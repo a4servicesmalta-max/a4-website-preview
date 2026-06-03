@@ -206,4 +206,27 @@ export const insightsData: InsightArticle[] = [
       <p>By operating digital platforms, firms move beyond one-off advice toward maintaining ongoing operational infrastructure for their clients, supporting governance and growth over time.</p>
     `,
   },
+  {
+    id: "9",
+    slug: "esg-is-changing-but-it-is-not-disappearing",
+    title: "ESG Is Changing, But It Is Not Disappearing",
+    subtitle: "Sustainability reporting is evolving, not ending.",
+    description:
+      "As CSRD and global sustainability rules shift, many businesses wonder whether ESG still matters. It does—but the focus is moving toward practical, evidence-based reporting tied to risk, finance, and stakeholder trust.",
+    category: "Governance & Risk",
+    publishDate: "June 3, 2026",
+    readTime: "8 min read",
+    author: "Rana",
+    image: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=2070",
+    content: `
+      <h2>Regulatory Evolution</h2>
+      <p>CSRD and the EU Omnibus package are reshaping sustainability reporting timelines and scope. Delays and simplifications do not mean ESG is fading—they mean reporting is becoming more focused and usable.</p>
+
+      <h2>ESG Beyond Formal Reporting</h2>
+      <p>Banks, investors, customers, and supply chains may still request sustainability information even when a business is outside full CSRD scope. EFRAG's voluntary VSME standard offers SMEs a proportionate path to prepare structured data.</p>
+
+      <h2>Risk, Finance, and Practical Action</h2>
+      <p>ESG overlaps with governance, tender eligibility, and access to finance. Smaller businesses benefit from building reliable records early—moving from slogans toward credible, evidence-based sustainability information.</p>
+    `,
+  },
 ];
