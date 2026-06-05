@@ -2,7 +2,7 @@
 // for the automated-bookkeeping conversion landing page. Reuses Primitives,
 // HeroFX and PortalMockup from the main app.
 
-const LB_PORTAL = "https://client.a4.com.mt";
+const LB_PORTAL = "https://client.a4.com.mt/onboarding";
 
 function LandingNav() {
   return (

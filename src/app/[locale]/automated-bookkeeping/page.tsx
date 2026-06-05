@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import "./styles.css";
-import { LandingNav, LandingHero, Integrations, HowItWorks, Why, FinalCTA, SupportStrip } from "./components/LandingParts";
-import { LandingPlan } from "./components/LandingPlan";
+import "@/components/a4-landing/styles.css";
+import { LandingApp } from "./components/LandingParts";
 
 export const metadata: Metadata = {
   title: "Automated Bookkeeping | A4 Services",
@@ -9,19 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function AutomatedBookkeepingPage() {
-  console.log("RENDERING AUTOMATED BOOKKEEPING PAGE");
   return (
-    <div className="bg-[var(--a4-canvas-light)] text-[var(--a4-ink)] font-sans antialiased selection:bg-[var(--a4-primary)] selection:text-white">
-      <LandingNav />
-      <main>
-        <LandingHero />
-        <Integrations />
-        <HowItWorks />
-        <LandingPlan />
-        <Why />
-        <FinalCTA />
-      </main>
-      <SupportStrip />
+    <div className="a4-landing-page pt-8">
+      <LandingApp />
     </div>
   );
 }

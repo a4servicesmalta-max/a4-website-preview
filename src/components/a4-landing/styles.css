@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --a4-primary: #494fdf;
+    --a4-primary-bright: #4f55f1;
+    --a4-primary-deep: #3a40c4;
+    --a4-on-primary: #ffffff;
+    --a4-canvas-light: #ffffff;
+    --a4-canvas-dark: #000000;
+    --a4-surface-soft: #f4f4f4;
+    --a4-surface-card: #ffffff;
+    --a4-surface-deep: #0a0a0a;
+    --a4-surface-elevated: #16181a;
+    --a4-hairline-light: #e2e2e7;
+    --a4-hairline-dark: rgba(255, 255, 255, 0.12);
+    --a4-hairline-strong: #191c1f;
+    --a4-divider-soft: rgba(255, 255, 255, 0.06);
+    --a4-ink: #191c1f;
+    --a4-body: #1f2226;
+    --a4-charcoal: #3a3d40;
+    --a4-mute: #505a63;
+    --a4-ash: #5c5e60;
+    --a4-stone: #8d969e;
+    --a4-faint: #c9c9cd;
+    --a4-on-dark: #ffffff;
+    --a4-on-dark-mute: rgba(255, 255, 255, 0.72);
+    --a4-accent-teal: #00a87e;
+    --a4-link: #376cd5;
+    --a4-font-display: "General Sans", "Aeonik Pro", "Inter Display", "Inter", system-ui, sans-serif;
+    --a4-font-body: "Inter", system-ui, -apple-system, sans-serif;
+    --a4-r-sm: 8px;
+    --a4-r-md: 12px;
+    --a4-r-lg: 20px;
+    --a4-r-xl: 28px;
+    --a4-r-full: 9999px;
+  }
+}
+
+@layer utilities {
+  .a4-font-display { font-family: var(--a4-font-display); }
+  .a4-font-body { font-family: var(--a4-font-body); }
+}
+
+.a4-landing-page { background: #000; color: #fff; font-family: var(--a4-font-body); overflow-x: hidden; }
+.a4-landing-page ::selection { background: var(--a4-primary); color: #fff; }
+
+.hero-bg {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(125% 95% at 50% 32%, #000 34%, transparent 80%);
+  mask-image: radial-gradient(125% 95% at 50% 32%, #000 34%, transparent 80%);
+}
+
+.a4-burger { display: none; }
+@media (max-width: 1024px) {
+  .a4-navlinks { display: none !important; }
+  .a4-burger { display: inline-flex !important; }
+}
+@media (max-width: 920px) {
+  .a4-footgrid { grid-template-columns: 1fr 1fr !important; gap: 36px 24px !important; }
+}
+@media (max-width: 560px) {
+  .a4-footgrid { grid-template-columns: 1fr !important; }
+  .qt-services, .qt-cols { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 820px) {
+  .pr-grid, .svc-grid, .dl-grid, .dl-modalgrid, .dl-calgrid, .fb-row { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 900px) { .svc-list4 { grid-template-columns: 1fr 1fr !important; } }
+@media (max-width: 480px) { .svc-list4 { grid-template-columns: 1fr !important; } }
+@media (max-width: 420px) { .svc-list { grid-template-columns: 1fr !important; } .pm-steplabel { display: none; } }
+
+html[data-reveal="off"] [data-areveal] {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+@keyframes a4rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes a4grow { from { width: 0%; } to { width: 100%; } }
+@keyframes a4pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.8); } }
+
+input.a4-range {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
+  border-radius: 999px; background: var(--a4-hairline-dark); outline: none;
+}

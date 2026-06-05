@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* ---- Brand ---------------------------------------------------------- */
+    --a4-primary:          #494fdf;   /* cobalt violet */
+    --a4-primary-bright:   #4f55f1;   /* inline link / accent-photo headers */
+    --a4-primary-deep:     #3a40c4;   /* pressed/active cobalt */
+    --a4-on-primary:       #ffffff;
+
+    /* ---- Canvas / Surface ---------------------------------------------- */
+    --a4-canvas-light:     #ffffff;   /* white catalogue mode */
+    --a4-canvas-dark:      #000000;   /* TRUE black storytelling canvas */
+    --a4-surface-soft:     #f4f4f4;   /* off-white tiles, soft buttons */
+    --a4-surface-card:     #ffffff;   /* feature cards on light */
+    --a4-surface-deep:     #0a0a0a;   /* inset cards inside dark regions */
+    --a4-surface-elevated: #16181a;   /* plan cards lifted off black */
+
+    /* ---- Hairlines / Dividers ------------------------------------------ */
+    --a4-hairline-light:   #e2e2e7;
+    --a4-hairline-dark:    rgba(255,255,255,0.12);
+    --a4-hairline-strong:  #191c1f;
+    --a4-divider-soft:     rgba(255,255,255,0.06);
+
+    /* ---- Text ----------------------------------------------------------- */
+    --a4-ink:              #191c1f;   /* primary text on light (warm black) */
+    --a4-body:             #1f2226;
+    --a4-charcoal:         #3a3d40;
+    --a4-mute:             #505a63;
+    --a4-ash:              #5c5e60;
+    --a4-stone:            #8d969e;
+    --a4-faint:            #c9c9cd;
+    --a4-on-dark:          #ffffff;
+    --a4-on-dark-mute:     rgba(255,255,255,0.72);
+
+    /* ---- Accent palette --- */
+    --a4-accent-teal:        #00a87e;
+    --a4-link:               #376cd5;
+
+    /* ---- Type families -------------------------------------------------- */
+    --a4-font-display: "General Sans", "Aeonik Pro", "Inter Display", "Inter", system-ui, sans-serif;
+    --a4-font-body:    "Inter", system-ui, -apple-system, sans-serif;
+
+    /* ---- Radii ---------------------------------------------------------- */
+    --a4-r-md:   12px;
+    --a4-r-lg:   20px;
+    --a4-r-xl:   28px;
+    --a4-r-full: 9999px;
+  }
+}
+
+@layer utilities {
+  .a4-font-display { font-family: var(--a4-font-display); }
+  .a4-font-body { font-family: var(--a4-font-body); }
+}
+
+@keyframes a4rise { 
+  from { opacity: 0; transform: translateY(10px); } 
+  to { opacity: 1; transform: none; } 
+}
+
+@keyframes a4grow { 
+  from { width: 0%; } 
+  to { width: 100%; } 
+}
+
+@media (max-width: 420px) { 
+  .pm-steplabel { display: none; } 
+}
