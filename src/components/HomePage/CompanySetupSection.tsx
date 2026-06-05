@@ -112,11 +112,11 @@ const CompanySetupSection = () => {
                 <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
                     <GetInstantQuoteButton
                         text={t('companySetup.startIncorporationCta')}
-                        href="https://client.A4.com/onboarding"
+                        href="https://client.a4.com.mt/onboarding"
                         className="px-8 py-4 sm:px-10 sm:py-5 !text-xs !font-black uppercase tracking-widest"
                     />
                     <Link
-                        href="https://client.A4.com/onboarding"
+                        href="https://client.a4.com.mt/onboarding"
                         className="px-8 py-4 sm:px-10 sm:py-5 rounded-full bg-white/10 border border-white/15 text-white font-black text-xs uppercase tracking-widest transition-all hover:bg-white/15 hover:border-white/25 hover:scale-105 active:scale-95 shadow-sm"
                     >
                         {t('companySetup.bookConsultationCta')}

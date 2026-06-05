@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 
-const ONBOARDING = "https://client.A4.com/onboarding";
+const ONBOARDING = "https://client.a4.com.mt/onboarding";
 
 export default function CtaAccountingMalta() {
   const { t } = useTranslation("services");

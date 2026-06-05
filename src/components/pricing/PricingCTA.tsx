@@ -58,7 +58,7 @@ const PricingCTA = () => {
                   <p className="text-white/90 text-lg mb-8 leading-relaxed">{t("cta.body")}</p>
 
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <LocalizedLink href="https://client.A4.com/onboarding">
+                    <LocalizedLink href="https://client.a4.com.mt/onboarding">
                       <motion.button
                         type="button"
                         whileHover={isIPhone || isLowPerformance ? {} : { scale: 1.05 }}
@@ -77,7 +77,7 @@ const PricingCTA = () => {
                       </motion.button>
                     </LocalizedLink>
 
-                    <LocalizedLink href="https://client.A4.com/onboarding">
+                    <LocalizedLink href="https://client.a4.com.mt/onboarding">
                       <motion.button
                         type="button"
                         whileHover={isIPhone || isLowPerformance ? {} : { scale: 1.05 }}

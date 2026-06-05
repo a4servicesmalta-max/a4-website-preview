@@ -230,7 +230,7 @@ const InteractiveBlock = ({ isDark = false }: { isDark?: boolean }) => {
 
                 <a
                   ref={ctaRef}
-                  href="https://client.A4.com/onboarding"
+                  href="https://client.a4.com.mt/onboarding"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
