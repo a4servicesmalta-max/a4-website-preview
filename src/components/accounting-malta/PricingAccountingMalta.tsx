@@ -3,7 +3,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-const ONBOARDING = "https://client.A4.com/onboarding";
+const ONBOARDING = "https://client.a4.com.mt/onboarding";
 
 export default function PricingAccountingMalta() {
   const { t } = useTranslation("services");

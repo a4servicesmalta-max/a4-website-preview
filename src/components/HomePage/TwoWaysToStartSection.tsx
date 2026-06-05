@@ -224,7 +224,7 @@ const TwoWaysToStartSection = ({ isDark = true }: { isDark?: boolean }) => {
 
                     <GetInstantQuoteButton
                       text={t("twoWaysToStart.cta")}
-                      href="https://client.A4.com/onboarding"
+                      href="https://client.a4.com.mt/onboarding"
                       className={cn(
                         "h-14 w-full rounded-2xl text-base font-bold sm:w-auto sm:px-10",
                         !isDark && "shadow-lg shadow-zinc-500/15"

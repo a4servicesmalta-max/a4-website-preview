@@ -401,6 +401,7 @@ const Navbar = () => {
       useCompactNav
         ? [
           { label: t("nav.resource.insights"), href: "/insights" },
+          { label: "Automated Bookkeeping", href: "/automated-bookkeeping" },
           { label: t("nav.resource.bookkeeping"), href: "/bookkeeping" },
           { label: t("nav.resource.accountingMalta"), href: "/accounting-malta" },
           { label: t("nav.product.aiReview"), href: "/ai-review" },
@@ -416,6 +417,7 @@ const Navbar = () => {
         ]
         : [
           { label: t("nav.resource.insights"), href: "/insights" },
+          { label: "Automated Bookkeeping", href: "/automated-bookkeeping" },
           { label: t("nav.resource.bookkeeping"), href: "/bookkeeping" },
           { label: t("nav.resource.accountingMalta"), href: "/accounting-malta" },
           { label: t("nav.product.aiReview"), href: "/ai-review" },
@@ -454,10 +456,10 @@ const Navbar = () => {
           <motion.div
             initial={false}
             className={`relative pointer-events-auto w-full mx-auto rounded-full ${isMobile
-                ? "bg-white border border-gray-200/80 text-black"
-                : useDarkNavbarTheme
-                  ? `bg-white/10 ${isIPhone || isLowPerformance ? "" : "backdrop-blur-xl"} border border-white/20 text-white`
-                  : `bg-white/80 ${isIPhone || isLowPerformance ? "" : "backdrop-blur-xl"} border border-gray-200/60 text-black`
+              ? "bg-white border border-gray-200/80 text-black"
+              : useDarkNavbarTheme
+                ? `bg-white/10 ${isIPhone || isLowPerformance ? "" : "backdrop-blur-xl"} border border-white/20 text-white`
+                : `bg-white/80 ${isIPhone || isLowPerformance ? "" : "backdrop-blur-xl"} border border-gray-200/60 text-black`
               } shadow-lg shadow-black/5 px-4  sm:px-6 lg:px-8 transition-all duration-300`}
           >
             <div className="flex items-center justify-between min-h-[56px] sm:min-h-[64px] lg:min-h-[80px]">
@@ -664,7 +666,7 @@ const Navbar = () => {
                 <div className="hidden lg:flex items-center gap-2 xl:gap-3">
 
                   <LocalizedLink
-                    href="https://client.A4.com/onboarding"
+                    href="https://client.a4.com.mt/onboarding"
                     className={`flex items-center justify-center ${useDarkNavbarTheme
                       ? "text-white/90 hover:text-white"
                       : "text-black/90 hover:text-primary-blue"
@@ -675,7 +677,7 @@ const Navbar = () => {
 
                   <GetInstantQuoteButton
                     hasShadow={false}
-                    href="https://client.A4.com/onboarding"
+                    href="https://client.a4.com.mt/onboarding"
                     text={t("nav.registerQuote")}
                   />
                 </div>
@@ -852,7 +854,7 @@ const Navbar = () => {
                 ))}
                 <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
                   <LocalizedLink
-                    href="https://client.A4.com/onboarding"
+                    href="https://client.a4.com.mt/onboarding"
                     className="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white py-3 text-[15px] font-medium text-black transition-colors hover:border-primary-blue/40 hover:text-primary-blue"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -862,7 +864,7 @@ const Navbar = () => {
                     <GetInstantQuoteButton
                       hasShadow={false}
                       className="w-full justify-center"
-                      href="https://client.A4.com/onboarding"
+                      href="https://client.a4.com.mt/onboarding"
                       text={t("nav.registerQuote")}
                     />
                   </div>
@@ -950,7 +952,7 @@ const Navbar = () => {
                   <h3 className="text-white font-bold text-lg">{t("nav.sidebar.quickActions")}</h3>
                   <div className="space-y-3">
                     <LocalizedLink
-                      href="https://client.A4.com/onboarding"
+                      href="https://client.a4.com.mt/onboarding"
                       onClick={() => setSidebarOpen(false)}
                       className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 transition-all"
                     >
