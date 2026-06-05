@@ -396,12 +396,22 @@ const Navbar = () => {
     [t]
   );
 
+  const productLandingLinks = useMemo(
+    () => [
+      { label: "Automated Bookkeeping", href: "/automated-bookkeeping" },
+      { label: "Automated Bookkeeping (Standalone)", href: "/automated-bookkeeping-standalone" },
+      { label: "Audit Services", href: "/audit-services" },
+      { label: "Partner Program", href: "/partner-program" },
+    ],
+    []
+  );
+
   const resourceLinks = useMemo(
     () =>
       useCompactNav
         ? [
+          ...productLandingLinks,
           { label: t("nav.resource.insights"), href: "/insights" },
-          { label: "Automated Bookkeeping", href: "/automated-bookkeeping" },
           { label: t("nav.resource.bookkeeping"), href: "/bookkeeping" },
           { label: t("nav.resource.accountingMalta"), href: "/accounting-malta" },
           { label: t("nav.product.aiReview"), href: "/ai-review" },
@@ -416,8 +426,8 @@ const Navbar = () => {
           { label: t("nav.product.cpePodcast"), href: "/cpe" },
         ]
         : [
+          ...productLandingLinks,
           { label: t("nav.resource.insights"), href: "/insights" },
-          { label: "Automated Bookkeeping", href: "/automated-bookkeeping" },
           { label: t("nav.resource.bookkeeping"), href: "/bookkeeping" },
           { label: t("nav.resource.accountingMalta"), href: "/accounting-malta" },
           { label: t("nav.product.aiReview"), href: "/ai-review" },
@@ -431,7 +441,7 @@ const Navbar = () => {
           { label: t("nav.resource.security"), href: "/security-compliance" },
           { label: t("nav.product.cpePodcast"), href: "/cpe" },
         ],
-    [t, useCompactNav]
+    [t, useCompactNav, productLandingLinks]
   );
 
   if (shouldHideChrome) {

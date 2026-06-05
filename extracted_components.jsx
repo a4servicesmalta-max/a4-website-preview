@@ -524,7 +524,7 @@ Object.assign(window, { PortalMockup });
 // Pick a bookkeeping tier + add-ons → live monthly price → two exits:
 // (1) Create account & request services, (2) Book a 15-min call.
 
-const LP_PORTAL = "https://client.a4.com.mt";
+const LP_PORTAL = "https://client.a4.com.mt/onboarding";
 
 const LP_TIERS = [
   { id: "starter", name: "Starter", price: 25, docs: "Up to 100 documents / month", blurb: "Perfect for sole traders and small companies." },
@@ -739,7 +739,7 @@ Object.assign(window, { LandingPlan });
 // for the automated-bookkeeping conversion landing page. Reuses Primitives,
 // HeroFX and PortalMockup from the main app.
 
-const LB_PORTAL = "https://client.a4.com.mt";
+const LB_PORTAL = "https://client.a4.com.mt/onboarding";
 
 function LandingNav() {
   return (
