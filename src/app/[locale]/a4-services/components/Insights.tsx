@@ -96,9 +96,9 @@ export function LinkedInVideos() {
           <Button variant="primary" size="md" href={A4_LINKEDIN_URL} target="_blank"><LinkedInGlyph size={16} color="#000" /> Follow on LinkedIn</Button>
         </Reveal>
 
-        <div style={{
+        <div className="li-grid" style={{
           display: "grid", gap: 22, marginTop: 48,
-          gridTemplateColumns: hasEmbeds ? "repeat(auto-fit, minmax(320px, 1fr))" : "repeat(auto-fit, minmax(300px, 1fr))",
+          gridTemplateColumns: hasEmbeds ? "repeat(auto-fit, minmax(260px, 1fr))" : "repeat(auto-fit, minmax(260px, 1fr))",
         }}>
           {LINKEDIN_POSTS.map((p, i) => (
             <Reveal key={i} delay={(i % 3) * 80} style={{ display: "flex" }}>

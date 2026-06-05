@@ -38,7 +38,7 @@ function PartnerHero() {
           <h1 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(42px,5.6vw,78px)", lineHeight: 1.0, letterSpacing: "-.03em", margin: "20px 0 0", textWrap: "balance" }}>
             Refer clients.<br />Earn <span style={{ color: "var(--a4-primary-bright)" }}>40%</span> for<br />three years.
           </h1>
-          <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 480, margin: "24px 0 0", textWrap: "pretty" }}>
+          <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: "clamp(16px,2.5vw,19px)", lineHeight: 1.6, maxWidth: 480, margin: "24px 0 0", textWrap: "pretty" }}>
             For accounting firms, lawyers and corporate service providers. Refer your clients' accounting, audit and tax work to A4 — earn 40% commission on every service they engage, for three full years, tracked in your own reseller portal.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>

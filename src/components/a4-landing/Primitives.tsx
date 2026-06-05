@@ -93,7 +93,7 @@ export function Icon({ name, size = 24, color = "currentColor", stroke = 1.75, s
 
 export function Container({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div className="max-w-[1200px] mx-auto px-[24px]" style={style}>
+    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-[24px]" style={style}>
       {children}
     </div>
   );

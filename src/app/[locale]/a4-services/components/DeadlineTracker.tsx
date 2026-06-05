@@ -125,7 +125,7 @@ export function DeadlineTracker() {
         </Reveal>
       </Container>
       <DLDrawer now={now} open={open} onClose={() => setOpen(false)} />
-      <button onClick={() => setOpen(true)} aria-label="Open compliance calendar" style={{ position: "fixed", left: 20, bottom: 20, zIndex: 390, height: 50, padding: "0 20px", borderRadius: 999, border: "1px solid var(--a4-hairline-strong)", background: "#fff", color: "#000", display: "inline-flex", alignItems: "center", gap: 9, fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: "0 14px 36px rgba(0,0,0,.45)" }}>
+      <button className="dl-fab" onClick={() => setOpen(true)} aria-label="Open compliance calendar" style={{ position: "fixed", left: 20, bottom: 20, zIndex: 390, height: 50, padding: "0 20px", borderRadius: 999, border: "1px solid var(--a4-hairline-strong)", background: "#fff", color: "#000", display: "inline-flex", alignItems: "center", gap: 9, fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: "0 14px 36px rgba(0,0,0,.45)" }}>
         <Icon name="calendar-days" size={18} color="#000" /> Deadlines
       </button>
     </section>
