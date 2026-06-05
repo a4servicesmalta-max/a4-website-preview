@@ -85,7 +85,7 @@ export function PortalDashboardMock() {
             <div style={{ height: "100%", width: "33%", borderRadius: 999, background: "var(--a4-primary-bright)" }} />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,auto)", gap: "0 48px", marginTop: 26 }}>
+          <div className="pd-stats" style={{ display: "grid", gridTemplateColumns: "repeat(3,auto)", gap: "0 48px", marginTop: 26 }}>
             {[["Documents provided", "2 of 6"], ["Period", "31 Dec 2024"], ["Target", "Sep 2026"]].map(([k, v]) => (
               <div key={k}>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-stone)" }}>{k}</div>

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PartnerProgramPage() {
   return (
-    <div className="a4-landing-page pt-8">
+    <div className="a4-landing-page pt-24 sm:pt-28">
       <PartnerApp />
     </div>
   );

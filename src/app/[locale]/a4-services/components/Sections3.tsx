@@ -68,7 +68,7 @@ export function Portal() {
           <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 18, lineHeight: 1.6, color: "var(--a4-on-dark-mute)", margin: "20px 0 0", maxWidth: 480, textWrap: "pretty" }}>
             A dedicated online portal designed to make financial administration easier, faster and more organised — giving clients better visibility, stronger organisation and a smoother experience.
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px", margin: "30px 0 0" }}>
+          <div className="portal-caps" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px", margin: "30px 0 0" }}>
             {caps.map((c) => (
               <div key={c} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <Icon name="check" size={17} color="var(--a4-accent-teal)" stroke={2.4} style={{ marginTop: 2, flexShrink: 0 }} />

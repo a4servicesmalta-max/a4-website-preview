@@ -17,7 +17,7 @@ export function Comparison() {
           sub="Many businesses are used to accounting firms that work reactively. A4 Services is built differently — we combine professional expertise with modern systems."
           maxWidth={640}
         /></Reveal>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, marginTop: 56 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginTop: 56 }}>
           {/* traditional */}
           <Reveal style={{ background: "var(--a4-canvas-light)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", padding: "clamp(28px,3vw,38px)" }}>
             <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Traditional accounting firm</div>

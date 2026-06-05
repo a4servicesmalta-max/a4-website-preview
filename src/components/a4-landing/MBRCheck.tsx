@@ -87,7 +87,7 @@ export function MBRCheck() {
 
         <Reveal delay={80} style={{ maxWidth: 680, margin: "40px auto 0" }}>
           <div ref={wrapRef} style={{ position: "relative" }}>
-            <div style={inputWrap}>
+            <div className="mbr-input-wrap" style={inputWrap}>
               <Icon name="search" size={18} color="var(--a4-stone)" />
               <input
                 value={query}

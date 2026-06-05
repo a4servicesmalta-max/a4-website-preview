@@ -198,7 +198,7 @@ export function ReviewedByTeam() {
           ))}
         </div>
         <Reveal delay={140}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 13, margin: "18px auto 0", maxWidth: 960, background: "rgba(0,168,126,.08)", border: "1px solid rgba(0,168,126,.22)", borderRadius: "var(--a4-r-lg)", padding: "18px 24px" }}>
+          <div className="rbt-equals" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 13, flexWrap: "wrap", margin: "18px auto 0", maxWidth: 960, background: "rgba(0,168,126,.08)", border: "1px solid rgba(0,168,126,.22)", borderRadius: "var(--a4-r-lg)", padding: "18px 24px" }}>
             <span style={{ width: 32, height: 32, borderRadius: 999, background: "var(--a4-accent-teal)", display: "grid", placeItems: "center", color: "#fff", fontFamily: "var(--a4-font-display)", fontSize: 18, fontWeight: 500, flexShrink: 0 }}>=</span>
             <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 15.5, fontWeight: 500, lineHeight: 1.5, color: "#fff", textWrap: "pretty" }}>
               Books that are right, not just fast — speed from automation, accuracy from a licensed team, at a subscription price.
