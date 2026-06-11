@@ -220,6 +220,32 @@
   background: linear-gradient(180deg, #777777 0%, var(--primary-zinc-hover) 100%);
 }
 
+.nav-resources-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #111111 #e8eaee;
+}
+
+.nav-resources-scrollbar::-webkit-scrollbar {
+  width: 7px;
+}
+
+.nav-resources-scrollbar::-webkit-scrollbar-track {
+  margin: 6px 0;
+  background: #e8eaee;
+  border-radius: 100px;
+}
+
+.nav-resources-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3a3a3a 0%, #111111 100%);
+  border-radius: 100px;
+  border: 2px solid #e8eaee;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.nav-resources-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #555555 0%, #000000 100%);
+}
+
 /* Utility Classes for Background Colors */
 .bg-background {
   background-color: var(--background);
@@ -479,7 +505,7 @@ html {
 html,
 body {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   /* Support dynamic viewport height for mobile Safari */
   min-height: 100dvh;
 }

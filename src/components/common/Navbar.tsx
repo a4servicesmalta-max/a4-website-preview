@@ -22,7 +22,8 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import GetInstantQuoteButton from "./GetInstantQuoteButton";
 import { useReduceMotion, usePerformance } from "@/contexts/ReduceMotionContext";
-import { servicesData } from "@/data/servicesData";
+import { A4_SERVICES_DATA } from "@/data/a4ServicesSiteData";
+import { RESOURCE_CARDS } from "@/data/a4ResourcesSiteData";
 
 // Logo path from assets
 const Logo = "/assets/images/a4-logo-new.webp";
@@ -39,8 +40,8 @@ const Navbar = () => {
     return seg && isLocale(seg) ? seg : defaultLocale;
   }, [pathname]);
   const widenNavForI18n = activeLocale !== "en";
-  const [servicesOpen, setServicesOpen] = useState(false);
   const [portalsOpen, setPortalsOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -50,10 +51,6 @@ const Navbar = () => {
 
   // Check if mobile screen
   const [isMobile, setIsMobile] = useState(false);
-
-  // Detect when the browser is at 100% zoom or above on laptop/desktop
-  // and switch to a "compact" nav where some items move under Resources.
-  const [useCompactNav, setUseCompactNav] = useState(false);
 
   const hideChromeRoutes = [
     "/privacy-policy",
@@ -69,30 +66,6 @@ const Navbar = () => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  // Detect zoom level & viewport width to switch nav layout.
-  // We treat "100% zoom and above" as compact mode on typical laptops,
-  // keeping the original layout for 90% zoom users.
-  useEffect(() => {
-    const updateNavMode = () => {
-      // Heuristic: compare outerWidth to innerWidth to infer zoom percentage.
-      // This is not perfect across all browsers, but works well for Chrome-like setups.
-      const zoomApprox =
-        typeof window !== "undefined" && window.innerWidth
-          ? (window.outerWidth / window.innerWidth) * 100
-          : 100;
-
-      const isZoomedOrDefault = zoomApprox >= 100;
-      const isLaptopWidth = window.innerWidth >= 1024 && window.innerWidth <= 1536;
-
-      setUseCompactNav(isZoomedOrDefault && isLaptopWidth);
-    };
-
-    updateNavMode();
-    window.addEventListener("resize", updateNavMode);
-
-    return () => window.removeEventListener("resize", updateNavMode);
   }, []);
 
   // Prevent scrolling when mobile menu is open
@@ -329,6 +302,15 @@ const Navbar = () => {
         setIsOpen: undefined,
       },
       {
+        id: "about",
+        dropdownId: undefined,
+        label: t("nav.resource.about"),
+        href: "/about",
+        hasDropdown: false,
+        isOpen: undefined,
+        setIsOpen: undefined,
+      },
+      {
         id: "platform",
         dropdownId: "platform" as NavDropdownId,
         label: t("nav.platform"),
@@ -341,7 +323,7 @@ const Navbar = () => {
         id: "services",
         dropdownId: "services" as NavDropdownId,
         label: t("nav.services"),
-        href: "/#services",
+        href: "/services",
         hasDropdown: true,
         isOpen: servicesOpen,
         setIsOpen: setServicesOpen,
@@ -377,14 +359,23 @@ const Navbar = () => {
     [t, portalsOpen, servicesOpen, resourcesOpen]
   );
 
-  const productLinks = useMemo(
-    () => [
-      { label: t("nav.product.aiReview"), href: "/ai-review" },
-      { label: t("nav.product.ourTechnology"), href: "/technology" },
-      { label: t("nav.pricing"), href: "/pricing" },
-      { label: t("nav.product.cpePodcast"), href: "/cpe" },
-    ],
-    [t]
+  const servicesList = useMemo(
+    () =>
+      Object.values(A4_SERVICES_DATA).map((service) => ({
+        id: service.key,
+        slug: service.slug,
+        title: service.name,
+      })),
+    []
+  );
+
+  const resourceLinks = useMemo(
+    () =>
+      RESOURCE_CARDS.filter((card) => card.href !== "/about").map((card) => ({
+        label: card.t,
+        href: card.href,
+      })),
+    []
   );
 
   const portalLinks = useMemo(
@@ -394,54 +385,6 @@ const Navbar = () => {
       { label: t("nav.portal.audit"), href: "/portal/audit-portal" },
     ],
     [t]
-  );
-
-  const productLandingLinks = useMemo(
-    () => [
-      { label: "Automated Bookkeeping", href: "/automated-bookkeeping" },
-      { label: "Automated Bookkeeping (Standalone)", href: "/automated-bookkeeping-standalone" },
-      { label: "Audit Services", href: "/audit-services" },
-      { label: "Partner Program", href: "/partner-program" },
-    ],
-    []
-  );
-
-  const resourceLinks = useMemo(
-    () =>
-      useCompactNav
-        ? [
-          ...productLandingLinks,
-          { label: t("nav.resource.insights"), href: "/insights" },
-          { label: t("nav.resource.bookkeeping"), href: "/bookkeeping" },
-          { label: t("nav.resource.accountingMalta"), href: "/accounting-malta" },
-          { label: t("nav.product.aiReview"), href: "/ai-review" },
-          { label: t("nav.resource.accountingAgents", { defaultValue: "Accounting Agents" }), href: "/accounting" },
-          { label: t("nav.resource.businessAgents", { defaultValue: "Business Agents" }), href: "/business" },
-          { label: t("nav.resource.auditorQuestionnaire", { defaultValue: "Auditor Dashboard" }), href: "/auditor-questionnaire" },
-          { label: t("nav.resource.howItWorks"), href: "/how-it-works" },
-          { label: t("nav.resource.about"), href: "/about" },
-          { label: t("nav.resource.faqs"), href: "/faq" },
-          { label: t("nav.resource.contact"), href: "/contact" },
-          { label: t("nav.resource.security"), href: "/security-compliance" },
-          { label: t("nav.product.cpePodcast"), href: "/cpe" },
-        ]
-        : [
-          ...productLandingLinks,
-          { label: t("nav.resource.insights"), href: "/insights" },
-          { label: t("nav.resource.bookkeeping"), href: "/bookkeeping" },
-          { label: t("nav.resource.accountingMalta"), href: "/accounting-malta" },
-          { label: t("nav.product.aiReview"), href: "/ai-review" },
-          { label: t("nav.resource.accountingAgents", { defaultValue: "Accounting Agents" }), href: "/accounting" },
-          { label: t("nav.resource.businessAgents", { defaultValue: "Business Agents" }), href: "/business" },
-          { label: t("nav.resource.auditorQuestionnaire", { defaultValue: "Auditor Dashboard" }), href: "/auditor-questionnaire" },
-          { label: t("nav.resource.howItWorks"), href: "/how-it-works" },
-          { label: t("nav.resource.about"), href: "/about" },
-          { label: t("nav.resource.faqs"), href: "/faq" },
-          { label: t("nav.resource.contact"), href: "/contact" },
-          { label: t("nav.resource.security"), href: "/security-compliance" },
-          { label: t("nav.product.cpePodcast"), href: "/cpe" },
-        ],
-    [t, useCompactNav, productLandingLinks]
   );
 
   if (shouldHideChrome) {
@@ -552,9 +495,23 @@ const Navbar = () => {
                             {link.dropdownId === "services" ? (
                               <>
                                 <div className="flex-1 min-w-[280px]">
-                                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 pl-3">{t("nav.ourServices")}</h3>
+                                  <LocalizedLink
+                                    href="/services"
+                                    className="block px-4 py-3 mb-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors group/hub"
+                                    onClick={() => link.setIsOpen?.(false)}
+                                  >
+                                    <div className="text-[15px] font-semibold text-black group-hover/hub:text-primary-blue transition-colors">
+                                      {t("nav.ourServices")}
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-0.5">
+                                      {t("nav.viewAllServices")}
+                                    </div>
+                                  </LocalizedLink>
+                                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 pl-3">
+                                    {t("nav.browseByService")}
+                                  </h3>
                                   <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                    {servicesData.map((service) => (
+                                    {servicesList.map((service) => (
                                       <LocalizedLink
                                         key={service.id}
                                         href={`/services/${service.slug}`}
@@ -579,7 +536,7 @@ const Navbar = () => {
                                       {t("nav.unifiedServicesBody")}
                                     </p>
                                   </div>
-                                  <LocalizedLink href="/services/advisory-growth" className="relative z-10 flex items-center gap-2 text-xs font-bold text-zinc-600 group-hover:gap-3 transition-all" onClick={() => link.setIsOpen?.(false)}>
+                                  <LocalizedLink href="/services" className="relative z-10 flex items-center gap-2 text-xs font-bold text-zinc-600 group-hover:gap-3 transition-all" onClick={() => link.setIsOpen?.(false)}>
                                     {t("nav.exploreMethodology")} <ArrowRight className="w-4 h-4" />
                                   </LocalizedLink>
                                 </div>
@@ -628,20 +585,36 @@ const Navbar = () => {
                             ) : link.dropdownId === "resources" ? (
                               <>
                                 <div className="flex-1 min-w-[280px]">
-                                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 pl-3">{t("nav.resourcesCompany")}</h3>
-                                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                    {resourceLinks.map((item) => (
-                                      <LocalizedLink
-                                        key={item.href}
-                                        href={item.href}
-                                        className="block px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group/item"
-                                        onClick={() => link.setIsOpen?.(false)}
-                                      >
-                                        <div className="text-[14px] font-medium text-black group-hover/item:text-primary-blue transition-colors">
-                                          {item.label}
-                                        </div>
-                                      </LocalizedLink>
-                                    ))}
+                                  <LocalizedLink
+                                    href="/resources"
+                                    className="block px-4 py-3 mb-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors group/hub"
+                                    onClick={() => link.setIsOpen?.(false)}
+                                  >
+                                    <div className="text-[15px] font-semibold text-black group-hover/hub:text-primary-blue transition-colors">
+                                      {t("nav.resources")}
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-0.5">
+                                      {t("nav.viewResourcesHub")}
+                                    </div>
+                                  </LocalizedLink>
+                                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 pl-3">
+                                    {t("nav.browseResources")}
+                                  </h3>
+                                  <div className="nav-resources-scrollbar max-h-[min(380px,58vh)] overflow-y-auto overscroll-contain pr-2">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                      {resourceLinks.map((item) => (
+                                        <LocalizedLink
+                                          key={item.href}
+                                          href={item.href}
+                                          className="block px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group/item"
+                                          onClick={() => link.setIsOpen?.(false)}
+                                        >
+                                          <div className="text-[14px] font-medium text-black group-hover/item:text-primary-blue transition-colors">
+                                            {item.label}
+                                          </div>
+                                        </LocalizedLink>
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
                                 <div className="hidden sm:flex w-[240px] lg:w-[280px] shrink-0 rounded-2xl p-6 bg-slate-50 border border-slate-200 flex-col justify-between group">
@@ -676,7 +649,7 @@ const Navbar = () => {
                 <div className="hidden lg:flex items-center gap-2 xl:gap-3">
 
                   <LocalizedLink
-                    href="https://client.a4.com.mt/onboarding"
+                    href="https://client.a4.com.mt"
                     className={`flex items-center justify-center ${useDarkNavbarTheme
                       ? "text-white/90 hover:text-white"
                       : "text-black/90 hover:text-primary-blue"
@@ -823,17 +796,27 @@ const Navbar = () => {
                           className="pl-3 pb-3 overflow-hidden"
                         >
                           <div className="rounded-xl bg-gray-50 border border-gray-200/80 p-2.5 space-y-0.5">
-                            {link.dropdownId === "services" &&
-                              servicesData.map((service) => (
+                            {link.dropdownId === "services" && (
+                              <>
                                 <LocalizedLink
-                                  key={service.id}
-                                  href={`/services/${service.slug}`}
-                                  className="block py-2.5 text-sm font-medium text-black hover:text-primary-blue rounded-lg pl-3 transition-colors"
+                                  href="/services"
+                                  className="block py-2.5 px-3 mb-1 text-sm font-semibold text-black hover:text-primary-blue rounded-lg bg-white border border-gray-200/80 transition-colors"
                                   onClick={() => setMobileMenuOpen(false)}
                                 >
-                                  {service.title}
+                                  {t("nav.ourServices")}
                                 </LocalizedLink>
-                              ))}
+                                {servicesList.map((service) => (
+                                  <LocalizedLink
+                                    key={service.id}
+                                    href={`/services/${service.slug}`}
+                                    className="block py-2.5 text-sm font-medium text-black hover:text-primary-blue rounded-lg pl-3 transition-colors"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                  >
+                                    {service.title}
+                                  </LocalizedLink>
+                                ))}
+                              </>
+                            )}
                             {link.dropdownId === "platform" &&
                               portalLinks.map((item) => (
                                 <LocalizedLink
@@ -845,17 +828,29 @@ const Navbar = () => {
                                   {item.label}
                                 </LocalizedLink>
                               ))}
-                            {link.dropdownId === "resources" &&
-                              resourceLinks.map((item) => (
+                            {link.dropdownId === "resources" && (
+                              <>
                                 <LocalizedLink
-                                  key={item.href}
-                                  href={item.href}
-                                  className="block py-2.5 text-sm font-medium text-black hover:text-primary-blue rounded-lg pl-3 transition-colors"
+                                  href="/resources"
+                                  className="block py-2.5 px-3 mb-1 text-sm font-semibold text-black hover:text-primary-blue rounded-lg bg-white border border-gray-200/80 transition-colors"
                                   onClick={() => setMobileMenuOpen(false)}
                                 >
-                                  {item.label}
+                                  {t("nav.resources")}
                                 </LocalizedLink>
-                              ))}
+                                <div className="nav-resources-scrollbar max-h-[min(320px,45vh)] overflow-y-auto overscroll-contain pl-3 pr-2">
+                                  {resourceLinks.map((item) => (
+                                    <LocalizedLink
+                                      key={item.href}
+                                      href={item.href}
+                                      className="block py-2.5 text-sm font-medium text-black hover:text-primary-blue rounded-lg transition-colors"
+                                      onClick={() => setMobileMenuOpen(false)}
+                                    >
+                                      {item.label}
+                                    </LocalizedLink>
+                                  ))}
+                                </div>
+                              </>
+                            )}
                           </div>
                         </motion.div>
                       )}
@@ -864,7 +859,7 @@ const Navbar = () => {
                 ))}
                 <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
                   <LocalizedLink
-                    href="https://client.a4.com.mt/onboarding"
+                    href="https://client.a4.com.mt"
                     className="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white py-3 text-[15px] font-medium text-black transition-colors hover:border-primary-blue/40 hover:text-primary-blue"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -992,7 +987,7 @@ const Navbar = () => {
                     </LocalizedLink>
 
                     <LocalizedLink
-                      href="/#services"
+                      href="/services"
                       onClick={() => setSidebarOpen(false)}
                       className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/15 transition-all"
                     >

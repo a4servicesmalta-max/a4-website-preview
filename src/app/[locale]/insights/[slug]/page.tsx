@@ -1,7 +1,9 @@
-import { notFound } from 'next/navigation';
-import { Metadata } from 'next';
-import BlogTemplate from '@/components/blog/BlogTemplate';
-import { getBlogBySlug, getRelatedBlogs, getBlogSlugs } from '@/utils/blog';
+import { notFound } from "next/navigation";
+import { Metadata } from "next";
+import "@/components/a4-landing/styles.css";
+import "@/components/a4-site/site-pages.css";
+import { ArticlePageContent } from "../components/ArticlePageContent";
+import { getBlogBySlug, getBlogSlugs } from "@/utils/blog";
 
 interface BlogPageProps {
   params: Promise<{
@@ -22,7 +24,7 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
 
   if (!blog) {
     return {
-      title: 'Post Not Found',
+      title: "Post Not Found",
     };
   }
 
@@ -32,13 +34,13 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
     openGraph: {
       title: blog.title,
       description: blog.excerpt,
-      type: 'article',
+      type: "article",
       publishedTime: blog.date,
-      authors: [blog.author || 'A4 Team'],
+      authors: [blog.author || "A4 Team"],
       tags: blog.tags || [],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: blog.title,
       description: blog.excerpt,
     },
@@ -53,11 +55,14 @@ export default async function BlogPage({ params }: BlogPageProps) {
     notFound();
   }
 
-  const relatedBlogs = getRelatedBlogs(slug, 3);
+  return <ArticlePageContent blog={blog} />;
 
-  return (
-    <div className="min-h-screen">
-      <BlogTemplate blog={blog} relatedBlogs={relatedBlogs} />
-    </div>
-  );
+  // --- Previous implementation (commented out) ---
+  // import BlogTemplate from "@/components/blog/BlogTemplate";
+  // const relatedBlogs = getRelatedBlogs(slug, 3);
+  // return (
+  //   <div className="min-h-screen">
+  //     <BlogTemplate blog={blog} relatedBlogs={relatedBlogs} />
+  //   </div>
+  // );
 }

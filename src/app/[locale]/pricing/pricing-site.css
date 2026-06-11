@@ -1,0 +1,18 @@
+@import url("https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+.a4-pricing-page { background: #000; overflow-x: clip; }
+.a4-pricing-page ::selection { background: var(--a4-primary); color: #fff; }
+
+@media (max-width: 820px) {
+  .a4-pricing-page .pr-grid,
+  .a4-pricing-page .pr-complex,
+  .a4-pricing-page .two-col {
+    grid-template-columns: 1fr !important;
+  }
+  .a4-pricing-page .a4-sum { position: static !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .a4-pricing-page .hero-bg::before { animation: none; }
+}

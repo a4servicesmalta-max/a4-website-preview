@@ -13,4 +13,7 @@ export default function PartnerProgramPage() {
       <PartnerApp />
     </div>
   );
+
+  // --- Previous implementation (commented out) ---
+  // Prior partner/reseller landing — replaced by PartnerApp from New website (2) Partner Program.html
 }

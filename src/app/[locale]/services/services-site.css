@@ -1,0 +1,20 @@
+/* Shared layout helpers for A4 service pages (from New website site.css) */
+@import url("https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+.a4-services-page { background: #000; overflow-x: clip; }
+.a4-services-page ::selection { background: var(--a4-primary); color: #fff; }
+
+@media (max-width: 820px) {
+  .a4-services-page .two-col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .a4-services-page .pm-steplabel { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .a4-services-page .hero-bg::before { animation: none; }
+}

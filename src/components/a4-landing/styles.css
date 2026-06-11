@@ -42,7 +42,7 @@
   .a4-font-body { font-family: var(--a4-font-body); }
 }
 
-.a4-landing-page { background: #000; color: #fff; font-family: var(--a4-font-body); overflow-x: hidden; }
+.a4-landing-page { background: #000; color: #fff; font-family: var(--a4-font-body); overflow-x: clip; }
 .a4-landing-page ::selection { background: var(--a4-primary); color: #fff; }
 .a4-landing-page img { max-width: 100%; height: auto; }
 

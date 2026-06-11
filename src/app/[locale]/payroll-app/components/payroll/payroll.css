@@ -1,0 +1,57 @@
+/* payroll.css — A4 client-portal payroll app styles */
+.a4-landing-page {
+  --canvas-dark: var(--a4-canvas-dark);
+  --primary: var(--a4-primary);
+  --primary-bright: var(--a4-primary-bright);
+  --surface-deep: var(--a4-surface-deep);
+  --surface-elevated: var(--a4-surface-elevated);
+  --hairline-dark: var(--a4-hairline-dark);
+  --divider-soft: var(--a4-divider-soft);
+  --stone: var(--a4-stone);
+  --on-dark-mute: var(--a4-on-dark-mute);
+  --font-body: var(--a4-font-body);
+  --r-sm: var(--a4-r-sm);
+  --r-md: var(--a4-r-md);
+  --r-lg: var(--a4-r-lg);
+  --r-xl: var(--a4-r-xl, 24px);
+  --r-full: 9999px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--canvas-dark); }
+body { font-family: var(--font-body); -webkit-font-smoothing: antialiased; color: #fff; }
+::selection { background: var(--primary); color: #fff; }
+.lucide { display: block; }
+
+.pay-input, .pay-select {
+  width: 100%; height: 44px; padding: 0 14px;
+  background: var(--surface-deep); border: 1px solid var(--hairline-dark);
+  border-radius: var(--r-md); color: #fff;
+  font-family: var(--font-body); font-size: 14.5px; outline: none;
+  transition: border-color .15s;
+}
+.pay-input:focus, .pay-select:focus { border-color: var(--primary-bright); }
+.pay-input::placeholder { color: var(--stone); }
+.pay-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23808489' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; cursor: pointer; }
+.pay-select option { background: #16181a; color: #fff; }
+input[type="date"].pay-input::-webkit-calendar-picker-indicator { filter: invert(.7); cursor: pointer; }
+
+.pay-table { width: 100%; border-collapse: collapse; }
+.pay-table th { text-align: left; font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--stone); padding: 10px 14px; border-bottom: 1px solid var(--hairline-dark); white-space: nowrap; }
+.pay-table td { padding: 13px 14px; font-size: 14px; color: #fff; border-bottom: 1px solid var(--divider-soft); white-space: nowrap; }
+.pay-table tr.pay-rowlink { cursor: pointer; transition: background .14s; }
+.pay-table tr.pay-rowlink:hover { background: rgba(255,255,255,.035); }
+.pay-table td.num, .pay-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.pay-table tr.totals td { border-top: 1px solid var(--hairline-dark); border-bottom: none; font-weight: 700; background: rgba(73,79,223,.07); }
+
+.pay-navitem { display: flex; align-items: center; gap: 11px; width: 100%; height: 42px; padding: 0 14px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--on-dark-mute); font-family: var(--font-body); font-size: 14px; font-weight: 600; letter-spacing: .1px; cursor: pointer; transition: background .15s, color .15s; text-align: left; }
+.pay-navitem:hover { color: #fff; background: rgba(255,255,255,.05); }
+.pay-navitem.active { color: #fff; background: rgba(73,79,223,.18); }
+
+.pay-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.pay-scroll::-webkit-scrollbar-thumb { background: #2a2d31; border-radius: 99px; border: 2px solid #000; }
+.pay-scroll { scrollbar-color: #2a2d31 #000; }
+
+@keyframes payFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.pay-fade { animation: payFade .35s cubic-bezier(.2,.7,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .pay-fade { animation: none; } }
