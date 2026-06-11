@@ -100,12 +100,13 @@ function PMScreenQuote({ reduce }: { reduce: boolean }) {
   );
 }
 
-export function PortalMockup() {
+export function PortalMockup({ animate = false }: { animate?: boolean }) {
   const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const [started, setStarted] = useState(false);
   const [step, setStep] = useState(0);
 
   useEffect(() => {
+    if (!animate) return;
     let done = false;
     const begin = () => {
       if (!done) {
@@ -124,15 +125,15 @@ export function PortalMockup() {
       io?.disconnect();
       clearTimeout(fallback);
     };
-  }, []);
+  }, [animate]);
 
   useEffect(() => {
-    if (!started || reduce) return;
+    if (!animate || !started || reduce) return;
     const id = setInterval(() => setStep((s) => (s + 1) % 3), PM_DURATION);
     return () => clearInterval(id);
-  }, [started, reduce]);
+  }, [animate, started, reduce]);
 
-  const shown = reduce ? 2 : step;
+  const shown = !animate ? 0 : reduce ? 2 : step;
   const Screen = [PMScreenAccount, PMScreenRequest, PMScreenQuote][shown];
 
   return (

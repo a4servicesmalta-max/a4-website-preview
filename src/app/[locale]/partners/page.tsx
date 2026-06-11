@@ -1,6 +1,7 @@
-import React from "react";
-import { Metadata } from "next";
-import PartnersPageContent from "@/components/partners/PartnersPageContent";
+import type { Metadata } from "next";
+import "@/components/a4-landing/styles.css";
+import "@/components/a4-site/site-pages.css";
+import { PartnersInfoContent } from "./components/PartnersInfoContent";
 
 export const metadata: Metadata = {
   title: "Partner With A4 | Partnership Models",
@@ -8,8 +9,12 @@ export const metadata: Metadata = {
     "Explore A4 partnership opportunities, including Service Delivery, White Label Solutions, Technology Integration, and our Reseller Program.",
 };
 
-const PartnersPage = () => {
-  return <PartnersPageContent />;
-};
+export default function PartnersPage() {
+  return <PartnersInfoContent />;
 
-export default PartnersPage;
+  // --- Previous implementation (commented out) ---
+  // import PartnersPageContent from "@/components/partners/PartnersPageContent";
+  // const PartnersPage = () => {
+  //   return <PartnersPageContent />;
+  // };
+}

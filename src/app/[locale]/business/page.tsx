@@ -1,4 +1,5 @@
-import React from "react";
+import type { Metadata } from "next";
+import "@/components/a4-landing/styles.css";
 import LandingHero from "@/components/AIAgentsLanding/LandingHero";
 import ValueStrip from "@/components/AIAgentsLanding/ValueStrip";
 import AgentsShowcase from "@/components/AIAgentsLanding/AgentsShowcase";
@@ -7,11 +8,16 @@ import PortalMockup from "@/components/AIAgentsLanding/PortalMockup";
 import PricingSection from "@/components/AIAgentsLanding/PricingSection";
 import CTASection from "@/components/AIAgentsLanding/CTASection";
 
+export const metadata: Metadata = {
+  title: "Business Agents — A4 Services",
+  description: "Business agent tools and workflows for sharper operational finance.",
+};
+
 export default function BusinessLandingPage() {
   const namespace = "business";
 
   return (
-    <main className="min-h-screen w-full bg-white pt-[72px] lg:pt-[100px]">
+    <main className="a4-landing-page pt-24 sm:pt-28 lg:pt-32 min-h-screen w-full bg-white">
       <LandingHero namespace={namespace} />
       <ValueStrip namespace={namespace} />
       <AgentsShowcase namespace={namespace} />
@@ -21,4 +27,11 @@ export default function BusinessLandingPage() {
       <CTASection namespace={namespace} />
     </main>
   );
+
+  // --- Previous implementation (commented out) ---
+  // return (
+  //   <main className="min-h-screen w-full bg-white pt-[72px] lg:pt-[100px]">
+  //     ... same components without a4-landing-page wrapper
+  //   </main>
+  // );
 }

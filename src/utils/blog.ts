@@ -11,6 +11,7 @@ export interface BlogPost {
     content: string;
     readingTime: string;
     featuredImage?: string;
+    category?: string;
     tags?: string[];
     author?: string;
 }
@@ -56,6 +57,7 @@ export function getBlogBySlug(slug: string): BlogPost | null {
             content: content, // We'll process this to HTML in the component
             readingTime: `${readingTime} min read`,
             featuredImage: data.featuredImage,
+            category: typeof data.category === 'string' ? data.category : undefined,
             tags: data.tags || [],
             author: data.author || 'A4 Team'
         } as BlogPost;
@@ -92,6 +94,7 @@ export function getAllBlogs(): BlogPost[] {
                     content: content,
                     readingTime: `${readingTime} min read`,
                     featuredImage: data.featuredImage,
+                    category: typeof data.category === 'string' ? data.category : undefined,
                     tags: data.tags || [],
                     author: data.author || 'A4 Team'
                 } as BlogPost;

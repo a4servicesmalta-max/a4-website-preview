@@ -13,4 +13,7 @@ export default function AutomatedBookkeepingPage() {
       <LandingApp />
     </div>
   );
+
+  // --- Previous implementation (commented out) ---
+  // Standalone landing with its own nav/footer — replaced by LandingApp from New website (2) Automated Bookkeeping.html
 }

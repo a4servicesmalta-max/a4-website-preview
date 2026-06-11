@@ -1,11 +1,12 @@
 "use client"
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import LocalizedLink from '@/components/common/LocalizedLink'
 import { stripLocaleFromPathname } from '@/lib/localized-path'
+import { A4_SERVICES_DATA } from '@/data/a4ServicesSiteData'
 import GetStartedHero from './GetStartedHero'
 
 const Logo = '/assets/images/a4-logo-new.webp'
@@ -20,28 +21,36 @@ const Footer = () => {
     '/cookie-policy',
   ]
 
+  const services = useMemo(
+    () => Object.values(A4_SERVICES_DATA),
+    []
+  )
+  const servicesMid = Math.ceil(services.length / 2)
+  const servicesCol1 = services.slice(0, servicesMid)
+  const servicesCol2 = services.slice(servicesMid)
+
   if (hideChromeRoutes.includes(barePath)) {
     return null
   }
 
+  const sectionClass = 'space-y-4 flex flex-col items-center text-center md:items-start md:text-left'
+  const listClass = 'space-y-2 w-full'
+  const linkClass = 'text-sm text-gray hover:text-primary-blue transition-colors inline-block'
+
   return (
     <footer className="w-full relative overflow-hidden ">
-      {/* Split background: top white, bottom light grey */}
       <div className="absolute inset-0 -z-20 bg-white " />
       <div className="absolute top-0 left-0 right-0 h-[260px] md:h-[300px] -z-10 bg-background" />
-      {/* GetStartedHero - Positioned above footer content with spacing */}
       <div className="relative w-full -mt-48 md:-mt-56 mb-16 flex justify-center">
         {!pathname.includes('/careers') && <GetStartedHero />}
       </div>
 
-      {/* Radial Gradient Pattern Images - Bottom left and right */}
       <div className="pointer-events-none">
         <div className="absolute bottom-0 left-0 w-[350px] h-[330px]  transform -rotate-360">
           <Image
             src="/assets/images/radial3.png"
             alt="Radial Gradient Pattern"
             fill
-
           />
         </div>
         <div className="absolute bottom-0 right-0 w-[350px] h-[330px]  transform -rotate-90">
@@ -49,17 +58,15 @@ const Footer = () => {
             src="/assets/images/radial3.png"
             alt="Radial Gradient Pattern"
             fill
-
           />
         </div>
       </div>
 
-      {/* Main Footer Content */}
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8  pb-12 lg:pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-8">
-          {/* Column 1 - Logo and Description */}
-          <div className="space-y-4">
-            <LocalizedLink href="/" className="flex items-center gap-3">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 lg:pb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
+          {/* Logo & tagline */}
+          <div className={`${sectionClass} lg:col-span-3`}>
+            <LocalizedLink href="/" className="flex items-center gap-3 justify-center md:justify-start">
               <div className="flex items-center justify-center">
                 <Image
                   src={Logo}
@@ -71,11 +78,11 @@ const Footer = () => {
               </div>
             </LocalizedLink>
 
-            <p className="text-sm text-gray leading-relaxed">
+            <p className="text-sm text-gray leading-relaxed max-w-xs">
               {t('footer.tagline')}
             </p>
 
-            <div className="flex items-center gap-4 pt-2">
+            <div className="flex items-center gap-4 pt-2 justify-center md:justify-start">
               <a
                 href="https://www.linkedin.com/company/officialA4/"
                 target="_blank"
@@ -88,128 +95,132 @@ const Footer = () => {
                 </svg>
               </a>
             </div>
-
           </div>
 
-          <div className="space-y-4">
+          {/* Platform */}
+          <div className={`${sectionClass} lg:col-span-2`}>
             <h3 className="text-text-dark font-bold text-base">{t('footer.platform')}</h3>
-            <ul className="space-y-2">
+            <ul className={listClass}>
               <li>
-                <LocalizedLink href="/" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/" className={linkClass}>
                   {t('footer.overview')}
                 </LocalizedLink>
               </li>
               <li>
-                <LocalizedLink href="/how-it-works" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/how-it-works" className={linkClass}>
                   {t('footer.howItWorks')}
                 </LocalizedLink>
               </li>
               <li>
-                <LocalizedLink href="/pricing" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/pricing" className={linkClass}>
                   {t('footer.pricing')}
                 </LocalizedLink>
               </li>
               <li>
-                <LocalizedLink href="/security-compliance" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/security-compliance" className={linkClass}>
                   {t('footer.security')}
                 </LocalizedLink>
               </li>
               <li>
-                <LocalizedLink href="/#why-A4" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/#why-A4" className={linkClass}>
                   {t('footer.whyA4')}
                 </LocalizedLink>
               </li>
             </ul>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-text-dark font-bold text-base">{t('footer.services')}</h3>
-            <ul className="space-y-2">
-              <li>
-                <LocalizedLink href="/services/corporate" className="text-sm text-gray hover:text-primary-blue transition-colors">
-                  {t('footer.corporate')}
-                </LocalizedLink>
-              </li>
-              <li>
-                <LocalizedLink href="/services/audit" className="text-sm text-gray hover:text-primary-blue transition-colors">
-                  {t('footer.audit')}
-                </LocalizedLink>
-              </li>
-              <li>
-                <LocalizedLink href="/services/accounting" className="text-sm text-gray hover:text-primary-blue transition-colors">
-                  {t('footer.accounting')}
-                </LocalizedLink>
-              </li>
-              <li>
-                <LocalizedLink href="/services/tax" className="text-sm text-gray hover:text-primary-blue transition-colors">
-                  {t('footer.tax')}
-                </LocalizedLink>
-              </li>
-              <li>
-                <LocalizedLink href="/services/legal" className="text-sm text-gray hover:text-primary-blue transition-colors">
-                  {t('footer.legal')}
-                </LocalizedLink>
-              </li>
-              <li>
-                <LocalizedLink href="/services/vat-payroll" className="text-sm text-gray hover:text-primary-blue transition-colors">
-                  {t('footer.vatPayroll')}
-                </LocalizedLink>
-              </li>
-            </ul>
-          </div>
-
-          <div className="space-y-4">
+          {/* Company */}
+          <div className={`${sectionClass} lg:col-span-2`}>
             <h3 className="text-text-dark font-bold text-base">{t('footer.company')}</h3>
-            <ul className="space-y-2">
+            <ul className={listClass}>
               <li>
-                <LocalizedLink href="/about" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/about" className={linkClass}>
                   {t('footer.about')}
                 </LocalizedLink>
               </li>
               <li>
-                <LocalizedLink href="/faq" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/faq" className={linkClass}>
                   {t('footer.faqs')}
                 </LocalizedLink>
               </li>
               <li>
-                <LocalizedLink href="/insights" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/insights" className={linkClass}>
                   {t('footer.insights')}
                 </LocalizedLink>
               </li>
               <li>
-                <LocalizedLink href="/white-label-platform" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/resources" className={linkClass}>
+                  Resources
+                </LocalizedLink>
+              </li>
+              <li>
+                <LocalizedLink href="/white-label-platform" className={linkClass}>
                   {t('footer.whiteLabelLanding')}
                 </LocalizedLink>
               </li>
               <li>
-                <LocalizedLink href="/partners-platform" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/partners-platform" className={linkClass}>
                   {t('footer.partnerPlatformLanding')}
                 </LocalizedLink>
               </li>
               <li>
-                <LocalizedLink href="/contact" className="text-sm text-gray hover:text-primary-blue transition-colors">
-                  {t('footer.contact')}
-                </LocalizedLink>
-              </li>
-              <li>
-                <LocalizedLink href="/cpe" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <LocalizedLink href="/cpe" className={linkClass}>
                   {t('footer.cpePodcast')}
                 </LocalizedLink>
               </li>
             </ul>
           </div>
 
-          {/* Column 5 - Contact Us */}
-          <div className="space-y-4">
-            <h3 className="text-text-dark font-bold text-base">{t('footer.contactUs')}</h3>
-            <ul className="space-y-3">
-              <li className="flex items-center gap-2">
-                <span className="w-10 h-10 rounded-full bg-primary-blue text-white flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Services — 18 items in two columns */}
+          <div className={`${sectionClass} lg:col-span-5 lg:items-start`}>
+            <h3 className="text-text-dark font-bold text-base">{t('footer.services')}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 w-full text-center sm:text-left">
+              <ul className={listClass}>
+                {servicesCol1.map((service) => (
+                  <li key={service.key}>
+                    <LocalizedLink href={`/services/${service.slug}`} className={linkClass}>
+                      {service.name}
+                    </LocalizedLink>
+                  </li>
+                ))}
+              </ul>
+              <ul className={listClass}>
+                {servicesCol2.map((service) => (
+                  <li key={service.key}>
+                    <LocalizedLink href={`/services/${service.slug}`} className={linkClass}>
+                      {service.name}
+                    </LocalizedLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact — separate band below main grid */}
+        <div className="mt-12 pt-10 border-t border-gray-100">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-8 lg:gap-16 items-start">
+            <div className="space-y-3 flex flex-col items-center text-center lg:items-start lg:text-left">
+              <h3 className="text-text-dark font-bold text-base">{t('footer.contactUs')}</h3>
+              <p className="text-sm text-gray max-w-md leading-relaxed">
+                Speak to the team — call, email or book a free 15-minute consultation.
+              </p>
+              <LocalizedLink
+                href="/contact"
+                className="inline-flex items-center justify-center rounded-lg bg-primary-blue px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                {t('footer.contact')}
+              </LocalizedLink>
+            </div>
+
+            <ul className="flex flex-col gap-4 w-full max-w-[360px] mx-auto lg:mx-0 lg:ml-auto">
+              <li className="flex items-start gap-3.5">
+                <span className="w-9 h-9 shrink-0 rounded-full bg-primary-blue text-white flex items-center justify-center mt-0.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                 </span>
-                <div className="flex flex-col leading-tight">
+                <div className="flex flex-col gap-0.5 pt-0.5 min-w-0 text-left">
                   <a href="tel:+35677142418" className="text-sm text-gray hover:text-primary-blue transition-colors">
                     +356 77142418
                   </a>
@@ -218,42 +229,45 @@ const Footer = () => {
                   </a>
                 </div>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="w-10 h-10 rounded-full bg-primary-blue text-white flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <li className="flex items-start gap-3.5">
+                <span className="w-9 h-9 shrink-0 rounded-full bg-primary-blue text-white flex items-center justify-center mt-0.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </span>
-                <a href="mailto:info@A4.com" className="text-sm text-gray hover:text-primary-blue transition-colors">
+                <a
+                  href="mailto:info@A4.com"
+                  className="text-sm text-gray hover:text-primary-blue transition-colors pt-2 min-w-0 text-left"
+                >
                   info@A4.com
                 </a>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="w-10 h-10 rounded-full bg-primary-blue text-white flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <li className="flex items-start gap-3.5">
+                <span className="w-9 h-9 shrink-0 rounded-full bg-primary-blue text-white flex items-center justify-center mt-0.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </span>
-                <span className="text-sm text-gray">
+                <span className="text-sm text-gray leading-relaxed pt-2 min-w-0 text-left">
                   A4, Triq San Giljan, San Gwann, Malta.
                 </span>
               </li>
             </ul>
           </div>
         </div>
-        <div className="mt-12 pt-8 border-t border-gray-100">
-          <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-4xl">
+
+        <div className="mt-12 pt-8 border-t border-gray-100 text-center md:text-left">
+          <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-4xl mx-auto md:mx-0">
             {t('footer.disclaimer')}
           </p>
         </div>
       </div>
 
-      {/* Bottom Bar */}
       <div className=" max-w-6xl mx-auto relative z-10 border-t border-gray-200 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray">
-            <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray text-center">
+            <div className="flex flex-wrap items-center justify-center gap-4">
               <LocalizedLink href="/terms-and-conditions" className="hover:text-primary-blue transition-colors">
                 {t('footer.terms')}
               </LocalizedLink>
