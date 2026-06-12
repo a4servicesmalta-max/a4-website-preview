@@ -12,24 +12,9 @@ import {
 } from "@/data/a4ServicesSiteData";
 import { PageHero } from "./PageHero";
 import { ServiceClosing } from "./ServiceClosing";
+import { ServiceOfferingVisual } from "./ServiceOfferingVisual";
 import { ServicePortalBand } from "./ServicePortalBand";
 import { useLocalizedHref } from "./useLocalizedHref";
-
-function VisualPlaceholder() {
-  return (
-    <div
-      aria-hidden="true"
-      className="w-full max-w-[320px] h-[220px] rounded-[var(--a4-r-lg)] border-[1.5px] border-dashed border-[var(--a4-hairline-strong)] bg-[var(--a4-surface-soft)] grid place-items-center"
-    >
-      <div className="text-center">
-        <Icon name="image" size={22} color="var(--a4-mute)" style={{ margin: "0 auto" }} />
-        <div className="a4-font-body text-[12.5px] font-semibold text-[var(--a4-mute)] mt-2 tracking-[.02em]">
-          Visual placeholder
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function ServicePageContent({ service }: { service: A4SiteService }) {
   const details = A4_SERVICE_DETAILS[service.key];
@@ -80,7 +65,7 @@ export function ServicePageContent({ service }: { service: A4SiteService }) {
               )}
             </Reveal>
             <Reveal delay={90} style={{ display: "flex", justifyContent: "center" }}>
-              <VisualPlaceholder />
+              <ServiceOfferingVisual serviceKey={service.key} title={service.name} />
             </Reveal>
           </div>
 
