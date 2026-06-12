@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import LocalizedLink from '@/components/common/LocalizedLink'
 import { stripLocaleFromPathname } from '@/lib/localized-path'
 import { A4_SERVICES_DATA } from '@/data/a4ServicesSiteData'
-import GetStartedHero from './GetStartedHero'
+import FooterCtaStrip from './FooterCtaStrip'
 
 const Logo = '/assets/images/a4-logo-new.webp'
 
@@ -39,11 +39,12 @@ const Footer = () => {
 
   return (
     <footer className="w-full relative overflow-hidden ">
+      <FooterCtaStrip />
       <div className="absolute inset-0 -z-20 bg-white " />
       <div className="absolute top-0 left-0 right-0 h-[260px] md:h-[300px] -z-10 bg-background" />
-      <div className="relative w-full -mt-48 md:-mt-56 mb-16 flex justify-center">
+      {/* <div className="relative w-full -mt-48 md:-mt-56 mb-16 flex justify-center">
         {!pathname.includes('/careers') && <GetStartedHero />}
-      </div>
+      </div> */}
 
       <div className="pointer-events-none">
         <div className="absolute bottom-0 left-0 w-[350px] h-[330px]  transform -rotate-360">
