@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { getNextComplianceDeadline, formatComplianceDate } from "@/lib/compliance-deadlines";
+import { SUPPORT_RESPONSE_LABEL } from "@/lib/site-config";
 
 export function ContactCTA() {
   return (
@@ -25,7 +27,7 @@ export function ContactCTA() {
             <span style={{ position: "relative", display: "inline-flex", width: 8, height: 8 }}>
               <span style={{ position: "absolute", inset: 0, borderRadius: 999, background: "var(--a4-accent-teal)" }} />
             </span>
-            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-on-dark-mute)" }}>Avg. response: 12 mins</span>
+            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-on-dark-mute)" }}>{SUPPORT_RESPONSE_LABEL}</span>
           </div>
         </Reveal>
       </Container>

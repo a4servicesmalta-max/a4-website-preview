@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import LocalizedLink from "@/components/common/LocalizedLink";
-import { Button, Container, Eyebrow, Icon } from "@/components/a4-landing/Primitives";
+import { Button, Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import { useLocalizedHref } from "./useLocalizedHref";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
-const PR_PORTAL = "https://client.a4.com.mt/onboarding";
 const prEuro = (n: number) => "€" + Math.round(n).toLocaleString();
 
 const PR_SERVICES = [
@@ -137,13 +137,247 @@ function PricingHero() {
   );
 }
 
-function PricingInfoBanner() {
-  const href = useLocalizedHref();
+const PR_STARTING_TIERS = [
+  {
+    id: "starter",
+    name: "Starter",
+    icon: "file-stack",
+    tag: "Bookkeeping",
+    price: 25,
+    unit: "/ mo",
+    blurb: "Up to 100 documents per month — ideal for lighter volumes.",
+    popular: false,
+  },
+  {
+    id: "unlimited",
+    name: "Unlimited",
+    icon: "layers",
+    tag: "Bookkeeping",
+    price: 50,
+    unit: "/ mo",
+    blurb: "Unlimited documents — best value for active, growing books.",
+    popular: true,
+  },
+  {
+    id: "vat",
+    name: "VAT returns",
+    icon: "receipt-text",
+    tag: "Compliance",
+    price: 15,
+    unit: "/ mo",
+    from: true,
+    blurb: "Quarterly filing from €35/mo; annual plans from €15/mo.",
+  },
+  {
+    id: "audit",
+    name: "Statutory audit",
+    icon: "clipboard-check",
+    tag: "Assurance",
+    price: 600,
+    unit: "/ yr",
+    from: true,
+    blurb: "Independent audit for companies that require one.",
+  },
+  {
+    id: "tax",
+    name: "Corporate tax",
+    icon: "landmark",
+    tag: "Advisory",
+    price: null,
+    unit: "",
+    quoted: true,
+    blurb: "Quoted after a quick review of your structure and filings.",
+  },
+] as const;
+
+type StartingTier = (typeof PR_STARTING_TIERS)[number];
+
+function PricingTierCard({ tier }: { tier: StartingTier }) {
+  const isPopular = "popular" in tier && tier.popular;
+  const isQuoted = "quoted" in tier && tier.quoted;
+
   return (
-    <Container>
-      <LocalizedLink
+    <div
+      className="group relative flex flex-col h-full overflow-hidden rounded-[var(--a4-r-lg)] transition-all duration-300 hover:-translate-y-1"
+      style={{
+        padding: isPopular ? "28px 24px 26px" : "24px 22px",
+        background: isPopular
+          ? "linear-gradient(160deg, rgba(73,79,223,.22) 0%, rgba(18,18,28,.95) 45%, var(--a4-surface-elevated) 100%)"
+          : "linear-gradient(180deg, rgba(255,255,255,.04) 0%, var(--a4-surface-elevated) 100%)",
+        border: `1px solid ${isPopular ? "rgba(73,79,223,.55)" : "var(--a4-hairline-dark)"}`,
+        boxShadow: isPopular
+          ? "0 24px 48px -12px rgba(73,79,223,.35), inset 0 1px 0 rgba(255,255,255,.08)"
+          : "inset 0 1px 0 rgba(255,255,255,.04)",
+      }}
+    >
+      {isPopular && (
+        <>
+          <div
+            aria-hidden="true"
+            className="absolute -top-12 -right-12 w-40 h-40 rounded-full pointer-events-none opacity-60"
+            style={{ background: "radial-gradient(circle, rgba(73,79,223,.45) 0%, transparent 70%)" }}
+          />
+          <span
+            className="relative self-start mb-3 a4-font-body text-[10px] font-bold uppercase tracking-[.1em] px-2.5 py-1 rounded-full"
+            style={{ background: "var(--a4-primary)", color: "#fff", boxShadow: "0 4px 14px rgba(73,79,223,.4)" }}
+          >
+            Most popular
+          </span>
+        </>
+      )}
+
+      <div className="relative flex items-start justify-between gap-3">
+        <span
+          className="grid place-items-center shrink-0 transition-transform duration-300 group-hover:scale-105"
+          style={{
+            width: 46,
+            height: 46,
+            borderRadius: "var(--a4-r-md)",
+            background: isPopular ? "rgba(73,79,223,.25)" : "rgba(255,255,255,.06)",
+            border: `1px solid ${isPopular ? "rgba(73,79,223,.4)" : "var(--a4-hairline-dark)"}`,
+          }}
+        >
+          <Icon
+            name={tier.icon}
+            size={22}
+            color={isPopular ? "var(--a4-primary-bright)" : "var(--a4-on-dark-mute)"}
+            stroke={1.75}
+          />
+        </span>
+        <span
+          className="a4-font-body text-[10.5px] font-bold uppercase tracking-[.1em] rounded-full px-2.5 py-1"
+          style={{
+            color: "var(--a4-stone)",
+            background: "rgba(255,255,255,.05)",
+            border: "1px solid var(--a4-hairline-dark)",
+          }}
+        >
+          {tier.tag}
+        </span>
+      </div>
+
+      <div className="relative mt-5">
+        <div
+          className="a4-font-body text-[12px] font-semibold uppercase tracking-[.12em]"
+          style={{ color: isPopular ? "var(--a4-primary-bright)" : "var(--a4-stone)" }}
+        >
+          {tier.name}
+        </div>
+
+        {isQuoted ? (
+          <div className="a4-font-display font-medium text-white mt-3 leading-tight text-[clamp(28px,7vw,34px)] tracking-[-.02em]">
+            Quoted
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-baseline gap-1.5 mt-3">
+            {"from" in tier && tier.from && (
+              <span className="a4-font-body text-[13px] text-[var(--a4-stone)]">from</span>
+            )}
+            <span className="a4-font-display font-medium text-white leading-none text-[clamp(32px,8vw,44px)] tracking-[-2px] tabular-nums">
+              {prEuro(tier.price!)}
+            </span>
+            <span className="a4-font-body text-[13px] text-[var(--a4-stone)]">{tier.unit}</span>
+          </div>
+        )}
+      </div>
+
+      <div
+        className="relative mt-5 pt-5 flex-1"
+        style={{ borderTop: `1px solid ${isPopular ? "rgba(73,79,223,.25)" : "var(--a4-hairline-dark)"}` }}
+      >
+        <p
+          className="a4-font-body text-[14px] leading-[1.55] text-[var(--a4-on-dark-mute)] m-0"
+          style={{ textWrap: "pretty" }}
+        >
+          {tier.blurb}
+        </p>
+      </div>
+
+      <div
+        className="absolute inset-0 rounded-[var(--a4-r-lg)] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{
+          boxShadow: "inset 0 0 0 1px rgba(255,255,255,.08)",
+        }}
+      />
+    </div>
+  );
+}
+
+function PricingStartingTiers() {
+  const href = useLocalizedHref();
+  const bookkeeping = PR_STARTING_TIERS.filter((t) => t.tag === "Bookkeeping");
+  const other = PR_STARTING_TIERS.filter((t) => t.tag !== "Bookkeeping");
+
+  return (
+    <section
+      className="relative bg-black border-b border-[var(--a4-hairline-dark)] overflow-hidden"
+      style={{ padding: "clamp(40px,5vw,64px) 0" }}
+    >
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(73,79,223,.12) 0%, transparent 65%)",
+        }}
+      />
+      <Container style={{ position: "relative" }}>
+        <Reveal style={{ textAlign: "center", maxWidth: 640, margin: "0 auto" }}>
+          <Eyebrow dark>Starting prices</Eyebrow>
+          <p
+            className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4"
+            style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}
+          >
+            Fixed monthly bookkeeping and VAT plans — audit and complex tax work quoted after a quick review.
+          </p>
+        </Reveal>
+
+        {/* Bookkeeping — featured row */}
+        <Reveal delay={60}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-12 mx-auto max-w-[720px]">
+            {bookkeeping.map((tier, i) => (
+              <Reveal key={tier.id} delay={i * 70}>
+                <PricingTierCard tier={tier} />
+              </Reveal>
+            ))}
+          </div>
+        </Reveal>
+
+        {/* Other services */}
+        <Reveal delay={100}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 mx-auto max-w-[1100px]">
+            {other.map((tier, i) => (
+              <Reveal key={tier.id} delay={120 + i * 60}>
+                <PricingTierCard tier={tier} />
+              </Reveal>
+            ))}
+          </div>
+        </Reveal>
+
+        <Reveal delay={160}>
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-3 mt-10 px-1">
+            <Button variant="primary" size="md" href={CLIENT_ONBOARDING_URL} target="_blank" style={{ width: "100%", maxWidth: 320 }}>
+              Access portal <Icon name="arrow-right" size={16} color="#000" />
+            </Button>
+            <Button variant="outline-dark" size="md" href={href("/contact")} style={{ width: "100%", maxWidth: 320 }}>
+              Get a tailored quote
+            </Button>
+          </div>
+        </Reveal>
+
+        <Reveal delay={180}>
+          <PricingInfoBanner />
+        </Reveal>
+      </Container>
+    </section>
+  );
+}
+
+function PricingInfoBanner() {
+  return (
+    <LocalizedLink
         href="/pricing-info"
-        className="flex items-center justify-between gap-4 no-underline mx-auto max-w-[980px] -mt-2 mb-8 px-5 py-4 rounded-[var(--a4-r-lg)] transition-colors duration-150 hover:border-[var(--a4-primary-bright)]"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 no-underline mx-auto max-w-[980px] mt-8 px-4 py-4 sm:px-5 rounded-[var(--a4-r-lg)] transition-colors duration-150 hover:border-[var(--a4-primary-bright)]"
         style={{
           background: "rgba(73,79,223,.10)",
           border: "1px solid rgba(73,79,223,.35)",
@@ -159,15 +393,14 @@ function PricingInfoBanner() {
           <div className="min-w-0">
             <div className="a4-font-body text-[14px] font-semibold text-white">How our pricing works</div>
             <div className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-0.5">
-              No fixed packages — see the six factors, quote process and our commitment to transparent fees.
+              Fixed monthly plans for bookkeeping and VAT — plus how we quote audit and complex work.
             </div>
           </div>
         </div>
-        <span className="a4-font-body text-[13px] font-semibold text-white whitespace-nowrap shrink-0 hidden sm:inline-flex items-center gap-1.5">
+        <span className="a4-font-body text-[13px] font-semibold text-white sm:whitespace-nowrap shrink-0 inline-flex items-center gap-1.5">
           Read pricing guide <Icon name="arrow-right" size={14} color="#fff" />
         </span>
       </LocalizedLink>
-    </Container>
   );
 }
 
@@ -209,7 +442,6 @@ function PricingCalc() {
 
   return (
     <section id="calc" style={{ background: "#000", padding: "clamp(40px,5vw,64px) 0 clamp(64px,9vw,104px)" }}>
-      <PricingInfoBanner />
       <Container>
         <div className="flex justify-center mb-9">
           <div
@@ -338,7 +570,7 @@ function PricingCalc() {
                     </div>
                   ))}
                 </div>
-                <Button variant="dark" size="md" href={PR_PORTAL} target="_blank" style={{ width: "100%", marginTop: 22 }}>
+                <Button variant="dark" size="md" href={CLIENT_ONBOARDING_URL} target="_blank" style={{ width: "100%", marginTop: 22 }}>
                   Create account &amp; request <Icon name="arrow-right" size={16} color="#fff" />
                 </Button>
                 <div className="flex items-center justify-center gap-[7px] mt-3">
@@ -438,6 +670,7 @@ export function PricingCalculatorContent() {
   return (
     <div className="a4-pricing-page">
       <PricingHero />
+      <PricingStartingTiers />
       <PricingCalc />
       <PricingComplex />
     </div>

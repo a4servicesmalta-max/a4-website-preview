@@ -5,7 +5,8 @@ import React from "react";
 import { MBRCheck } from "@/components/a4-landing/MBRCheck";
 import { LandingPlan } from "@/components/a4-landing/LandingPlan";
 import { Hero, Statement } from "./Sections1";
-import { LinkedInVideos, Insights } from "./Insights";
+import { LinkedInVideoFeed } from "./LinkedInVideoFeed";
+import { Insights } from "./Insights";
 import { Capabilities, Outcomes } from "./Sections2";
 import { Services } from "./Services";
 import { FeatureBento } from "./FeatureBento";
@@ -14,6 +15,7 @@ import { DeadlineTracker } from "./DeadlineTracker";
 import { International, WhoWeWorkWith } from "./Sections4";
 import { Comparison } from "./Comparison";
 import { ContactCTA, FAQ } from "./Sections5";
+import { TrustedSectorsBand, DedicatedTeam, CaseStudiesTeaser, TestimonialsSection } from "./HomeConversionSections";
 
 export function A4ServicesApp() {
   return (
@@ -22,19 +24,23 @@ export function A4ServicesApp() {
       <main>
         <Hero />
         <Statement />
-        <LinkedInVideos />
+        <LinkedInVideoFeed />
+        <TrustedSectorsBand />
         <Insights />
         <MBRCheck />
         <LandingPlan />
+        <CaseStudiesTeaser />
         <Capabilities />
         <Services />
         <FeatureBento />
+        <DedicatedTeam />
         <Outcomes />
         <HowItWorks />
         <DeadlineTracker />
         <International />
         <Comparison />
         <WhoWeWorkWith />
+        <TestimonialsSection />
         <ContactCTA />
         <FAQ />
       </main>

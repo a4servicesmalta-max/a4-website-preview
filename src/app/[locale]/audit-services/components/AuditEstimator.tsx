@@ -6,7 +6,7 @@ import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Revea
 // turnover, balance-sheet size and complexity. Captures the lead via a
 // "request proposal / book consultation" modal.
 
-const AE_PORTAL = "https://client.a4.com.mt/onboarding";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 const AE_TURNOVER = [
   { label: "Under €100k", mult: 1.0 },

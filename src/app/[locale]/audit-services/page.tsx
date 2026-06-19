@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import "@/components/a4-landing/styles.css";
 import { AuditApp } from "./components/AuditParts";
 
-export const metadata: Metadata = {
-  title: "Audit Services | A4 Services Malta",
-  description: "Licensed audit firm in Malta — rigorous, independent, on-time audits with fixed fees agreed up front.",
-};
+import { pageMetadata } from "@/lib/page-metadata";
+
+export const metadata: Metadata = pageMetadata(
+  "Audit & Assurance in Malta",
+  "Statutory audit and assurance from A4 Services Limited — a licensed Malta audit firm. Fixed fees, GAPSME and IFRS, signed by a licensed audit firm.",
+);
 
 export default function AuditServicesPage() {
   return (

@@ -7,6 +7,7 @@ import SectionBadge from "./SectionBadge";
 import TextAnimation from "./TextAnimation";
 import { usePerformance } from "@/contexts/ReduceMotionContext";
 import { cn } from "@/lib/utils";
+import { CONTACT_PHONES_DISPLAY } from "@/lib/contact";
 
 interface FaqItem {
   title: string;
@@ -25,7 +26,7 @@ interface FaqAccordionProps {
 
 const FaqAccordion = ({
   faqItems,
-  phoneNumber = "+356 77142418 • +44 07400 487907",
+  phoneNumber = CONTACT_PHONES_DISPLAY,
   callToActionText = "Need more help?",
 }: FaqAccordionProps) => {
   const [openIndex, setOpenIndex] = useState<number | null>(0);

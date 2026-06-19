@@ -22,11 +22,18 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import GetInstantQuoteButton from "./GetInstantQuoteButton";
 import { useReduceMotion, usePerformance } from "@/contexts/ReduceMotionContext";
-import { A4_SERVICES_DATA } from "@/data/a4ServicesSiteData";
+import { A4_SERVICES_VISIBLE } from "@/data/a4ServicesSiteData";
 import { RESOURCE_CARDS } from "@/data/a4ResourcesSiteData";
+import {
+  CONTACT_EMAIL,
+  CONTACT_EMAIL_HREF,
+  CONTACT_PHONES,
+} from "@/lib/contact";
+import { CLIENT_LOGIN_URL, CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 // Logo path from assets
 const Logo = "/assets/images/a4-logo-new.webp";
+const LogoMarkWhite = "/assets/a4-mark-white.png";
 
 type NavDropdownId = "platform" | "services" | "resources";
 
@@ -361,7 +368,7 @@ const Navbar = () => {
 
   const servicesList = useMemo(
     () =>
-      Object.values(A4_SERVICES_DATA).map((service) => ({
+      A4_SERVICES_VISIBLE.map((service) => ({
         id: service.key,
         slug: service.slug,
         title: service.name,
@@ -648,19 +655,21 @@ const Navbar = () => {
               <div className="flex items-center gap-3 lg:gap-4 shrink-0">
                 <div className="hidden lg:flex items-center gap-2 xl:gap-3">
 
-                  <LocalizedLink
-                    href="https://client.a4.com.mt"
+                  <a
+                    href={CLIENT_LOGIN_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={`flex items-center justify-center ${useDarkNavbarTheme
                       ? "text-white/90 hover:text-white"
                       : "text-black/90 hover:text-primary-blue"
                       } font-medium text-[15px] transition-colors px-2`}
                   >
                     <span>{t("nav.login")}</span>
-                  </LocalizedLink>
+                  </a>
 
                   <GetInstantQuoteButton
                     hasShadow={false}
-                    href="https://client.a4.com.mt/onboarding"
+                    href={CLIENT_ONBOARDING_URL}
                     text={t("nav.registerQuote")}
                   />
                 </div>
@@ -858,18 +867,20 @@ const Navbar = () => {
                   </div>
                 ))}
                 <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
-                  <LocalizedLink
-                    href="https://client.a4.com.mt"
+                  <a
+                    href={CLIENT_LOGIN_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white py-3 text-[15px] font-medium text-black transition-colors hover:border-primary-blue/40 hover:text-primary-blue"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {t("nav.login")}
-                  </LocalizedLink>
+                  </a>
                   <div onClick={() => setMobileMenuOpen(false)}>
                     <GetInstantQuoteButton
                       hasShadow={false}
                       className="w-full justify-center"
-                      href="https://client.a4.com.mt/onboarding"
+                      href={CLIENT_ONBOARDING_URL}
                       text={t("nav.registerQuote")}
                     />
                   </div>
@@ -916,15 +927,16 @@ const Navbar = () => {
                     className="flex items-center gap-3"
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <div className=" flex items-center justify-center">
-                      <Image
-                        src={Logo}
-                        alt="A4"
-                        width={150}
-                        height={80}
-                        className="object-contain"
-                      />
-                    </div>
+                    <Image
+                      src={LogoMarkWhite}
+                      alt="A4 Services"
+                      width={44}
+                      height={44}
+                      className="object-contain shrink-0"
+                    />
+                    <span className="text-white font-medium text-lg tracking-tight">
+                      A4 Services
+                    </span>
                   </LocalizedLink>
                   <button
                     onClick={() => setSidebarOpen(false)}
@@ -956,8 +968,10 @@ const Navbar = () => {
                 <div className="space-y-4">
                   <h3 className="text-white font-bold text-lg">{t("nav.sidebar.quickActions")}</h3>
                   <div className="space-y-3">
-                    <LocalizedLink
-                      href="https://client.a4.com.mt/onboarding"
+                    <a
+                      href={CLIENT_ONBOARDING_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       onClick={() => setSidebarOpen(false)}
                       className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 transition-all"
                     >
@@ -984,7 +998,7 @@ const Navbar = () => {
                           />
                         </svg>
                       </span>
-                    </LocalizedLink>
+                    </a>
 
                     <LocalizedLink
                       href="/services"
@@ -1026,28 +1040,25 @@ const Navbar = () => {
                       <p className="text-white text-sm mb-1 opacity-80">
                         {t("nav.sidebar.phone")}
                       </p>
-                      <a
-                        href="tel:+35677142418"
-                        className="text-white text-base hover:text-primary-blue transition-colors"
-                      >
-                        +356 77142418
-                      </a>
-                      <a
-                        href="tel:+4407400487907"
-                        className="mt-1 block text-white text-base hover:text-primary-blue transition-colors"
-                      >
-                        +44 07400 487907
-                      </a>
+                      {CONTACT_PHONES.map((phone) => (
+                        <a
+                          key={phone.href}
+                          href={phone.href}
+                          className="block text-white text-base hover:text-primary-blue transition-colors"
+                        >
+                          {phone.display}
+                        </a>
+                      ))}
                     </div>
                     <div>
                       <p className="text-white text-sm mb-1 opacity-80">
                         {t("nav.sidebar.email")}
                       </p>
                       <a
-                        href="mailto:info@A4.com"
+                        href={CONTACT_EMAIL_HREF}
                         className="text-white text-base hover:text-primary-blue transition-colors"
                       >
-                        info@A4.com
+                        {CONTACT_EMAIL}
                       </a>
                     </div>
                   </div>

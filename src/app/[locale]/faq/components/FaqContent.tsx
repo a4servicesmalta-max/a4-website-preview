@@ -6,6 +6,7 @@ import { Accordion } from "@/components/a4-site/Accordion";
 import { FAQ_GROUPS } from "@/data/a4FaqSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
+import { CONTACT_PHONES } from "@/lib/contact";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
 
 export function FaqContent() {
@@ -48,11 +49,11 @@ export function FaqContent() {
             Chat to our friendly team — we&apos;re happy to talk it through.
           </p>
           <div className="flex gap-x-7 gap-y-[10px] justify-center flex-wrap mt-6">
-            {["+356 7714 2418", "+44 7400 487907"].map((v) => (
-              <div key={v} className="flex items-center gap-[9px]">
+            {CONTACT_PHONES.map((p) => (
+              <a key={p.href} href={p.href} className="flex items-center gap-[9px] no-underline">
                 <Icon name="phone" size={16} color="var(--a4-primary-bright)" />
-                <span className="a4-font-body text-[16px] font-semibold text-white">{v}</span>
-              </div>
+                <span className="a4-font-body text-[16px] font-semibold text-white">{p.display}</span>
+              </a>
             ))}
           </div>
           <div className="mt-[30px]">

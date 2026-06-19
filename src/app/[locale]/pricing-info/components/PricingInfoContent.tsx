@@ -30,7 +30,7 @@ export function PricingInfoContent() {
       <PageHero
         eyebrow="Transparent pricing"
         title="Fair, transparent, and tailored to your needs"
-        sub="No fixed packages and no hidden fees — just a clear quote scoped to your business. Here's exactly how we price and how a quote comes together."
+        sub="Fixed monthly plans for everyday bookkeeping, VAT and payroll — with tailored quotes for audit and more complex engagements. Here's exactly how we price and how a quote comes together."
       >
         <div className="flex gap-[10px] justify-center flex-wrap mt-[30px]">
           {PRICING_HERO_CHIPS.map((c) => (

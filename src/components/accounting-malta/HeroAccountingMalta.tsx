@@ -3,7 +3,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-const ONBOARDING = "https://client.a4.com.mt/onboarding";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 export default function HeroAccountingMalta() {
   const { t } = useTranslation("services");
@@ -28,7 +28,7 @@ export default function HeroAccountingMalta() {
           </h1>
           <p className="hero-sub">{t(`${p}sub`)}</p>
           <div className="hero-actions">
-            <a href={ONBOARDING} className="btn-solid">
+            <a href={CLIENT_ONBOARDING_URL} className="btn-solid">
               {t(`${p}btnPrimary`)}
             </a>
             <a href="#how" className="btn-line">

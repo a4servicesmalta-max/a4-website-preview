@@ -4,6 +4,7 @@ import LocalizedLink from "@/components/common/LocalizedLink";
 import { Building2, Rocket, Sparkles } from "lucide-react";
 import { usePerformance } from "@/contexts/ReduceMotionContext";
 import { cn } from "@/lib/utils";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 import GetInstantQuoteButton from "../common/GetInstantQuoteButton";
 import { SectionTitleHero } from "@/components/HomePage/SectionTitleHero";
@@ -126,7 +127,7 @@ const WorkspaceEntrySection = ({ isDark: _isDark = true }: { isDark?: boolean })
                 <div className="mt-10 flex flex-wrap items-center justify-between gap-6">
                   <GetInstantQuoteButton
                     text={t("workspaceEntry.createWorkspaceCta")}
-                    href="https://client.a4.com.mt/onboarding"
+                    href={CLIENT_ONBOARDING_URL}
                     className="h-[52px] px-8 text-sm"
                   />
 
@@ -201,7 +202,7 @@ const WorkspaceEntrySection = ({ isDark: _isDark = true }: { isDark?: boolean })
                 <div className="mt-10 flex flex-wrap items-center gap-4">
                   <GetInstantQuoteButton
                     text={t("workspaceEntry.startIncorporationCta")}
-                    href="https://client.a4.com.mt/onboarding"
+                    href={CLIENT_ONBOARDING_URL}
                     className="h-[52px] border-none bg-white px-8 text-sm text-slate-900 shadow-white/5 hover:bg-slate-50"
                     hasShadow={false}
                   />

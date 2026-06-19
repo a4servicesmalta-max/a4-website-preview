@@ -3,7 +3,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-const ONBOARDING = "https://client.a4.com.mt/onboarding";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 export default function PricingAccountingMalta() {
   const { t } = useTranslation("services");
@@ -95,7 +95,7 @@ export default function PricingAccountingMalta() {
         </div>
         <p className="accounting-malta-pricing-foot">
           {t(`${p}foot`)}{" "}
-          <a href={ONBOARDING}>{t(`${p}footLink`)}</a>
+          <a href={CLIENT_ONBOARDING_URL}>{t(`${p}footLink`)}</a>
         </p>
       </div>
     </section>

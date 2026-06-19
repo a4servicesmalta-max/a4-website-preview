@@ -8,7 +8,7 @@ import { PartnerEarnings } from "./PartnerEarnings";
 // animated earnings-dashboard mockup, how-it-works, who-it's-for, portal,
 // why-partner, FAQ, CTA, footer. Reuses Primitives + HeroFX from the main app.
 
-const PP_PORTAL = "https://client.a4.com.mt/onboarding";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 // function PartnerNav() { ... } — using site-wide Navbar from layout
 

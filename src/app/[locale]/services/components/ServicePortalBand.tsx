@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 import { Button, Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import { ServicePortalMockup } from "./ServicePortalMockup";
 
@@ -36,7 +36,7 @@ export function ServicePortalBand({ serviceName }: { serviceName: string }) {
               deliverable, deadline and document in the same secure workspace.
             </p>
             <div className="mt-7">
-              <Button variant="primary" size="md" href="https://client.a4.com.mt/onboarding" target="_blank">
+              <Button variant="primary" size="md" href={CLIENT_ONBOARDING_URL} target="_blank">
                 Open the portal <Icon name="arrow-right" size={16} color="#000" />
               </Button>
             </div>

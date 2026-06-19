@@ -5,6 +5,8 @@ import FormStatusModal from "@/components/common/FormStatusModal";
 import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
+import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONES } from "@/lib/contact";
+import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
 
 function ContactForm() {
   const [f, setF] = useState({ name: "", email: "", message: "" });
@@ -149,9 +151,8 @@ function ContactForm() {
 }
 
 const CONTACT_ITEMS = [
-  ["mail", "Email", "info@a4.com.mt", "mailto:info@a4.com.mt"],
-  ["phone", "Malta", "+356 7714 2418", "tel:+35677142418"],
-  ["phone", "United Kingdom", "+44 7400 487907", "tel:+447400487907"],
+  ["mail", "Email", CONTACT_EMAIL, CONTACT_EMAIL_HREF],
+  ...CONTACT_PHONES.map((phone) => ["phone", phone.label, phone.display, phone.href] as const),
   ["map-pin", "Office", "A4, Triq San Giljan, San Gwann, Malta", null],
 ] as const;
 
@@ -186,7 +187,7 @@ export function ContactContent() {
                     <h3 className="a4-font-display font-medium text-[20px] text-white m-0">Book a free 15-minute call</h3>
                   </div>
                   <p className="a4-font-body text-[14.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[10px] mb-[18px]">Prefer to talk it through? Grab a slot and we&apos;ll learn about your business — no obligation.</p>
-                  <Button variant="primary" size="md" href="https://calendly.com/A4-info/new-meeting" target="_blank" rel="noreferrer">
+                  <Button variant="primary" size="md" href={CALENDLY_BOOKING_URL} target="_blank" rel="noreferrer">
                     Book a call <Icon name="arrow-right" size={16} color="#000" />
                   </Button>
                 </div>

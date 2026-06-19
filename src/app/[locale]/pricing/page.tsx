@@ -3,11 +3,12 @@ import "@/components/a4-landing/styles.css";
 import "./pricing-site.css";
 import { PricingCalculatorContent } from "./components/PricingCalculatorContent";
 
-export const metadata: Metadata = {
-  title: "Pricing — A4 Services Malta",
-  description:
-    "Build a fixed price for accounting, VAT and audit work in seconds. Transparent Malta pricing with no hidden fees.",
-};
+import { pageMetadata } from "@/lib/page-metadata";
+
+export const metadata: Metadata = pageMetadata(
+  "Pricing — Fixed Bookkeeping & Tailored Quotes",
+  "Build a fixed price for accounting, VAT and audit work in seconds. Transparent Malta pricing from A4 Services Limited.",
+);
 
 export default function PricingPage() {
   return <PricingCalculatorContent />;

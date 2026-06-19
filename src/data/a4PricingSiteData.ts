@@ -48,8 +48,8 @@ export const PRICING_COMMIT = [
 ];
 
 export const PRICING_HERO_CHIPS = [
-  "No fixed packages",
+  "Fixed bookkeeping from €25/mo",
   "No hidden fees",
   "Clear communication",
-  "Tailored quote",
+  "Tailored quotes for audit & complex work",
 ];

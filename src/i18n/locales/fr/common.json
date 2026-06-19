@@ -99,11 +99,11 @@
     "contactUs": "Contactez-nous",
     "ctaStripTitle": "A4 Services Limited — accounting that works differently.",
     "ctaStripButton": "Book a consultation",
-    "disclaimer": "Les services professionnels via A4 sont fournis par un réseau de cabinets vérifiés. A4 fournit l'environnement numérique pour gérer ces missions.",
+    "disclaimer": "A4 Services Limited est un cabinet de comptabilité, d'audit et de services aux entreprises agréé à Malte. Tout le travail professionnel est réalisé directement par A4, avec le soutien de notre plateforme client sécurisée. Pour un appui transfrontalier, nous travaillons avec BOKS International.",
     "terms": "Conditions Générales",
     "privacy": "Politique de Confidentialité",
     "cookies": "Politique de Cookies",
-    "copyright": "© 2026 What A4 Is. Tous droits réservés."
+    "copyright": "© 2026 A4 Services Limited. Tous droits réservés."
   },
   "pageHeader": {
     "home": "Accueil"
@@ -121,7 +121,7 @@
     "botAskName": "Parfait, à quel nom devons-nous adresser notre réponse ?",
     "botAskEmail": "Merci ! Quelle est la meilleure adresse e-mail pour vous joindre ?",
     "botSuccess": "Merci pour votre temps. Notre équipe support examinera cette conversation et vous contactera dès que possible.",
-    "botErrorSend": "Envoi impossible. Réessayez ou écrivez-nous à info@A4.com.",
+    "botErrorSend": "Envoi impossible. Réessayez ou écrivez-nous à info@a4.com.mt.",
     "submitErrorFailed": "Échec de l'envoi.",
     "startNewChat": "Nouvelle conversation",
     "inputPlaceholder": "Écrivez un message…"

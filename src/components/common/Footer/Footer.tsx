@@ -6,7 +6,13 @@ import { usePathname } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import LocalizedLink from '@/components/common/LocalizedLink'
 import { stripLocaleFromPathname } from '@/lib/localized-path'
-import { A4_SERVICES_DATA } from '@/data/a4ServicesSiteData'
+import { A4_SERVICES_VISIBLE } from '@/data/a4ServicesSiteData'
+import {
+  CONTACT_EMAIL,
+  CONTACT_EMAIL_HREF,
+  CONTACT_PHONES,
+  LINKEDIN_COMPANY_URL,
+} from '@/lib/contact'
 import FooterCtaStrip from './FooterCtaStrip'
 
 const Logo = '/assets/images/a4-logo-new.webp'
@@ -22,7 +28,7 @@ const Footer = () => {
   ]
 
   const services = useMemo(
-    () => Object.values(A4_SERVICES_DATA),
+    () => A4_SERVICES_VISIBLE,
     []
   )
   const servicesMid = Math.ceil(services.length / 2)
@@ -85,7 +91,7 @@ const Footer = () => {
 
             <div className="flex items-center gap-4 pt-2 justify-center md:justify-start">
               <a
-                href="https://www.linkedin.com/company/officialA4/"
+                href={LINKEDIN_COMPANY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 flex items-center justify-center bg-primary-blue rounded-full text-white transition-colors"
@@ -222,12 +228,15 @@ const Footer = () => {
                   </svg>
                 </span>
                 <div className="flex flex-col gap-0.5 pt-0.5 min-w-0 text-left">
-                  <a href="tel:+35677142418" className="text-sm text-gray hover:text-primary-blue transition-colors">
-                    +356 77142418
-                  </a>
-                  <a href="tel:+4407400487907" className="text-sm text-gray hover:text-primary-blue transition-colors">
-                    +44 07400 487907
-                  </a>
+                  {CONTACT_PHONES.map((phone) => (
+                    <a
+                      key={phone.href}
+                      href={phone.href}
+                      className="text-sm text-gray hover:text-primary-blue transition-colors"
+                    >
+                      {phone.display}
+                    </a>
+                  ))}
                 </div>
               </li>
               <li className="flex items-start gap-3.5">
@@ -237,10 +246,10 @@ const Footer = () => {
                   </svg>
                 </span>
                 <a
-                  href="mailto:info@A4.com"
+                  href={CONTACT_EMAIL_HREF}
                   className="text-sm text-gray hover:text-primary-blue transition-colors pt-2 min-w-0 text-left"
                 >
-                  info@A4.com
+                  {CONTACT_EMAIL}
                 </a>
               </li>
               <li className="flex items-start gap-3.5">

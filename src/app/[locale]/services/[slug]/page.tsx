@@ -1,9 +1,11 @@
 import React from "react";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import "@/components/a4-landing/styles.css";
 import "../services-site.css";
 import { ALL_A4_SERVICE_SLUGS, getA4SiteServiceBySlug } from "@/data/a4ServicesSiteData";
 import { locales } from "@/lib/i18n-config";
+import { pageMetadata } from "@/lib/page-metadata";
 import { ServicePageContent } from "../components/ServicePageContent";
 
 // --- Previous implementation (commented out) ---
@@ -30,6 +32,16 @@ export async function generateStaticParams() {
     }
   }
   return out;
+}
+
+export async function generateMetadata({ params }: ServicePageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const service = getA4SiteServiceBySlug(slug);
+  if (!service) return {};
+  return pageMetadata(
+    `${service.name} in Malta`,
+    service.lead ?? `${service.name} delivered by A4 Services Limited — licensed Malta accounting and audit firm.`,
+  );
 }
 
 const ServicePage = async ({ params }: ServicePageProps) => {

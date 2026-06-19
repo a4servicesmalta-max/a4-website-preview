@@ -3,11 +3,12 @@ import "@/components/a4-landing/styles.css";
 import "@/components/a4-site/site-pages.css";
 import { FaqContent } from "./components/FaqContent";
 
-export const metadata: Metadata = {
-  title: "FAQs — A4 Services",
-  description:
-    "Everything you might want to know about working with A4 — and how the firm, the people and the technology fit together.",
-};
+import { pageMetadata } from "@/lib/page-metadata";
+
+export const metadata: Metadata = pageMetadata(
+  "FAQs — Working with A4",
+  "Answers about A4 Services — Malta accounting, audit, VAT, payroll, corporate services, security and how our client portal works.",
+);
 
 export default function FaqPage() {
   return <FaqContent />;

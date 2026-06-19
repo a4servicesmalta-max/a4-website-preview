@@ -1,118 +1,70 @@
 "use client";
 
-import React, { useMemo } from "react";
-import PageHeader from "@/components/common/PageHeader";
-import ContentSection from "@/components/partners/ContentSection";
-import Link from "next/link";
+import LocalizedLink from "@/components/common/LocalizedLink";
+import { Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import { usePagesTranslation } from "@/hooks/usePagesTranslation";
-import { FadeInUp } from "@/components/common/Animations";
+import { PartnerSubpageLayout, usePartnerSections } from "./PartnerSubpageLayout";
 
-const WhiteLabelPageContent = () => {
+export default function WhiteLabelPageContent() {
   const { t } = usePagesTranslation("partners");
-
-  const sections = useMemo(() => {
-    // Assuming 6 sections as defined in JSON for whiteLabel
-    return [0, 1, 2, 3, 4, 5].map((i) => ({
-      title: t(`whiteLabel.sections.${i}.title`),
-      content: t(`whiteLabel.sections.${i}.content`, { returnObjects: true }) as any as string[],
-      list: t(`whiteLabel.sections.${i}.list`, { returnObjects: true }) as any as string[] | undefined,
-    }));
-  }, [t]);
+  const sections = usePartnerSections(t, "whiteLabel", 6);
 
   return (
-    <main>
-      <PageHeader
-        title={t("whiteLabel.pageHeader.title")}
-        breadcrumbs={[
-          { label: t("whiteLabel.pageHeader.breadcrumbs.0.label"), href: "/partners" },
-          { label: t("whiteLabel.pageHeader.breadcrumbs.1.label") }
-        ]}
-      />
-      
-      <section className="py-20 bg-section-light">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-            <div className="text-center mb-16 max-w-3xl mx-auto">
-                <FadeInUp>
-                    <h2 className="text-3xl md:text-4xl font-bold text-text-heading mb-6">
-                        {t("whiteLabel.hero.title")}
-                    </h2>
-                    <p className="text-lg text-text-gray leading-relaxed">
-                        {t("whiteLabel.hero.description")}
-                    </p>
-                    <div className="mt-8">
-                        <Link 
-                            href="/contact" 
-                            className="inline-flex items-center justify-center px-8 py-3 bg-primary text-white font-medium rounded-full shadow-lg hover:bg-primary-blue transition-all"
-                        >
-                            {t("whiteLabel.hero.cta")}
-                        </Link>
-                    </div>
-                </FadeInUp>
+    <PartnerSubpageLayout
+      icon="palette"
+      modelLabel="White-label"
+      pageTitle={t("whiteLabel.pageHeader.title")}
+      heroTitle={t("whiteLabel.hero.title")}
+      heroDescription={t("whiteLabel.hero.description")}
+      ctaLabel={t("whiteLabel.hero.cta")}
+      ctaHref="/contact"
+      sections={sections}
+      currentHref="/partners/white-label"
+    >
+      <section className="bg-[var(--a4-canvas-light)] border-b border-[var(--a4-hairline-light)]" style={{ padding: "clamp(48px,6vw,72px) 0" }}>
+        <Container>
+          <Reveal>
+            <div className="grid gap-5 md:grid-cols-2">
+              {(["client", "audit"] as const).map((key, i) => (
+                <Reveal
+                  key={key}
+                  delay={i * 80}
+                  style={{
+                    background: "var(--a4-surface-card)",
+                    border: "1px solid var(--a4-hairline-light)",
+                    borderRadius: "var(--a4-r-lg)",
+                    padding: "clamp(26px,3vw,36px)",
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: "100%",
+                  }}
+                >
+                  <span
+                    className="grid place-items-center w-12 h-12 rounded-[var(--a4-r-md)]"
+                    style={{ background: "rgba(73,79,223,.1)", border: "1px solid rgba(73,79,223,.2)" }}
+                  >
+                    <Icon name={key === "client" ? "layout-dashboard" : "clipboard-check"} size={22} color="var(--a4-primary)" stroke={1.75} />
+                  </span>
+                  <h3 className="a4-font-display font-medium text-[var(--a4-ink)] mt-5" style={{ fontSize: "clamp(20px,2.4vw,24px)" }}>
+                    {t(`whiteLabel.experience.${key}.title`)}
+                  </h3>
+                  <p className="a4-font-body text-[15px] leading-[1.6] text-[var(--a4-mute)] mt-3 flex-1" style={{ textWrap: "pretty" }}>
+                    {t(`whiteLabel.experience.${key}.description`)}
+                  </p>
+                  <LocalizedLink
+                    href={key === "client" ? "/partners/white-label/client-portal" : "/partners/white-label/audit-portal"}
+                    className="inline-flex items-center gap-1.5 mt-6 a4-font-body text-[14.5px] font-semibold no-underline"
+                    style={{ color: "var(--a4-link)" }}
+                  >
+                    {t(`whiteLabel.experience.${key}.cta`)}
+                    <Icon name="arrow-right" size={15} color="var(--a4-link)" />
+                  </LocalizedLink>
+                </Reveal>
+              ))}
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20">
-                <FadeInUp delay={0.2}>
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col">
-                        <h3 className="text-2xl font-bold text-text-heading mb-4">{t("whiteLabel.experience.client.title")}</h3>
-                        <p className="text-text-gray mb-8 flex-grow">{t("whiteLabel.experience.client.description")}</p>
-                        <Link href="/client-portal" className="text-primary font-semibold hover:underline inline-flex items-center">
-                            {t("whiteLabel.experience.client.cta")}
-                            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="9 5l7 7-7 7" />
-                            </svg>
-                        </Link>
-                    </div>
-                </FadeInUp>
-
-                <FadeInUp delay={0.4}>
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col">
-                        <h3 className="text-2xl font-bold text-text-heading mb-4">{t("whiteLabel.experience.audit.title")}</h3>
-                        <p className="text-text-gray mb-8 flex-grow">{t("whiteLabel.experience.audit.description")}</p>
-                        <Link href="/audit-portal" className="text-primary font-semibold hover:underline inline-flex items-center">
-                            {t("whiteLabel.experience.audit.cta")}
-                            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="9 5l7 7-7 7" />
-                            </svg>
-                        </Link>
-                    </div>
-                </FadeInUp>
-            </div>
-
-            <div className="bg-white rounded-3xl p-8 md:p-16 shadow-xl border border-gray-100 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-bold text-text-heading mb-6">{t("whiteLabel.workingWith.title")}</h2>
-                    <p className="text-lg text-text-gray mb-12 max-w-3xl leading-relaxed">
-                        {t("whiteLabel.workingWith.description")}
-                    </p>
-                    
-                    <div className="space-y-12">
-                        {sections.map((section, idx) => (
-                            <div key={idx} className="border-t border-gray-100 pt-10 first:border-t-0 first:pt-0">
-                                <h3 className="text-xl font-bold text-text-heading mb-4">{section.title}</h3>
-                                <div className="space-y-4">
-                                    {section.content.map((p, pIdx) => (
-                                        <p key={pIdx} className="text-text-gray">{p}</p>
-                                    ))}
-                                    {section.list && (
-                                        <ul className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8 mt-6">
-                                            {section.list.map((item, lIdx) => (
-                                                <li key={lIdx} className="flex items-start text-text-gray text-sm">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 mr-3 flex-shrink-0" />
-                                                    {item}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
+          </Reveal>
+        </Container>
       </section>
-    </main>
+    </PartnerSubpageLayout>
   );
-};
-
-export default WhiteLabelPageContent;
+}

@@ -99,11 +99,11 @@
     "contactUs": "Contacto",
     "ctaStripTitle": "A4 Services Limited — accounting that works differently.",
     "ctaStripButton": "Book a consultation",
-    "disclaimer": "Los servicios profesionales a través de A4 se prestan mediante una red de firmas profesionales verificadas. A4 proporciona el entorno digital para gestionar estos encargos de forma eficiente y segura.",
+    "disclaimer": "A4 Services Limited es una firma de contabilidad, auditoría y servicios corporativos con licencia en Malta. Todo el trabajo profesional lo realiza directamente A4, respaldado por nuestra plataforma segura para clientes. Cuando se requiere apoyo transfronterizo, trabajamos con BOKS International.",
     "terms": "Términos y Condiciones",
     "privacy": "Política de Privacidad",
     "cookies": "Política de Cookies",
-    "copyright": "© 2026 What A4 Is. Todos los derechos reservados."
+    "copyright": "© 2026 A4 Services Limited. Todos los derechos reservados."
   },
   "pageHeader": {
     "home": "Inicio"
@@ -121,7 +121,7 @@
     "botAskName": "Genial, ¿a qué nombre debemos dirigir nuestra respuesta?",
     "botAskEmail": "¡Gracias! ¿Cuál es el mejor correo para contactarle?",
     "botSuccess": "Gracias por su tiempo. Nuestro equipo revisará esta conversación y se pondrá en contacto lo antes posible.",
-    "botErrorSend": "No pudimos enviar su solicitud. Inténtelo de nuevo o escriba a info@A4.com.",
+    "botErrorSend": "No pudimos enviar su solicitud. Inténtelo de nuevo o escriba a info@a4.com.mt.",
     "submitErrorFailed": "Error al enviar.",
     "startNewChat": "Nuevo chat",
     "inputPlaceholder": "Escriba un mensaje…"

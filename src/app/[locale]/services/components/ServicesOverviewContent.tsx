@@ -68,7 +68,7 @@ export function ServicesOverviewContent() {
           <Button variant="primary" size="lg" href={href("/contact")}>
             Book a consultation <Icon name="arrow-right" size={18} color="#000" />
           </Button>
-          <Button variant="outline-dark" size="lg" href={href("/pricing-info")}>
+          <Button variant="outline-dark" size="lg" href={href("/pricing")}>
             How pricing works
           </Button>
         </div>

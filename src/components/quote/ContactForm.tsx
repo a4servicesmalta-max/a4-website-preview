@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Mail, Phone, MapPin, PhoneCall } from "lucide-react";
 import { motion } from "framer-motion";
 import FormStatusModal from "@/components/common/FormStatusModal";
+import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
 import { usePagesTranslation } from "@/hooks/usePagesTranslation";
 
 const ContactForm = () => {
@@ -275,7 +276,7 @@ const ContactForm = () => {
                   <motion.a
                     whileHover={{ scale: 1.02, y: -1 }}
                     whileTap={{ scale: 0.97, y: 0 }}
-                    href="https://calendly.com/A4-info/new-meeting"
+                    href={CALENDLY_BOOKING_URL}
                     target="_blank"
                     rel="noreferrer"
                     className="bg-primary-blue hover:bg-primary-zinc-hover text-white font-semibold py-4 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"

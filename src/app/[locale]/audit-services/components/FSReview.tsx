@@ -10,7 +10,7 @@ import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Revea
 // the file name (deterministic) — wire to the real internal FS-review engine in
 // production, with explicit consent + no-retention handling.
 
-const FS_PORTAL = "https://client.a4.com.mt/onboarding";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 const FS_STEPS = [
   "Reading the document…",

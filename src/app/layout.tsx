@@ -6,6 +6,8 @@ import "./globals.css";
 import "@/components/bookkeeping/bookkeeping.css";
 import { headers } from "next/headers";
 import { LOCALE_HEADER } from "@/lib/i18n-config";
+import { getSiteUrl } from "@/lib/site-url";
+import { DEFAULT_DESCRIPTION, pageMetadata } from "@/lib/page-metadata";
 
 const CLARITY_TAG_ID = "w8hmbtjpb8";
 
@@ -27,30 +29,28 @@ const nunito = Nunito({
   display: "swap",
 });
 
+const siteUrl = getSiteUrl();
+const rootMeta = pageMetadata(
+  "Accounting, Audit & Corporate Services in Malta",
+  "A4 Services Limited — a licensed Malta accounting and audit firm. Fixed monthly bookkeeping, VAT, payroll, audit and corporate services. Internationally capable via BOKS International.",
+);
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://A4.com"),
+  ...rootMeta,
+  metadataBase: new URL(siteUrl),
   title: {
-    default: "Global Accounting, Tax, Audit — and More. Done for You.",
+    default: "Accounting, Audit & Corporate Services in Malta | A4 Services",
     template: "%s",
   },
-  description:
-    "A4 is a structured digital platform for accounting, audit, legal and corporate services. Get a dedicated team, full visibility, and one place for documents, deadlines, and communication.",
-  alternates: {
-    canonical: "/",
-  },
   openGraph: {
+    ...rootMeta.openGraph,
     type: "website",
-    url: "/",
-    title: "Global Accounting, Tax, Audit — and More. Done for You.",
-    description:
-      "A4 is a structured digital platform for accounting, audit, legal and corporate services. Get a dedicated team, full visibility, and one place for documents, deadlines, and communication.",
-    siteName: "A4",
+    siteName: "A4 Services",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Global Accounting, Tax, Audit — and More. Done for You.",
-    description:
-      "A4 is a structured digital platform for accounting, audit, legal and corporate services. Get a dedicated team, full visibility, and one place for documents, deadlines, and communication.",
+    title: "Accounting, Audit & Corporate Services in Malta | A4 Services",
+    description: DEFAULT_DESCRIPTION,
   },
   icons: {
     icon: "/favicon.ico",

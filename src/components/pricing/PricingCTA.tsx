@@ -7,6 +7,7 @@ import LocalizedLink from "@/components/common/LocalizedLink";
 import { usePerformance } from "@/contexts/ReduceMotionContext";
 import { cn } from "@/lib/utils";
 import { usePagesTranslation } from "@/hooks/usePagesTranslation";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 const PricingCTA = () => {
   const { t } = usePagesTranslation("pricing");
@@ -58,7 +59,7 @@ const PricingCTA = () => {
                   <p className="text-white/90 text-lg mb-8 leading-relaxed">{t("cta.body")}</p>
 
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <LocalizedLink href="https://client.a4.com.mt/onboarding">
+                    <a href={CLIENT_ONBOARDING_URL} target="_blank" rel="noopener noreferrer">
                       <motion.button
                         type="button"
                         whileHover={isIPhone || isLowPerformance ? {} : { scale: 1.05 }}
@@ -75,9 +76,9 @@ const PricingCTA = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
                       </motion.button>
-                    </LocalizedLink>
+                    </a>
 
-                    <LocalizedLink href="https://client.a4.com.mt/onboarding">
+                    <a href={CLIENT_ONBOARDING_URL} target="_blank" rel="noopener noreferrer">
                       <motion.button
                         type="button"
                         whileHover={isIPhone || isLowPerformance ? {} : { scale: 1.05 }}
@@ -97,7 +98,7 @@ const PricingCTA = () => {
                           />
                         </svg>
                       </motion.button>
-                    </LocalizedLink>
+                    </a>
                   </div>
 
                   <div className="mt-10 pt-8 border-t border-white/20">

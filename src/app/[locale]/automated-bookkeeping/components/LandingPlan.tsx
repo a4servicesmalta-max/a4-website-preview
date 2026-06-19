@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Icon, Button, Container, SectionHead, Reveal } from "./Primitives";
 
-const LP_PORTAL = "https://client.a4.com.mt/onboarding";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 const LP_TIERS = [
   { id: "starter", name: "Starter", price: 25, docs: "Up to 100 documents / month", blurb: "Perfect for sole traders and small companies." },
@@ -160,7 +160,7 @@ export function LandingPlan() {
                 ))}
               </div>
               <div className="flex flex-col gap-[10px] mt-[24px]">
-                <Button variant="primary" size="md" href={LP_PORTAL} target="_blank" style={{ width: "100%" }}>Create account &amp; request <Icon name="arrow-right" size={16} color="#000" /></Button>
+                <Button variant="primary" size="md" href={CLIENT_ONBOARDING_URL} target="_blank" style={{ width: "100%" }}>Create account &amp; request <Icon name="arrow-right" size={16} color="#000" /></Button>
                 <Button variant="outline-dark" size="md" onClick={() => { setBooked(null); setModal(true); }} style={{ width: "100%" }}><Icon name="calendar" size={16} color="#fff" /> Book a 15-min call</Button>
               </div>
               <div className="flex items-center justify-center gap-[7px] mt-[14px]">

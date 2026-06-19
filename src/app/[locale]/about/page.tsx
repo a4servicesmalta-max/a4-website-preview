@@ -3,11 +3,12 @@ import "@/components/a4-landing/styles.css";
 import "@/components/a4-site/site-pages.css";
 import { AboutContent } from "./components/AboutContent";
 
-export const metadata: Metadata = {
-  title: "About A4 — Modern Accounting, Audit & Corporate Services",
-  description:
-    "A4 is a modern accounting, audit and corporate services firm — not software, not a marketplace. We do the work for you with a secure client portal.",
-};
+import { pageMetadata } from "@/lib/page-metadata";
+
+export const metadata: Metadata = pageMetadata(
+  "About A4 — Malta Accounting & Audit Firm",
+  "A4 Services Limited is a licensed Malta accounting, audit and corporate services firm — not software, not a marketplace. We do the work for you.",
+);
 
 export default function AboutPage() {
   return <AboutContent />;

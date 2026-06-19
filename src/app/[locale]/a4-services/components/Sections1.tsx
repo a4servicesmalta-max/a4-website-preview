@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { TrustBar } from "./HomeConversionSections";
 
 // export function Nav({ accent }: { accent: string }) { ... } — using site-wide Navbar from layout
 
@@ -44,6 +45,7 @@ export function Hero({ eyebrow = "Malta · Accounting & Audit Firm", accent = "#
             <Button variant="primary" size="lg">Book a consultation <Icon name="arrow-right" size={18} color="#000" /></Button>
             <Button variant="outline-dark" size="lg">View our services</Button>
           </div>
+          <TrustBar />
         </Reveal>
       </Container>
 

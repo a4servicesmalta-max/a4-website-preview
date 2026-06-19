@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import * as LucideIcons from "lucide-react";
+import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { isExternalHref } from "@/lib/external-links";
 
 export function Logo({ height = 26, invert = false }: { height?: number; invert?: boolean }) {
   return (
@@ -25,6 +27,12 @@ type ButtonProps = {
 };
 
 export function Button({ variant = "primary", size = "md", children, onClick, style, href, target, rel }: ButtonProps) {
+  const localizedHref = useLocalizedHref();
+  const resolvedHref = href
+    ? isExternalHref(href)
+      ? href
+      : localizedHref(href)
+    : undefined;
   const baseClasses =
     "border-0 cursor-pointer rounded-[var(--a4-r-full)] a4-font-body font-semibold tracking-[.24px] inline-flex items-center justify-center gap-2 transition-all duration-150 whitespace-nowrap decoration-none";
   const sizes = { lg: "h-[56px] px-[32px] text-[18px]", md: "h-[48px] px-[26px] text-[16px]", sm: "h-[40px] px-[18px] text-[14.5px]" };
@@ -36,10 +44,10 @@ export function Button({ variant = "primary", size = "md", children, onClick, st
     "outline-dark": "bg-transparent text-[#fff] border border-[rgba(255,255,255,.4)]",
     cobalt: "bg-[var(--a4-primary)] text-[#fff]",
   };
-  const Tag = href ? "a" : "button";
+  const Tag = resolvedHref ? "a" : "button";
   return (
     <Tag
-      href={href}
+      href={resolvedHref}
       onClick={onClick}
       target={target}
       rel={rel || (target === "_blank" ? "noopener noreferrer" : undefined)}
@@ -136,7 +144,7 @@ export function SectionHead({
   );
 }
 
-export function Reveal({ children, delay = 0, style, as = "div" }: { children: React.ReactNode; delay?: number; style?: React.CSSProperties; as?: React.ElementType }) {
+export function Reveal({ children, delay = 0, style, className, as = "div" }: { children: React.ReactNode; delay?: number; style?: React.CSSProperties; className?: string; as?: React.ElementType }) {
   const ref = useRef<HTMLElement>(null);
   const [shown, setShown] = useState(false);
   useEffect(() => {
@@ -166,6 +174,7 @@ export function Reveal({ children, delay = 0, style, as = "div" }: { children: R
     <Tag
       ref={ref}
       data-areveal=""
+      className={className}
       style={{
         ...style,
         opacity: shown ? 1 : 0,

@@ -34,9 +34,26 @@ export function PDBadge({ n }) {
   return <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, color: "var(--a4-on-dark-mute)", background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: 999, padding: "1px 7px", lineHeight: 1.5 }}>{n}</span>;
 }
 
+const ILLUSTRATIVE_BADGE = {
+  display: "inline-block",
+  fontFamily: "var(--a4-font-body)",
+  fontSize: 10.5,
+  fontWeight: 600,
+  letterSpacing: ".08em",
+  textTransform: "uppercase",
+  color: "var(--a4-stone)",
+  border: "1px solid var(--a4-hairline-dark)",
+  borderRadius: 999,
+  padding: "4px 10px",
+  marginBottom: 10,
+};
+
 export function PortalDashboardMock() {
   return (
     <div style={{ background: "#000", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-xl)", overflow: "hidden", boxShadow: "0 40px 100px -40px rgba(0,0,0,.95)" }}>
+      <div style={{ padding: "10px 18px 0", borderBottom: "1px solid var(--a4-hairline-dark)" }}>
+        <span style={ILLUSTRATIVE_BADGE}>Illustrative example — not a real client</span>
+      </div>
       {/* top bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, padding: "14px 18px", borderBottom: "1px solid var(--a4-hairline-dark)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>

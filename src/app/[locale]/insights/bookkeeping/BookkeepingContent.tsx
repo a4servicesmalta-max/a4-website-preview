@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { Calendar, ArrowUpRight, Check, X, Star, ChevronDown, RefreshCw, Clock } from 'lucide-react';
 import { BlogPost } from '@/utils/blog';
 import { cn } from '@/lib/utils';
+import { CLIENT_ONBOARDING_URL } from '@/lib/external-links';
 
 // --- Sub-components for better organization ---
 
@@ -566,7 +567,7 @@ export default function BookkeepingContent({ relatedBlogs = [] }: { relatedBlogs
                   </div>
 
                   <div className="flex flex-wrap gap-4">
-                    <a href="https://client.a4.com.mt/onboarding" className="bg-white text-gray-900 px-8 py-4 rounded-xl font-bold text-base hover:shadow-2xl hover:shadow-white/10 hover:-translate-y-1 transition-all">Get a Managed Quote</a>
+                    <a href={CLIENT_ONBOARDING_URL} className="bg-white text-gray-900 px-8 py-4 rounded-xl font-bold text-base hover:shadow-2xl hover:shadow-white/10 hover:-translate-y-1 transition-all">Get a Managed Quote</a>
                     <LocalizedLink href="/contact" className="bg-white/10 text-white border border-white/20 px-8 py-4 rounded-xl font-bold text-base hover:bg-white/20 transition-all">Talk to a Partner</LocalizedLink>
                   </div>
                 </div>
@@ -664,7 +665,7 @@ export default function BookkeepingContent({ relatedBlogs = [] }: { relatedBlogs
                   Copy Link
                 </button>
                 <a
-                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://A4.com/en/insights/bookkeeping')}`}
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://a4.com.mt/en/insights/bookkeeping')}`}
                   target="_blank" rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-100 rounded-lg text-xs font-bold text-gray-600 hover:border-primary-blue hover:text-primary-blue transition-all"
                 >
@@ -677,7 +678,7 @@ export default function BookkeepingContent({ relatedBlogs = [] }: { relatedBlogs
             <div className="bg-gray-900 rounded-2xl p-6 text-center text-white">
               <h5 className="font-lora text-lg font-bold mb-3 leading-tight">Stop managing software yourself</h5>
               <p className="text-[11px] text-white/60 mb-5 leading-relaxed">Let A4 handle your bookkeeping, VAT, and audit preparation while you focus on growth.</p>
-              <a href="https://client.a4.com.mt/onboarding" className="block w-full py-3 bg-primary-blue text-white rounded-xl text-sm font-bold hover:bg-zinc-600 transition-all mb-3">See Managed Pricing</a>
+              <a href={CLIENT_ONBOARDING_URL} className="block w-full py-3 bg-primary-blue text-white rounded-xl text-sm font-bold hover:bg-zinc-600 transition-all mb-3">See Managed Pricing</a>
               <span className="text-[10px] text-white/40">Free 30-minute consultation included.</span>
             </div>
 

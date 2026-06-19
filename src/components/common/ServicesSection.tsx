@@ -25,25 +25,25 @@ const ServicesSection = () => {
       id: 1,
       title: "Corporate Service",
       image: "/assets/images/placeholder.png",
-      link: "/services/corporate",
+      link: "/services/corporate-csp-services",
     },
     {
       id: 2,
       title: "Accounting and Finance",
       image: "/assets/images/placeholder.png",
-      link: "/services/accounting",
+      link: "/services/accounting-finance",
     },
     {
       id: 3,
       title: "Tax and Compliance",
       image: "/assets/images/placeholder.png",
-      link: "/services/tax",
+      link: "/services/tax-compliance",
     },
     {
       id: 4,
       title: "Audit and Assurance",
       image: "/assets/images/placeholder.png",
-      link: "/services/audit",
+      link: "/services/audit-assurance",
     },
   ];
 

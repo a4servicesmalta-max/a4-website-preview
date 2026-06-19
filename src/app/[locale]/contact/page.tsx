@@ -3,11 +3,12 @@ import "@/components/a4-landing/styles.css";
 import "@/components/a4-site/site-pages.css";
 import { ContactContent } from "./components/ContactContent";
 
-export const metadata: Metadata = {
-  title: "Contact A4 — Get in Touch",
-  description:
-    "Send us a message, call the team, or book a free 15-minute call. We usually reply within one business day.",
-};
+import { pageMetadata } from "@/lib/page-metadata";
+
+export const metadata: Metadata = pageMetadata(
+  "Contact A4 Services Malta",
+  "Call, email or book a free 15-minute consultation with A4 Services Limited — licensed Malta accounting and audit firm.",
+);
 
 export default function ContactPage() {
   return <ContactContent />;

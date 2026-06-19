@@ -6,7 +6,7 @@ import { HeroFX } from "./HeroFX";
 import { PortalMockup } from "./PortalMockup";
 import { LandingPlan } from "./LandingPlan";
 
-const LB_PORTAL = "https://client.a4.com.mt/onboarding";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 // export function LandingNav() {
 //   return (
@@ -18,7 +18,7 @@ const LB_PORTAL = "https://client.a4.com.mt/onboarding";
 //         </a> */}
 //         <div className="flex-1" />
 //         {/* <a href="#pricing" className="a4-navlinks a4-font-body text-[15px] font-medium text-[var(--a4-on-dark-mute)] no-underline hidden sm:block">Pricing</a>
-//         <Button variant="primary" size="sm" href={LB_PORTAL} target="_blank" style={{ height: 44, padding: "0 20px" }}>
+//         <Button variant="primary" size="sm" href={CLIENT_ONBOARDING_URL} target="_blank" style={{ height: 44, padding: "0 20px" }}>
 //           Get started <Icon name="arrow-right" size={16} color="#000" />
 //         </Button> */}
 //       </div>
@@ -42,7 +42,7 @@ export function LandingHero({ accent = "#494fdf" }) {
           </p>
           <div className="flex gap-[12px] mt-[32px] flex-wrap">
             <Button variant="primary" size="lg" href="#pricing">See your price <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href={LB_PORTAL} target="_blank">Create your account</Button>
+            <Button variant="outline-dark" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account</Button>
           </div>
           <div className="flex gap-[22px] mt-[32px] flex-wrap">
             {["No setup fee", "No long contracts", "Cancel anytime"].map((t) => (
@@ -177,7 +177,7 @@ export function FinalCTA() {
               Create your account and request services in minutes — or book a quick call and we'll set everything up with you.
             </p>
             <div className="flex gap-[12px] mt-[34px] flex-wrap justify-center">
-              <Button variant="primary" size="lg" href={LB_PORTAL} target="_blank">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>
+              <Button variant="primary" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>
               <Button variant="outline-dark" size="lg" href="#pricing">See your price</Button>
             </div>
           </div>

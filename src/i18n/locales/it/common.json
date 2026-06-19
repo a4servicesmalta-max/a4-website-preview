@@ -99,11 +99,11 @@
     "contactUs": "Contattaci",
     "ctaStripTitle": "A4 Services Limited — accounting that works differently.",
     "ctaStripButton": "Book a consultation",
-    "disclaimer": "I servizi professionali offerti attraverso A4 sono forniti da una rete di studi professionali verificati. A4 fornisce l'ambiente digitale per gestire questi incarichi in modo efficiente e sicuro.",
+    "disclaimer": "A4 Services Limited è uno studio di contabilità, revisione e servizi societari autorizzato a Malta. Tutto il lavoro professionale è svolto direttamente da A4, con il supporto della nostra piattaforma clienti sicura. Quando serve supporto transfrontaliero, collaboriamo con BOKS International.",
     "terms": "Termini e Condizioni",
     "privacy": "Informativa sulla Privacy",
     "cookies": "Informativa sui Cookie",
-    "copyright": "© 2026 What A4 Is. Tutti i diritti riservati."
+    "copyright": "© 2026 A4 Services Limited. Tutti i diritti riservati."
   },
   "pageHeader": {
     "home": "Home"
@@ -121,7 +121,7 @@
     "botAskName": "Perfetto, a quale nome dobbiamo rivolgere la risposta?",
     "botAskEmail": "Grazie! Qual è la migliore email per contattarla?",
     "botSuccess": "Grazie per il suo tempo. Il nostro team esaminerà questa conversazione e la contatterà al più presto.",
-    "botErrorSend": "Non è stato possibile inviare la richiesta. Riprovare o scrivere a info@A4.com.",
+    "botErrorSend": "Non è stato possibile inviare la richiesta. Riprovare o scrivere a info@a4.com.mt.",
     "submitErrorFailed": "Invio non riuscito.",
     "startNewChat": "Nuova chat",
     "inputPlaceholder": "Scriva un messaggio…"

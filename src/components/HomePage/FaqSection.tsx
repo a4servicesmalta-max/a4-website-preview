@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
+import { CONTACT_PHONES } from "@/lib/contact";
 import { cn } from "@/lib/utils";
 import { usePerformance } from "@/contexts/ReduceMotionContext";
 
@@ -166,8 +167,11 @@ const FaqSection = () => {
                       </div>
                    <div className="flex flex-col">
                       <span className="text-[8px] font-black text-zinc-600 tracking-[0.2em] uppercase mb-0.5">{t("faqSection.supportLabel")}</span>
-                      <span className="text-sm font-black text-slate-900 tracking-wide">+356 77142418</span>
-                      <span className="text-sm font-black text-slate-900 tracking-wide">+44 07400 487907</span>
+                      {CONTACT_PHONES.map((phone) => (
+                        <span key={phone.href} className="text-sm font-black text-slate-900 tracking-wide">
+                          {phone.display}
+                        </span>
+                      ))}
                 </div>
                             </div>
                            </div>

@@ -6,7 +6,7 @@ import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Revea
 // program: 40% commission on everything a referred client engages, for 3 years.
 // Left: inputs. Right: black summary with the 3-year commission + an apply modal.
 
-const PE_PORTAL = "https://client.a4.com.mt/onboarding";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 const PE_RATE = 0.4;     // 40% commission
 const PE_YEARS = 3;      // for three years
 

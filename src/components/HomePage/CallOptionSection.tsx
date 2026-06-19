@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import LocalizedLink from "@/components/common/LocalizedLink";
+import { SUPPORT_RESPONSE_LABEL } from "@/lib/site-config";
 import { ArrowRight, PhoneCall } from "lucide-react";
 
 const CallOptionSection = ({ isDark = true }: { isDark?: boolean }) => {
@@ -53,7 +54,7 @@ const CallOptionSection = ({ isDark = true }: { isDark?: boolean }) => {
                 <ArrowRight className="w-4 h-4" />
               </div>
             </LocalizedLink>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30">Avg response: 12 mins</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30">{SUPPORT_RESPONSE_LABEL}</p>
           </div>
 
         </div>

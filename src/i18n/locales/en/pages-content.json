@@ -121,13 +121,13 @@
       "description": "Prefer email, a quick call or an in-person chat? Choose what works best for you.",
       "email": {
         "label": "Email",
-        "value": "info@A4.com"
+        "value": "info@a4.com.mt"
       },
       "phone": {
         "label": "Phone",
         "values": [
-          "+356 77142418",
-          "+44 07400 487907"
+          "+356 2790 0007",
+          "+356 7714 2418"
         ]
       },
       "address": {

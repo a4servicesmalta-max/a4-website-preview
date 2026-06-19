@@ -8,7 +8,7 @@ import { SmoothScroll } from "@/components/common/SmoothScroll";
 import ScrollToTopButton from "@/components/common/ScrollToTopButton";
 import CookieConsentBanner from "@/components/common/CookieConsentBanner";
 import SupportChat from "@/components/support-chat/SupportChat";
-import LanguageSwitcher from "@/components/common/LanguageSwitcher";
+import FloatingActionDock from "@/components/common/FloatingActionDock";
 import { stripLocaleFromPathname } from "@/lib/localized-path";
 import { isA4LandingWithoutSiteChrome } from "@/lib/a4-landing-routes";
 
@@ -26,7 +26,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
       {!hideSiteNavFooter && <Footer />}
       <ScrollToTopButton />
       <SupportChat />
-      <LanguageSwitcher />
+      <FloatingActionDock />
       <CookieConsentBanner />
     </SmoothScroll>
   );

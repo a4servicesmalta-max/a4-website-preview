@@ -4,6 +4,7 @@ import React, { useMemo, useState, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { SERVICE_TYPE_OPTIONS } from "@/data/serviceRequestForms"
 import { cn } from "@/lib/utils"
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links"
 import { SectionTitleHero } from "@/components/HomePage/SectionTitleHero"
 
 type FormData = {
@@ -461,7 +462,7 @@ const ProcessStepsSectionDark = ({ isDark = false }: { isDark?: boolean }) => {
                           {t("processSteps.success.newRequest")}
                         </button>
                         <a
-                          href="https://devclient.A4.com/onboarding"
+                          href={CLIENT_ONBOARDING_URL}
                           className="flex-1 flex items-center justify-center h-14 rounded-2xl bg-white text-[#050510] font-bold tracking-wide text-sm shadow-xl shadow-white/10 transition-all hover:bg-slate-200"
                         >
                           {t("processSteps.success.registerNow")}
@@ -564,7 +565,7 @@ const ProcessStepsSectionDark = ({ isDark = false }: { isDark?: boolean }) => {
 
             <div className="mt-6">
               <a
-                href="https://devclient.A4.com/onboarding"
+                href={CLIENT_ONBOARDING_URL}
                 className="group relative flex w-full items-center justify-center h-16 rounded-[1.5rem] bg-slate-900 border border-slate-800 text-white font-black tracking-wide text-sm transition-all hover:bg-slate-800 hover:border-primary-blue/50 overflow-hidden shadow-lg"
               >
                 <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-primary-blue/10 to-zinc-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />

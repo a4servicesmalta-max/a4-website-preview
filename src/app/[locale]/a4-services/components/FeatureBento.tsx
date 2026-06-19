@@ -72,6 +72,7 @@ export function FeatureBento() {
               <h3 style={{ ...h3, color: "#fff" }}>Clear financial visibility</h3>
               <p style={{ ...p, color: "var(--a4-on-dark-mute)", maxWidth: 440 }}>Live monthly reporting through your portal — see exactly how your business is performing, whenever you want.</p>
               <div style={{ marginTop: "auto", paddingTop: 26 }}>
+                <span style={{ display: "inline-block", fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--a4-stone)", marginBottom: 10 }}>Illustrative example</span>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
                   <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 30, color: "#fff", letterSpacing: "-1px", fontVariantNumeric: "tabular-nums" }}>€1,876,580</span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-accent-teal)" }}><Icon name="trending-up" size={14} color="var(--a4-accent-teal)" />+14%</span>

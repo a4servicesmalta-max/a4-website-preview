@@ -121,13 +121,13 @@
       "description": "Vous préférez l'e-mail, un appel rapide ou une discussion en personne ? Choisissez ce qui vous convient le mieux.",
       "email": {
         "label": "E-mail",
-        "value": "info@A4.com"
+        "value": "info@a4.com.mt"
       },
       "phone": {
         "label": "Téléphone",
         "values": [
-          "+356 77142418",
-          "+44 07400 487907"
+          "+356 2790 0007",
+          "+356 7714 2418"
         ]
       },
       "address": {

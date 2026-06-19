@@ -535,7 +535,7 @@ export const A4_SERVICES_LEFT: ServiceKey[] = [
   "audit-readiness",
   "banking-payments",
   "bookkeeping",
-  "legal",
+  // "legal",
 ];
 
 export const A4_SERVICES_RIGHT: ServiceKey[] = [
@@ -546,9 +546,16 @@ export const A4_SERVICES_RIGHT: ServiceKey[] = [
   "crypto-digital-assets",
   "group-consolidation",
   "corporate-transactions",
-  "outsourcing",
+  // "outsourcing",
   "vat-payroll",
 ];
+
+/** Hidden from nav, footer and /services overview — pages remain reachable by URL. */
+export const A4_SERVICES_HIDDEN: ServiceKey[] = ["legal", "outsourcing"];
+
+export const A4_SERVICES_VISIBLE = Object.values(A4_SERVICES_DATA).filter(
+  (s) => !A4_SERVICES_HIDDEN.includes(s.key),
+);
 
 export const ALL_A4_SERVICE_SLUGS = Object.values(A4_SERVICES_DATA).map((s) => s.slug);
 

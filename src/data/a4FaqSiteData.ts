@@ -1,7 +1,11 @@
 export const FAQ_GROUPS = [
   {
-    cat: "Clarity",
+    cat: "Getting started",
     items: [
+      {
+        q: "What is A4?",
+        a: "A4 Services Limited is a licensed Malta accounting, audit and corporate services firm. We do the work for you — not software you have to run yourself — through a secure client portal with a dedicated team behind it.",
+      },
       { q: "Do I need accounting or audit software?", a: "No. A4 is a firm that does the work for you — you don't need to buy or learn any software. We work in your secure client portal and, where helpful, connect to tools you already use like Sage, QuickBooks or Xero." },
       { q: "Who is A4 for?", a: "Founder-led and owner-managed businesses, multi-entity groups, and international teams operating in or through Malta — especially those preparing for audit, fundraising or acquisition who want their finances handled properly." },
     ],

@@ -8,6 +8,7 @@ import { SectionTitleHero } from "@/components/HomePage/SectionTitleHero";
 import { lazyImgProps } from "@/lib/lazy-media-props";
 import { useLazyMedia } from "@/hooks/use-lazy-media";
 import { cn } from "@/lib/utils";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 const VIDEO_SRC = "/assets/videos/Invite%20Advisor%20V1.2.gif";
 
@@ -224,7 +225,7 @@ const TwoWaysToStartSection = ({ isDark = true }: { isDark?: boolean }) => {
 
                     <GetInstantQuoteButton
                       text={t("twoWaysToStart.cta")}
-                      href="https://client.a4.com.mt/onboarding"
+                      href={CLIENT_ONBOARDING_URL}
                       className={cn(
                         "h-14 w-full rounded-2xl text-base font-bold sm:w-auto sm:px-10",
                         !isDark && "shadow-lg shadow-zinc-500/15"

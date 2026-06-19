@@ -10,7 +10,7 @@ import { MBRCheck } from "@/components/a4-landing/MBRCheck";
 // for the automated-bookkeeping conversion landing page. Reuses Primitives,
 // HeroFX and PortalMockup from the main app.
 
-const LB_PORTAL = "https://client.a4.com.mt/onboarding";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 // export function LandingNav() {
 //   const [open, setOpen] = useState(false);
@@ -29,7 +29,7 @@ const LB_PORTAL = "https://client.a4.com.mt/onboarding";
 //         {links.map((l) => (
 //           <a key={l.label} href={l.href} className="a4-navlinks" style={{ fontFamily: "var(--a4-font-body)", fontSize: 15, fontWeight: 500, color: "var(--a4-on-dark-mute)", textDecoration: "none" }}>{l.label}</a>
 //         ))}
-//         <Button variant="primary" size="sm" href={LB_PORTAL} target="_blank" style={{ height: 44, padding: "0 20px" }}>Get started <Icon name="arrow-right" size={16} color="#000" /></Button>
+//         <Button variant="primary" size="sm" href={CLIENT_ONBOARDING_URL} target="_blank" style={{ height: 44, padding: "0 20px" }}>Get started <Icon name="arrow-right" size={16} color="#000" /></Button>
 //         <button className="a4-burger" onClick={() => setOpen(!open)} aria-label="Menu" style={{ display: "none", background: "none", border: 0, cursor: "pointer", color: "#fff", padding: 6 }}>
 //           <Icon name={open ? "x" : "menu"} size={24} color="#fff" />
 //         </button>
@@ -39,7 +39,7 @@ const LB_PORTAL = "https://client.a4.com.mt/onboarding";
 //           {links.map((l) => (
 //             <a key={l.label} href={l.href} onClick={() => setOpen(false)} style={{ fontFamily: "var(--a4-font-body)", fontSize: 16, fontWeight: 500, color: "var(--a4-on-dark-mute)", textDecoration: "none", padding: "10px 0" }}>{l.label}</a>
 //           ))}
-//           <a href={LB_PORTAL} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ fontFamily: "var(--a4-font-body)", fontSize: 16, fontWeight: 600, color: "#fff", textDecoration: "none", padding: "10px 0" }}>Create account →</a>
+//           <a href={CLIENT_ONBOARDING_URL} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ fontFamily: "var(--a4-font-body)", fontSize: 16, fontWeight: 600, color: "#fff", textDecoration: "none", padding: "10px 0" }}>Create account →</a>
 //         </div>
 //       )}
 //     </header>
@@ -65,7 +65,7 @@ export function LandingHero({ accent = "#494fdf" }) {
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
             <Button variant="primary" size="lg" href="#pricing">See your price <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href={LB_PORTAL} target="_blank">Create your account</Button>
+            <Button variant="outline-dark" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account</Button>
           </div>
           <div style={{ display: "flex", gap: 22, marginTop: 32, flexWrap: "wrap" }}>
             {["No setup fee", "No long contracts", "Cancel anytime"].map((t) => (
@@ -224,7 +224,7 @@ export function FinalCTA() {
               Create your account and request services in minutes — or book a quick call and we'll set everything up with you.
             </p>
             <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
-              <Button variant="primary" size="lg" href={LB_PORTAL} target="_blank">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>
+              <Button variant="primary" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>
               <Button variant="outline-dark" size="lg" href="#pricing">See your price</Button>
             </div>
           </div>

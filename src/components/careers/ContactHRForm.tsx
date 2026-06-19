@@ -125,7 +125,7 @@ const ContactHRForm = ({
               <div className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
                 <p>{subtitle}</p>
                 <div className="mt-8">
-                  {emailLabel} <a href="mailto:info@A4.com" className="text-white font-semibold hover:text-primary-blue transition-colors">info@A4.com</a>
+                  {emailLabel} <a href="mailto:info@a4.com.mt" className="text-white font-semibold hover:text-primary-blue transition-colors">info@a4.com.mt</a>
                 </div>
               </div>
             </FadeInUp>

@@ -3,11 +3,12 @@ import "@/components/a4-landing/styles.css";
 import "./services-site.css";
 import { ServicesOverviewContent } from "./components/ServicesOverviewContent";
 
-export const metadata: Metadata = {
-  title: "Our Services — A4 Services",
-  description:
-    "Assurance-led accounting, tax, corporate and audit services for businesses in and through Malta — scoped clearly, priced transparently, delivered through one portal.",
-};
+import { pageMetadata } from "@/lib/page-metadata";
+
+export const metadata: Metadata = pageMetadata(
+  "Accounting, Audit & Corporate Services",
+  "Assurance-led accounting, tax, corporate and audit services for Malta businesses — scoped clearly, priced transparently, delivered through one portal.",
+);
 
 export default function ServicesOverviewPage() {
   return <ServicesOverviewContent />;

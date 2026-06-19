@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, Clock, Shield, Zap } from "lucide-react";
 import LocalizedLink from "@/components/common/LocalizedLink";
 import { cn } from "@/lib/utils";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -230,7 +231,7 @@ const InteractiveBlock = ({ isDark = false }: { isDark?: boolean }) => {
 
                 <a
                   ref={ctaRef}
-                  href="https://client.a4.com.mt/onboarding"
+                  href={CLIENT_ONBOARDING_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(

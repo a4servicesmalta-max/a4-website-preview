@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react"
 import { SERVICE_TYPE_OPTIONS } from "@/data/serviceRequestForms"
 import { cn } from "@/lib/utils"
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links"
 
 type FormData = {
   name: string
@@ -451,7 +452,7 @@ const ProcessStepsSection = () => {
                           New Request
                         </button>
                         <a
-                          href="https://devclient.A4.com/onboarding"
+                          href={CLIENT_ONBOARDING_URL}
                           className="flex-1 flex items-center justify-center h-14 rounded-2xl bg-zinc-600 text-white font-bold tracking-wide text-sm shadow-xl shadow-zinc-600/20 border border-zinc-500 transition-all hover:bg-zinc-700"
                         >
                           Register Now
@@ -541,7 +542,7 @@ const ProcessStepsSection = () => {
 
             <div className="mt-6">
               <a
-                href="https://devclient.A4.com/onboarding"
+                href={CLIENT_ONBOARDING_URL}
                 className="group relative flex w-full items-center justify-center h-16 rounded-[1.5rem] bg-white border-2 border-slate-200 text-slate-900 font-black tracking-wide text-sm transition-all hover:bg-slate-50 hover:border-zinc-300 overflow-hidden"
               >
                 <div className="absolute inset-0 w-full h-full bg-linear-to-r from-zinc-50 to-zinc-100 opacity-0 group-hover:opacity-100 transition-opacity" />
