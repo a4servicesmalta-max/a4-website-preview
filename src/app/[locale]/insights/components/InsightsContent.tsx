@@ -71,10 +71,17 @@ export function InsightsContent({ blogs }: { blogs: BlogPost[] }) {
             >
               <div className="ins-feat grid" style={{ gridTemplateColumns: "1.1fr 1fr", gap: 0 }}>
                 <div className="relative overflow-hidden bg-[var(--a4-surface-elevated)] min-h-[280px]">
-                  <div aria-hidden="true" className="hero-bg" style={{ WebkitMaskImage: "none", maskImage: "none" }} />
-                  <div className="absolute inset-0 grid place-items-center">
-                    <Icon name={featuredVisual.icon} size={64} color={featuredVisual.color} stroke={1.4} />
-                  </div>
+                  {featured.featuredImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={featured.featuredImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <div aria-hidden="true" className="hero-bg" style={{ WebkitMaskImage: "none", maskImage: "none" }} />
+                      <div className="absolute inset-0 grid place-items-center">
+                        <Icon name={featuredVisual.icon} size={64} color={featuredVisual.color} stroke={1.4} />
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex flex-col justify-center" style={{ padding: "clamp(28px,3.6vw,44px)" }}>
                   <InsightMeta
@@ -114,8 +121,15 @@ export function InsightsContent({ blogs }: { blogs: BlogPost[] }) {
                     href={`/insights/${p.slug}`}
                     className="flex flex-col h-full no-underline bg-[var(--a4-surface-card)] border border-[var(--a4-hairline-light)] rounded-[var(--a4-r-lg)] overflow-hidden transition-[border-color] duration-[180ms] hover:border-[var(--a4-hairline-strong)]"
                   >
-                    <div className="h-[150px] bg-[var(--a4-surface-soft)] grid place-items-center">
-                      <Icon name={visual.icon} size={40} color={visual.color} stroke={1.4} />
+                    <div className="h-[150px] bg-[var(--a4-surface-soft)] overflow-hidden">
+                      {p.featuredImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.featuredImage} alt="" loading="lazy" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="h-full grid place-items-center">
+                          <Icon name={visual.icon} size={40} color={visual.color} stroke={1.4} />
+                        </div>
+                      )}
                     </div>
                     <div className="p-[22px] pb-6 flex flex-col flex-1">
                       <InsightMeta
