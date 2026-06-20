@@ -3,9 +3,24 @@ title: "Cross-Border Structuring and the Importance of Economic Substance in the
 date: "2026-02-23"
 excerpt: "Cross-border structuring is legitimate when aligned with real commercial activity. However, OECD BEPS standards and the EU Anti-Tax Avoidance Directive have reinforced a clear principle: legal form must reflect economic substance."
 category: "International"
-featuredImage: "/images/blog/global-marketing-finance-strategy-supports-600nw-2683847569.webp"
+featuredImage: "/assets/insights/cross-border-substance.jpg"
 tags: ["Corporate Substance", "Cross-Border Business", "Economic Substance", "International Structuring", "Tax Governance", "corporate structuring"]
 author: "Cleven"
+keyTakeaways:
+  - "Cross-border structuring remains legitimate, but incorporation alone is no longer sufficient: authorities increasingly require that legal form reflects economic reality."
+  - "The OECD's BEPS Action 5 shifted the focus from formal compliance to the location of genuine value creation, making decision-making, personnel, and business functions central to legitimacy."
+  - "Substance is part of enforceable EU law, not merely guidance: the Anti-Tax Avoidance Directive's General Anti-Abuse Rule (Article 6) lets Member States disregard non-genuine arrangements."
+  - "Substance is assessed through coherence rather than a single threshold, covering decision-making, qualified personnel, operational infrastructure, and a commercial rationale consistent with the group structure."
+  - "The implications now extend beyond tax: weak substance can trigger enhanced due diligence, banking difficulties, reputational scrutiny, and loss of treaty or directive benefits."
+faq:
+  - q: "Is cross-border structuring still legitimate?"
+    a: "Yes. Cross-border structuring is a normal and often necessary feature of international business, used to expand into new markets, centralise functions, protect intellectual property, or organise financing. It remains legitimate when aligned with commercial reality. What has changed is the regulatory expectation that legal form reflects genuine economic substance rather than relying on incorporation alone."
+  - q: "What is economic substance in practice?"
+    a: "Substance is not defined by a single threshold; it is assessed through coherence. In practical terms it may involve identifiable decision-making taking place in the jurisdiction, qualified personnel performing core income-generating activities, appropriate operational infrastructure, and a commercial rationale consistent with the group structure. The underlying question is whether the structure reflects the business or is detached from it."
+  - q: "How does EU law treat arrangements that lack substance?"
+    a: "Within the European Union, substance principles are embedded in binding legislation. The Anti-Tax Avoidance Directive (Directive (EU) 2016/1164) contains a General Anti-Abuse Rule in Article 6, which allows Member States to disregard arrangements that are not genuine and are put in place primarily to obtain a tax advantage. An arrangement may be regarded as non-genuine where it does not reflect economic reality."
+  - q: "What are the risks beyond tax of weak substance?"
+    a: "Financial institutions, investors, and counterparties increasingly assess governance quality and operational credibility. Structures that lack demonstrable substance may encounter enhanced due diligence, difficulty maintaining banking relationships, reputational scrutiny, and challenges accessing treaty or directive benefits. Substance has become a broader governance standard, not only a tax consideration."
 ---
 
 # Cross-Border Structuring and the Importance of Economic Substance in the EU
@@ -56,6 +71,8 @@ Although legislative negotiations evolve over time, the policy direction is cons
 
 ## What Substance Means in Practice
 
+![Cross-border corporate group structure with an indicator of real operational substance](/assets/insights/cross-border-substance-1.jpg)
+
 Substance is not defined by a single threshold. It is assessed through coherence.
 
 In practical terms, this may involve:
@@ -68,6 +85,18 @@ In practical terms, this may involve:
 A company that exists solely as a conduit, without meaningful activity or oversight, may face challenges under anti-abuse principles or future anti-shell measures.
 
 The underlying question is straightforward: does the structure reflect the business, or is it detached from it?
+
+The table below summarises the indicators that distinguish a substantive structure from a conduit or letterbox entity.
+
+| Substance indicator | Substantive structure | Conduit / letterbox entity |
+| --- | --- | --- |
+| Decision-making | Taken in the jurisdiction by those with authority | Directed elsewhere; local role nominal |
+| Personnel | Qualified staff performing core income-generating activities | Few or no resident employees |
+| Infrastructure | Appropriate premises and operational resources | No genuine premises or active local presence |
+| Commercial rationale | Consistent with the wider group and real activity | Exists primarily to obtain a tax advantage |
+| Governance and oversight | Demonstrable and credible | Absent or detached from the business |
+
+Bringing this coherence to a group is partly a structuring question and partly a governance one. The right [accounting, tax and advisory support](/a4-services) can help confirm that legal form and economic reality stay aligned as a structure evolves.
 
 ---
 
@@ -93,6 +122,8 @@ Cross-border structuring remains legitimate when aligned with commercial reality
 However, OECD standards, the EU Anti-Tax Avoidance Directive, and ongoing European Parliament initiatives collectively reinforce a consistent principle: legal form must correspond to economic substance.
 
 In the current regulatory environment, incorporation is only the starting point. The decisive question is whether the structure reflects genuine activity, governance, and decision-making.
+
+If you are reviewing an existing cross-border arrangement or planning a new one, it is worth [speaking to an advisor](/contact) before relying on legal form alone.
 
 ---
 

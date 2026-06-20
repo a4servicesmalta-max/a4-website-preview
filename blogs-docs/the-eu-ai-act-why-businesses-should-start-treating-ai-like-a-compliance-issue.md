@@ -3,7 +3,7 @@ title: "The EU AI Act: Why Businesses Should Start Treating AI Like a Compliance
 date: "2026-06-04"
 excerpt: "As AI moves from experimentation to everyday business use, the EU AI Act is shifting artificial intelligence into the same category as other compliance risks—requiring documentation, controls, and governance, not informal tool adoption."
 category: "Regulation & Compliance"
-featuredImage: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=2070"
+featuredImage: "/assets/insights/eu-ai-act.jpg"
 tags:
   - "EU AI Act"
   - "Artificial Intelligence"
@@ -12,6 +12,21 @@ tags:
   - "Governance"
   - "Digital Regulation"
 author: "Rana"
+keyTakeaways:
+  - "The EU AI Act moves artificial intelligence into the same category as other business risks—something to be understood, documented, controlled, and monitored rather than adopted informally."
+  - "The Act follows a risk-based approach: some practices are prohibited, high-risk systems carry stricter obligations, and the majority of rules apply from 2 August 2026."
+  - "Informal AI use is a real exposure; staff entering confidential or personal data into public tools without internal rules can create data protection, confidentiality, and governance issues."
+  - "Businesses should start with a simple AI inventory—knowing which tools are used, by whom, on what data, and whether humans remain involved in final decisions."
+  - "The AI Act sits alongside GDPR and sector rules, so AI adoption should be treated as part of the wider compliance framework, with governance, training, and human oversight."
+faq:
+  - q: "When does the EU AI Act apply?"
+    a: "The EU AI Act entered into force on 1 August 2024 and is being applied in stages. According to the European Commission, it becomes fully applicable on 2 August 2026, with some exceptions applying earlier. The majority of rules, including those for high-risk AI systems in certain areas and transparency obligations, apply from 2 August 2026."
+  - q: "Does the EU AI Act treat all AI systems the same way?"
+    a: "No. The Act follows a risk-based approach. Some AI practices are prohibited because they are considered unacceptable, other systems are classified as high-risk and carry stricter obligations, some tools are subject mainly to transparency requirements, and many lower-risk uses face limited obligations. The level of risk depends on the use case."
+  - q: "What is the first step a business should take?"
+    a: "Create a simple inventory of AI tools and AI-related processes. Management should know which tools are being used, who is using them, what data is being processed, what decisions the tools support, and whether humans remain involved in final decision-making. Without this basic visibility, it is difficult to manage AI risk properly."
+  - q: "Does the EU AI Act replace data protection obligations like GDPR?"
+    a: "No. The EU AI Act should be viewed alongside other regulations. Even if a specific AI use is not classified as high-risk under the Act, the business may still have obligations under GDPR, confidentiality rules, employment law, consumer protection rules, or sector-specific regulations. AI adoption should be treated as part of the wider compliance framework."
 ---
 
 Artificial intelligence has moved quickly from experimentation to everyday business use. Companies are using AI tools to draft documents, analyse data, support customer service, automate workflows, screen information, detect patterns, and improve decision-making. In many cases, these tools can save time and reduce manual work. However, as AI becomes more embedded in business operations, it also creates new responsibilities.
@@ -40,6 +55,17 @@ This matters because businesses need to understand how AI is being used before t
 
 For example, an AI tool used casually to help draft a social media post is very different from an AI system used to assess job applicants, evaluate creditworthiness, monitor employees, support medical decisions, or influence access to essential services. The level of risk depends on the use case.
 
+![AI systems being assessed against a risk-based compliance framework](/assets/insights/eu-ai-act-1.jpg)
+
+The table below summarises, at a high level, how the risk-based approach maps different uses to the broad level of obligation described above.
+
+| Risk category | Illustrative use | General obligation |
+| --- | --- | --- |
+| Prohibited | Practices considered unacceptable | Not permitted |
+| High-risk | Assessing job applicants, evaluating creditworthiness, monitoring employees | Stricter obligations |
+| Transparency | Chatbots, generated content, automated interactions | Inform stakeholders where relevant |
+| Lower-risk | Casual drafting, general research support | Limited obligations |
+
 ## AI Inventories and Visibility
 
 This is why businesses should start with a simple but important exercise: create an inventory of AI tools and AI-related processes. This does not need to be complicated. Management should know which tools are being used, who is using them, what data is being processed, what decisions the tools support, and whether humans remain involved in final decision-making.
@@ -50,7 +76,7 @@ Without this basic visibility, it is difficult to manage AI risk properly.
 
 Another important area is employee training. The AI Act includes requirements around AI literacy, meaning organisations should ensure that people using or overseeing AI systems have an appropriate level of understanding. This does not mean every employee needs to become a technical expert. It means staff should understand the limitations of AI, the risk of incorrect outputs, confidentiality concerns, data protection requirements, and when human review is necessary.
 
-This is particularly relevant in finance, compliance, audit, legal, HR, and customer-facing roles. AI can assist with work, but it should not replace professional judgement where accuracy, accountability, and regulatory obligations are involved.
+This is particularly relevant in finance, compliance, audit, legal, HR, and customer-facing roles. AI can assist with work, but it should not replace professional judgement where accuracy, accountability, and regulatory obligations are involved — areas where the right [accounting, tax and advisory support](/a4-services) remains essential alongside any technology.
 
 ## Transparency and Governance
 
@@ -70,7 +96,7 @@ This is especially important for financial services and professional services fi
 
 The purpose is not to stop businesses from using AI. In fact, companies that use AI properly may gain a real advantage. They can reduce repetitive work, improve reporting, strengthen customer service, and support better decision-making. However, the businesses that benefit most will be those that implement AI in a controlled and responsible way.
 
-A practical approach for businesses would include identifying current AI use, reviewing data risks, creating an internal AI policy, training staff, documenting approved tools, assessing higher-risk use cases, and maintaining human oversight for important decisions.
+A practical approach for businesses would include identifying current AI use, reviewing data risks, creating an internal AI policy, training staff, documenting approved tools, assessing higher-risk use cases, and maintaining human oversight for important decisions. If you are unsure how AI fits into your control environment, it is worth [speaking to an advisor](/contact) before committing to new systems.
 
 AI is becoming part of normal business operations. The EU AI Act simply confirms what many businesses should already be doing: understanding how technology is used, managing the risks, and ensuring accountability.
 

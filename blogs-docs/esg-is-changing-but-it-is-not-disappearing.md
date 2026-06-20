@@ -3,7 +3,7 @@ title: "ESG Is Changing, But It Is Not Disappearing"
 date: "2026-06-03"
 excerpt: "As sustainability reporting rules evolve in Europe and internationally, many business owners ask whether ESG still matters. The answer is yes—but the way companies approach it is becoming more practical, focused, and connected to business value."
 category: "Governance & Risk"
-featuredImage: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=2070"
+featuredImage: "/assets/insights/esg-reporting.jpg"
 tags:
   - "Malta Business registry"
   - "ESG"
@@ -12,6 +12,21 @@ tags:
   - "Business Finance"
   - "Risk Management"
 author: "Rana"
+keyTakeaways:
+  - "ESG is not disappearing; sustainability reporting is simply becoming more practical, more focused, and more connected to genuine business value."
+  - "Even where rules are delayed or simplified, banks, investors, larger customers, insurers, and supply chains may still ask businesses for sustainability-related information."
+  - "SMEs increasingly operate inside supply chains affected by sustainability rules, and the voluntary VSME standard offers a proportionate middle ground for smaller companies."
+  - "From a finance perspective, ESG is part of risk management and long-term planning, affecting access to finance, insurance terms, tender eligibility, and investor confidence."
+  - "The companies that handle ESG well will not produce the longest reports, but the most useful, accurate, and relevant information."
+faq:
+  - q: "Does ESG still matter if reporting rules are being delayed or simplified?"
+    a: "Yes. The real trend is not that ESG is disappearing but that sustainability reporting is becoming more practical and more connected to business value. Even where formal rules are delayed, reduced, or simplified, stakeholder expectations are still moving towards greater transparency."
+  - q: "Do smaller businesses that fall outside CSRD scope still need to think about ESG?"
+    a: "Often, yes. Many SMEs are not directly subject to the same reporting as large listed companies, but they operate inside supply chains affected by sustainability rules. A larger client preparing disclosures may need information from suppliers on energy use, emissions, labour practices, governance, or risk controls."
+  - q: "What is the VSME standard?"
+    a: "EFRAG developed a voluntary sustainability reporting standard for non-listed micro, small, and medium-sized enterprises, known as VSME. It is voluntary, intended for companies with fewer than 250 employees, aligned with the European Sustainability Reporting Standards, and tailored to the size, capacity, and needs of SMEs."
+  - q: "How should a smaller business start preparing for ESG questions?"
+    a: "Take a practical and proportionate approach. Start with the basics: understand energy consumption, review major suppliers, document key policies, improve internal controls, and keep records that can support claims made to banks or clients. Build reliable information gradually rather than waiting until a stakeholder asks."
 ---
 
 # ESG Is Changing, But It Is Not Disappearing
@@ -30,6 +45,16 @@ For businesses, this creates confusion. Some may assume that if rules are delaye
 
 The real trend is not that ESG is disappearing. The trend is that sustainability reporting is becoming more practical, more focused, and more connected to business value. Companies are being pushed to move away from generic statements and towards clearer information that stakeholders can actually use.
 
+The table below summarises how the conversation around ESG is shifting from the older perception to the emerging reality.
+
+| The old perception of ESG | The emerging reality |
+| --- | --- |
+| A compliance burden to satisfy regulators | Part of risk management and long-term business planning |
+| Generic statements and broad slogans | Clear, useful information stakeholders can actually use |
+| Only relevant to large listed companies | Increasingly requested across supply chains, including SMEs |
+| A marketing exercise | Evidence, data, and consistency that stakeholders can verify |
+| Less important if rules are delayed or simplified | Still expected by banks, investors, customers, and insurers |
+
 ## **Why ESG Still Matters Beyond Formal Reporting**
 
 This matters because ESG is no longer only about regulation. Banks, investors, larger customers, public sector buyers, insurers, and international supply chains may still ask for sustainability-related information even where a business is not directly required to publish a formal sustainability report. A smaller company may not fall under the full CSRD scope, but it may still be asked to provide information by a larger client that does.
@@ -42,9 +67,11 @@ For many SMEs, this may become a useful middle ground. They may not need a compl
 
 ## **ESG as Risk Management and Business Planning**
 
+![Sustainability metrics flowing into a structured ESG report](/assets/insights/esg-reporting-1.jpg)
+
 From a finance perspective, ESG should be understood as part of risk management and long-term business planning. It is not only about environmental policies or corporate statements. It can affect access to finance, insurance terms, tender eligibility, supplier relationships, brand reputation, and investor confidence.
 
-For example, a bank assessing a business may increasingly consider climate-related risks, energy costs, regulatory exposure, governance quality, and the reliability of management information. A company with poor records, weak controls, or no visibility over environmental and operational risks may appear less prepared than a competitor with clearer data.
+For example, a bank assessing a business may increasingly consider climate-related risks, energy costs, regulatory exposure, governance quality, and the reliability of management information. A company with poor records, weak controls, or no visibility over environmental and operational risks may appear less prepared than a competitor with clearer data. Bringing structure to this kind of information often starts with the same discipline as a thorough [financial health check](/accounting-health-check) of the underlying numbers.
 
 The same applies to tenders and supply chains. Businesses that work with larger organisations may find that sustainability questionnaires become part of onboarding. These questionnaires may ask about energy usage, waste management, data protection, employee policies, anti-bribery procedures, or supplier controls. In practice, ESG often overlaps with general good governance.
 
@@ -56,13 +83,13 @@ For smaller businesses, the best approach is usually practical and proportionate
 
 The important point is to build reliable information gradually. If a company waits until a bank, investor, or major customer asks for ESG information, it may struggle to respond quickly. If the information is already organised, the business can respond with more confidence.
 
-There is also a strategic benefit. Reviewing sustainability-related data can help businesses identify cost savings and operational improvements. Energy efficiency, waste reduction, better procurement, employee retention, and stronger governance can all have a financial impact. ESG, when approached properly, is not separate from business performance. It can support it.
+There is also a strategic benefit. Reviewing sustainability-related data can help businesses identify cost savings and operational improvements. Energy efficiency, waste reduction, better procurement, employee retention, and stronger governance can all have a financial impact. ESG, when approached properly, is not separate from business performance. It can support it. The right [accounting, tax and advisory support](/a4-services) can help turn this scattered information into something structured and credible.
 
 ## **From Slogans to Credible Reporting**
 
 This is the shift businesses need to understand. The discussion is moving away from ESG as a slogan and towards sustainability information as part of credible business reporting. The companies that handle this well will not be the ones producing the longest reports. They will be the ones producing the most useful, accurate, and relevant information.
 
-For directors and business owners, the message is clear. Even if regulatory requirements are changing, stakeholder expectations are still moving towards greater transparency. Companies that prepare early, keep better records, and understand their risks will be in a stronger position when dealing with banks, investors, customers, and regulators.
+For directors and business owners, the message is clear. Even if regulatory requirements are changing, stakeholder expectations are still moving towards greater transparency. Companies that prepare early, keep better records, and understand their risks will be in a stronger position when dealing with banks, investors, customers, and regulators. If you are unsure where to begin, it is worth [speaking to an advisor](/contact) before your next bank review or tender deadline.
 
 ESG may be changing, but it is not disappearing. It is becoming part of how businesses are assessed, financed, and trusted.
 

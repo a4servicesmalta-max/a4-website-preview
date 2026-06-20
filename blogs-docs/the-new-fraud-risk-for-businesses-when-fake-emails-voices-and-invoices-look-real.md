@@ -3,7 +3,7 @@ title: "The New Fraud Risk for Businesses: When Fake Emails, Voices and Invoices
 date: "2026-06-08"
 excerpt: "AI-powered impersonation is making fraud harder to detect—from convincing emails and cloned voices to fake invoices. For businesses, this is no longer only a cybersecurity issue. It is a financial control issue that demands stronger verification and internal controls."
 category: "Compliance & Risk"
-featuredImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&q=80&w=2070"
+featuredImage: "/assets/insights/fraud-risk.jpg"
 tags:
   - "Fraud"
   - "Invoice Fraud"
@@ -12,6 +12,21 @@ tags:
   - "Internal Controls"
   - "Business Risk"
 author: "Rana"
+keyTakeaways:
+  - "AI-powered impersonation has turned fraud from a cybersecurity problem into a financial control problem, with convincing fake emails, cloned voices and realistic invoices."
+  - "Invoice fraud and authorised push payment fraud often rely on social engineering rather than hacking, manipulating people instead of breaking into systems."
+  - "Strong internal controls — segregation of duties, payment approval thresholds, dual authorisation for bank detail changes and clear escalation rules — are among the best defences."
+  - "Always verify any change in supplier bank details through a separate, trusted communication channel rather than replying to the original email."
+  - "Technology should support controls, not replace them; a culture where staff feel safe to question urgent or unusual requests is essential."
+faq:
+  - q: "Why is AI-driven fraud harder to detect than traditional scams?"
+    a: "In the past, scams were often easy to spot because emails were badly written, sender addresses looked suspicious, and fake invoices had obvious mistakes. Criminals can now use artificial intelligence to write professional emails, imitate communication styles, create fake documents, clone voices and produce deepfake video or audio, making impersonation far more convincing."
+  - q: "What is the most practical control against supplier bank detail fraud?"
+    a: "Verify any change in supplier bank details through a separate communication channel. If new bank details arrive by email, do not reply directly to that email — contact the supplier using a trusted phone number or contact already held on file. This simple step can prevent serious losses."
+  - q: "Why should urgent payment requests be treated with caution?"
+    a: "Fraudsters often create pressure by claiming a payment is urgent, confidential, delayed, or required to avoid consequences. Staff should be trained to recognise urgency as a warning sign rather than a reason to bypass controls, and should feel comfortable questioning unusual requests even when they appear to come from senior management."
+  - q: "Is fraud prevention only an IT or cybersecurity responsibility?"
+    a: "No. For directors, fraud prevention should be treated as part of governance and financial control. The question is not whether staff are trustworthy, but whether the business has controls that protect both the company and its employees from manipulation. Regular financial review and reconciliation also help identify issues earlier."
 ---
 
 Business fraud has always existed, but the way it happens is changing quickly. In the past, many scams were easier to spot. Emails were badly written, sender addresses looked suspicious, and fake invoices often had obvious mistakes. Today, fraud is becoming more convincing.
@@ -44,11 +59,23 @@ They need process.
 
 ## Internal Controls and Verification
 
-Strong internal controls are one of the best protections against fraud. This includes proper segregation of duties, payment approval thresholds, supplier verification procedures, dual authorisation for bank detail changes, and clear escalation rules for urgent or unusual requests.
+![A deepfake invoice and spoofed email caught by a verification check](/assets/insights/fraud-risk-1.jpg)
+
+Strong internal controls are one of the best protections against fraud. This includes proper segregation of duties, payment approval thresholds, supplier verification procedures, dual authorisation for bank detail changes, and clear escalation rules for urgent or unusual requests. If you are unsure whether your current procedures would withstand a convincing impersonation attempt, an [accounting health check](/accounting-health-check) can help surface the gaps before they are exploited.
 
 One practical control is to verify any change in supplier bank details through a separate communication channel. If new bank details are received by email, the business should not reply directly to that email. It should contact the supplier using a trusted phone number or contact already held on file. This simple step can prevent serious losses.
 
 Another important control is dual approval for payments above a certain value. No single person should be able to create, approve, and release significant payments without review. This is especially important for SMEs, where teams may be small and informal approval habits can develop over time.
+
+The table below summarises how common fraud techniques map to the practical controls that help defend against them.
+
+| Fraud technique | Practical control |
+| --- | --- |
+| Changed supplier bank details by email | Verify the change through a separate, trusted channel held on file |
+| Impersonated executive or supplier payment request | Segregation of duties and dual authorisation above a set threshold |
+| Urgent, confidential or "avoid consequences" pressure | Treat urgency as a warning sign; clear escalation rules |
+| Intercepted invoice matching an expected amount | Supplier verification procedures and approval thresholds |
+| Fraudulent or incorrect payment slipping through | Regular reconciliation and review of bank payments and balances |
 
 ## Culture, Training, and Urgency
 
@@ -64,7 +91,7 @@ The rise of AI-driven fraud also means businesses should review their use of pub
 
 This does not mean businesses should stop communicating publicly. It means they should understand how public information can be misused and ensure internal procedures are strong enough to withstand convincing requests.
 
-Financial reporting also plays a role. Regular review of bank payments, supplier balances, unusual transactions, and reconciliation differences can help identify issues earlier. If reconciliations are delayed, fraudulent or incorrect payments may remain unnoticed for longer.
+Financial reporting also plays a role. Regular review of bank payments, supplier balances, unusual transactions, and reconciliation differences can help identify issues earlier. If reconciliations are delayed, fraudulent or incorrect payments may remain unnoticed for longer. This is one area where having reliable [accounting, tax and advisory support](/a4-services) keeps the numbers current enough to spot anomalies quickly.
 
 ## Governance and the Cost of Fraud
 
@@ -81,3 +108,5 @@ Businesses do not need to become experts in every fraud technique. They do need 
 In a world where emails, voices, invoices, and even video calls can be manipulated, trust alone is no longer enough.
 
 Businesses need verification.
+
+If you would like help reviewing your payment and supplier controls, [speak to an advisor](/contact) before the next convincing request lands in your inbox.

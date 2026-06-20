@@ -3,7 +3,7 @@ title: "What Is Economic Substance in Malta?"
 date: "2026-05-14"
 excerpt: "Economic substance has become a major part of modern international business compliance. This article explains what economic substance means in Malta, why it matters for cross-border structures, and how businesses are increasingly expected to demonstrate genuine operational presence and governance."
 category: "Banking & Compliance"
-featuredImage: "https://images.unsplash.com/photo-1486406146922-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070"
+featuredImage: "/assets/insights/economic-substance-malta.jpg"
 tags:
   - "Economic Substance"
   - "Malta Compliance"
@@ -12,6 +12,21 @@ tags:
   - "Compliance"
   - "Cross-Border Business"
 author: "Rana"
+keyTakeaways:
+  - "Economic substance is about whether a company genuinely carries out real economic activity in the jurisdiction where it claims to operate, not just whether it is registered there."
+  - "Substance requirements gained prominence as the OECD and the European Union pushed jurisdictions to strengthen rules around genuine operational presence, profit shifting, and tax transparency."
+  - "Authorities assess the overall operational reality, including where decisions are made, where directors operate, whether there are employees, premises, and adequate resources relative to the activity."
+  - "Substance expectations are proportionate to the nature, scale, and activity of the business, so a holding company is not assessed the same way as an active trading company."
+  - "Substance affects more than tax, influencing banking relationships, audits, due diligence, and regulatory reviews, and is far easier to establish properly from the beginning than to fix later."
+faq:
+  - q: "Does every Maltese company need economic substance?"
+    a: "Substance expectations vary depending on the nature of the company and its activities. However, companies involved in international or cross-border operations are increasingly expected to demonstrate genuine operational presence and governance."
+  - q: "Is economic substance only about taxation?"
+    a: "No. Substance considerations can also affect banking, compliance reviews, audits, investor due diligence, and broader regulatory assessments."
+  - q: "Does having a registered office automatically create substance?"
+    a: "No. A registered address alone is generally not enough to demonstrate meaningful economic substance."
+  - q: "Can small companies still meet substance expectations?"
+    a: "Yes. Substance expectations are usually assessed relative to the scale and activity of the business."
 ---
 
 Over the last several years, "economic substance" has become one of the most important concepts in international business and corporate compliance.
@@ -66,7 +81,19 @@ For example, a holding company may not require the same operational footprint as
 
 However, even lower-risk structures are increasingly expected to demonstrate commercial rationale and genuine management activity.
 
+The table below summarises how substance expectations tend to differ depending on the nature of the business.
+
+| Type of structure | Typical substance focus |
+| --- | --- |
+| Holding company | Genuine management activity, documented decision-making, and commercial rationale rather than a large operational footprint |
+| Intellectual property structure | Where the IP is managed and controlled, decision-making, and adequate resources relative to the activity |
+| Active trading company | Employees, physical presence, operational activity, and resources consistent with customers and trade |
+
+In each case, the focus is whether the structure makes commercial and operational sense relative to the activities being carried out.
+
 ## Economic Substance in Malta
+
+![Local office, staff and decision-making illustrating economic substance requirements in Malta](/assets/insights/economic-substance-malta-1.jpg)
 
 Malta operates within broader EU and international regulatory frameworks, meaning substance considerations are highly relevant for Maltese companies involved in international operations.
 
@@ -80,7 +107,7 @@ In practice, this often means businesses should ensure:
 - accounting and compliance obligations are fulfilled,
 - and operational activity aligns with the nature of the business.
 
-Substance is not simply about having a Maltese company registered. Authorities increasingly assess whether the operational reality supports the structure itself.
+Substance is not simply about having a Maltese company registered. Authorities increasingly assess whether the operational reality supports the structure itself. Keeping accounting, governance and compliance obligations in order is part of this, and the right [accounting, tax and advisory support](/a4-services) can help ensure the operational reality genuinely aligns with the structure.
 
 ## Why Economic Substance Matters
 
@@ -161,25 +188,7 @@ Companies that proactively maintain:
 - structured operations,
 - and operational consistency
 
-are generally in a far stronger position during audits, banking reviews, due diligence exercises, and regulatory assessments.
-
-## Frequently Asked Questions
-
-### Does every Maltese company need economic substance?
-
-Substance expectations vary depending on the nature of the company and its activities. However, companies involved in international or cross-border operations are increasingly expected to demonstrate genuine operational presence and governance.
-
-### Is economic substance only about taxation?
-
-No. Substance considerations can also affect banking, compliance reviews, audits, investor due diligence, and broader regulatory assessments.
-
-### Does having a registered office automatically create substance?
-
-No. A registered address alone is generally not enough to demonstrate meaningful economic substance.
-
-### Can small companies still meet substance expectations?
-
-Yes. Substance expectations are usually assessed relative to the scale and activity of the business.
+are generally in a far stronger position during audits, banking reviews, due diligence exercises, and regulatory assessments. If you are unsure how your structure measures up, it is worth [speaking to an advisor](/contact) early rather than addressing weaknesses under pressure later.
 
 ## Conclusion
 
