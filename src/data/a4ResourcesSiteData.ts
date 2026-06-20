@@ -32,6 +32,7 @@ export const RESOURCE_NAV_CARDS: ResourceCard[] = [
   { icon: "workflow", t: "How A4 Works", s: "Interactive guide to automation, human review and final deliverables.", href: "/how-a4-works" },
   { icon: "file-search", t: "Audit Outsourcing", s: "Vacei × A4 white-label audit delivery — outsource audits and keep the final say.", href: "/audit-outsourcing" },
   { icon: "wallet", t: "Payroll App", s: "Malta payroll prototype with live 2026 rates — run payroll, manage people and tax forms.", href: "/payroll-app" },
+  { icon: "stethoscope", t: "Free check", s: "Free 2-minute accounting health check plus a real AI review of your accounts or financial statements.", href: "/accounting-health-check" },
   // { icon: "git-compare", t: "Reconciliation Hero", s: "Animated landing experience for audit-grade reconciliation and reporting clarity.", href: "/reconciliation-hero" },
 ];
 

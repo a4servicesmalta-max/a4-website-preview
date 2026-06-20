@@ -3,6 +3,7 @@
 
 import React from "react";
 import { LandingPlan } from "@/components/a4-landing/LandingPlan";
+import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
 import { Hero, Statement } from "./Sections1";
 import { LinkedInVideoFeed } from "./LinkedInVideoFeed";
 import { Insights } from "./Insights";
@@ -26,7 +27,7 @@ export function A4ServicesApp() {
         <LinkedInVideoFeed />
         <TrustedSectorsBand />
         <Insights />
-        {/* TODO: <HealthCheckPromo/> added in a later task */}
+        <HealthCheckPromo />
         <LandingPlan />
         <CaseStudiesTeaser />
         <Capabilities />

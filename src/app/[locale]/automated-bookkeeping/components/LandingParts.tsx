@@ -6,6 +6,7 @@ import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Revea
 import { HeroFX } from "@/components/a4-landing/HeroFX";
 import { PortalMockup } from "@/components/a4-landing/PortalMockup";
 import { LandingPlan } from "@/components/a4-landing/LandingPlan";
+import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
 // for the automated-bookkeeping conversion landing page. Reuses Primitives,
 // HeroFX and PortalMockup from the main app.
 
@@ -254,7 +255,7 @@ export function LandingApp() {
       {/* <LandingNav /> */}
       <main>
         <LandingHero />
-        {/* TODO: <HealthCheckPromo/> added in a later task */}
+        <HealthCheckPromo />
         <Integrations />
         <HowItWorks />
         <ReviewedByTeam />
