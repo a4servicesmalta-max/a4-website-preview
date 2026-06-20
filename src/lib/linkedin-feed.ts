@@ -14,10 +14,11 @@ export type LinkedInFeedPost = {
 export const MANUAL_LINKEDIN_POSTS: LinkedInFeedPost[] = [
   {
     id: "ugcPost-7465064097143816192",
-    title: "A4 Services on LinkedIn",
-    blurb: "Latest update from the A4 team — watch on LinkedIn.",
+    title: "Profitable but out of cash? Why cash flow matters",
+    blurb:
+      "A business can be profitable on paper and still struggle to pay its bills — here's why cash flow is what really keeps you running.",
     url: "https://www.linkedin.com/feed/update/urn:li:ugcPost:7465064097143816192",
-    embed: "https://www.linkedin.com/embed/feed/update/urn:li:ugcPost:7465064097143816192?compact=1",
+    thumbnail: "/assets/linkedin/profitable-but-out-of-cash.jpg",
   },
   {
     id: "ugcPost-7466131337012326400",
