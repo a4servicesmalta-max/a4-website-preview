@@ -22,10 +22,11 @@ export const MANUAL_LINKEDIN_POSTS: LinkedInFeedPost[] = [
   },
   {
     id: "ugcPost-7466131337012326400",
-    title: "A4 Services on LinkedIn",
-    blurb: "Latest update from the A4 team — watch on LinkedIn.",
+    title: "Why missing invoices create bigger problems later",
+    blurb:
+      "Missing invoices rarely seem important — until VAT is due or an audit starts. Good document habits today save big headaches tomorrow.",
     url: "https://www.linkedin.com/feed/update/urn:li:ugcPost:7466131337012326400",
-    embed: "https://www.linkedin.com/embed/feed/update/urn:li:ugcPost:7466131337012326400?compact=1",
+    thumbnail: "/assets/linkedin/missing-invoices-square.jpg",
   },
 ];
 
