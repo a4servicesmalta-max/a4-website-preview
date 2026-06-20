@@ -14,6 +14,8 @@ export interface BlogPost {
     category?: string;
     tags?: string[];
     author?: string;
+    keyTakeaways?: string[];
+    faq?: { q: string; a: string }[];
 }
 
 const blogsDirectory = path.join(process.cwd(), 'blogs-docs');
@@ -59,7 +61,9 @@ export function getBlogBySlug(slug: string): BlogPost | null {
             featuredImage: data.featuredImage,
             category: typeof data.category === 'string' ? data.category : undefined,
             tags: data.tags || [],
-            author: data.author || 'A4 Team'
+            author: data.author || 'A4 Team',
+            keyTakeaways: Array.isArray(data.keyTakeaways) ? data.keyTakeaways : undefined,
+            faq: Array.isArray(data.faq) ? data.faq : undefined
         } as BlogPost;
     } catch (error) {
         console.error(`Error processing blog ${slug}:`, error);
@@ -96,7 +100,9 @@ export function getAllBlogs(): BlogPost[] {
                     featuredImage: data.featuredImage,
                     category: typeof data.category === 'string' ? data.category : undefined,
                     tags: data.tags || [],
-                    author: data.author || 'A4 Team'
+                    author: data.author || 'A4 Team',
+                    keyTakeaways: Array.isArray(data.keyTakeaways) ? data.keyTakeaways : undefined,
+                    faq: Array.isArray(data.faq) ? data.faq : undefined
                 } as BlogPost;
             } catch (error) {
                 console.error(`Error processing blog ${slug}:`, error);

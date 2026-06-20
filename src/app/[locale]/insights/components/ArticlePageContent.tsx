@@ -64,7 +64,115 @@ export function ArticlePageContent({ blog }: { blog: BlogPost }) {
       <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(52px,7vw,84px) 0 clamp(64px,9vw,100px)" }}>
         <Container>
           <div style={{ maxWidth: 720, margin: "0 auto" }}>
+            {blog.featuredImage && (
+              <img
+                src={blog.featuredImage}
+                alt={blog.title}
+                loading="eager"
+                style={{
+                  width: "100%",
+                  aspectRatio: "16/9",
+                  objectFit: "cover",
+                  borderRadius: "var(--a4-r-lg)",
+                  border: "1px solid var(--a4-hairline-light)",
+                  marginBottom: 28,
+                }}
+              />
+            )}
+            {!!blog.keyTakeaways?.length && (
+              <div
+                style={{
+                  background: "var(--a4-surface-soft)",
+                  borderLeft: "3px solid var(--a4-primary)",
+                  borderRadius: "var(--a4-r-lg)",
+                  padding: "18px 20px",
+                  marginBottom: 28,
+                }}
+              >
+                <div
+                  className="a4-font-body"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: ".06em",
+                    color: "var(--a4-primary)",
+                    marginBottom: 10,
+                  }}
+                >
+                  Key takeaways
+                </div>
+                <ul
+                  className="a4-font-body"
+                  style={{
+                    margin: 0,
+                    paddingLeft: 20,
+                    color: "var(--a4-ink)",
+                    fontSize: 15.5,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {blog.keyTakeaways.map((item, i) => (
+                    <li key={i} style={{ marginBottom: 6 }}>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <MarkdownRenderer content={blog.content} />
+            {!!blog.faq?.length && (
+              <div style={{ marginTop: 40 }}>
+                <h2
+                  className="a4-font-display"
+                  style={{
+                    fontSize: "clamp(24px,3vw,34px)",
+                    fontWeight: 500,
+                    letterSpacing: "-.02em",
+                    color: "var(--a4-ink)",
+                    margin: "0 0 18px",
+                  }}
+                >
+                  Frequently asked questions
+                </h2>
+                {blog.faq.map((f, i) => (
+                  <details
+                    key={i}
+                    className="a4-font-body"
+                    style={{
+                      borderTop: "1px solid var(--a4-hairline-light)",
+                      borderBottom:
+                        i === blog.faq!.length - 1
+                          ? "1px solid var(--a4-hairline-light)"
+                          : "none",
+                      padding: "14px 0",
+                    }}
+                  >
+                    <summary
+                      style={{
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        fontSize: 16,
+                        color: "var(--a4-ink)",
+                        listStyle: "none",
+                      }}
+                    >
+                      {f.q}
+                    </summary>
+                    <p
+                      style={{
+                        margin: "10px 0 0",
+                        fontSize: 15.5,
+                        lineHeight: 1.6,
+                        color: "var(--a4-mute)",
+                      }}
+                    >
+                      {f.a}
+                    </p>
+                  </details>
+                ))}
+              </div>
+            )}
           </div>
           <div
             className="mx-auto mt-12 pt-7"
