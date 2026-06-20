@@ -8,17 +8,17 @@ import { pageMetadata } from "@/lib/page-metadata";
 import { HealthCheckTool } from "./components/HealthCheckTool";
 
 export const metadata: Metadata = pageMetadata(
-  "Is your accounting audit-ready? — Free check",
-  "Run a free 2-minute accounting health check and get a real AI review of your accounts or financial statements — flag the issues that slow down a Malta audit before they cost you.",
+  "How audit-ready are your accounts? — Free check",
+  "Get a clear accounting health score in two minutes, then a real review of your trial balance or financial statements by A4's own engine — see what would slow down a Malta audit before it costs you.",
 );
 
 export default function AccountingHealthCheckPage() {
   return (
     <div className="a4-site-page">
       <PageHero
-        eyebrow="Free tool"
-        title="Is your accounting audit-ready?"
-        sub="Take the free 2-minute check, then get a real AI review of your accounts or financial statements — see what would slow down a Malta audit before it does."
+        eyebrow="Free check"
+        title="How audit-ready are your accounts?"
+        sub="Get a clear score in two minutes — then a real review of your trial balance or financial statements by A4's own engine. The same technology behind our platform, pointed at your numbers: clarity on what to fix before it slows down a Malta audit."
       />
       <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,96px) 0" }}>
         <Container>

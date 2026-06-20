@@ -49,7 +49,7 @@ export function HealthCheckPromo() {
                 textWrap: "balance",
               }}
             >
-              Find out if your accounts are audit-ready.
+              See exactly where your accounting stands.
             </h2>
             <p
               className="a4-font-body"
@@ -61,7 +61,7 @@ export function HealthCheckPromo() {
                 textWrap: "pretty",
               }}
             >
-              A free 2-minute check plus a real AI review of your accounts or financial statements — no obligation.
+              A two-minute score, then a real review of your trial balance or financial statements by A4&apos;s own engine — clarity on what to fix, no obligation.
             </p>
           </div>
           <div style={{ position: "relative", flexShrink: 0 }}>
