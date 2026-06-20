@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "vitest run",
     "lint": "eslint",
     "translate:deepl": "node scripts/deepl-translate.mjs",
     "export:locale-masters": "npx tsx scripts/exporters/services-master.ts && node scripts/scaffold-pages-json.mjs",
@@ -51,6 +52,7 @@
     "eslint-config-next": "16.1.4",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }
