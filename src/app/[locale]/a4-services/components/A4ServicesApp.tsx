@@ -2,7 +2,6 @@
 "use client";
 
 import React from "react";
-import { MBRCheck } from "@/components/a4-landing/MBRCheck";
 import { LandingPlan } from "@/components/a4-landing/LandingPlan";
 import { Hero, Statement } from "./Sections1";
 import { LinkedInVideoFeed } from "./LinkedInVideoFeed";
@@ -27,7 +26,7 @@ export function A4ServicesApp() {
         <LinkedInVideoFeed />
         <TrustedSectorsBand />
         <Insights />
-        <MBRCheck />
+        {/* TODO: <HealthCheckPromo/> added in a later task */}
         <LandingPlan />
         <CaseStudiesTeaser />
         <Capabilities />

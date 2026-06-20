@@ -10,7 +10,7 @@ const STATIC_PATHS = [
   "/insights",
   "/pricing",
   "/pricing-info",
-  "/mbr-check",
+  "/accounting-health-check",
   "/compliance-calendar",
   "/partners",
   "/white-label-platform",

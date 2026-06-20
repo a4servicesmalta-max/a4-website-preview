@@ -1,102 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { MBRCheck } from "@/components/a4-landing/MBRCheck";
 import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import LocalizedLink from "@/components/common/LocalizedLink";
-import { MBR_BAROS_URL } from "@/lib/mbr-links";
-
-export function MbrCheckPageContent() {
-  return (
-    <div className="a4-site-page">
-      <PageHero
-        eyebrow="Malta Business Registry"
-        title={
-          <>
-            Check MBR filing status &{" "}
-            <span style={{ color: "var(--a4-primary-bright)" }}>penalties</span>
-          </>
-        }
-        sub="Use the official Malta Business Registry (BAROS) to see your company’s registration details, annual return status and any enforcement notices — free, direct from the source."
-      >
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-3 mt-8 w-full max-w-lg mx-auto sm:max-w-none px-1">
-          <Button variant="primary" size="lg" href={MBR_BAROS_URL} target="_blank" rel="noopener noreferrer" style={{ width: "100%", maxWidth: 360 }}>
-            Open MBR BAROS portal <Icon name="external-link" size={18} color="#000" />
-          </Button>
-          <LocalizedLink href="/compliance-calendar" className="w-full sm:w-auto" style={{ maxWidth: 360 }}>
-            <Button variant="outline-dark" size="lg" style={{ width: "100%" }}>
-              2026 compliance calendar
-            </Button>
-          </LocalizedLink>
-        </div>
-      </PageHero>
-
-      <MBRCheck variant="page" />
-
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(48px,6vw,72px) 0" }}>
-        <Container>
-          <Reveal
-            style={{
-              background: "var(--a4-surface-card)",
-              border: "1px solid var(--a4-hairline-light)",
-              borderRadius: "var(--a4-r-lg)",
-              padding: "clamp(24px,3vw,36px)",
-            }}
-          >
-            <h2
-              className="a4-font-display font-medium text-[var(--a4-ink)]"
-              style={{ fontSize: "clamp(22px,2.6vw,28px)" }}
-            >
-              Not Malta? Other registries
-            </h2>
-            <p className="a4-font-body text-[var(--a4-mute)] mt-3 max-w-2xl text-[15px] leading-relaxed">
-              This page covers the <strong className="text-[var(--a4-ink)]">Malta Business Registry (MBR)</strong> only.
-              If you need India&apos;s Ministry of Corporate Affairs (MCA) master data or ROC filing status, use the
-              official MCA portal and FO Services — A4 Services Limited operates in Malta and does not provide MCA
-              lookups.
-            </p>
-            <p className="a4-font-body text-[13px] text-[var(--a4-mute)] mt-4">
-              MBR penalty enforcement and strike-off notices are published through the official registry — always verify
-              there before relying on any third-party estimate.
-            </p>
-          </Reveal>
-        </Container>
-      </section>
-
-      <section className="bg-[var(--a4-canvas-light)] border-t border-[var(--a4-hairline-light)]" style={{ padding: "0 0 clamp(48px,6vw,72px)" }}>
-        <Container>
-          <Reveal
-            style={{
-              background: "var(--a4-surface-card)",
-              border: "1px solid var(--a4-hairline-light)",
-              borderRadius: "var(--a4-r-lg)",
-              padding: "clamp(24px,3vw,36px)",
-              textAlign: "center",
-            }}
-          >
-            <h2 className="a4-font-display font-medium text-[var(--a4-ink)]" style={{ fontSize: "clamp(22px,2.6vw,28px)" }}>
-              Need help bringing filings up to date?
-            </h2>
-            <p className="a4-font-body text-[var(--a4-mute)] mt-3 max-w-lg mx-auto text-[15px] leading-relaxed">
-              Our team handles overdue MBR returns, audited accounts and CFR submissions — fixed quotes, no surprises.
-            </p>
-            <div className="flex gap-3 justify-center flex-wrap mt-6">
-              <LocalizedLink href="/contact">
-                <Button variant="primary" size="md">
-                  Speak to the team <Icon name="arrow-right" size={16} color="#000" />
-                </Button>
-              </LocalizedLink>
-            </div>
-          </Reveal>
-        </Container>
-      </section>
-
-      <ServicePortalBand serviceName="MBR compliance" />
-    </div>
-  );
-}
 
 export function ComplianceCalendarContent() {
   const [email, setEmail] = useState("");
@@ -160,9 +68,6 @@ export function ComplianceCalendarContent() {
               <p className="a4-font-body text-[13px] text-[var(--a4-mute)] mt-6">
                 Dates are indicative — your company&apos;s year-end and VAT scheme may shift exact deadlines. A4 clients get a tailored compliance calendar in their portal.
               </p>
-              <LocalizedLink href="/mbr-check" className="inline-flex items-center gap-1.5 mt-4 a4-font-body text-[14px] font-semibold text-[var(--a4-primary)] no-underline hover:underline">
-                Check your MBR status on BAROS <Icon name="arrow-right" size={14} color="var(--a4-primary)" />
-              </LocalizedLink>
             </Reveal>
             <Reveal delay={80}>
               <form
