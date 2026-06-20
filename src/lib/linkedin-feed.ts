@@ -18,7 +18,7 @@ export const MANUAL_LINKEDIN_POSTS: LinkedInFeedPost[] = [
     blurb:
       "A business can be profitable on paper and still struggle to pay its bills — here's why cash flow is what really keeps you running.",
     url: "https://www.linkedin.com/feed/update/urn:li:ugcPost:7465064097143816192",
-    thumbnail: "/assets/linkedin/profitable-but-out-of-cash.jpg",
+    thumbnail: "/assets/linkedin/profitable-but-out-of-cash-square.jpg",
   },
   {
     id: "ugcPost-7466131337012326400",

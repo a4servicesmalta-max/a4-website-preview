@@ -108,7 +108,7 @@ function LinkedInVideoCard({ post }: { post: LinkedInFeedPost }) {
       <div
         style={{
           position: "relative",
-          aspectRatio: "16 / 10",
+          aspectRatio: post.thumbnail ? "1 / 1" : "16 / 10",
           background: "#000",
           overflow: "hidden",
           borderBottom: "1px solid var(--a4-hairline-dark)",
