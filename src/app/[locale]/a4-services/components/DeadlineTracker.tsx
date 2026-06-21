@@ -138,7 +138,7 @@ export function DeadlineTracker() {
         <Reveal className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-7">
           <div className="min-w-0" style={{ maxWidth: 560 }}>
             <Eyebrow dark>Malta compliance</Eyebrow>
-            <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(26px,5vw,48px)", lineHeight: 1.05, letterSpacing: "-.025em", margin: "16px 0 0", textWrap: "balance" }}>We never miss a filing deadline.</h2>
+            <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 400, color: "#fff", fontSize: "clamp(20px,3vw,30px)", lineHeight: 1.15, letterSpacing: "-.015em", margin: "14px 0 0", textWrap: "balance" }}>We never miss a filing deadline.</h2>
             <p style={{ fontFamily: "var(--a4-font-body)", fontSize: "clamp(15px,2.5vw,17px)", lineHeight: 1.55, color: "var(--a4-on-dark-mute)", margin: "14px 0 0", textWrap: "pretty" }}>
               As your accountants and auditors, we track every statutory date and file on time. Next up: <strong style={{ color: "#fff", fontWeight: 600 }}>{next.name}</strong>, due {formatComplianceDate(next.date)}.
             </p>
