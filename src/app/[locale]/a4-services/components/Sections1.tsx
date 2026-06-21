@@ -36,7 +36,7 @@ export function Hero({ eyebrow = "Malta · Accounting & Audit Firm", accent = "#
             <span style={{ width: 28, height: 1, background: "var(--a4-hairline-strong)" }} />
           </div>
           <h1 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(38px,6.2vw,82px)", lineHeight: 1.18, letterSpacing: "-.03em", margin: "24px auto 0", maxWidth: 920, textWrap: "balance" }}>
-            Simplify your accounting<br />&amp; audit with <span style={{ color: "var(--a4-primary-bright)" }}>A4</span>.
+            Simplify your accounting{" "}<br />&amp; audit with <span style={{ color: "var(--a4-primary-bright)" }}>A4</span>.
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: "clamp(16px,1.7vw,20px)", lineHeight: 1.6, maxWidth: 560, margin: "26px auto 0", textWrap: "pretty" }}>
             A licensed Malta accounting &amp; audit firm — automation does the heavy lifting while our team keeps you compliant, organised and in control.
