@@ -22,13 +22,20 @@ export default function CookieConsentBanner() {
     }
   }, []);
 
-  const accept = () => {
+  const persistConsent = (value: "accepted" | "rejected") => {
     if (typeof document !== "undefined") {
-      document.cookie = `${COOKIE_NAME}=accepted; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""
+      document.cookie = `${COOKIE_NAME}=${value}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""
         }`;
     }
     setVisible(false);
   };
+
+  // Accept: record consent. Non-essential scripts/cookies should only be
+  // loaded once this value is "accepted".
+  const accept = () => persistConsent("accepted");
+
+  // Reject: persist the refusal and load nothing non-essential.
+  const reject = () => persistConsent("rejected");
 
   if (!visible) return null;
 
@@ -53,21 +60,21 @@ export default function CookieConsentBanner() {
                 {t("cookieConsent.policyLink")}
               </LocalizedLink>
             </div>
+            {/* Equal-weight Accept / Reject — both explicit, neither is a low-emphasis link */}
             <div className="flex items-center gap-2 sm:gap-3 self-stretch sm:self-auto">
               <button
                 type="button"
-                onClick={accept}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-white text-[#111111] text-sm font-semibold hover:bg-gray-100 transition-colors"
+                onClick={reject}
+                className="flex-1 sm:flex-none min-h-[44px] px-4 py-2.5 rounded-xl bg-white/10 text-white text-sm font-semibold border border-white/25 hover:bg-white/15 transition-colors"
               >
-                {t("cookieConsent.accept")}
+                {t("cookieConsent.reject")}
               </button>
-              {/* Optional secondary link; currently just closes banner visually */}
               <button
                 type="button"
-                onClick={() => setVisible(false)}
-                className="hidden sm:inline-flex px-3 py-2 text-xs font-medium text-white/70 hover:text-white"
+                onClick={accept}
+                className="flex-1 sm:flex-none min-h-[44px] px-4 py-2.5 rounded-xl bg-white text-[#111111] text-sm font-semibold hover:bg-gray-100 transition-colors"
               >
-                {t("cookieConsent.dismiss")}
+                {t("cookieConsent.accept")}
               </button>
             </div>
           </div>

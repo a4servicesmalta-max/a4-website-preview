@@ -32,12 +32,14 @@ export default function FloatingActionDock() {
   const [visible, setVisible] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
+  // Default to COLLAPSED (compact bubble) on load; only expand if the user
+  // previously chose to expand it this session.
   const [minimized, setMinimized] = useState(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined") return true;
     try {
-      return sessionStorage.getItem(DOCK_MINIMIZED_KEY) === "1";
+      return sessionStorage.getItem(DOCK_MINIMIZED_KEY) !== "0";
     } catch {
-      return false;
+      return true;
     }
   });
 

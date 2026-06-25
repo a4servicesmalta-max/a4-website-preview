@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import * as LucideIcons from "lucide-react";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
 import { isExternalHref } from "@/lib/external-links";
+import { useReduceMotion } from "@/contexts/ReduceMotionContext";
 
 export function Logo({ height = 26, invert = false }: { height?: number; invert?: boolean }) {
   return (
@@ -146,15 +147,19 @@ export function SectionHead({
 
 export function Reveal({ children, delay = 0, style, className, as = "div" }: { children: React.ReactNode; delay?: number; style?: React.CSSProperties; className?: string; as?: React.ElementType }) {
   const ref = useRef<HTMLElement>(null);
-  const [shown, setShown] = useState(false);
+  const reduceMotion = useReduceMotion();
+  // Start visible by default so content is never blank if JS/observer is slow
+  // or the animation never fires; only the on-scroll lift is opt-in.
+  const [shown, setShown] = useState(true);
   useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
+    if (reduceMotion) {
       setShown(true);
       return;
     }
     const el = ref.current;
     if (!el) return;
+    // Begin from the pre-reveal state, then animate in when in view.
+    setShown(false);
     const io = new IntersectionObserver(
       (ents) => {
         ents.forEach((e) => {
@@ -168,8 +173,9 @@ export function Reveal({ children, delay = 0, style, className, as = "div" }: { 
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [reduceMotion]);
   const Tag = as;
+  const animate = !reduceMotion && !shown;
   return (
     <Tag
       ref={ref}
@@ -177,9 +183,13 @@ export function Reveal({ children, delay = 0, style, className, as = "div" }: { 
       className={className}
       style={{
         ...style,
-        opacity: shown ? 1 : 0,
-        transform: shown ? "none" : "translateY(18px)",
-        transition: `opacity .6s ease ${delay}ms, transform .6s cubic-bezier(.2,.7,.2,1) ${delay}ms`,
+        // Visible opacity floor: even mid-animation text stays readable,
+        // and reduced-motion renders fully opaque with no transform.
+        opacity: animate ? 0.35 : 1,
+        transform: animate ? "translateY(18px)" : "none",
+        transition: reduceMotion
+          ? "none"
+          : `opacity .6s ease ${delay}ms, transform .6s cubic-bezier(.2,.7,.2,1) ${delay}ms`,
       }}
     >
       {children}

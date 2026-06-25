@@ -884,3 +884,15 @@ html.A4-custom-cursor body .cursor-pointer {
     transform: translateY(0) scale(0.98);
   }
 }
+/* Accessibility safety net: neutralise motion for users who prefer reduced motion.
+   Keeps layout intact (no display/animation:none) — just collapses durations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
