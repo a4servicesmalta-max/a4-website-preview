@@ -4,6 +4,22 @@ import { FindingsList } from "./FindingsList";
 import { Field, primaryBtn, outlineBtn, type Contact } from "./Field";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
 
+type AccountingResponse = {
+  company?: string;
+  score: number;
+  band: string;
+  narrative?: string;
+  findings?: ReviewResponse["findings"];
+  reportBase64?: string;
+  reportName?: string;
+};
+
+type AnyResponse = ReviewResponse | AccountingResponse;
+
+function isAccounting(d: AnyResponse): d is AccountingResponse {
+  return (d as AccountingResponse).score !== undefined && (d as AccountingResponse).score !== null;
+}
+
 function download(b64: string, filename: string, mime: string) {
   const bin = atob(b64); const u8 = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
@@ -21,12 +37,13 @@ export function DeepReview({
   setContact: (c: Contact) => void;
   contactCaptured: boolean;
 }) {
-  const [kind, setKind] = useState<"fs" | "tb">("fs");
+  const [path, setPath] = useState<"accounting" | "fs">("accounting");
   const [file, setFile] = useState<File | null>(null);
+  const [glFile, setGlFile] = useState<File | null>(null);
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
-  const [data, setData] = useState<ReviewResponse | null>(null);
+  const [data, setData] = useState<AnyResponse | null>(null);
   const [editContact, setEditContact] = useState(false);
 
   // Email confirmation gate — the AI review only runs once the email is verified.
@@ -68,14 +85,22 @@ export function DeepReview({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file || !verified) return;
+    if (!verified) return;
+    if (path === "accounting" && !file && !glFile) return;
+    if (path === "fs" && !file) return;
     setStatus("loading"); setError("");
     const fd = new FormData();
-    fd.append("file", file); fd.append("kind", kind); fd.append("consent", String(consent));
     fd.append("email", contact.email); fd.append("name", contact.name); fd.append("company", contact.company);
-    fd.append("verifiedToken", verifiedToken);
+    fd.append("consent", String(consent)); fd.append("verifiedToken", verifiedToken);
+    const url = path === "accounting" ? "/api/accounting-health" : "/api/fs-gap-review";
+    if (path === "accounting") {
+      if (file) fd.append("tb", file);
+      if (glFile) fd.append("gl", glFile);
+    } else {
+      fd.append("file", file as File); fd.append("kind", "fs");
+    }
     try {
-      const res = await fetch("/api/fs-gap-review", { method: "POST", body: fd });
+      const res = await fetch(url, { method: "POST", body: fd });
       const body = await res.json();
       if (!res.ok) { setError(body.error || "Review failed."); setStatus("error"); return; }
       setData(body); setStatus("idle");
@@ -83,24 +108,42 @@ export function DeepReview({
   }
 
   if (data) {
+    if (isAccounting(data)) {
+      return (
+        <div>
+          <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 600 }}>Accounting health — {data.company}</h3>
+          <p style={{ color: "var(--a4-mute)", fontSize: 14, margin: "4px 0 16px" }}>
+            {data.score}/100 · {data.band}
+          </p>
+          {data.narrative && <p style={{ fontSize: 14.5, color: "var(--a4-body)", marginBottom: 16 }}>{data.narrative}</p>}
+          {data.findings && <FindingsList findings={data.findings} />}
+          {data.reportBase64 && data.reportName && (
+            <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button type="button" style={primaryBtn()} onClick={() => download(data.reportBase64!, data.reportName!, "application/pdf")}>⬇ Download report (PDF)</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const fsData = data as ReviewResponse;
     return (
       <div>
-        <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 600 }}>{data.framework} review — {data.company}</h3>
+        <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 600 }}>{fsData.framework} review — {fsData.company}</h3>
         <p style={{ color: "var(--a4-mute)", fontSize: 14, margin: "4px 0 16px" }}>
-          {data.stats.checks_run} checks · {data.stats.checks_passed} passed · {data.stats.checks_failed} flagged
+          {fsData.stats.checks_run} checks · {fsData.stats.checks_passed} passed · {fsData.stats.checks_failed} flagged
         </p>
-        <FindingsList findings={data.findings} />
+        <FindingsList findings={fsData.findings} />
         <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button type="button" style={primaryBtn()} onClick={() => download(data.reportBase64, data.reportName, "application/pdf")}>⬇ Download report (PDF)</button>
-          {data.annotatedDocxBase64 && (
-            <button type="button" style={outlineBtn} onClick={() => download(data.annotatedDocxBase64!, data.annotatedName || "review.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}>⬇ Annotated Word</button>
+          <button type="button" style={primaryBtn()} onClick={() => download(fsData.reportBase64, fsData.reportName, "application/pdf")}>⬇ Download report (PDF)</button>
+          {fsData.annotatedDocxBase64 && (
+            <button type="button" style={outlineBtn} onClick={() => download(fsData.annotatedDocxBase64!, fsData.annotatedName || "review.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}>⬇ Annotated Word</button>
           )}
         </div>
       </div>
     );
   }
 
-  const accept = kind === "tb" ? ".pdf,.csv,.xlsx,.xlsm" : ".pdf,.doc,.docx";
   const tab = (active: boolean): React.CSSProperties => ({
     flex: 1, padding: "12px 14px", borderRadius: 10, cursor: "pointer",
     border: `1px solid ${active ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
@@ -109,32 +152,67 @@ export function DeepReview({
     fontWeight: active ? 600 : 500, fontSize: 14.5, fontFamily: "var(--a4-font-body)",
   });
 
+  const submitDisabled = status === "loading" || !consent || !verified ||
+    (path === "accounting" ? !file && !glFile : !file);
+
   return (
     <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
       <div>
         <label style={{ fontSize: 13, color: "var(--a4-mute)", display: "block", marginBottom: 6 }}>What would you like reviewed?</label>
         <div style={{ display: "flex", gap: 10 }}>
-          <button type="button" onClick={() => setKind("fs")} aria-pressed={kind === "fs"} style={tab(kind === "fs")}>Financial statements</button>
-          <button type="button" onClick={() => setKind("tb")} aria-pressed={kind === "tb"} style={tab(kind === "tb")}>Trial balance</button>
+          <button type="button" onClick={() => setPath("accounting")} aria-pressed={path === "accounting"} style={tab(path === "accounting")}>Accounting health (TB + GL)</button>
+          <button type="button" onClick={() => setPath("fs")} aria-pressed={path === "fs"} style={tab(path === "fs")}>Financial statements</button>
         </div>
       </div>
 
-      <label
-        style={{
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          gap: 4, minHeight: 92, padding: "16px", borderRadius: 12, cursor: "pointer", textAlign: "center",
-          border: `1.5px dashed ${file ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
-          background: file ? "rgba(73,79,223,.04)" : "var(--a4-surface-soft)",
-        }}
-      >
-        <input type="file" accept={accept} onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
-        <span style={{ fontSize: 14.5, fontWeight: 600, color: file ? "var(--a4-primary)" : "var(--a4-ink)" }}>
-          {file ? file.name : `Click to upload your ${kind === "tb" ? "trial balance" : "financial statements"}`}
-        </span>
-        <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>
-          {kind === "tb" ? "CSV, Excel or PDF" : "PDF or Word"} · processed in memory, never stored
-        </span>
-      </label>
+      {path === "accounting" ? (
+        <>
+          <label
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: 4, minHeight: 92, padding: "16px", borderRadius: 12, cursor: "pointer", textAlign: "center",
+              border: `1.5px dashed ${file ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
+              background: file ? "rgba(73,79,223,.04)" : "var(--a4-surface-soft)",
+            }}
+          >
+            <input type="file" accept=".csv,.xlsx,.xlsm,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
+            <span style={{ fontSize: 14.5, fontWeight: 600, color: file ? "var(--a4-primary)" : "var(--a4-ink)" }}>
+              {file ? file.name : "Click to upload your trial balance"}
+            </span>
+            <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>CSV, Excel or PDF · processed in memory, never stored</span>
+          </label>
+
+          <label
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: 4, minHeight: 80, padding: "14px", borderRadius: 12, cursor: "pointer", textAlign: "center",
+              border: `1.5px dashed ${glFile ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
+              background: glFile ? "rgba(73,79,223,.04)" : "var(--a4-surface-soft)",
+            }}
+          >
+            <input type="file" accept=".csv,.xlsx,.xlsm" onChange={(e) => setGlFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
+            <span style={{ fontSize: 14.5, fontWeight: 600, color: glFile ? "var(--a4-primary)" : "var(--a4-ink)" }}>
+              {glFile ? glFile.name : "General ledger (optional — unlocks transaction-level checks)"}
+            </span>
+            <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>CSV or Excel · processed in memory, never stored</span>
+          </label>
+        </>
+      ) : (
+        <label
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            gap: 4, minHeight: 92, padding: "16px", borderRadius: 12, cursor: "pointer", textAlign: "center",
+            border: `1.5px dashed ${file ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
+            background: file ? "rgba(73,79,223,.04)" : "var(--a4-surface-soft)",
+          }}
+        >
+          <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
+          <span style={{ fontSize: 14.5, fontWeight: 600, color: file ? "var(--a4-primary)" : "var(--a4-ink)" }}>
+            {file ? file.name : "Click to upload your financial statements"}
+          </span>
+          <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>PDF or Word · processed in memory, never stored</span>
+        </label>
+      )}
 
       {showFields ? (
         <>
@@ -192,7 +270,7 @@ export function DeepReview({
         I understand my file is processed to generate this review and is not stored.
       </label>
 
-      <button type="submit" disabled={status === "loading" || !consent || !file || !verified} style={primaryBtn(status === "loading" || !consent || !file || !verified)}>
+      <button type="submit" disabled={submitDisabled} style={primaryBtn(submitDisabled)}>
         {status === "loading" ? "Analyzing… (up to ~60s)" : verified ? "Run my review" : "Confirm your email to run"}
       </button>
       {status === "error" && <p style={{ color: "#c2303d", fontSize: 14, margin: 0 }}>{error}</p>}
