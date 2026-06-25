@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { isVerified } from "@/lib/email-verify";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -24,10 +25,15 @@ export async function POST(req: NextRequest) {
     const name = String(form.get("name") || "");
     const company = String(form.get("company") || "");
     const consent = String(form.get("consent") || "");
+    const verifiedToken = String(form.get("verifiedToken") || "");
 
     if (!(file instanceof File)) return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
     if (consent !== "true") return NextResponse.json({ error: "Consent is required to process the file." }, { status: 400 });
+    // Gate the AI engine behind a confirmed email — never spend a review on an unverified address.
+    if (!isVerified(email, verifiedToken)) {
+      return NextResponse.json({ error: "Please confirm your email before running the review." }, { status: 401 });
+    }
 
     const lower = file.name.toLowerCase();
     const allowed = kind === "tb" ? TB_TYPES : FS_TYPES;

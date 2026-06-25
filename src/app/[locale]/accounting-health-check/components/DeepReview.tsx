@@ -29,15 +29,51 @@ export function DeepReview({
   const [data, setData] = useState<ReviewResponse | null>(null);
   const [editContact, setEditContact] = useState(false);
 
+  // Email confirmation gate — the AI review only runs once the email is verified.
+  const [verifiedToken, setVerifiedToken] = useState("");
+  const [verifiedEmail, setVerifiedEmail] = useState("");
+  const [challengeToken, setChallengeToken] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [devCode, setDevCode] = useState("");
+  const [vBusy, setVBusy] = useState(false);
+  const [vErr, setVErr] = useState("");
+
   const showFields = !contactCaptured || editContact;
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim());
+  const verified = !!verifiedToken && verifiedEmail.toLowerCase() === contact.email.trim().toLowerCase();
+
+  async function sendCode() {
+    setVBusy(true); setVErr(""); setDevCode("");
+    try {
+      const r = await fetch("/api/verify/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: contact.email }) });
+      const b = await r.json();
+      if (!r.ok) { setVErr(b.error || "Could not send a code."); return; }
+      setChallengeToken(b.challengeToken); setCodeSent(true);
+      if (b.devCode) setDevCode(b.devCode);
+    } catch { setVErr("Could not send a code. Please try again."); }
+    finally { setVBusy(false); }
+  }
+
+  async function confirmCode() {
+    setVBusy(true); setVErr("");
+    try {
+      const r = await fetch("/api/verify/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: contact.email, code, challengeToken }) });
+      const b = await r.json();
+      if (!r.ok) { setVErr(b.error || "Verification failed."); return; }
+      setVerifiedToken(b.verifiedToken); setVerifiedEmail(contact.email);
+    } catch { setVErr("Verification failed. Please try again."); }
+    finally { setVBusy(false); }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file) return;
+    if (!file || !verified) return;
     setStatus("loading"); setError("");
     const fd = new FormData();
     fd.append("file", file); fd.append("kind", kind); fd.append("consent", String(consent));
     fd.append("email", contact.email); fd.append("name", contact.name); fd.append("company", contact.company);
+    fd.append("verifiedToken", verifiedToken);
     try {
       const res = await fetch("/api/fs-gap-review", { method: "POST", body: fd });
       const body = await res.json();
@@ -117,13 +153,47 @@ export function DeepReview({
         </div>
       )}
 
+      {!verified ? (
+        <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: 12, padding: 14, background: "var(--a4-surface-soft)", display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 13.5, color: "var(--a4-body)", lineHeight: 1.5 }}>
+            <strong style={{ color: "var(--a4-ink)" }}>Confirm your email to run the review.</strong> We&apos;ll send a 6-digit code so your report reaches a real inbox.
+          </div>
+          {!codeSent ? (
+            <button type="button" disabled={!emailValid || vBusy} onClick={sendCode}
+              style={{ ...outlineBtn, alignSelf: "start", opacity: !emailValid || vBusy ? 0.5 : 1, cursor: !emailValid || vBusy ? "default" : "pointer" }}>
+              {vBusy ? "Sending…" : "Send me a code"}
+            </button>
+          ) : (
+            <>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Field placeholder="6-digit code" inputMode="numeric" maxLength={6} value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  style={{ maxWidth: 170, letterSpacing: "3px", fontWeight: 600 }} />
+                <button type="button" disabled={code.length < 6 || vBusy} onClick={confirmCode} style={primaryBtn(code.length < 6 || vBusy)}>
+                  {vBusy ? "Checking…" : "Confirm"}
+                </button>
+              </div>
+              <div style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>
+                {devCode ? `Test mode — your code is ${devCode}. ` : `Code sent to ${contact.email}. `}
+                <button type="button" onClick={sendCode} disabled={vBusy} style={{ background: "none", border: 0, color: "var(--a4-primary)", cursor: "pointer", fontWeight: 600, fontSize: 12.5, padding: 0 }}>Resend</button>
+              </div>
+            </>
+          )}
+          {vErr && <p style={{ color: "#c2303d", fontSize: 13.5, margin: 0 }}>{vErr}</p>}
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#1a7f4b", fontWeight: 600 }}>
+          <span aria-hidden>✓</span> Email confirmed — {verifiedEmail}
+        </div>
+      )}
+
       <label style={{ fontSize: 13.5, display: "flex", gap: 9, alignItems: "flex-start", color: "var(--a4-body)", lineHeight: 1.5 }}>
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required style={{ marginTop: 3, accentColor: "var(--a4-primary)", width: 16, height: 16 }} />
         I understand my file is processed to generate this review and is not stored.
       </label>
 
-      <button type="submit" disabled={status === "loading" || !consent || !file} style={primaryBtn(status === "loading" || !consent || !file)}>
-        {status === "loading" ? "Analyzing… (up to ~60s)" : "Run my review"}
+      <button type="submit" disabled={status === "loading" || !consent || !file || !verified} style={primaryBtn(status === "loading" || !consent || !file || !verified)}>
+        {status === "loading" ? "Analyzing… (up to ~60s)" : verified ? "Run my review" : "Confirm your email to run"}
       </button>
       {status === "error" && <p style={{ color: "#c2303d", fontSize: 14, margin: 0 }}>{error}</p>}
     </form>
