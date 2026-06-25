@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { TrustBar } from "./HomeConversionSections";
+import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 // export function Nav({ accent }: { accent: string }) { ... } — using site-wide Navbar from layout
 
@@ -42,8 +43,8 @@ export function Hero({ eyebrow = "Malta · Accounting & Audit Firm", accent = "#
             A licensed Malta accounting &amp; audit firm — automation does the heavy lifting while our team keeps you compliant, organised and in control.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
-            <Button variant="primary" size="lg">Book a consultation <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg">View our services</Button>
+            <Button variant="primary" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank" rel="noopener noreferrer">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>
+            <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
           </div>
           <TrustBar />
         </Reveal>
