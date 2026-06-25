@@ -116,7 +116,7 @@ export function LandingPlan() {
           align="center"
           eyebrow="Build your price"
           title="Bookkeeping from €25/month"
-          sub="Create your account and run your bookkeeping in the A4 app — you upload, our automation does the rest. Add an accountant review whenever you want a qualified accountant to check the postings. Fixed monthly price, cancel anytime."
+          sub="Create your account and run your bookkeeping on the A4 platform — you upload, our automation does the rest. Add an accountant review whenever you want a qualified accountant to check the postings. Fixed monthly price, cancel anytime."
           maxWidth={620}
         /></Reveal>
 

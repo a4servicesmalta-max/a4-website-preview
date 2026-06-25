@@ -67,7 +67,7 @@ export default async function RootLayout({
 
   return (
     <html lang={lang} suppressHydrationWarning>
-      <body className={`antialiased ${bodoni.variable} ${montserrat.variable} ${nunito.variable}`}>
+      <body suppressHydrationWarning className={`antialiased ${bodoni.variable} ${montserrat.variable} ${nunito.variable}`}>
         <Script
           id="clarity-script"
           strategy="afterInteractive"

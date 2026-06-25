@@ -12,6 +12,7 @@ const SVC_LIST = [
   { icon: "book-open-check", name: "Accounting, bookkeeping & VAT", hint: "Automated processing and VAT returns, reviewed every month." },
   { icon: "users", name: "Payroll", hint: "FS5 submissions, payslips and SSC compliance." },
   { icon: "landmark", name: "Tax & MBR filings", hint: "Corporate & personal tax and your MBR annual return." },
+  { icon: "building-2", name: "Corporate & CSP services", hint: "Company formation, MBR filings, shareholder services and ongoing corporate administration." },
 ];
 
 const PDASH_NAV = [
@@ -159,7 +160,7 @@ export function Services() {
 
         <Reveal style={{ marginTop: 52 }}><PortalDashboardMock /></Reveal>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, background: "var(--a4-hairline-dark)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", overflow: "hidden", marginTop: 20 }} className="svc-list4">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 1, background: "var(--a4-hairline-dark)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", overflow: "hidden", marginTop: 20 }} className="svc-list4">
           {SVC_LIST.map((s) => (
             <Reveal key={s.name} style={{ background: "#000", padding: "24px 22px" }}>
               <Icon name={s.icon} size={22} color="var(--a4-primary-bright)" stroke={1.75} />
