@@ -16,6 +16,17 @@ export function TrustBar() {
     { label: "GAPSME & IFRS", icon: "scale" },
   ];
 
+  const recognition = [
+    {
+      label: "Top 5 Accounting Firm in Malta — The Manifest, 2026",
+      href: "https://themanifest.com/mt/accounting/financial/firms",
+    },
+    {
+      label: "Featured in Clutch's Top Accounting Firms in Malta, 2026",
+      href: "https://clutch.co/mt/accounting",
+    },
+  ];
+
   return (
     <Reveal delay={60}>
       <div
@@ -54,6 +65,60 @@ export function TrustBar() {
             )}
             {item.label}
           </span>
+        ))}
+      </div>
+
+      <div
+        aria-label="Industry recognition"
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "8px 12px",
+          marginTop: 16,
+          maxWidth: 920,
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}
+      >
+        <span
+          style={{
+            fontFamily: "var(--a4-font-body)",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+            color: "var(--a4-on-dark-mute)",
+            opacity: 0.7,
+          }}
+        >
+          Industry recognition
+        </span>
+        {recognition.map((item) => (
+          <a
+            key={item.label}
+            href={item.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontFamily: "var(--a4-font-body)",
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: "var(--a4-on-dark-mute)",
+              textDecoration: "none",
+              border: "1px solid var(--a4-hairline-dark)",
+              borderRadius: 999,
+              padding: "8px 14px",
+              background: "rgba(255,255,255,.04)",
+            }}
+          >
+            <Icon name="award" size={15} color="var(--a4-primary-bright)" stroke={2} />
+            {item.label}
+          </a>
         ))}
       </div>
     </Reveal>
