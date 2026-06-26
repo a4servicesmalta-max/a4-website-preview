@@ -80,6 +80,6 @@ export const config = {
   /** Include `/` explicitly — some setups skip root with a single complex negative pattern. */
   matcher: [
     "/",
-    "/((?!api|_next|_vercel|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot|pdf|mp4|webm)$).*)",
+    "/((?!api|_next|_vercel|lp/|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot|pdf|mp4|webm|html)$).*)",
   ],
 };

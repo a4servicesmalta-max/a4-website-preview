@@ -39,7 +39,6 @@ export function DeepReview({
 }) {
   const [path, setPath] = useState<"accounting" | "fs">("accounting");
   const [file, setFile] = useState<File | null>(null);
-  const [glFile, setGlFile] = useState<File | null>(null);
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
@@ -85,19 +84,16 @@ export function DeepReview({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!verified) return;
-    if (path === "accounting" && !file && !glFile) return;
-    if (path === "fs" && !file) return;
+    if (!verified || !file) return;
     setStatus("loading"); setError("");
     const fd = new FormData();
     fd.append("email", contact.email); fd.append("name", contact.name); fd.append("company", contact.company);
     fd.append("consent", String(consent)); fd.append("verifiedToken", verifiedToken);
     const url = path === "accounting" ? "/api/accounting-health" : "/api/fs-gap-review";
     if (path === "accounting") {
-      if (file) fd.append("tb", file);
-      if (glFile) fd.append("gl", glFile);
+      fd.append("tb", file);
     } else {
-      fd.append("file", file as File); fd.append("kind", "fs");
+      fd.append("file", file); fd.append("kind", "fs");
     }
     try {
       const res = await fetch(url, { method: "POST", body: fd });
@@ -152,15 +148,14 @@ export function DeepReview({
     fontWeight: active ? 600 : 500, fontSize: 14.5, fontFamily: "var(--a4-font-body)",
   });
 
-  const submitDisabled = status === "loading" || !consent || !verified ||
-    (path === "accounting" ? !file && !glFile : !file);
+  const submitDisabled = status === "loading" || !consent || !verified || !file;
 
   return (
     <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
       <div>
         <label style={{ fontSize: 13, color: "var(--a4-mute)", display: "block", marginBottom: 6 }}>What would you like reviewed?</label>
         <div style={{ display: "flex", gap: 10 }}>
-          <button type="button" onClick={() => setPath("accounting")} aria-pressed={path === "accounting"} style={tab(path === "accounting")}>Accounting health (TB + GL)</button>
+          <button type="button" onClick={() => setPath("accounting")} aria-pressed={path === "accounting"} style={tab(path === "accounting")}>Trial balance</button>
           <button type="button" onClick={() => setPath("fs")} aria-pressed={path === "fs"} style={tab(path === "fs")}>Financial statements</button>
         </div>
       </div>
@@ -180,21 +175,6 @@ export function DeepReview({
               {file ? file.name : "Click to upload your trial balance"}
             </span>
             <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>CSV, Excel or PDF · processed in memory, never stored</span>
-          </label>
-
-          <label
-            style={{
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              gap: 4, minHeight: 80, padding: "14px", borderRadius: 12, cursor: "pointer", textAlign: "center",
-              border: `1.5px dashed ${glFile ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
-              background: glFile ? "rgba(73,79,223,.04)" : "var(--a4-surface-soft)",
-            }}
-          >
-            <input type="file" accept=".csv,.xlsx,.xlsm" onChange={(e) => setGlFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
-            <span style={{ fontSize: 14.5, fontWeight: 600, color: glFile ? "var(--a4-primary)" : "var(--a4-ink)" }}>
-              {glFile ? glFile.name : "General ledger (optional — unlocks transaction-level checks)"}
-            </span>
-            <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>CSV or Excel · processed in memory, never stored</span>
           </label>
         </>
       ) : (

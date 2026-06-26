@@ -44,27 +44,52 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File too large (max 20 MB)." }, { status: 400 });
 
     const base = process.env.A4_ACCOUNTING_URL;
-    if (!base) return NextResponse.json({ error: "Accounting-health service not configured." }, { status: 503 });
-    const auth = Buffer.from(`${process.env.A4_ACCOUNTING_USER || "a4"}:${process.env.A4_ACCOUNTING_PASS || ""}`).toString("base64");
 
+    // Primary path: the dedicated accounting-health engine (TB + GL), when hosted.
+    if (base) {
+      const auth = Buffer.from(`${process.env.A4_ACCOUNTING_USER || "a4"}:${process.env.A4_ACCOUNTING_PASS || ""}`).toString("base64");
+      const out = new FormData();
+      if (tbFile) out.append("tb", tbFile, tbFile.name);
+      if (glFile) out.append("gl", glFile, glFile.name);
+      out.append("deep", "true");
+
+      const engine = await fetch(`${base}/api/health-review`, { method: "POST", headers: { Authorization: `Basic ${auth}` }, body: out });
+      await emailLead(
+        `Accounting-health request — ${name || email}`,
+        `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nTB: ${tbFile?.name || "-"}\nGL: ${glFile?.name || "-"}\nEngine status: ${engine.status}`,
+        email,
+      ).catch(() => {});
+      if (!engine.ok) {
+        const detail = await engine.json().catch(() => ({}));
+        const msg = engine.status === 422
+          ? "We couldn't read those files. Try a clean CSV or Excel export."
+          : (detail.detail || detail.error || "The service had a problem. We've logged your request and will follow up.");
+        return NextResponse.json({ error: msg }, { status: engine.status === 422 ? 422 : 502 });
+      }
+      return NextResponse.json(await engine.json());
+    }
+
+    // Fallback (no dedicated engine hosted): run the trial balance through the FS engine's
+    // TB reviewer, which is deployed and has the Anthropic key. GL is not used in this mode.
+    const fsBase = process.env.A4_FSREVIEW_URL;
+    if (!fsBase) return NextResponse.json({ error: "Review service not configured." }, { status: 503 });
+    if (!tbFile) return NextResponse.json({ error: "Please upload a trial balance (CSV, Excel or PDF)." }, { status: 400 });
+    const fsAuth = Buffer.from(`${process.env.A4_FSREVIEW_USER || "a4"}:${process.env.A4_FSREVIEW_PASS || ""}`).toString("base64");
     const out = new FormData();
-    if (tbFile) out.append("tb", tbFile, tbFile.name);
-    if (glFile) out.append("gl", glFile, glFile.name);
+    out.append("file", tbFile, tbFile.name);
     out.append("deep", "true");
 
-    const engine = await fetch(`${base}/api/health-review`, { method: "POST", headers: { Authorization: `Basic ${auth}` }, body: out });
-
+    const engine = await fetch(`${fsBase}/api/review-tb`, { method: "POST", headers: { Authorization: `Basic ${fsAuth}` }, body: out });
     await emailLead(
-      `Accounting-health request — ${name || email}`,
-      `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nTB: ${tbFile?.name || "-"}\nGL: ${glFile?.name || "-"}\nEngine status: ${engine.status}`,
+      `Trial-balance review request — ${name || email}`,
+      `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nTB: ${tbFile.name}\nGL: ${glFile?.name || "- (not used)"}\nEngine status: ${engine.status}`,
       email,
     ).catch(() => {});
-
     if (!engine.ok) {
       const detail = await engine.json().catch(() => ({}));
       const msg = engine.status === 422
-        ? "We couldn't read those files. Try a clean CSV or Excel export."
-        : (detail.detail || detail.error || "The service had a problem. We've logged your request and will follow up.");
+        ? "We couldn't read that file. Try a clean CSV or Excel export."
+        : (detail.detail || detail.error || "The review service had a problem. We've logged your request and will follow up.");
       return NextResponse.json({ error: msg }, { status: engine.status === 422 ? 422 : 502 });
     }
     return NextResponse.json(await engine.json());
