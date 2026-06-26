@@ -241,7 +241,7 @@ function LinkedInPostsSwiper({ posts }: { posts: LinkedInFeedPost[] }) {
   const currentPage = Math.min(pageCount, Math.floor(activeIndex / slidesPerView) + 1);
 
   return (
-    <div className="relative mt-10 sm:mt-12 px-0 sm:px-12">
+    <div className="relative mt-10 sm:mt-12 px-0 sm:px-12 mx-auto" style={{ maxWidth: 760 }}>
       {posts.length > slidesPerView && (
         <>
           <button
