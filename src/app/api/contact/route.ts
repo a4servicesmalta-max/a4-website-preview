@@ -43,30 +43,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
-    if (!toAddress) {
-      return NextResponse.json(
-        { error: "Email destination is not configured." },
-        { status: 500 },
-      );
-    }
+    // Portal push is primary — always capture the lead first.
+    await pushToPortal({ name, email, message, service: "Contact form", source: "contact", priority: "Med", meta: { subject, context } });
 
-    await getTransport().sendMail({
-      from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-      to: toAddress,
-      subject: subject || `New contact from ${name || "A4 website"}`,
-      replyTo: email,
-      text: `
+    // Email is best-effort — a missing/broken SMTP config must never cause a 5xx.
+    try {
+      const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
+      if (toAddress) {
+        await getTransport().sendMail({
+          from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+          to: toAddress,
+          subject: subject || `New contact from ${name || "A4 website"}`,
+          replyTo: email,
+          text: `
 Name: ${name || "N/A"}
 Email: ${email}
 Context: ${context || "General contact"}
 
 Message:
 ${message}
-      `.trim(),
-    });
-
-    await pushToPortal({ name, email, message, service: "Contact form", source: "contact", priority: "Med", meta: { subject, context } });
+          `.trim(),
+        });
+      }
+    } catch (emailErr) {
+      console.warn("Contact form email skipped (SMTP not configured or failed):", emailErr);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

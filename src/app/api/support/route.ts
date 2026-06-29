@@ -60,14 +60,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
-    if (!toAddress) {
-      return NextResponse.json(
-        { error: "Email destination is not configured." },
-        { status: 500 }
-      );
-    }
-
     const transcript =
       Array.isArray(conversation) && conversation.length > 0
         ? conversation
@@ -77,12 +69,19 @@ export async function POST(req: NextRequest) {
 
     const sessionToken = req.cookies.get("A4_session")?.value || "N/A";
 
-    await getTransport().sendMail({
-      from: `"A4 Website Support" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-      to: toAddress,
-      replyTo: email,
-      subject: "Website Support Request",
-      text: `
+    // Portal push is primary — always capture the lead first.
+    await pushToPortal({ name, email, message: issue, service: "Support chat", source: "support-chat", priority: "Med", meta: { conversation } });
+
+    // Email is best-effort — a missing/broken SMTP config must never cause a 5xx.
+    try {
+      const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
+      if (toAddress) {
+        await getTransport().sendMail({
+          from: `"A4 Website Support" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+          to: toAddress,
+          replyTo: email,
+          subject: "Website Support Request",
+          text: `
 Support request from the website chat.
 
 Name: ${name.trim()}
@@ -95,10 +94,12 @@ ${issue.trim()}
 --- Conversation transcript ---
 ${transcript}
 --- End transcript ---
-      `.trim(),
-    });
-
-    await pushToPortal({ name, email, message: issue, service: "Support chat", source: "support-chat", priority: "Med", meta: { conversation } });
+          `.trim(),
+        });
+      }
+    } catch (emailErr) {
+      console.warn("Support form email skipped (SMTP not configured or failed):", emailErr);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
