@@ -1,0 +1,11 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+vi.mock("@/lib/email-verify", () => ({ isVerified: vi.fn(() => true) }));
+vi.mock("@/lib/portal", () => ({ pushToPortal: vi.fn(async () => {}) }));
+import { isVerified } from "@/lib/email-verify";
+import { pushToPortal } from "@/lib/portal";
+import { POST } from "./route";
+const body = (o: any) => ({ json: async () => o } as any);
+beforeEach(() => vi.clearAllMocks());
+it("400 on bad provider", async () => { const r = await POST(body({ email: "a@b.com", provider: "x", consent: true, verifiedToken: "t" })); expect(r.status).toBe(400); });
+it("401 when not verified", async () => { (isVerified as any).mockReturnValue(false); const r = await POST(body({ email: "a@b.com", provider: "xero", consent: true, verifiedToken: "bad" })); expect(r.status).toBe(401); });
+it("pushes to portal when valid", async () => { (isVerified as any).mockReturnValue(true); const r = await POST(body({ email: "a@b.com", name: "N", company: "C", provider: "xero", consent: true, verifiedToken: "ok" })); expect(r.status).toBe(200); expect(pushToPortal).toHaveBeenCalled(); });

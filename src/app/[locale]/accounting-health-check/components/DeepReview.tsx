@@ -37,8 +37,10 @@ export function DeepReview({
   setContact: (c: Contact) => void;
   contactCaptured: boolean;
 }) {
-  const [path, setPath] = useState<"accounting" | "fs">("accounting");
+  const [path, setPath] = useState<"accounting" | "fs" | "connect">("accounting");
   const [file, setFile] = useState<File | null>(null);
+  const [provider, setProvider] = useState<"" | "sage" | "quickbooks" | "xero">("");
+  const [connectDone, setConnectDone] = useState(false);
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
@@ -84,6 +86,21 @@ export function DeepReview({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (path === "connect") {
+      if (!verified || !consent || !provider) return;
+      setStatus("loading"); setError("");
+      try {
+        const res = await fetch("/api/connect-accounting", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: contact.email, name: contact.name, company: contact.company, provider, verifiedToken, consent: true }),
+        });
+        const body = await res.json();
+        if (!res.ok) { setError(body.error || "Request failed. Please try again."); setStatus("error"); return; }
+        setConnectDone(true); setStatus("idle");
+      } catch { setError("Request failed. Please try again."); setStatus("error"); }
+      return;
+    }
     if (!verified || !file) return;
     setStatus("loading"); setError("");
     const fd = new FormData();
@@ -140,6 +157,20 @@ export function DeepReview({
     );
   }
 
+  if (connectDone) {
+    const providerLabel: Record<string, string> = { sage: "Sage", quickbooks: "QuickBooks", xero: "Xero" };
+    return (
+      <div style={{ padding: "24px 0", display: "grid", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, color: "#1a7f4b", fontWeight: 700 }}>
+          <span aria-hidden>✓</span> Request received
+        </div>
+        <p style={{ fontSize: 14.5, color: "var(--a4-body)", margin: 0, lineHeight: 1.6 }}>
+          Thanks — we&apos;ll connect to <strong style={{ color: "var(--a4-ink)" }}>{providerLabel[provider] ?? provider}</strong> securely, run your accounting-health review, and email you the results.
+        </p>
+      </div>
+    );
+  }
+
   const tab = (active: boolean): React.CSSProperties => ({
     flex: 1, padding: "12px 14px", borderRadius: 10, cursor: "pointer",
     border: `1px solid ${active ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
@@ -148,36 +179,23 @@ export function DeepReview({
     fontWeight: active ? 600 : 500, fontSize: 14.5, fontFamily: "var(--a4-font-body)",
   });
 
-  const submitDisabled = status === "loading" || !consent || !verified || !file;
+  const submitDisabled =
+    path === "connect"
+      ? status === "loading" || !consent || !verified || provider === ""
+      : status === "loading" || !consent || !verified || !file;
 
   return (
     <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
       <div>
         <label style={{ fontSize: 13, color: "var(--a4-mute)", display: "block", marginBottom: 6 }}>What would you like reviewed?</label>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button type="button" onClick={() => setPath("accounting")} aria-pressed={path === "accounting"} style={tab(path === "accounting")}>Trial balance</button>
-          <button type="button" onClick={() => setPath("fs")} aria-pressed={path === "fs"} style={tab(path === "fs")}>Financial statements</button>
+          <button type="button" onClick={() => setPath("fs")} aria-pressed={path === "fs"} style={tab(path === "fs")}>Management accounts / FS</button>
+          <button type="button" onClick={() => setPath("connect")} aria-pressed={path === "connect"} style={tab(path === "connect")}>Connect software</button>
         </div>
       </div>
 
-      {path === "accounting" ? (
-        <>
-          <label
-            style={{
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              gap: 4, minHeight: 92, padding: "16px", borderRadius: 12, cursor: "pointer", textAlign: "center",
-              border: `1.5px dashed ${file ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
-              background: file ? "rgba(73,79,223,.04)" : "var(--a4-surface-soft)",
-            }}
-          >
-            <input type="file" accept=".csv,.xlsx,.xlsm,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
-            <span style={{ fontSize: 14.5, fontWeight: 600, color: file ? "var(--a4-primary)" : "var(--a4-ink)" }}>
-              {file ? file.name : "Click to upload your trial balance"}
-            </span>
-            <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>CSV, Excel or PDF · processed in memory, never stored</span>
-          </label>
-        </>
-      ) : (
+      {path === "accounting" && (
         <label
           style={{
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -186,12 +204,44 @@ export function DeepReview({
             background: file ? "rgba(73,79,223,.04)" : "var(--a4-surface-soft)",
           }}
         >
-          <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
+          <input type="file" accept=".csv,.xlsx,.xlsm,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
           <span style={{ fontSize: 14.5, fontWeight: 600, color: file ? "var(--a4-primary)" : "var(--a4-ink)" }}>
-            {file ? file.name : "Click to upload your financial statements"}
+            {file ? file.name : "Click to upload your trial balance"}
           </span>
-          <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>PDF or Word · processed in memory, never stored</span>
+          <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>CSV, Excel or PDF · processed in memory, never stored</span>
         </label>
+      )}
+
+      {path === "fs" && (
+        <label
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            gap: 4, minHeight: 92, padding: "16px", borderRadius: 12, cursor: "pointer", textAlign: "center",
+            border: `1.5px dashed ${file ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
+            background: file ? "rgba(73,79,223,.04)" : "var(--a4-surface-soft)",
+          }}
+        >
+          <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xlsm" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
+          <span style={{ fontSize: 14.5, fontWeight: 600, color: file ? "var(--a4-primary)" : "var(--a4-ink)" }}>
+            {file ? file.name : "Click to upload your management accounts or financial statements"}
+          </span>
+          <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>PDF, Word or Excel — management accounts or financial statements · processed in memory, never stored</span>
+        </label>
+      )}
+
+      {path === "connect" && (
+        <div style={{ display: "grid", gap: 10 }}>
+          <p style={{ margin: 0, fontSize: 13.5, color: "var(--a4-body)", lineHeight: 1.6 }}>
+            We&apos;ll connect securely and review your numbers — pick your software and confirm your email.
+          </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {(["sage", "quickbooks", "xero"] as const).map((p) => (
+              <button key={p} type="button" onClick={() => setProvider(p)} aria-pressed={provider === p} style={tab(provider === p)}>
+                {p === "sage" ? "Sage" : p === "quickbooks" ? "QuickBooks" : "Xero"}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {showFields ? (
@@ -251,7 +301,11 @@ export function DeepReview({
       </label>
 
       <button type="submit" disabled={submitDisabled} style={primaryBtn(submitDisabled)}>
-        {status === "loading" ? "Analyzing… (up to ~60s)" : verified ? "Run my review" : "Confirm your email to run"}
+        {status === "loading"
+          ? (path === "connect" ? "Sending request…" : "Analyzing… (up to ~60s)")
+          : verified
+            ? (path === "connect" ? "Request my review" : "Run my review")
+            : "Confirm your email to run"}
       </button>
       {status === "error" && <p style={{ color: "#c2303d", fontSize: 14, margin: 0 }}>{error}</p>}
     </form>
