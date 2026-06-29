@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { pushToPortal } from "@/lib/portal";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -96,6 +97,8 @@ ${transcript}
 --- End transcript ---
       `.trim(),
     });
+
+    await pushToPortal({ name, email, message: issue, service: "Support chat", source: "support-chat", priority: "Med", meta: { conversation } });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

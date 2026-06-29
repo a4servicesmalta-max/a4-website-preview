@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { pushToPortal } from "@/lib/portal";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -206,6 +207,8 @@ export async function POST(req: NextRequest) {
       text: autoReplyText,
       html: autoReplyHtml,
     });
+
+    await pushToPortal({ name, email, company: meta?.companyName, phone: meta?.phone, message, service: "Quote request" + (meta?.service ? ` — ${meta.service}` : ""), source: "quote", priority: "High", meta });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

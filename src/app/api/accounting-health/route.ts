@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { isVerified } from "@/lib/email-verify";
+import { pushToPortal } from "@/lib/portal";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -42,6 +43,8 @@ export async function POST(req: NextRequest) {
     if (glFile && !okType(glFile, GL_TYPES)) return NextResponse.json({ error: "General ledger must be CSV or Excel." }, { status: 400 });
     if ((tbFile?.size || 0) > 20 * 1024 * 1024 || (glFile?.size || 0) > 20 * 1024 * 1024)
       return NextResponse.json({ error: "File too large (max 20 MB)." }, { status: 400 });
+
+    await pushToPortal({ name, email, company, message: `Uploaded ${tbFile?.name || "TB"}${glFile ? " + " + glFile.name : ""} for accounting/TB review`, service: "Accounting / trial-balance review", source: "accounting-health", priority: "High", meta: { tb: tbFile?.name || null, gl: glFile?.name || null } });
 
     const base = process.env.A4_ACCOUNTING_URL;
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { pushToPortal } from "@/lib/portal";
 
 function getTransport() {
   const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
@@ -33,6 +34,8 @@ export async function POST(req: NextRequest) {
         text: `Hi ${name || ""},\n\nHere is your accounting health check result.\n\n${summary}\n\nWant a real review of your numbers? Reply or book a call: ${process.env.NEXT_PUBLIC_CALENDLY_BOOKING_URL || "https://a4.com.mt/contact"}\n\n— A4 Services`,
       });
     }
+    await pushToPortal({ name, email, company, message: `Accounting health score: ${score}/100 (${band})`, service: "Accounting health quiz", source: "health-check", priority: "Med", meta: { score, band, breakdown } });
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("health-check lead error:", e);

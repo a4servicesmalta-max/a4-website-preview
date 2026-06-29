@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { isVerified } from "@/lib/email-verify";
+import { pushToPortal } from "@/lib/portal";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -58,6 +59,8 @@ export async function POST(req: NextRequest) {
       `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nKind: ${kind}\nFile: ${file.name}\nEngine status: ${engine.status}`,
       email,
     ).catch(() => {});
+
+    await pushToPortal({ name, email, company, message: `Uploaded ${file.name} for ${kind === "tb" ? "trial balance" : "financial statements"} review`, service: `FS/TB review (${kind})`, source: "fs-review", priority: "High", meta: { kind, fileName: file.name } });
 
     if (!engine.ok) {
       const detail = await engine.json().catch(() => ({}));
