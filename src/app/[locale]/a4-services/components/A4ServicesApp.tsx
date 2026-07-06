@@ -18,7 +18,6 @@ import { ContactCTA, FAQ } from "./Sections5";
 import {
   TrustedSectorsBand,
   TestimonialsSection,
-  DedicatedTeam,
   CaseStudiesTeaser,
 } from "./HomeConversionSections";
 import { MotionBand } from "./MotionBand";
@@ -41,7 +40,6 @@ export function A4ServicesApp() {
         <Services />
         <FeatureBento />
         <HowItWorks />
-        <DedicatedTeam />
         <DeadlineTracker />
         <International />
         <Comparison />
