@@ -8,7 +8,7 @@ import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 // export function Nav({ accent }: { accent: string }) { ... } — using site-wide Navbar from layout
 
-export function Hero({ eyebrow = "Malta · Accounting & Audit Firm", accent = "#494fdf" }) {
+export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit Firm", accent = "#494fdf" }) {
   const InlineTile = ({ icon, rot, color = "var(--a4-primary-bright)", bg = "var(--a4-surface-elevated)", delay = 0 }: { icon: string, rot: number, color?: string, bg?: string, delay?: number }) => (
     <span className="hero-tile" style={{ display: "inline-block", verticalAlign: "middle", margin: "0 .12em", animationDelay: delay + "s" }}>
       <span style={{ display: "grid", placeItems: "center", width: "clamp(44px,5.4vw,74px)", height: "clamp(44px,5.4vw,74px)", borderRadius: "clamp(12px,1.5vw,20px)", background: bg, border: "1px solid var(--a4-hairline-dark)", transform: `rotate(${rot}deg)`, boxShadow: "0 16px 38px -12px rgba(0,0,0,.75)" }}>
@@ -45,6 +45,14 @@ export function Hero({ eyebrow = "Malta · Accounting & Audit Firm", accent = "#
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank" rel="noopener noreferrer">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>
             <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
+          </div>
+          <div style={{ display: "flex", gap: "6px 22px", marginTop: 22, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
+            {["Quotes within 24 hours", "Automated bookkeeping from €25/mo", "Free accounting health check"].map((fact, i) => (
+              <span key={fact} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 500, color: "var(--a4-on-dark-mute)" }}>
+                <Icon name="check" size={14} color="var(--a4-primary-bright)" stroke={2.5} />
+                {fact}
+              </span>
+            ))}
           </div>
           <TrustBar />
         </Reveal>

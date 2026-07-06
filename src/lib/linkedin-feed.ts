@@ -13,6 +13,14 @@ export type LinkedInFeedPost = {
 /** Manual fallback when no feed provider is configured. Paste embed `src` from LinkedIn → Embed this post. */
 export const MANUAL_LINKEDIN_POSTS: LinkedInFeedPost[] = [
   {
+    id: "activity-7478409614972108800",
+    title: "Financial vs management accounts — what's the difference?",
+    blurb:
+      "Financial accounts look at the past — taxes and legal requirements. Management accounts give you the real-time numbers to run the business day to day.",
+    url: "https://www.linkedin.com/feed/update/urn:li:activity:7478409614972108800",
+    thumbnail: "/assets/linkedin/management-vs-financial-square.jpg",
+  },
+  {
     id: "ugcPost-7465064097143816192",
     title: "Profitable but out of cash? Why cash flow matters",
     blurb:

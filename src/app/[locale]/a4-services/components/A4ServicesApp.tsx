@@ -15,7 +15,12 @@ import { DeadlineTracker } from "./DeadlineTracker";
 import { International, WhoWeWorkWith } from "./Sections4";
 import { Comparison } from "./Comparison";
 import { ContactCTA, FAQ } from "./Sections5";
-import { TrustedSectorsBand } from "./HomeConversionSections";
+import {
+  TrustedSectorsBand,
+  TestimonialsSection,
+  DedicatedTeam,
+  CaseStudiesTeaser,
+} from "./HomeConversionSections";
 
 export function A4ServicesApp() {
   return (
@@ -24,8 +29,10 @@ export function A4ServicesApp() {
       <main>
         <Hero />
         <Statement />
+        <CaseStudiesTeaser />
         <LinkedInVideoFeed />
         <TrustedSectorsBand />
+        <TestimonialsSection />
         <Insights />
         <HealthCheckPromo />
         <LandingPlan />
@@ -33,6 +40,7 @@ export function A4ServicesApp() {
         <Services />
         <FeatureBento />
         <HowItWorks />
+        <DedicatedTeam />
         <DeadlineTracker />
         <International />
         <Comparison />

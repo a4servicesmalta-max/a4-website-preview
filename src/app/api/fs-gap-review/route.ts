@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { isVerified } from "@/lib/email-verify";
 import { pushToPortal } from "@/lib/portal";
+import { engineFetch } from "@/lib/fs-review-engine";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -43,16 +44,14 @@ export async function POST(req: NextRequest) {
     }
     if (file.size > 20 * 1024 * 1024) return NextResponse.json({ error: "File too large (max 20 MB)." }, { status: 400 });
 
-    const base = process.env.A4_FSREVIEW_URL;
-    if (!base) return NextResponse.json({ error: "Review service not configured." }, { status: 503 });
-    const auth = Buffer.from(`${process.env.A4_FSREVIEW_USER || "a4"}:${process.env.A4_FSREVIEW_PASS || ""}`).toString("base64");
+    if (!process.env.A4_FSREVIEW_URL) return NextResponse.json({ error: "Review service not configured." }, { status: 503 });
     const endpoint = kind === "tb" ? "/api/review-tb" : "/api/review";
 
     const out = new FormData();
     out.append("file", file, file.name);
     out.append("deep", "true");
 
-    const engine = await fetch(`${base}${endpoint}`, { method: "POST", headers: { Authorization: `Basic ${auth}` }, body: out });
+    const engine = await engineFetch(endpoint, out);
 
     await emailLead(
       `FS/TB review request — ${name || email} (${kind.toUpperCase()})`,
