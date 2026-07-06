@@ -10,29 +10,23 @@ import { TRUSTED_SECTORS } from "@/data/a4TestimonialsData";
 import { TestimonialsSwiper } from "@/components/a4-landing/TestimonialsSwiper";
 
 export function TrustBar() {
-  const pillStyle: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 7,
+  const items: { label: string; href?: string }[] = [
+    { label: "Malta Accountancy Board authorised" },
+    { label: "BOKS International member" },
+    { label: "GAPSME & IFRS" },
+    { label: "Top 5 Firm in Malta — The Manifest 2026", href: "https://themanifest.com/mt/accounting/financial/firms" },
+    { label: "Clutch Top Firms 2026", href: "https://clutch.co/mt/accounting" },
+  ];
+
+  const itemStyle: React.CSSProperties = {
     fontFamily: "var(--a4-font-body)",
     fontSize: 12,
-    fontWeight: 600,
-    color: "var(--a4-on-dark-mute)",
+    fontWeight: 500,
+    letterSpacing: ".02em",
+    color: "var(--a4-stone)",
     textDecoration: "none",
-    border: "1px solid var(--a4-hairline-dark)",
-    borderRadius: 999,
-    padding: "7px 13px",
-    background: "rgba(255,255,255,.04)",
     whiteSpace: "nowrap",
   };
-
-  const items: { label: string; icon: string; logo?: string; href?: string }[] = [
-    { label: "Malta Accountancy Board authorised", icon: "badge-check" },
-    { label: "BOKS International member", icon: "globe", logo: "/assets/boks-logo.png" },
-    { label: "GAPSME & IFRS", icon: "scale" },
-    { label: "Top 5 Firm in Malta · The Manifest 2026", icon: "award", href: "https://themanifest.com/mt/accounting/financial/firms" },
-    { label: "Clutch Top Firms Malta 2026", icon: "award", href: "https://clutch.co/mt/accounting" },
-  ];
 
   return (
     <Reveal delay={60}>
@@ -41,34 +35,34 @@ export function TrustBar() {
           display: "flex",
           flexWrap: "wrap",
           justifyContent: "center",
-          gap: "8px 10px",
-          marginTop: 26,
-          maxWidth: 860,
+          alignItems: "center",
+          columnGap: 10,
+          rowGap: 6,
+          marginTop: 24,
+          maxWidth: 780,
           marginLeft: "auto",
           marginRight: "auto",
         }}
       >
-        {items.map((item) => {
-          const inner = (
-            <>
-              {item.logo ? (
-                <img src={item.logo} alt="" width={16} height={16} style={{ display: "block", borderRadius: 4 }} />
-              ) : (
-                <Icon name={item.icon} size={14} color="var(--a4-primary-bright)" stroke={2} />
-              )}
-              {item.label}
-            </>
-          );
-          return item.href ? (
-            <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" style={pillStyle}>
-              {inner}
-            </a>
-          ) : (
-            <span key={item.label} style={pillStyle}>
-              {inner}
-            </span>
-          );
-        })}
+        {items.map((item, i) => (
+          <React.Fragment key={item.label}>
+            {i > 0 && <span aria-hidden="true" style={{ width: 3, height: 3, borderRadius: 999, background: "var(--a4-hairline-strong)" }} />}
+            {item.href ? (
+              <a
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={itemStyle}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--a4-on-dark-mute)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--a4-stone)")}
+              >
+                {item.label}
+              </a>
+            ) : (
+              <span style={itemStyle}>{item.label}</span>
+            )}
+          </React.Fragment>
+        ))}
       </div>
     </Reveal>
   );
