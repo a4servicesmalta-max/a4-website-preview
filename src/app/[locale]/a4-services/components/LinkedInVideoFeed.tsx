@@ -241,7 +241,7 @@ function LinkedInPostsSwiper({ posts }: { posts: LinkedInFeedPost[] }) {
   const currentPage = Math.min(pageCount, Math.floor(activeIndex / slidesPerView) + 1);
 
   return (
-    <div className="relative mt-10 sm:mt-12 px-0 sm:px-12 mx-auto" style={{ maxWidth: 760 }}>
+    <div className="relative mt-10 sm:mt-12 px-0 sm:px-12 mx-auto" style={{ maxWidth: 1080 }}>
       {posts.length > slidesPerView && (
         <>
           <button
@@ -279,7 +279,7 @@ function LinkedInPostsSwiper({ posts }: { posts: LinkedInFeedPost[] }) {
         slidesPerView={1}
         breakpoints={{
           768: { slidesPerView: Math.min(2, posts.length), spaceBetween: 22 },
-          1024: { slidesPerView: Math.min(2, posts.length), spaceBetween: 24 },
+          1024: { slidesPerView: Math.min(3, posts.length), spaceBetween: 24 },
         }}
         loop={canLoop}
         watchOverflow

@@ -21,6 +21,7 @@ import {
   DedicatedTeam,
   CaseStudiesTeaser,
 } from "./HomeConversionSections";
+import { MotionBand } from "./MotionBand";
 
 export function A4ServicesApp() {
   return (
@@ -45,6 +46,7 @@ export function A4ServicesApp() {
         <International />
         <Comparison />
         <WhoWeWorkWith />
+        <MotionBand />
         <ContactCTA />
         <FAQ />
       </main>

@@ -5,6 +5,57 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { TrustBar } from "./HomeConversionSections";
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
+import { useReduceMotion } from "@/contexts/ReduceMotionContext";
+
+/** Typewriter cycle for the hero — types/deletes each word with a caret. Static under reduced motion. */
+function TypeCycle({ words, fallback }: { words: string[]; fallback: string }) {
+  const reduceMotion = useReduceMotion();
+  const [text, setText] = useState(words[0]);
+  const stateRef = useRef({ word: 0, len: words[0].length, deleting: false });
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const s = stateRef.current;
+      const current = words[s.word];
+      if (!s.deleting) {
+        s.len += 1;
+        setText(current.slice(0, s.len));
+        if (s.len >= current.length) {
+          s.deleting = true;
+          timer = setTimeout(tick, 2400); // hold the full word
+          return;
+        }
+        timer = setTimeout(tick, 70);
+      } else {
+        s.len -= 1;
+        setText(current.slice(0, s.len));
+        if (s.len <= 0) {
+          s.deleting = false;
+          s.word = (s.word + 1) % words.length;
+          timer = setTimeout(tick, 350);
+          return;
+        }
+        timer = setTimeout(tick, 38);
+      }
+    };
+    timer = setTimeout(tick, 1400);
+    return () => clearTimeout(timer);
+  }, [reduceMotion, words]);
+
+  if (reduceMotion) return <span>{fallback}</span>;
+  return (
+    <span aria-label={fallback} style={{ whiteSpace: "nowrap" }}>
+      <span aria-hidden="true">{text}</span>
+      <span
+        aria-hidden="true"
+        className="hero-caret"
+        style={{ display: "inline-block", width: "0.06em", minWidth: 2, height: "0.92em", background: "var(--a4-primary-bright)", marginLeft: "0.08em", verticalAlign: "-0.08em" }}
+      />
+    </span>
+  );
+}
 
 // export function Nav({ accent }: { accent: string }) { ... } — using site-wide Navbar from layout
 
@@ -37,7 +88,12 @@ export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit F
             <span style={{ width: 28, height: 1, background: "var(--a4-hairline-strong)" }} />
           </div>
           <h1 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(38px,6.2vw,82px)", lineHeight: 1.18, letterSpacing: "-.03em", margin: "24px auto 0", maxWidth: 920, textWrap: "balance" }}>
-            Simplify your accounting{" "}<br />&amp; audit with <span style={{ color: "var(--a4-primary-bright)" }}>A4</span>.
+            Simplify your{" "}
+            <TypeCycle
+              words={["accounting", "statutory audit", "VAT returns", "payroll", "tax compliance"]}
+              fallback="accounting & audit"
+            />
+            <br />with <span style={{ color: "var(--a4-primary-bright)" }}>A4</span>.
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: "clamp(16px,1.7vw,20px)", lineHeight: 1.6, maxWidth: 560, margin: "26px auto 0", textWrap: "pretty" }}>
             A licensed Malta accounting &amp; audit firm — automation does the heavy lifting while our team keeps you compliant, organised and in control.
