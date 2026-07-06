@@ -10,21 +10,28 @@ import { TRUSTED_SECTORS } from "@/data/a4TestimonialsData";
 import { TestimonialsSwiper } from "@/components/a4-landing/TestimonialsSwiper";
 
 export function TrustBar() {
-  const items = [
-    { label: "Authorised by the Malta Accountancy Board", icon: "badge-check" },
+  const pillStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
+    fontFamily: "var(--a4-font-body)",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "var(--a4-on-dark-mute)",
+    textDecoration: "none",
+    border: "1px solid var(--a4-hairline-dark)",
+    borderRadius: 999,
+    padding: "7px 13px",
+    background: "rgba(255,255,255,.04)",
+    whiteSpace: "nowrap",
+  };
+
+  const items: { label: string; icon: string; logo?: string; href?: string }[] = [
+    { label: "Malta Accountancy Board authorised", icon: "badge-check" },
     { label: "BOKS International member", icon: "globe", logo: "/assets/boks-logo.png" },
     { label: "GAPSME & IFRS", icon: "scale" },
-  ];
-
-  const recognition = [
-    {
-      label: "Top 5 Accounting Firm in Malta — The Manifest, 2026",
-      href: "https://themanifest.com/mt/accounting/financial/firms",
-    },
-    {
-      label: "Featured in Clutch's Top Accounting Firms in Malta, 2026",
-      href: "https://clutch.co/mt/accounting",
-    },
+    { label: "Top 5 Firm in Malta · The Manifest 2026", icon: "award", href: "https://themanifest.com/mt/accounting/financial/firms" },
+    { label: "Clutch Top Firms Malta 2026", icon: "award", href: "https://clutch.co/mt/accounting" },
   ];
 
   return (
@@ -34,92 +41,34 @@ export function TrustBar() {
           display: "flex",
           flexWrap: "wrap",
           justifyContent: "center",
-          gap: "10px 14px",
-          marginTop: 28,
-          maxWidth: 920,
+          gap: "8px 10px",
+          marginTop: 26,
+          maxWidth: 860,
           marginLeft: "auto",
           marginRight: "auto",
         }}
       >
-        {items.map((item) => (
-          <span
-            key={item.label}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              fontFamily: "var(--a4-font-body)",
-              fontSize: 12.5,
-              fontWeight: 600,
-              color: "var(--a4-on-dark-mute)",
-              border: "1px solid var(--a4-hairline-dark)",
-              borderRadius: 999,
-              padding: "8px 14px",
-              background: "rgba(255,255,255,.04)",
-            }}
-          >
-            {item.logo ? (
-              <img src={item.logo} alt="" width={18} height={18} style={{ display: "block", borderRadius: 4 }} />
-            ) : (
-              <Icon name={item.icon} size={15} color="var(--a4-primary-bright)" stroke={2} />
-            )}
-            {item.label}
-          </span>
-        ))}
-      </div>
-
-      <div
-        aria-label="Industry recognition"
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "8px 12px",
-          marginTop: 16,
-          maxWidth: 920,
-          marginLeft: "auto",
-          marginRight: "auto",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--a4-font-body)",
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: ".08em",
-            textTransform: "uppercase",
-            color: "var(--a4-on-dark-mute)",
-            opacity: 0.7,
-          }}
-        >
-          Industry recognition
-        </span>
-        {recognition.map((item) => (
-          <a
-            key={item.label}
-            href={item.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              fontFamily: "var(--a4-font-body)",
-              fontSize: 12.5,
-              fontWeight: 600,
-              color: "var(--a4-on-dark-mute)",
-              textDecoration: "none",
-              border: "1px solid var(--a4-hairline-dark)",
-              borderRadius: 999,
-              padding: "8px 14px",
-              background: "rgba(255,255,255,.04)",
-            }}
-          >
-            <Icon name="award" size={15} color="var(--a4-primary-bright)" stroke={2} />
-            {item.label}
-          </a>
-        ))}
+        {items.map((item) => {
+          const inner = (
+            <>
+              {item.logo ? (
+                <img src={item.logo} alt="" width={16} height={16} style={{ display: "block", borderRadius: 4 }} />
+              ) : (
+                <Icon name={item.icon} size={14} color="var(--a4-primary-bright)" stroke={2} />
+              )}
+              {item.label}
+            </>
+          );
+          return item.href ? (
+            <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" style={pillStyle}>
+              {inner}
+            </a>
+          ) : (
+            <span key={item.label} style={pillStyle}>
+              {inner}
+            </span>
+          );
+        })}
       </div>
     </Reveal>
   );
