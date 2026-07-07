@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { locales } from "@/lib/i18n-config";
 import { getSiteUrl } from "@/lib/site-url";
-import { getBlogSlugs } from "@/utils/blog";
+import { getBlogSlugs, getAllBlogsMerged } from "@/utils/blog";
 
 /** Marketing routes to surface in Search Console / Ads landing quality (locale-prefixed). */
 const STATIC_PATHS = [
@@ -33,7 +33,6 @@ const STATIC_PATHS = [
   "/business",
   "/auditor-questionnaire",
   "/automated-bookkeeping",
-  "/automated-bookkeeping-standalone",
   "/audit-services",
   "/partner-program",
   "/audit-outsourcing",
@@ -41,9 +40,11 @@ const STATIC_PATHS = [
   "/reconciliation-hero",
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getSiteUrl();
-  const slugs = getBlogSlugs();
+  // File posts + portal-published posts (falls back to file-only on fetch failure).
+  const merged = await getAllBlogsMerged().catch(() => null);
+  const slugs = merged ? merged.map((b) => b.slug) : getBlogSlugs();
   const entries: MetadataRoute.Sitemap = [];
 
   for (const locale of locales) {

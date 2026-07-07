@@ -1,13 +1,14 @@
-// @ts-nocheck
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import React, { useState, useEffect, useRef } from "react";
+import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 // Enter a company → query MBR (sample data) → flag overdue audited accounts +
 // estimated penalty, with an "already submitted (awaiting approval)" option.
 // NOTE: sample data for the demo — wire to the real MBR API in production.
 
-const AO_DB = {
+type Company = { name: string; reg: string; sector: string; lastAudited: string; overdue: number };
+
+const AO_DB: Record<string, Company> = {
   "blue lagoon": { name: "Blue Lagoon Hospitality Ltd", reg: "C 61042", sector: "Tourism & Hospitality", lastAudited: "FY2023", overdue: 18 },
   "nexus": { name: "Nexus Trading Ltd", reg: "C 48291", sector: "Import & Distribution", lastAudited: "FY2024", overdue: 0 },
   "meridian": { name: "Meridian Construct Ltd", reg: "C 39014", sector: "Construction & Property", lastAudited: "FY2023", overdue: 9 },
@@ -22,28 +23,31 @@ const AO_LOAD = [
   "Calculating overdue period & penalties…",
 ];
 
-const aoEuro = (n) => "€" + n.toLocaleString();
-const aoPenalty = (m) => (m > 0 ? 100 + m * 45 : 0);
+const aoEuro = (n: number) => "€" + n.toLocaleString();
+const aoPenalty = (m: number) => (m > 0 ? 100 + m * 45 : 0);
 
 export function AuditOverdue() {
   const [query, setQuery] = useState("");
-  const [matches, setMatches] = useState([]);
+  const [matches, setMatches] = useState<[string, Company][]>([]);
   const [ddOpen, setDdOpen] = useState(false);
   const [stage, setStage] = useState("idle");
   const [loadStep, setLoadStep] = useState(0);
-  const [co, setCo] = useState(null);
+  const [co, setCo] = useState<Company | null>(null);
+  const [notFoundName, setNotFoundName] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const timers = useRef([]);
-  const wrapRef = useRef(null);
+  const [nfEmail, setNfEmail] = useState("");
+  const [nfStatus, setNfStatus] = useState("idle"); // idle | sending | done | error
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   useEffect(() => {
-    const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setDdOpen(false); };
+    const onDoc = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setDdOpen(false); };
     document.addEventListener("click", onDoc);
     return () => document.removeEventListener("click", onDoc);
   }, []);
 
-  const search = (val) => {
+  const search = (val: string) => {
     setQuery(val);
     const q = val.toLowerCase().trim();
     if (q.length < 2) { setMatches([]); setDdOpen(false); return; }
@@ -51,18 +55,41 @@ export function AuditOverdue() {
     setMatches(m); setDdOpen(m.length > 0);
   };
 
-  const runLoad = (company) => {
+  const runLoad = (company: Company | null) => {
     timers.current.forEach(clearTimeout); timers.current = [];
     setCo(company); setStage("loading"); setLoadStep(0); setDdOpen(false); setSubmitted(false);
+    setNfEmail(""); setNfStatus("idle");
     [550, 1150, 1700, 2200].forEach((ms, i) => timers.current.push(setTimeout(() => setLoadStep(i + 1), ms)));
     timers.current.push(setTimeout(() => setStage("result"), 2500));
   };
-  const pick = (key) => { const c = AO_DB[key]; setQuery(c.name); runLoad(c); };
+  const pick = (key: string) => { const c = AO_DB[key]; setQuery(c.name); runLoad(c); };
+  // Only the 5 sample companies above have real demo data. Any other name gets
+  // an honest "we'll check for you" lead capture — never a fabricated record.
   const check = () => {
     const q = query.toLowerCase().trim();
     const key = Object.keys(AO_DB).find((k) => AO_DB[k].name.toLowerCase().includes(q) || k.includes(q));
     if (key) { pick(key); return; }
-    if (q.length > 2) runLoad({ name: query.replace(/\b\w/g, (c) => c.toUpperCase()) + (/(ltd|limited)$/i.test(query) ? "" : " Ltd"), reg: "C " + Math.floor(10000 + Math.random() * 89999), sector: "Professional Services", lastAudited: "FY2024", overdue: 0 });
+    if (q.length > 2) { setNotFoundName(query.trim()); runLoad(null); }
+  };
+  const submitNotFound = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nfEmail.trim())) return;
+    setNfStatus("sending");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: nfEmail,
+          subject: `Audit overdue check — ${notFoundName}`,
+          message: `Company: ${notFoundName}\nRequesting a manual Malta Business Registry check for overdue statutory audit filings.`,
+          context: "audit-overdue-check",
+        }),
+      });
+      if (!res.ok) throw new Error("failed");
+      setNfStatus("done");
+    } catch {
+      setNfStatus("error");
+    }
   };
 
   const penalty = co ? aoPenalty(co.overdue) : 0;
@@ -71,7 +98,7 @@ export function AuditOverdue() {
   return (
     <section style={{ background: "#000", padding: "clamp(56px,8vw,88px) 0", borderTop: "1px solid var(--a4-hairline-dark)" }}>
       <Container>
-        <Reveal align="center"><SectionHead
+        <Reveal><SectionHead
           dark align="center"
           eyebrow="Free overdue check"
           title="Is your audit overdue?"
@@ -87,7 +114,7 @@ export function AuditOverdue() {
               <Button variant="primary" size="md" onClick={check} style={{ flexShrink: 0 }}>Check audit status <Icon name="arrow-right" size={16} color="#000" /></Button>
             </div>
             <div style={{ textAlign: "center", marginTop: 10, fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)" }}>
-              Try <button onClick={() => pick("blue lagoon")} style={{ background: "none", border: 0, color: "var(--a4-primary-bright)", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>“Blue Lagoon”</button> · powered by Malta Business Registry data
+              Try our sample record: <button onClick={() => pick("blue lagoon")} style={{ background: "none", border: 0, color: "var(--a4-primary-bright)", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>“Blue Lagoon”</button> · other companies are checked manually by our team
             </div>
             {ddOpen && (
               <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-md)", overflow: "hidden", zIndex: 20, boxShadow: "0 16px 48px rgba(0,0,0,.5)" }}>
@@ -121,6 +148,27 @@ export function AuditOverdue() {
                 </div>
               )}
 
+              {stage === "result" && !co && (
+                <div style={{ background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "22px 26px" }}>
+                  {nfStatus === "done" ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Icon name="check-circle" size={19} color="var(--a4-accent-teal)" />
+                      <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "#fff" }}>Thanks — we&apos;ll check the registry for <strong>{notFoundName}</strong> and get back to you at {nfEmail}.</div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, color: "#fff" }}>We couldn&apos;t find &quot;{notFoundName}&quot; in our sample records</div>
+                      <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, lineHeight: 1.5, color: "var(--a4-on-dark-mute)", marginTop: 6 }}>Leave your email and our team will check the Malta Business Registry for you and follow up — free, no obligation.</div>
+                      <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+                        <input value={nfEmail} onChange={(e) => setNfEmail(e.target.value)} type="email" placeholder="Work email" style={{ flex: "1 1 220px", background: "var(--a4-surface-deep)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-md)", padding: "11px 14px", color: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 14, outline: "none" }} />
+                        <Button variant="primary" size="md" onClick={submitNotFound} style={{ opacity: nfStatus === "sending" ? 0.6 : 1, pointerEvents: nfStatus === "sending" ? "none" : "auto" }}>{nfStatus === "sending" ? "Sending…" : "Check for me"} <Icon name="arrow-right" size={16} color="#000" /></Button>
+                      </div>
+                      {nfStatus === "error" && <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--accent-danger)", marginTop: 10 }}>Something went wrong. Please try again or email info@a4.com.mt.</div>}
+                    </>
+                  )}
+                </div>
+              )}
+
               {stage === "result" && co && (
                 <div style={{ background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", overflow: "hidden" }}>
                   <div style={{ padding: "22px 26px", borderBottom: "1px solid var(--a4-hairline-dark)" }}>
@@ -142,7 +190,7 @@ export function AuditOverdue() {
                         {overdue && (
                           <label style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--a4-hairline-dark)", cursor: "pointer" }}>
                             <input type="checkbox" checked={submitted} onChange={(e) => setSubmitted(e.target.checked)} style={{ width: 15, height: 15, accentColor: "var(--a4-primary)", cursor: "pointer" }} />
-                            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-on-dark-mute)" }}>I've already submitted these accounts to MBR (awaiting approval)</span>
+                            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-on-dark-mute)" }}>I&apos;ve already submitted these accounts to MBR (awaiting approval)</span>
                           </label>
                         )}
                       </div>

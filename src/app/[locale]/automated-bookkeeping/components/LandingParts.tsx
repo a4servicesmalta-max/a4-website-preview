@@ -1,14 +1,12 @@
-// @ts-nocheck
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { HeroFX } from "@/components/a4-landing/HeroFX";
+import React from "react";
+import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { PortalMockup } from "@/components/a4-landing/PortalMockup";
 import { LandingPlan } from "@/components/a4-landing/LandingPlan";
 import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
-// for the automated-bookkeeping conversion landing page. Reuses Primitives,
-// HeroFX and PortalMockup from the main app.
+// for the automated-bookkeeping conversion landing page. Reuses Primitives
+// and PortalMockup from the main app.
 
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
@@ -221,7 +219,7 @@ export function FinalCTA() {
               Ready for clean books from €25/month?
             </h2>
             <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 18, lineHeight: 1.6, color: "var(--a4-on-dark-mute)", margin: "20px auto 0", maxWidth: 540, textWrap: "pretty" }}>
-              Create your account and request services in minutes — or book a quick call and we'll set everything up with you.
+              Create your account and request services in minutes — or book a quick call and we&apos;ll set everything up with you.
             </p>
             <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
               <Button variant="primary" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>

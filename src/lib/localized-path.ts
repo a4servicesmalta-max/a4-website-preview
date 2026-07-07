@@ -21,6 +21,8 @@ export function withLocale(locale: Locale, path: string): string {
     search = pathname.slice(qIdx);
     pathname = pathname.slice(0, qIdx);
   }
+  // Pure same-page anchor (e.g. "#apply") - stay on the current page, no locale prefix.
+  if (!pathname && hash) return `${hash}${search}`;
   if (!pathname.startsWith("/")) pathname = `/${pathname}`;
   if (pathname === "/") return `/${locale}${search}${hash}`;
   return `/${locale}${pathname}${search}${hash}`;

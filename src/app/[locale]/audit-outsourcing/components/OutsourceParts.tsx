@@ -1,38 +1,10 @@
-// @ts-nocheck
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Logo, Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 
 // OutsourceParts — Audit outsourcing landing (from New website OutsourceParts.jsx)
 
-const OS_PORTAL = "https://client.a4.com.mt";
-
-function OSNav() {
-  const [open, setOpen] = useState(false);
-  const links = [{ label: "How it works", href: "#how" }, { label: "The portals", href: "#portals" }, { label: "Main site", href: "A4 Services.html" }];
-  return (
-    <header style={{ position: "sticky", top: 0, zIndex: 60, background: "#000", borderBottom: "1px solid var(--a4-hairline-dark)" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", height: 64, display: "flex", alignItems: "center", gap: 16, padding: "0 24px" }}>
-        <a href="A4 Services.html" style={{ display: "flex", alignItems: "center", gap: 11, textDecoration: "none" }}>
-          <Logo height={24} />
-          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
-            <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 18, color: "#fff", letterSpacing: "-.2px" }}>A4 Services</span>
-            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-on-dark-mute)" }}>Audit Outsourcing</span>
-          </span>
-        </a>
-        <div style={{ flex: 1 }} />
-        {links.map((l) => (<a key={l.label} href={l.href} className="a4-navlinks" style={{ fontFamily: "var(--a4-font-body)", fontSize: 15, fontWeight: 500, color: "var(--a4-on-dark-mute)", textDecoration: "none" }}>{l.label}</a>))}
-        <Button variant="primary" size="sm" href="#apply" style={{ height: 44, padding: "0 20px" }}>Partner with us <Icon name="arrow-right" size={16} color="#000" /></Button>
-        <button className="a4-burger" onClick={() => setOpen(!open)} aria-label="Menu" style={{ display: "none", background: "none", border: 0, cursor: "pointer", color: "#fff", padding: 6 }}><Icon name={open ? "x" : "menu"} size={24} color="#fff" /></button>
-      </div>
-      {open && (<div style={{ borderTop: "1px solid var(--a4-hairline-dark)", padding: "12px 24px 20px", display: "flex", flexDirection: "column", gap: 4 }}>
-        {links.map((l) => (<a key={l.label} href={l.href} onClick={() => setOpen(false)} style={{ fontFamily: "var(--a4-font-body)", fontSize: 16, fontWeight: 500, color: "var(--a4-on-dark-mute)", textDecoration: "none", padding: "10px 0" }}>{l.label}</a>))}
-        <a href="#apply" onClick={() => setOpen(false)} style={{ fontFamily: "var(--a4-font-body)", fontSize: 16, fontWeight: 600, color: "#fff", textDecoration: "none", padding: "10px 0" }}>Partner with us →</a>
-      </div>)}
-    </header>
-  );
-}
 
 // Hero white-label portal mock — mock firm logo + branding-theme switcher
 function OSFileMock() {
@@ -75,17 +47,6 @@ function OSFileMock() {
   );
 }
 
-function OSCollab() {
-  return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 11, background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-full)", padding: "7px 15px 7px 12px", marginBottom: 22 }}>
-      <Logo height={17} />
-      <span style={{ color: "var(--a4-stone)", fontFamily: "var(--a4-font-display)", fontSize: 15, fontWeight: 500 }}>×</span>
-      <span style={{ color: "var(--a4-stone)", fontFamily: "var(--a4-font-display)", fontSize: 15, fontWeight: 500 }}>V</span>
-      <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, color: "var(--a4-on-dark-mute)" }}>Vacei, in collaboration with A4 Services</span>
-    </div>
-  );
-}
-
 function OSHero() {
   return (
     <section style={{ background: "#000", padding: "clamp(48px,7vw,92px) 0 clamp(56px,8vw,104px)", position: "relative", overflow: "hidden" }}>
@@ -108,14 +69,6 @@ function OSHero() {
           </div>
           <div style={{ display: "flex", gap: 22, marginTop: 32, flexWrap: "wrap" }}>
             {["First small audit free", "100% white-label", "You keep the final say"].map((t) => (<div key={t} style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon name="check" size={16} color="var(--a4-accent-teal)" stroke={2.4} /><span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-on-dark)" }}>{t}</span></div>))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 38, paddingTop: 24, borderTop: "1px solid var(--a4-hairline-dark)", flexWrap: "wrap" }}>
-            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-stone)" }}>In collaboration</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <Logo height={28} />
-              <span style={{ color: "var(--a4-stone)", fontFamily: "var(--a4-font-display)", fontSize: 20, fontWeight: 500 }}>×</span>
-              <span style={{ color: "var(--a4-stone)", fontFamily: "var(--a4-font-display)", fontSize: 20, fontWeight: 500 }}>Vacei</span>
-            </div>
           </div>
         </div>
         <div style={{ flex: "1 1 380px", display: "flex", justifyContent: "center", minWidth: 300 }}><OSFileMock /></div>
@@ -236,8 +189,33 @@ function OSWhy() {
 
 function OSApply() {
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", firm: "", country: "", email: "" });
-  const submit = () => { if (form.name && form.email && form.firm) setDone(true); };
+  const submit = async () => {
+    if (!form.name || !form.email || !form.firm) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          subject: `Audit outsourcing pilot request — ${form.firm}`,
+          message: `Firm: ${form.firm}\nCountry: ${form.country}\nRequesting a white-label audit outsourcing pilot.`,
+          context: "audit-outsourcing",
+        }),
+      });
+      if (!res.ok) throw new Error("request failed");
+      setDone(true);
+    } catch {
+      setError("Something went wrong sending your request. Please try again or email info@a4.com.mt.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
   const inp = { width: "100%", background: "var(--a4-surface-deep)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-md)", padding: "12px 14px", color: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 14.5, outline: "none", marginBottom: 12 };
   return (
     <section id="apply" style={{ background: "var(--a4-surface-soft)", padding: "clamp(64px,9vw,104px) 0" }}>
@@ -245,7 +223,7 @@ function OSApply() {
         <div style={{ background: "#000", borderRadius: "var(--a4-r-xl)", padding: "clamp(32px,5vw,64px)", display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 44, alignItems: "center" }} className="os-apply">
           <div>
             <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(30px,4vw,52px)", lineHeight: 1.04, letterSpacing: "-.025em", margin: 0, textWrap: "balance" }}>Outsource your next audit</h2>
-            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 18, lineHeight: 1.6, color: "var(--a4-on-dark-mute)", margin: "18px 0 0", maxWidth: 420, textWrap: "pretty" }}>Tell us about your firm and we'll set up a pilot with your two <strong style={{ color: "#fff" }}>white-label portals</strong>, branded with your logo. Your first audit for a small client is on us.</p>
+            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 18, lineHeight: 1.6, color: "var(--a4-on-dark-mute)", margin: "18px 0 0", maxWidth: 420, textWrap: "pretty" }}>Tell us about your firm and we&apos;ll set up a pilot with your two <strong style={{ color: "#fff" }}>white-label portals</strong>, branded with your logo. Your first audit for a small client is on us.</p>
           </div>
           <div style={{ background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)" }}>
             {done ? (
@@ -260,7 +238,8 @@ function OSApply() {
                 <input value={form.firm} onChange={(e) => setForm((f) => ({ ...f, firm: e.target.value }))} placeholder="Firm name" style={inp} />
                 <input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="Country" style={inp} />
                 <input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} type="email" placeholder="Work email" style={{ ...inp, marginBottom: 16 }} />
-                <Button variant="primary" size="md" onClick={submit} style={{ width: "100%" }}>Request a pilot <Icon name="arrow-right" size={16} color="#000" /></Button>
+                {error && <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--accent-danger)", marginBottom: 12 }}>{error}</div>}
+                <Button variant="primary" size="md" onClick={submit} style={{ width: "100%", opacity: submitting ? 0.6 : 1, pointerEvents: submitting ? "none" : "auto" }}>{submitting ? "Sending…" : "Request a pilot"} <Icon name="arrow-right" size={16} color="#000" /></Button>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 12, textAlign: "center" }}>White-label · confidential · no obligation</div>
               </div>
             )}
@@ -268,18 +247,6 @@ function OSApply() {
         </div>
       </Container>
     </section>
-  );
-}
-
-function OSFooter() {
-  return (
-    <footer style={{ background: "#000", borderTop: "1px solid var(--a4-hairline-dark)", padding: "40px 0" }}>
-      <Container style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
-        <a href="A4 Services.html" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}><Logo height={20} /><span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 16, color: "#fff" }}>A4 Services</span></a>
-        <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-stone)" }}>© {new Date().getFullYear()} A4 Services Limited · Accounting &amp; audit firm in Malta · info@a4.com.mt</span>
-        <a href="A4 Services.html" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 600, color: "var(--a4-on-dark-mute)", textDecoration: "none" }}>Back to main site →</a>
-      </Container>
-    </footer>
   );
 }
 
