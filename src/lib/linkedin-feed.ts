@@ -1,4 +1,5 @@
 import { LINKEDIN_COMPANY_URL } from "@/lib/contact";
+import { fetchLinkedInShowcasePosts } from "@/lib/cms";
 
 export type LinkedInFeedPost = {
   id: string;
@@ -123,8 +124,21 @@ function parseRssXml(xml: string): LinkedInFeedPost[] {
 
 export async function fetchLinkedInFeedPosts(): Promise<{
   posts: LinkedInFeedPost[];
-  source: "feed" | "manual";
+  source: "portal" | "feed" | "manual";
 }> {
+  // Portal-managed showcase posts (team.a4.com.mt -> Website -> LinkedIn) take
+  // priority — editable without a redeploy. Falls through on empty/error.
+  const portalPosts = await fetchLinkedInShowcasePosts().catch(() => []);
+  if (portalPosts.length > 0) {
+    return {
+      posts: portalPosts.map((p) => ({
+        id: p.id, title: p.title, blurb: p.blurb, url: p.url,
+        thumbnail: p.thumbnail ?? undefined, embed: p.embed ?? undefined,
+      })),
+      source: "portal",
+    };
+  }
+
   const feedUrl = process.env.LINKEDIN_FEED_URL?.trim();
 
   if (!feedUrl) {

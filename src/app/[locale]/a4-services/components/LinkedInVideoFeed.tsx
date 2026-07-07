@@ -15,7 +15,7 @@ import "swiper/css/pagination";
 
 type FeedResponse = {
   posts: LinkedInFeedPost[];
-  source: "feed" | "manual";
+  source: "portal" | "feed" | "manual";
 };
 
 const EMBED_W = 504;
@@ -343,7 +343,7 @@ function LinkedInFeedSkeleton() {
 
 export function LinkedInVideoFeed() {
   const [posts, setPosts] = useState<LinkedInFeedPost[]>([]);
-  const [source, setSource] = useState<"feed" | "manual" | "loading">("loading");
+  const [source, setSource] = useState<"portal" | "feed" | "manual" | "loading">("loading");
 
   useEffect(() => {
     let cancelled = false;

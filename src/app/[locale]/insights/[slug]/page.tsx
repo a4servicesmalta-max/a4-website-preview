@@ -3,7 +3,11 @@ import { Metadata } from "next";
 import "@/components/a4-landing/styles.css";
 import "@/components/a4-site/site-pages.css";
 import { ArticlePageContent } from "../components/ArticlePageContent";
-import { getBlogBySlug, getBlogSlugs } from "@/utils/blog";
+import { getBlogBySlugMerged, getBlogSlugs } from "@/utils/blog";
+
+// File posts are prebuilt via generateStaticParams; portal-published (DB)
+// posts render on demand and revalidate, so publishing needs no redeploy.
+export const revalidate = 120;
 
 interface BlogPageProps {
   params: Promise<{
@@ -20,7 +24,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const blog = getBlogBySlug(slug);
+  const blog = await getBlogBySlugMerged(slug);
 
   if (!blog) {
     return {
@@ -52,7 +56,7 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
 
 export default async function BlogPage({ params }: BlogPageProps) {
   const { slug } = await params;
-  const blog = getBlogBySlug(slug);
+  const blog = await getBlogBySlugMerged(slug);
 
   if (!blog) {
     notFound();

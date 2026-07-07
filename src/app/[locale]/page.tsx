@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import HomePage from "@/components/HomePage/Homepage";
-import { getAllBlogs } from "@/utils/blog";
+import { getAllBlogsMerged } from "@/utils/blog";
+import { fetchSiteOverride, type SectionConfig } from "@/lib/cms";
 import { A4ServicesApp } from "./a4-services/components/A4ServicesApp";
 import { pageMetadata } from "@/lib/page-metadata";
 import { locales } from "@/lib/i18n-config";
@@ -17,8 +18,16 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { ...base, alternates: { canonical: `/${locale}`, languages } };
 }
 
-export default function Home() {
-  const recentBlogs = getAllBlogs().slice(0, 3);
+// Re-render at most every 2 minutes so portal edits (sections, blog posts)
+// go live without a redeploy.
+export const revalidate = 120;
+
+export default async function Home() {
+  const [allBlogs, sectionConfig] = await Promise.all([
+    getAllBlogsMerged(),
+    fetchSiteOverride<SectionConfig[]>("homepage.sections"),
+  ]);
+  const recentBlogs = allBlogs.slice(0, 3);
 
   const accountingService = {
     "@context": "https://schema.org",
@@ -104,7 +113,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }}
       />
-      <A4ServicesApp />
+      <A4ServicesApp sections={sectionConfig} />
     </main>
   );
 }
