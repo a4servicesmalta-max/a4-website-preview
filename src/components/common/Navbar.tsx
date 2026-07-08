@@ -17,7 +17,6 @@ import {
   Linkedin,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import GetInstantQuoteButton from "./GetInstantQuoteButton";
 import { useReduceMotion, usePerformance } from "@/contexts/ReduceMotionContext";
 import { A4_SERVICES_VISIBLE } from "@/data/a4ServicesSiteData";
 import { RESOURCE_CARDS } from "@/data/a4ResourcesSiteData";
@@ -665,11 +664,6 @@ const Navbar = () => {
                     <span>{t("nav.login")}</span>
                   </a>
 
-                  <GetInstantQuoteButton
-                    hasShadow={false}
-                    href={CLIENT_ONBOARDING_URL}
-                    text={t("nav.registerQuote")}
-                  />
                 </div>
 
                 {/* Mobile: hamburger opens full-screen menu. Desktop: hamburger opens sidebar. */}
@@ -874,14 +868,6 @@ const Navbar = () => {
                   >
                     {t("nav.login")}
                   </a>
-                  <div onClick={() => setMobileMenuOpen(false)}>
-                    <GetInstantQuoteButton
-                      hasShadow={false}
-                      className="w-full justify-center"
-                      href={CLIENT_ONBOARDING_URL}
-                      text={t("nav.registerQuote")}
-                    />
-                  </div>
                 </div>
               </div>
             </motion.div>
