@@ -5,7 +5,6 @@ import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-la
 // Pick a bookkeeping tier + add-ons → live monthly price → two exits:
 // (1) Create account & request services, (2) Book a 15-min call.
 
-import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 const LP_TIERS = [
   { id: "starter", name: "Starter", price: 25, docs: "Up to 100 documents / month", blurb: "Perfect for lighter monthly volumes." },
@@ -300,7 +299,7 @@ export function LandingPlan() {
                 </div>
               )}
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-                <Button variant="primary" size="md" href={`${CLIENT_ONBOARDING_URL}${CLIENT_ONBOARDING_URL.includes("?") ? "&" : "?"}plan=${encodeURIComponent(tier)}&monthly=${monthly}`} target="_blank" style={{ width: "100%" }}>Create account &amp; request <Icon name="arrow-right" size={16} color="#000" /></Button>
+                <Button variant="primary" size="md" href="/contact" style={{ width: "100%" }}>Request information <Icon name="arrow-right" size={16} color="#000" /></Button>
                 <Button variant="outline-dark" size="md" onClick={() => { setBooked(null); setModal(true); }} style={{ width: "100%" }}><Icon name="calendar" size={16} color="#fff" /> Book a 15-min call</Button>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 14 }}>

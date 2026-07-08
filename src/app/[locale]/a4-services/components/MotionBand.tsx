@@ -3,7 +3,6 @@
 
 import React, { useEffect, useRef } from "react";
 import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
-import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 import { useReduceMotion } from "@/contexts/ReduceMotionContext";
 
 /**
@@ -103,8 +102,8 @@ export function MotionBand() {
             Registration takes minutes. Connect your data, see your deadlines, and let our licensed team and automation keep you compliant.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 30, flexWrap: "wrap", justifyContent: "center" }}>
-            <Button variant="primary" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank" rel="noopener noreferrer">
-              Create your account <Icon name="arrow-right" size={18} color="#000" />
+            <Button variant="primary" size="lg" href="/contact">
+              Request information <Icon name="arrow-right" size={18} color="#000" />
             </Button>
             <Button variant="outline-dark" size="lg" href="/quote">
               Get an instant quote

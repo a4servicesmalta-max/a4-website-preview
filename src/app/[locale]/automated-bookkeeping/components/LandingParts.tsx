@@ -63,7 +63,7 @@ export function LandingHero({ accent = "#494fdf" }) {
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
             <Button variant="primary" size="lg" href="#pricing">See your price <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account</Button>
+            <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
           </div>
           <div style={{ display: "flex", gap: 22, marginTop: 32, flexWrap: "wrap" }}>
             {["No setup fee", "No long contracts", "Cancel anytime"].map((t) => (
@@ -222,7 +222,7 @@ export function FinalCTA() {
               Create your account and request services in minutes — or book a quick call and we&apos;ll set everything up with you.
             </p>
             <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
-              <Button variant="primary" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>
+              <Button variant="primary" size="lg" href="/contact">Request information <Icon name="arrow-right" size={18} color="#000" /></Button>
               <Button variant="outline-dark" size="lg" href="#pricing">See your price</Button>
             </div>
           </div>

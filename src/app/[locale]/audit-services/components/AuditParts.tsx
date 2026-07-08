@@ -8,7 +8,6 @@ import { FSReview } from "./FSReview";
 // services, process, overdue check, FAQ, final CTA, footer. Reuses Primitives
 // and HeroFX from the main app.
 
-import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 // export function AuditNav() {
 //   const [open, setOpen] = useState(false);
@@ -208,7 +207,7 @@ function AuditCTA() {
           <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 19, lineHeight: 1.6, color: "var(--a4-on-dark-mute)", margin: "22px auto 0", maxWidth: 560, textWrap: "pretty" }}>A two-minute estimate, then a quick call to confirm scope. On-time filing, by registered auditors.</p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get your audit estimate <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account</Button>
+            <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
           </div>
         </Reveal>
       </Container>

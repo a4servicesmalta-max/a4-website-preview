@@ -172,7 +172,7 @@ export function Pricing() {
                 ))}
               </div>
               <div style={{ marginTop: 24 }}>
-                <Button variant="primary" size="md" style={{ width: "100%" }}>Create account &amp; request <Icon name="arrow-right" size={16} color="#000" /></Button>
+                <Button variant="primary" size="md" href="/contact" style={{ width: "100%" }}>Request information <Icon name="arrow-right" size={16} color="#000" /></Button>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 14 }}>
                 <Icon name="lock" size={13} color="var(--a4-stone)" />

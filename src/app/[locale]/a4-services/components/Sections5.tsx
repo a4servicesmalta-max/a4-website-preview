@@ -5,7 +5,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { getNextComplianceDeadline, formatComplianceDate } from "@/lib/compliance-deadlines";
 import { SUPPORT_RESPONSE_LABEL } from "@/lib/site-config";
-import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 export function ContactCTA() {
   return (
@@ -21,7 +20,7 @@ export function ContactCTA() {
             Speak to us if you need an accounting firm in Malta, your company requires a statutory audit, your bookkeeping is behind, or you want better visibility over your business numbers.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 38, flexWrap: "wrap", justifyContent: "center" }}>
-            <Button variant="primary" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank" rel="noopener noreferrer">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>
+            <Button variant="primary" size="lg" href="/contact">Request information <Icon name="arrow-right" size={18} color="#000" /></Button>
             <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
           </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 9, marginTop: 30, background: "rgba(255,255,255,.05)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-full)", padding: "8px 16px" }}>

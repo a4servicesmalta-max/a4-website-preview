@@ -570,8 +570,8 @@ function PricingCalc() {
                     </div>
                   ))}
                 </div>
-                <Button variant="dark" size="md" href={CLIENT_ONBOARDING_URL} target="_blank" style={{ width: "100%", marginTop: 22 }}>
-                  Create account &amp; request <Icon name="arrow-right" size={16} color="#fff" />
+                <Button variant="dark" size="md" href="/contact" style={{ width: "100%", marginTop: 22 }}>
+                  Request information <Icon name="arrow-right" size={16} color="#fff" />
                 </Button>
                 <div className="flex items-center justify-center gap-[7px] mt-3">
                   <Icon name="shield-check" size={13} color="var(--a4-stone)" />

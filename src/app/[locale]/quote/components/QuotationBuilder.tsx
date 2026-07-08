@@ -11,7 +11,6 @@ import {
   type QuoteServiceId,
   type RevenueBandId,
 } from "@/lib/quotation";
-import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 const panel: React.CSSProperties = {
   background: "var(--a4-surface-card)",
@@ -238,11 +237,11 @@ export function QuotationBuilder() {
                   Your quotation has downloaded — and our team has it too.
                 </p>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)", margin: "6px 0 0" }}>
-                  Fastest way to proceed: create your portal account and your confirmed quote will be waiting.
+                  Prefer to talk it through? Request information and our team will follow up with next steps.
                 </p>
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 14 }}>
-                  <Button variant="dark" size="md" href={CLIENT_ONBOARDING_URL} target="_blank" rel="noopener noreferrer">
-                    Create your portal account <Icon name="arrow-right" size={15} color="#fff" />
+                  <Button variant="dark" size="md" href="/contact">
+                    Request information <Icon name="arrow-right" size={15} color="#fff" />
                   </Button>
                   <Button variant="outline-light" size="md" onClick={() => download(done.pdfBase64, done.pdfName)}>
                     Download PDF again
