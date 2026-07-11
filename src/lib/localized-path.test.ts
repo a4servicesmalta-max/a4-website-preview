@@ -17,4 +17,10 @@ describe("withLocale", () => {
   it("returns external URLs unchanged", () => {
     expect(withLocale("en", "https://example.com")).toBe("https://example.com");
   });
+  it("does not double an already-localized path", () => {
+    expect(withLocale("en", "/en/contact")).toBe("/en/contact");
+  });
+  it("keeps another locale's prefix rather than stacking", () => {
+    expect(withLocale("en", "/fr/contact")).toBe("/fr/contact");
+  });
 });

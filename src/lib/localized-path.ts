@@ -24,6 +24,9 @@ export function withLocale(locale: Locale, path: string): string {
   // Pure same-page anchor (e.g. "#apply") - stay on the current page, no locale prefix.
   if (!pathname && hash) return `${hash}${search}`;
   if (!pathname.startsWith("/")) pathname = `/${pathname}`;
+  // Already locale-prefixed (e.g. a caller pre-localized) - don't double it.
+  const first = pathname.split("/").filter(Boolean)[0];
+  if (first && isLocale(first)) return `${pathname}${search}${hash}`;
   if (pathname === "/") return `/${locale}${search}${hash}`;
   return `/${locale}${pathname}${search}${hash}`;
 }

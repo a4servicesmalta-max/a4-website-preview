@@ -64,6 +64,14 @@ Message:
 ${message}
           `.trim(),
         });
+
+        // Confirmation to the sender — without it they have no proof the message landed.
+        await getTransport().sendMail({
+          from: `"A4" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+          to: email,
+          subject: "Message received - A4",
+          text: `Hi ${name || "there"},\n\nThank you for contacting A4. We have received your message and will get back to you within 24 hours.\n\nBest regards,\nThe A4 Team`,
+        });
       }
     } catch (emailErr) {
       console.warn("Contact form email skipped (SMTP not configured or failed):", emailErr);
