@@ -5,6 +5,7 @@ import React from "react";
 import { LandingPlan } from "@/components/a4-landing/LandingPlan";
 import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
 import { Hero, Statement } from "./Sections1";
+import { IntroVideo } from "./IntroVideo";
 import { LinkedInVideoFeed } from "./LinkedInVideoFeed";
 import { Insights } from "./Insights";
 import { Capabilities } from "./Sections2";
@@ -31,6 +32,7 @@ import { MotionBand } from "./MotionBand";
 export const HOMEPAGE_SECTIONS = [
   { id: "hero", label: "Hero", el: Hero },
   { id: "statement", label: "Statement", el: Statement },
+  { id: "intro-video", label: "Intro Video", el: IntroVideo },
   { id: "case-studies", label: "Case Studies Teaser", el: CaseStudiesTeaser },
   { id: "linkedin-videos", label: "LinkedIn Video Feed", el: LinkedInVideoFeed },
   { id: "trusted-sectors", label: "Trusted Sectors Band", el: TrustedSectorsBand },
