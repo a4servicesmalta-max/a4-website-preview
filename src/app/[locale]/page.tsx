@@ -4,7 +4,7 @@ import { getAllBlogsMerged } from "@/utils/blog";
 import { fetchSiteOverride, type SectionConfig } from "@/lib/cms";
 import { A4ServicesApp } from "./a4-services/components/A4ServicesApp";
 import { pageMetadata } from "@/lib/page-metadata";
-import { locales } from "@/lib/i18n-config";
+import { defaultLocale, locales } from "@/lib/i18n-config";
 import "@/components/a4-landing/styles.css";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -13,9 +13,11 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     "Accounting, Audit & Corporate Services in Malta",
     "A4 Services Limited — licensed Malta accounting and audit firm. Fixed monthly bookkeeping from €25/mo, VAT, payroll, audit and corporate services.",
   );
-  const languages: Record<string, string> = Object.fromEntries(locales.map((l) => [l, `/${l}`]));
-  languages["x-default"] = "/en";
-  return { ...base, alternates: { canonical: `/${locale}`, languages } };
+  // The default-locale homepage is served at the root ("/"), not "/en".
+  const homeHref = (l: string) => (l === defaultLocale ? "/" : `/${l}`);
+  const languages: Record<string, string> = Object.fromEntries(locales.map((l) => [l, homeHref(l)]));
+  languages["x-default"] = "/";
+  return { ...base, alternates: { canonical: homeHref(locale), languages } };
 }
 
 // Re-render at most every 2 minutes so portal edits (sections, blog posts)

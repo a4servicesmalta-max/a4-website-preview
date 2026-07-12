@@ -1,12 +1,12 @@
 import type { Locale } from "@/lib/i18n-config";
-import { isLocale } from "@/lib/i18n-config";
+import { defaultLocale, isLocale } from "@/lib/i18n-config";
 
 /**
  * Prefix a site path with the active locale. Handles `/`, hashes, and query strings.
  * External URLs are returned unchanged.
  */
 export function withLocale(locale: Locale, path: string): string {
-  if (!path) return `/${locale}`;
+  if (!path) return locale === defaultLocale ? "/" : `/${locale}`;
   if (/^https?:\/\//i.test(path)) return path;
   let hash = "";
   let search = "";
@@ -25,9 +25,18 @@ export function withLocale(locale: Locale, path: string): string {
   if (!pathname && hash) return `${hash}${search}`;
   if (!pathname.startsWith("/")) pathname = `/${pathname}`;
   // Already locale-prefixed (e.g. a caller pre-localized) - don't double it.
+  // The bare default-locale home collapses to the canonical root.
   const first = pathname.split("/").filter(Boolean)[0];
-  if (first && isLocale(first)) return `${pathname}${search}${hash}`;
-  if (pathname === "/") return `/${locale}${search}${hash}`;
+  if (first && isLocale(first)) {
+    if (pathname === `/${defaultLocale}` || pathname === `/${defaultLocale}/`) {
+      return `${search}${hash}` || "/";
+    }
+    return `${pathname}${search}${hash}`;
+  }
+  if (pathname === "/") {
+    const home = locale === defaultLocale ? "" : `/${locale}`;
+    return `${home}${search}${hash}` || "/";
+  }
   return `/${locale}${pathname}${search}${hash}`;
 }
 
