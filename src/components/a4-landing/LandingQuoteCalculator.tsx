@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY } from "@/data/a4QuotePack";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
 // The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
@@ -52,10 +53,16 @@ const QSIZE: [string, string, string][] = [
   ["unsure", "Not sure", "we'll check"],
 ];
 const QT: Record<string, Record<string, number>> = {
+  // ⚠ `book` is the one table still local to this component and it does NOT
+  // match BOOKKEEPING_MONTHLY in the pack (69/119/199/329/549/899 here vs
+  // 59/99/169/279/469/769 there), so this calculator quotes bookkeeping higher
+  // than /accounting-services does. Left as-is because reconciling it is a
+  // pricing decision, not a refactor — flagged to the owner 2026-08-02.
   book: { "0": 0, "1-20": 69, "21-60": 119, "61-150": 199, "151-400": 329, "401-1000": 549, "1000+": 899 },
-  vat: { "0": 0, "1-20": 29, "21-60": 45, "61-150": 69, "151-400": 99, "401-1000": 139, "1000+": 189 },
-  taxret: { "0": 0, "1-20": 275, "21-60": 375, "61-150": 525, "151-400": 750, "401-1000": 1100, "1000+": 1650 },
-  assure: { "0": 0, "1-20": 750, "21-60": 1150, "61-150": 1750, "151-400": 2600, "401-1000": 3900, "1000+": 5800 },
+  // The rest read the pack directly, so a fee change lands here automatically.
+  vat: VAT_MONTHLY,
+  taxret: TAX_RETURN_YEARLY,
+  assure: AUDIT_YEARLY,
 };
 const QPAY = [
   { upTo: 5, rate: 32 },
