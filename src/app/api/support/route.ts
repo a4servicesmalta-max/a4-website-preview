@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
+import { pushChatToPortal } from "@/lib/portal-chat";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -69,8 +70,20 @@ export async function POST(req: NextRequest) {
 
     const sessionToken = req.cookies.get("A4_session")?.value || "N/A";
 
-    // Portal push is primary — always capture the lead first.
-    await pushToPortal({ name, email, message: issue, service: "Support chat", source: "support-chat", priority: "Med", meta: { conversation } });
+    // Primary home is the portal's Messages area: the chat becomes a real
+    // thread staff can reply to, rather than a one-way form submission.
+    const thread = await pushChatToPortal({
+      name: name.trim(),
+      email: email.trim(),
+      message: issue.trim(),
+      pageUrl: req.headers.get("referer") || undefined,
+    });
+
+    // If the chat module could not be reached the conversation must still land
+    // somewhere a human looks, so fall back to the Requests inbox.
+    if (!thread) {
+      await pushToPortal({ name, email, message: issue, service: "Support chat", source: "support-chat", priority: "Med", meta: { conversation } });
+    }
 
     // Email is best-effort — a missing/broken SMTP config must never cause a 5xx.
     try {
