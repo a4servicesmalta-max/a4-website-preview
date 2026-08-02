@@ -1293,7 +1293,7 @@ function HeroFX({
 Object.assign(window, {
   HeroFX
 });</script>
-<script>// AuditEstimator.jsx — statutory-audit fee estimator (from €600), scaled by
+<script>// AuditEstimator.jsx — statutory-audit fee estimator (from €750), scaled by
 // turnover, balance-sheet size and complexity. Captures the lead via a
 // "request proposal / book consultation" modal.
 
@@ -1474,7 +1474,7 @@ function AuditEstimator() {
     // `detected` is an internal sizing seed for A4's own indicative-fee model —
     // never presented as a fee read from the uploaded statements, and `a4` is
     // never rendered as a discount/comparison off it. Only `a4` renders.
-    const detected = 600 + h % 30 * 50;
+    const detected = 750 + h % 30 * 50;
     const a4 = Math.round(detected * 0.75 / 50) * 50;
     setRFile(name);
     setRStage("analyzing");
@@ -1497,7 +1497,7 @@ function AuditEstimator() {
   const rSubmit = () => {
     if (form.name && form.email) setRCaptured(true);
   };
-  const fee = Math.round((600 * AE_TURNOVER[turn].mult + AE_BS[bs].add + AE_TX[tx].add + (group ? 600 : 0) + (regulated ? 450 : 0)) / 50) * 50;
+  const fee = Math.round((750 * AE_TURNOVER[turn].mult + AE_BS[bs].add + AE_TX[tx].add + (group ? 600 : 0) + (regulated ? 450 : 0)) / 50) * 50;
   const open = i => {
     setIntent(i);
     setDone(null);
@@ -1528,7 +1528,7 @@ function AuditEstimator() {
   }, /*#__PURE__*/React.createElement(Container, null, /*#__PURE__*/React.createElement(Reveal, null, /*#__PURE__*/React.createElement(SectionHead, {
     align: "center",
     eyebrow: "Audit fee estimator",
-    title: "Statutory audit, from \u20AC600/year",
+    title: "Statutory audit, from \u20AC750/year",
     sub: "Every Maltese company must file audited financial statements. Get a transparent estimate of your audit fee in seconds \u2014 the final fee is fixed after a short scoping call.",
     maxWidth: 640
   })), /*#__PURE__*/React.createElement(Reveal, {
@@ -4273,7 +4273,7 @@ function AuditHero({
       color: "#fff",
       fontWeight: 600
     }
-  }, "from \u20AC600/year"), "."), /*#__PURE__*/React.createElement("div", {
+  }, "from \u20AC750/year"), "."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 12,
