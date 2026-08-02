@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { AuditEstimator } from "./AuditEstimator";
-import { FSReview } from "./FSReview";
 // services, process, overdue check, FAQ, final CTA, footer. Reuses Primitives
 // and HeroFX from the main app.
 
@@ -235,7 +234,7 @@ export function AuditApp() {
       {/* <AuditNav /> */}
       <main>
         <AuditHero />
-        <FSReview />
+        {/* <FSReview /> — component was never committed; see commit message. */}
         <WhyMalta />
         <AuditEstimator />
         <AuditServices />
