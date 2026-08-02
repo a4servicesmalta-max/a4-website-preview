@@ -5,6 +5,7 @@ import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/compone
 import { AuditEstimator } from "./AuditEstimator";
 import { ScrollVideo } from "@/components/a4-landing/ScrollVideo";
 import { AUDIT_FAQS } from "@/data/serviceFaqs";
+import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
 
 // Structure and copy ported from the Vacei "Audit" design
 // (Vacei Marketing Site Design.zip → Audit.dc.html), rendered in A4's palette,
@@ -36,7 +37,7 @@ function AuditHero() {
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get my audit fee <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href="#estimate">Book a consultation</Button>
+            <Button variant="outline-dark" size="lg" href={CALENDLY_BOOKING_URL} target="_blank" rel="noreferrer">Book a consultation</Button>
           </div>
           <div style={{ display: "flex", gap: "10px 28px", marginTop: 38, flexWrap: "wrap", justifyContent: "center" }}>
             {proof.map(([ic, t]) => (
@@ -156,7 +157,7 @@ function AuditFAQ() {
           <Eyebrow>FAQ</Eyebrow>
           <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "var(--a4-ink)", fontSize: "clamp(32px,4vw,48px)", lineHeight: 1.05, letterSpacing: "-.02em", margin: "18px 0 0", textWrap: "balance" }}>Audit questions, answered</h2>
           <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 17, lineHeight: 1.55, color: "var(--a4-mute)", margin: "18px 0 28px", maxWidth: 340 }}>Still unsure? Book a free consultation and we&apos;ll talk it through.</p>
-          <Button variant="dark" size="md" href="#estimate">Book a consultation <Icon name="arrow-right" size={17} color="#fff" /></Button>
+          <Button variant="dark" size="md" href={CALENDLY_BOOKING_URL} target="_blank" rel="noreferrer">Book a consultation <Icon name="arrow-right" size={17} color="#fff" /></Button>
         </Reveal>
         <Reveal delay={100} style={{ flex: "1 1 520px", minWidth: 300 }}>
           <div style={{ borderTop: "1px solid var(--a4-hairline-light)" }}>
