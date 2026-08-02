@@ -174,7 +174,7 @@ export type SoftwareTierId = keyof typeof SOFTWARE_TIERS;
 
 /** Client-facing names for the software plans. */
 export const SOFTWARE_TIER_LABELS: Record<SoftwareTierId, string> = {
-  book: "Bookkeeper",
+  book: "Junior",
   senior: "Senior",
   manager: "Manager",
   cfo: "CFO",

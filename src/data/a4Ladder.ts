@@ -24,7 +24,9 @@
 
 import { PRICING_VAT_NOTE, SOFTWARE_TIERS } from "./a4QuotePack";
 
-export const LADDER_BASE_LABEL = "A4 Books";
+/** The base RUNG's name. The product is still called A4 Books; the rung is
+ *  named on the ladder — Junior / Senior / Manager / CFO (owner 2026-08-02). */
+export const LADDER_BASE_LABEL = "Junior";
 
 export type LadderLevel = {
   id: string;
@@ -42,7 +44,8 @@ export type LadderLevel = {
 export const A4_LADDER: LadderLevel[] = [
   {
     id: "books",
-    name: "A4 Books",
+    // Wire id stays `books`; the rung is named on the ladder (owner 2026-08-02).
+    name: "Junior",
     add: SOFTWARE_TIERS.book,
     total: SOFTWARE_TIERS.book,
     human: false,
@@ -52,13 +55,13 @@ export const A4_LADDER: LadderLevel[] = [
   },
   {
     id: "senior",
-    name: "Senior accountant",
+    name: "Senior",
     add: SOFTWARE_TIERS.senior - SOFTWARE_TIERS.book,
     total: SOFTWARE_TIERS.senior,
     human: true,
     tagline: "A qualified accountant on your books.",
     detail:
-      "Everything in A4 Books, plus reconciliation review and sign-off, VAT return preparation, and complex entries handled by a Senior.",
+      "Everything in Junior, plus reconciliation review and sign-off, VAT return preparation, and complex entries handled by a Senior.",
   },
   {
     id: "manager",

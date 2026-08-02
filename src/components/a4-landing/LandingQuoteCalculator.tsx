@@ -63,7 +63,7 @@ const QPAY = [
   { upTo: 1e9, rate: 25 },
 ];
 const QSTEPS = ["What you do", "Volume", "Payroll", "Up to date?", "VAT", "Company size", "Your services", "Your quote"];
-const QTIERP: Record<string, [number, string]> = { book: [39, "Bookkeeper"], senior: [99, "Senior"], manager: [198, "Manager"], cfo: [357, "CFO"] };
+const QTIERP: Record<string, [number, string]> = { book: [39, "Junior"], senior: [99, "Senior"], manager: [198, "Manager"], cfo: [357, "CFO"] };
 
 type QState = {
   step: number;
@@ -249,7 +249,7 @@ export function LandingQuoteCalculator() {
       {
         name: "Software tier", desc: "All automation, no accountants. Prices are from-prices by volume.",
         amt: "€" + QTIERP[q.tier || "book"][0] + " /mo",
-        options: ([["book", "Bookkeeper"], ["senior", "Senior"], ["manager", "Manager"], ["cfo", "CFO"]] as [string, string][]).map(([k, label]) => ({ key: k, label, on: (q.tier || "book") === k, pick: () => setQ({ tier: k }) })),
+        options: ([["book", "Junior"], ["senior", "Senior"], ["manager", "Manager"], ["cfo", "CFO"]] as [string, string][]).map(([k, label]) => ({ key: k, label, on: (q.tier || "book") === k, pick: () => setQ({ tier: k }) })),
       },
       svc("review", "Accounting review", "We check your coding, VAT treatment and reconciliation, and send you the fix list.", [["none", "No — I'll self-file"], ["quarter", "Before each VAT return"], ["month", "Every month"]]),
     );
