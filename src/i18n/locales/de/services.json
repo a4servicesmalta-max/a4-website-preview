@@ -470,11 +470,12 @@
         {
           "title": "Internationale Gründung & Expansion",
           "items": [
-            "Unternehmensgründung in Malta",
+            "Unternehmensgründung in Malta — ab €2,000 einmalig (ein Einzelgesellschafter und ein Direktor, Einreichung beim MBR)",
             "EU-Betriebsgesellschaften und Tochterunternehmen",
             "Expansionsplanung für internationale Aktivitäten",
             "Koordination mit lokalen Beratern, falls erforderlich",
-            "Zentrale Verwaltung neuer Einheiten innerhalb der weiteren Gruppenstruktur"
+            "Zentrale Verwaltung neuer Einheiten innerhalb der weiteren Gruppenstruktur",
+            "Zusatzleistungen separat berechnet: weitere Gesellschafter je €250, weitere Direktoren je €150, MwSt.- und Steuerregistrierungen €150, Unterstützung bei der Bankkontoeröffnung €500, eingetragener Sitz €1,200/Jahr, Company Secretary €400/Jahr. Alle Preise zzgl. MwSt."
           ]
         },
         {
@@ -916,7 +917,7 @@
     "pricing": {
       "eyebrow": "Preise",
       "title": "Wählen Sie das richtige Support-Level",
-      "desc": "Starten Sie mit Bookkeeper für €39/Monat, ergänzen Sie einen qualifizierten Buchhalter für €79/Monat oder wählen Sie Betreuung auf Partner-Ebene — eine Plattform, ein Portal.",
+      "desc": "Starten Sie mit Bookkeeper für €39/Monat, ergänzen Sie einen qualifizierten Senior-Buchhalter für €99/Monat oder wählen Sie Betreuung auf Partner-Ebene — eine Plattform, ein Portal.",
       "from": "",
       "startingFrom": "zzgl. MwSt.",
       "month": "/Monat",
@@ -924,7 +925,7 @@
       "bestFor": "Am besten für",
       "viewAll": "Alle Funktionen ansehen",
       "notes1": "Alle Pakete beinhalten Zugang zu Ihrem A4-Portal für Dokumente, Aufgaben, Kommunikation und Ihre finanzielle Position.",
-      "notes2": "Bookkeeper und Accountant sind feste Monatspreise mit unbegrenzten Belegen. Partner wird nach einem kurzen Gespräch angeboten. MwSt.-Meldungen, Lohnbuchhaltung und Jahresabschlüsse sind optionale Zusatzleistungen mit separatem Preis.",
+      "notes2": "Bookkeeper und Senior Accountant sind feste Monatspreise mit unbegrenzten Belegen. Partner wird nach einem kurzen Gespräch angeboten. MwSt.-Meldungen, Lohnbuchhaltung und Jahresabschlüsse sind optionale Zusatzleistungen mit separatem Preis.",
       "notes3": "Für Kunden in Malta wird A4 von A4 Services, einer etablierten Prüfungs- und Wirtschaftsprüfungsgesellschaft, unterstützt.",
       "ctaTitle": "Nicht sicher, welches Paket am besten passt?",
       "ctaDesc": "Erstellen Sie Ihr Konto, fordern Sie ein Angebot an und wir empfehlen das richtige Support-Level.",
@@ -945,11 +946,11 @@
         "inc6": "A4-Portalzugang"
       },
       "pkg1": {
-        "label": "Accountant",
-        "title": "Accountant",
+        "label": "Senior Accountant",
+        "title": "Senior Accountant",
         "pos": "Software + qualifizierter Buchhalter",
         "desc": "Alles aus Bookkeeper, plus ein qualifizierter A4-Buchhalter, der Ihre Bücher monatlich prüft und freigibt.",
-        "bestFor": "Aktive Unternehmen, die einen qualifizierten Buchhalter hinter der Automatisierung wollen.",
+        "bestFor": "Aktive Unternehmen, die einen qualifizierten Senior-Buchhalter hinter der Automatisierung wollen.",
         "cta": "Jetzt starten",
         "badge": "Am beliebtesten",
         "inc1": "Alles aus Bookkeeper",
@@ -970,7 +971,7 @@
         "bestFor": "Wachsende Unternehmen, die Betreuung und Beratung auf Partner-Ebene wollen.",
         "cta": "Angebot anfordern",
         "badge": "",
-        "inc1": "Alles aus Accountant",
+        "inc1": "Alles aus Senior Accountant",
         "inc2": "Management-Reporting",
         "inc3": "Forecasting",
         "inc4": "Monatliche Beratungsgespräche",

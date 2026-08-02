@@ -470,11 +470,12 @@
         {
           "title": "Costituzione ed espansione internazionale",
           "items": [
-            "Costituzione di società a Malta",
+            "Costituzione di società a Malta — a partire da €2,000 una tantum (un socio individuale e un amministratore, depositata presso il MBR)",
             "Società operative e filiali nell'UE",
             "Pianificazione dell'espansione per operazioni internazionali",
             "Coordinamento con consulenti locali ove richiesto",
-            "Gestione centrale delle nuove entità nella struttura di gruppo"
+            "Gestione centrale delle nuove entità nella struttura di gruppo",
+            "Servizi aggiuntivi con prezzo separato: soci aggiuntivi €250 ciascuno, amministratori aggiuntivi €150 ciascuno, registrazioni IVA e fiscali €150, assistenza apertura conto bancario €500, sede legale €1,200/anno, segretario societario €400/anno. Tutti i prezzi sono IVA esclusa."
           ]
         },
         {
@@ -916,7 +917,7 @@
     "pricing": {
       "eyebrow": "Prezzi",
       "title": "Scegli il livello di supporto giusto",
-      "desc": "Parti con Bookkeeper a €39/mese, aggiungi un contabile qualificato a €79/mese o passa alla supervisione di un partner — una piattaforma, un portale.",
+      "desc": "Parti con Bookkeeper a €39/mese, aggiungi un contabile senior qualificato a €99/mese o passa alla supervisione di un partner — una piattaforma, un portale.",
       "from": "",
       "startingFrom": "IVA esclusa",
       "month": "/mese",
@@ -924,7 +925,7 @@
       "bestFor": "Ideale per",
       "viewAll": "Visualizza Tutte le Funzioni",
       "notes1": "Tutti i pacchetti includono l'accesso al tuo portale A4 per documenti, compiti, comunicazioni e visibilità finanziaria.",
-      "notes2": "Bookkeeper e Accountant sono prezzi mensili fissi con documenti illimitati. Partner viene quotato dopo una breve call. IVA, paghe e bilanci annuali sono servizi aggiuntivi con prezzo separato.",
+      "notes2": "Bookkeeper e Senior Accountant sono prezzi mensili fissi con documenti illimitati. Partner viene quotato dopo una breve call. IVA, paghe e bilanci annuali sono servizi aggiuntivi con prezzo separato.",
       "notes3": "Per i clienti a Malta, A4 è supportato da A4 Services, una società di revisione e contabilità consolidata.",
       "ctaTitle": "Non sei sicuro di quale pacchetto sia il migliore?",
       "ctaDesc": "Crea il tuo account, richiedi un preventivo e ti raccomanderemo il giusto livello di supporto.",
@@ -945,11 +946,11 @@
         "inc6": "Accesso al portale A4"
       },
       "pkg1": {
-        "label": "Accountant",
-        "title": "Accountant",
+        "label": "Senior Accountant",
+        "title": "Senior Accountant",
         "pos": "Software + contabile qualificato",
         "desc": "Tutto Bookkeeper, più un contabile qualificato A4 che rivede e approva i tuoi libri ogni mese.",
-        "bestFor": "Aziende attive che vogliono un contabile qualificato dietro l'automazione.",
+        "bestFor": "Aziende attive che vogliono un contabile senior qualificato dietro l'automazione.",
         "cta": "Inizia",
         "badge": "Più popolare",
         "inc1": "Tutto Bookkeeper",
@@ -970,7 +971,7 @@
         "bestFor": "Aziende in crescita che vogliono supervisione e consulenza a livello di partner.",
         "cta": "Richiedi un preventivo",
         "badge": "",
-        "inc1": "Tutto Accountant",
+        "inc1": "Tutto Senior Accountant",
         "inc2": "Reportistica direzionale",
         "inc3": "Previsioni",
         "inc4": "Call di consulenza mensili",

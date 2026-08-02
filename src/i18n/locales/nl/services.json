@@ -470,11 +470,12 @@
         {
           "title": "Internationale oprichting & expansie",
           "items": [
-            "Oprichting van bedrijven in Malta",
+            "Oprichting van bedrijven in Malta — vanaf €2,000 eenmalig (één individuele aandeelhouder en één directeur, ingediend bij de MBR)",
             "EU-werkmaatschappijen en dochterondernemingen",
             "Expansieplanning voor internationale operaties",
             "Coördinatie met lokale adviseurs waar nodig",
-            "Centraal beheer van nieuwe entiteiten binnen de groepsstructuur"
+            "Centraal beheer van nieuwe entiteiten binnen de groepsstructuur",
+            "Extra's apart geprijsd: extra aandeelhouders €250 elk, extra directeuren €150 elk, btw- en belastingregistraties €150, hulp bij bankrekening openen €500, statutaire zetel €1,200/jaar, company secretary €400/jaar. Alle prijzen zijn excl. btw."
           ]
         },
         {
@@ -916,7 +917,7 @@
     "pricing": {
       "eyebrow": "Prijzen",
       "title": "Kies het juiste niveau van ondersteuning",
-      "desc": "Start met Bookkeeper voor €39/maand, voeg een gekwalificeerde accountant toe voor €79/maand, of kies voor toezicht op partnerniveau — één platform, één portaal.",
+      "desc": "Start met Bookkeeper voor €39/maand, voeg een gekwalificeerde senior accountant toe voor €99/maand, of kies voor toezicht op partnerniveau — één platform, één portaal.",
       "from": "",
       "startingFrom": "Excl. btw",
       "month": "/maand",
@@ -924,7 +925,7 @@
       "bestFor": "Beste voor",
       "viewAll": "Bekijk Alle Functies",
       "notes1": "Alle pakketten zijn inclusief toegang tot uw A4 portaal, waar u documenten kunt uploaden, taken kunt volgen, communiceren en uw financiële positie kunt inzien.",
-      "notes2": "Bookkeeper en Accountant zijn vaste maandprijzen met onbeperkte documenten. Partner wordt geoffreerd na een kort gesprek. Btw-aangiften, salarisadministratie en jaarrekeningen zijn optionele extra's met aparte prijs.",
+      "notes2": "Bookkeeper en Senior Accountant zijn vaste maandprijzen met onbeperkte documenten. Partner wordt geoffreerd na een kort gesprek. Btw-aangiften, salarisadministratie en jaarrekeningen zijn optionele extra's met aparte prijs.",
       "notes3": "Voor klanten in Malta wordt A4 ondersteund door A4 Services, een gevestigd audit- en accountantskantoor in Malta.",
       "ctaTitle": "Niet zeker welk pakket het beste past?",
       "ctaDesc": "Maak uw account aan, vraag een offerte, en we zullen het juiste ondersteuningsniveau voor uw bedrijf aanbevelen.",
@@ -945,11 +946,11 @@
         "inc6": "Toegang tot A4-portaal"
       },
       "pkg1": {
-        "label": "Accountant",
-        "title": "Accountant",
+        "label": "Senior Accountant",
+        "title": "Senior Accountant",
         "pos": "Software + gekwalificeerde accountant",
         "desc": "Alles van Bookkeeper, plus een gekwalificeerde A4-accountant die uw boeken maandelijks controleert en aftekent.",
-        "bestFor": "Actieve bedrijven die een gekwalificeerde accountant achter de automatisering willen.",
+        "bestFor": "Actieve bedrijven die een gekwalificeerde senior accountant achter de automatisering willen.",
         "cta": "Aan de slag",
         "badge": "Meest gekozen",
         "inc1": "Alles van Bookkeeper",
@@ -970,7 +971,7 @@
         "bestFor": "Groeiende bedrijven die toezicht en advies op partnerniveau willen.",
         "cta": "Offerte aanvragen",
         "badge": "",
-        "inc1": "Alles van Accountant",
+        "inc1": "Alles van Senior Accountant",
         "inc2": "Managementrapportage",
         "inc3": "Forecasting",
         "inc4": "Maandelijkse adviesgesprekken",
