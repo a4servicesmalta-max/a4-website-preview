@@ -1,30 +1,30 @@
 import type { Metadata } from "next";
 import "@/components/a4-landing/styles.css";
-import { AuditApp } from "./components/AuditParts";
-import { AUDIT_FAQS } from "@/data/serviceFaqs";
+import { AccountingApp } from "./components/AccountingParts";
+import { ACCOUNTING_FAQS } from "@/data/serviceFaqs";
 import { pageMetadata } from "@/lib/page-metadata";
-import { AUDIT_PRE_TRADING } from "@/data/a4QuotePack";
+import { SOFTWARE_TIERS } from "@/data/a4QuotePack";
 
 export const metadata: Metadata = pageMetadata(
-  "Audit & Assurance in Malta",
-  `Statutory audit and assurance from A4 Services Limited — a licensed Malta audit firm. Fixed fees from €${AUDIT_PRE_TRADING}/year, GAPSME and IFRS, signed by a licensed audit firm. Get your audit fee in sixty seconds.`,
+  "Accounting & Bookkeeping in Malta",
+  `Automated bookkeeping with qualified Maltese accountants — from €${SOFTWARE_TIERS.book}/month. Documents read and coded for you, bank reconciled, VAT from the same ledger. Get your monthly price in sixty seconds.`,
 );
 
 const faqPage = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: AUDIT_FAQS.map((f) => ({
+  mainEntity: ACCOUNTING_FAQS.map((f) => ({
     "@type": "Question",
     name: f.q,
     acceptedAnswer: { "@type": "Answer", text: f.a },
   })),
 };
 
-export default function AuditServicesPage() {
+export default function AccountingServicesPage() {
   return (
     <div className="a4-landing-page pt-24 sm:pt-28">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }} />
-      <AuditApp />
+      <AccountingApp />
     </div>
   );
 }

@@ -1,6 +1,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // `src/lib/quotation-pdf.ts` reads two PNGs out of public/ at runtime via a
+  // computed path, so Next traces the WHOLE public/ folder into every server
+  // function — 595 MB of video and GIFs no function ever opens. That pushed
+  // api/quotation to 419 MB and Vercel refused the deployment (250 MB limit).
+  // Vercel serves this media from the CDN; it has no business in a bundle.
+  // The two PNGs the PDF does read (assets/quote/…, assets/a4-mark-white.png)
+  // are not matched here and stay traced.
+  outputFileTracingExcludes: {
+    "**": [
+      "public/assets/videos/**",
+      "public/**/*.mp4",
+      "public/**/*.webm",
+      "public/**/*.mov",
+      "public/**/*.gif",
+    ],
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "cdn.livechat-static.com" },

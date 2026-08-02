@@ -16,7 +16,18 @@
  * Nothing in here is confidential — it is the published price list.
  */
 
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-01";
+/**
+ * mt-2026-08-02 adds the pre-trading band only: AUDIT_YEARLY["0"] 0 → 600 and
+ * TAX_RETURN_YEARLY["0"] 0 → 175 (owner decision 2026-08-02, so that the
+ * "audit from €600/yr" headline on /audit-services is a price the calculator
+ * will actually quote). Every other fee is unchanged from mt-2026-08-01.
+ *
+ * ⚠ The two sibling copies still carry mt-2026-08-01 and must be updated to
+ * match before they quote a dormant company:
+ *   - vacei-marketing-site/index.html
+ *   - portal-backend/src/modules/quote-pack/malta-pack.ts
+ */
+export const A4_QUOTE_PACK_VERSION = "mt-2026-08-02";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -88,11 +99,9 @@ export const TAX_RETURN_YEARLY: Record<TxnBand, number> = {
 /** Statutory audit — €/yr by transaction band, × risk. */
 export const AUDIT_YEARLY: Record<TxnBand, number> = {
   // Pre-trading / dormant company. Owner decision 2026-08-02: price it rather
-  // than leave it unpriced, so the estimator can quote a dormant company
-  // instead of refusing. NOTE the pack this file transcribes has "0": 0 — this
-  // is a deliberate A4-site divergence, and it is why the advertised floor is
-  // AUDIT_FROM (the "1-20" band, €750) rather than the table minimum. Every
-  // company that actually trades starts at €750.
+  // than leave it unpriced, so the "audit from €600/yr" headline on
+  // /audit-services is true of an actual quote the calculator will produce.
+  // Any trading company starts at €750 (the "1-20" band).
   "0": 600,
   "1-20": 750,
   "21-60": 1150,
