@@ -50,10 +50,17 @@ async function pushToPartnerLeads(req: PortalRequest): Promise<void> {
   // `name` is required (min 1). Never invent one: fall back to what they gave.
   const name = (req.name?.trim() || req.company?.trim() || email.split("@")[0] || "Website enquiry").slice(0, 200);
 
-  const label = [req.service, req.source && `source: ${req.source}`, req.priority && `priority: ${req.priority}`]
+  // Origin line first, so staff can tell at a glance which site and which form
+  // produced the lead — a4.com.mt and vacei.com both land in the same list.
+  const label = [
+    req.service,
+    req.source && `form: ${req.source}`,
+    req.priority && `priority: ${req.priority}`,
+    req.company?.trim() && `company: ${req.company.trim()}`,
+  ]
     .filter(Boolean)
     .join(" · ");
-  const message = [label && `[A4 website — ${label}]`, req.message?.trim()]
+  const message = [`[a4.com.mt${label ? ` — ${label}` : ""}]`, req.message?.trim()]
     .filter(Boolean)
     .join("\n\n")
     .slice(0, 4000);

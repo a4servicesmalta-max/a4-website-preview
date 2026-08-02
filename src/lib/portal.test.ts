@@ -37,6 +37,7 @@ describe("pushToPortal", () => {
   it("keeps the real A4 source visible in the message", async () => {
     await pushToPortal({ name: "J", email: "j@b.mt", service: "FS/TB review (tb)", source: "fs-review", message: "uploaded a file" });
     const m = bodyOf("/public/website-leads").message;
+    expect(m).toMatch(/^\[a4\.com\.mt — /);          // origin is unmistakable
     expect(m).toContain("FS/TB review (tb)");
     expect(m).toContain("fs-review");
     expect(m).toContain("uploaded a file");
@@ -50,6 +51,11 @@ describe("pushToPortal", () => {
   it("prefers company over the email local-part", async () => {
     await pushToPortal({ email: "solo@borg.mt", company: "Borg Trading Ltd" });
     expect(bodyOf("/public/website-leads").name).toBe("Borg Trading Ltd");
+  });
+
+  it("always stamps the origin site, even with no service or message", async () => {
+    await pushToPortal({ name: "J", email: "j@b.mt" });
+    expect(bodyOf("/public/website-leads").message).toContain("a4.com.mt");
   });
 
   it("skips the lead when there is no email to file it against", async () => {
