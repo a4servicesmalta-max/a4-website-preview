@@ -14,20 +14,12 @@
 import {
   TXN_BANDS, RISK_TIERS, BOOKKEEPING_MONTHLY, VAT_MONTHLY, VAT_RULES, ACCOUNTING_REVIEW,
   PAYROLL_PER_HEAD, payrollRate, EXTRA_BANK_MONTHLY, CATCH_UP, SOFTWARE_TIERS,
-  SOFTWARE_TIER_BY_BAND, SOFTWARE_TIER_LABELS, LAUNCH_PROMO, isPromoActive, roundEur,
+  SOFTWARE_TIER_BY_BAND, SOFTWARE_TIER_LABELS, LAUNCH_PROMO, isPromoActive, roundEur, sectorTier,
   type TxnBand, type RiskTier,
 } from "@/data/a4QuotePack";
 
-export const SECTORS: { id: string; label: string; tier: RiskTier }[] = [
-  { id: "shop", label: "Shop, trade or services", tier: "standard" },
-  { id: "consulting", label: "Consulting or freelancing", tier: "standard" },
-  { id: "property", label: "Property or rentals", tier: "standard" },
-  { id: "hospitality", label: "Restaurant, bar or hotel", tier: "elevated" },
-  { id: "online", label: "Online sales or cross-border", tier: "elevated" },
-  { id: "holding", label: "Holding or investment company", tier: "elevated" },
-  { id: "regulated", label: "Gaming, crypto or financial services", tier: "high" },
-  { id: "other", label: "Something else", tier: "refer" },
-];
+// The sector list is pack data — one definition for every calculator.
+export { SECTORS } from "@/data/a4QuotePack";
 
 export const TXN = TXN_BANDS.map((b) => ({ id: b.id, label: b.label, sub: b.hint }));
 
@@ -91,7 +83,7 @@ export const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB")
 const find = <T extends { id: string }>(list: T[], id: string) => list.find((x) => x.id === id) ?? list[0];
 
 export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): AccountingQuote {
-  const tierId = find(SECTORS, s.sector).tier;
+  const tierId = sectorTier(s.sector);
   const tierDef = RISK_TIERS[tierId];
   if (tierDef.multiplier == null) return { refer: true };
   const rm = tierDef.multiplier;

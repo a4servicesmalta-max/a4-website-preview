@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pushToPortal } from "@/lib/portal";
-import { buildQuote, REVENUE_BANDS, type QuoteInput, type QuoteServiceId } from "@/lib/quotation";
+import { buildQuote, type QuoteInput, type QuoteServiceId } from "@/lib/quotation";
+import { SECTORS, TXN_BANDS, type TxnBand } from "@/data/a4QuotePack";
 import { renderQuotationPdf } from "@/lib/quotation-pdf";
 
 export const runtime = "nodejs";
@@ -15,8 +16,8 @@ export async function POST(req: NextRequest) {
     const email = String(b.email || "").slice(0, 200);
     const company = String(b.company || "").slice(0, 160);
     const regNo = String(b.regNo || "").slice(0, 40);
-    const industry = String(b.industry || "").slice(0, 80);
-    const revenueBand = REVENUE_BANDS.some((r) => r.id === b.revenueBand) ? b.revenueBand : "100k-500k";
+    const sector = SECTORS.some((x) => x.id === b.sector) ? String(b.sector) : "shop";
+    const txnBand = TXN_BANDS.some((t) => t.id === b.txnBand) ? (b.txnBand as TxnBand) : "21-60";
     const services = (Array.isArray(b.services) ? b.services : []).filter((s: string) =>
       VALID_SERVICES.includes(s as QuoteServiceId)
     ) as QuoteServiceId[];
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
     if (services.length === 0) return NextResponse.json({ error: "Select at least one service." }, { status: 400 });
 
-    const input: QuoteInput = { company, regNo, industry, revenueBand, services, overdueYears };
+    const input: QuoteInput = { company, regNo, sector, txnBand, services, overdueYears };
     const quote = buildQuote(input);
 
     // Lead is captured regardless of what the visitor does with the PDF.

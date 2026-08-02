@@ -33,6 +33,14 @@ const nextConfig: NextConfig = {
     return [
       { source: "/books", destination: booksDestination, permanent: false },
       { source: "/:locale(en|de|es|fr|it|nl)/books", destination: booksDestination, permanent: false },
+      // The old standalone ad landing pages carried frozen copies of the
+      // pricing and their own calculators, so they contradicted the live
+      // figures. Retired 2026-08-02 in favour of the real pages, which read
+      // the quote pack. Kept as redirects (not 404s) because live Google Ads
+      // may still point at these URLs. `redirects()` is evaluated before the
+      // filesystem, so these win even while the files exist in public/.
+      { source: "/lp/audit-services.html", destination: "/audit-services", permanent: true },
+      { source: "/lp/automated-bookkeeping.html", destination: "/accounting-services", permanent: true },
     ];
   },
 };

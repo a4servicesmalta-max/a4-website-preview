@@ -21,9 +21,12 @@ import {
   isPromoActive,
   PRICING_VAT_NOTE,
   PRICING_GOV_NOTE,
+  type SoftwareTierId,
 } from "@/data/a4QuotePack";
 import {
+  evaluateA4Items,
   submitWebsiteQuotation,
+  type A4Item,
   type QuoteCadence,
   type WebsiteQuoteResult,
 } from "@/lib/websiteQuotation";
@@ -43,6 +46,19 @@ const PR_SERVICES = [
  */
 const PR_VOLUME_BANDS = ["1-20", "21-60", "61-150", "151-400"] as const;
 const PR_VOLUME_LABELS = ["Up to 20", "20 to 60", "60 to 150", "150 to 400"];
+
+/**
+ * Ladder position → pack software tier. NOT a cast: the ladder calls its base
+ * level "books" while the pack tier key is "book", so the mapping is explicit
+ * and a missing entry is a type error rather than an unpriceable submission.
+ */
+const PR_TIER_BY_LADDER_ID: Record<string, SoftwareTierId> = {
+  books: "book",
+  senior: "senior",
+  manager: "manager",
+  cfo: "cfo",
+};
+const PR_TIER_IDS: SoftwareTierId[] = A4_LADDER.map((l) => PR_TIER_BY_LADDER_ID[l.id]);
 
 type ServiceId = (typeof PR_SERVICES)[number]["id"];
 
@@ -475,7 +491,7 @@ function PricingInfoBanner() {
 
 function PricingCalc() {
   const [svc, setSvc] = useState<ServiceId>("accounting");
-  const [recon, setRecon] = useState(true);
+  const [tierIdx, setTierIdx] = useState(0);
   const [vatVol, setVatVol] = useState(1);
   const [turn, setTurn] = useState(1);
   const [incShareholders, setIncShareholders] = useState(1);
@@ -490,95 +506,72 @@ function PricingCalc() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<WebsiteQuoteResult | null>(null);
 
-  const promo = isPromoActive();
-
   let unit: "/ mo" | "/ yr" | "one-off" = "/ mo";
   let complex = false;
-  /** Undiscounted lines — what the work actually costs before the promo. */
-  let lines: { label: string; amount: number; cadence: QuoteCadence }[] = [];
-  /** Pass-through government fees, never discounted. */
-  let passThrough = 0;
-  let selections: Record<string, unknown> = {};
+
+  /**
+   * The priced basket, in the ONLY shape the backend can reprice. Everything
+   * shown to the visitor is derived from `evaluateA4Items(items)` below, so the
+   * figures on screen and the figures we submit are the same arithmetic — if
+   * they diverged the backend's reprice would disagree and the quote would fall
+   * back to 202 RECEIVED with no email ever sent.
+   */
+  let items: A4Item[] = [];
 
   if (svc === "accounting") {
-    const base = LADDER_BASE.total;
-    const r = recon ? 15 : 0;
-    lines = [
-      { label: `${LADDER_BASE.name} — software only`, amount: base, cadence: "monthly" },
-      ...(recon ? [{ label: "Bank reconciliation", amount: r, cadence: "monthly" as QuoteCadence }] : []),
-    ];
-    selections = { kind: "accounting", tier: LADDER_BASE.id, recon };
+    items = [{ service: "software", tier: PR_TIER_IDS[tierIdx] }];
   } else if (svc === "vat") {
-    const band = PR_VOLUME_BANDS[vatVol];
-    lines = [{ label: `VAT returns · ${PR_VOLUME_LABELS[vatVol].toLowerCase()} transactions a month`, amount: VAT_MONTHLY[band], cadence: "monthly" }];
-    selections = { kind: "vat", txn: band, vatreg: "art10" };
+    items = [{ service: "vat", txn: PR_VOLUME_BANDS[vatVol], vatreg: "art10" }];
   } else if (svc === "audit") {
-    const band = PR_VOLUME_BANDS[turn];
     unit = "/ yr";
-    lines = [{ label: "Statutory audit", amount: AUDIT_YEARLY[band], cadence: "yearly" }];
-    selections = { kind: "audit", txn: band, assure: "we" };
+    items = [{ service: "audit", txn: PR_VOLUME_BANDS[turn] }];
     if (turn >= 3) complex = true;
   } else {
+    // Incorporation is NOT in the backend's priceable item set, so it can never
+    // be submitted as an instant quote — it goes down the lead path instead.
     unit = "one-off";
-    const one: { label: string; amount: number; cadence: QuoteCadence }[] = [
-      { label: "Incorporation — one shareholder, one director, filed with the MBR", amount: INCORPORATION.base, cadence: "oneoff" },
-    ];
-    if (incShareholders > 1)
-      one.push({ label: `Additional shareholders · ${incShareholders - 1}`, amount: (incShareholders - 1) * INCORPORATION.extraShareholder, cadence: "oneoff" });
-    if (incDirectors > 1)
-      one.push({ label: `Additional directors · ${incDirectors - 1}`, amount: (incDirectors - 1) * INCORPORATION.extraDirector, cadence: "oneoff" });
-    if (incRegistrations)
-      one.push({ label: "VAT and tax registrations", amount: INCORPORATION.vatTaxRegistrations, cadence: "oneoff" });
-    if (incBank) one.push({ label: "Bank account assistance", amount: INCORPORATION.bankAssistance, cadence: "oneoff" });
-    if (incRegOffice)
-      one.push({ label: "Registered office", amount: INCORPORATION.registeredOfficeYearly, cadence: "yearly" });
-    if (incSecretary)
-      one.push({ label: "Company secretary", amount: INCORPORATION.companySecretaryYearly, cadence: "yearly" });
-    lines = one;
-    selections = {
-      kind: "incorporation",
-      type: "ltd",
-      sh: incShareholders,
-      dirs: incDirectors,
-      reg: incRegistrations ? "we" : "none",
-      bank: incBank ? "we" : "none",
-      ro: incRegOffice ? "we" : "none",
-      sec: incSecretary ? "we" : "none",
-    };
   }
 
-  const sum = (c: QuoteCadence) => lines.filter((l) => l.cadence === c).reduce((s, l) => s + l.amount, 0);
-  const grossMonthly = sum("monthly");
-  const grossYearly = sum("yearly");
-  const grossOneOff = sum("oneoff");
+  const totals = evaluateA4Items(items);
+  const promo = totals.promoApplied;
 
-  // Promo exactly as the Vacei site applies it: monthly × 0.75, yearly × 0.75
-  // on everything except the government pass-through, one-offs untouched.
-  const discount = promo ? 1 - LAUNCH_PROMO.pct : 1;
-  const netMonthly = Math.round(grossMonthly * discount);
-  const netYearly = grossYearly > 0 ? Math.round((grossYearly - passThrough) * discount) + passThrough : 0;
-  const netOneOff = grossOneOff;
+  /** Incorporation is priced client-side for display only (lead path). */
+  const incLines: { label: string; amount: number; cadence: QuoteCadence }[] = [];
+  if (svc === "incorporation") {
+    incLines.push({ label: "Incorporation — one shareholder, one director, filed with the MBR", amount: INCORPORATION.base, cadence: "oneoff" });
+    if (incShareholders > 1)
+      incLines.push({ label: `Additional shareholders · ${incShareholders - 1}`, amount: (incShareholders - 1) * INCORPORATION.extraShareholder, cadence: "oneoff" });
+    if (incDirectors > 1)
+      incLines.push({ label: `Additional directors · ${incDirectors - 1}`, amount: (incDirectors - 1) * INCORPORATION.extraDirector, cadence: "oneoff" });
+    if (incRegistrations)
+      incLines.push({ label: "VAT and tax registrations", amount: INCORPORATION.vatTaxRegistrations, cadence: "oneoff" });
+    if (incBank) incLines.push({ label: "Bank account assistance", amount: INCORPORATION.bankAssistance, cadence: "oneoff" });
+    if (incRegOffice)
+      incLines.push({ label: "Registered office", amount: INCORPORATION.registeredOfficeYearly, cadence: "yearly" });
+    if (incSecretary)
+      incLines.push({ label: "Company secretary", amount: INCORPORATION.companySecretaryYearly, cadence: "yearly" });
+  }
+
+  const isLeadPath = svc === "incorporation";
+  const lines = isLeadPath ? incLines : totals.lines;
+
+  const incOneOff = incLines.filter((l) => l.cadence === "oneoff").reduce((s, l) => s + l.amount, 0);
 
   /** The headline figure for the cadence this service is billed in. */
-  const gross = unit === "/ mo" ? grossMonthly : unit === "/ yr" ? grossYearly : grossOneOff;
-  const price = unit === "/ mo" ? netMonthly : unit === "/ yr" ? netYearly : netOneOff;
+  const gross = isLeadPath
+    ? incOneOff
+    : unit === "/ mo"
+      ? totals.grossMonthly
+      : totals.grossYearly;
+  const price = isLeadPath ? incOneOff : unit === "/ mo" ? totals.monthly : totals.yearly;
   const discounted = promo && price < gross;
 
-  const canSend = name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const canSend = !isLeadPath && name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const send = async () => {
     if (!canSend || sending) return;
     setSending(true);
-    const result = await submitWebsiteQuotation({
-      name,
-      email,
-      selections,
-      lines,
-      monthly: netMonthly,
-      yearly: netYearly,
-      oneOff: netOneOff,
-    });
-    setSent(result);
+    setSent(await submitWebsiteQuotation({ name, email, items }));
     setSending(false);
   };
 
@@ -624,15 +617,14 @@ function PricingCalc() {
           >
             {svc === "accounting" && (
               <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">{LADDER_BASE.name} — {prEuro(LADDER_BASE.total)}/mo</div>
-                <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[6px]">
+                <div className="a4-font-body text-[14px] font-semibold text-white">How much of the finance function do you want?</div>
+                <PrChip items={A4_LADDER.map((l) => l.name)} value={tierIdx} set={setTierIdx} cols={2} />
+                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
+                  {A4_LADDER[tierIdx].tagline} {A4_LADDER[tierIdx].detail}
+                </p>
+                <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[10px]">
                   {LADDER_CAVEAT}
                 </p>
-                <div className="mt-2">
-                  <PrRow label="Bank reconciliation" sub="We match & reconcile every account">
-                    <PrToggle on={recon} set={setRecon} />
-                  </PrRow>
-                </div>
               </div>
             )}
             {svc === "vat" && (
@@ -754,7 +746,19 @@ function PricingCalc() {
                   ))}
                 </div>
 
-                {sent ? (
+                {isLeadPath ? (
+                  // Company formation is not on the instant-quote fee schedule —
+                  // shareholder structure decides the real price, so a person
+                  // scopes it. Same figures, different route.
+                  <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)]">
+                    <Button variant="dark" size="md" href="/contact" style={{ width: "100%" }}>
+                      Request this incorporation <Icon name="arrow-right" size={16} color="#fff" />
+                    </Button>
+                    <p className="a4-font-body text-[11.5px] leading-[1.5] text-[var(--a4-mute)] text-center mt-2.5">
+                      Company formation is confirmed by a director before anything is filed.
+                    </p>
+                  </div>
+                ) : sent ? (
                   <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)] text-center">
                     <p className="a4-font-body text-[14px] font-semibold text-[var(--a4-ink)] m-0">{sent.message}</p>
                     {sent.status === "quoted" && (

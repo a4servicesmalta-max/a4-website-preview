@@ -61,6 +61,27 @@ export const RISK_TIERS: Record<RiskTier, { label: string; multiplier: number | 
   refer: { label: "Referral", multiplier: null, onboarding: null },
 };
 
+/**
+ * What the company does → which risk tier it carries.
+ *
+ * THE canonical sector list. Every calculator asks this same question with
+ * these same options, so two surfaces can never put the same company in
+ * different tiers. `refer` is never auto-priced — it goes to a director.
+ */
+export const SECTORS: { id: string; label: string; tier: RiskTier }[] = [
+  { id: "shop", label: "Shop, trade or services", tier: "standard" },
+  { id: "consulting", label: "Consulting or freelancing", tier: "standard" },
+  { id: "property", label: "Property or rentals", tier: "standard" },
+  { id: "hospitality", label: "Restaurant, bar or hotel", tier: "elevated" },
+  { id: "online", label: "Online sales or cross-border", tier: "elevated" },
+  { id: "holding", label: "Holding or investment company", tier: "elevated" },
+  { id: "regulated", label: "Gaming, crypto or financial services", tier: "high" },
+  { id: "other", label: "Something else", tier: "refer" },
+];
+
+export const sectorTier = (id: string): RiskTier =>
+  (SECTORS.find((s) => s.id === id) ?? SECTORS[0]).tier;
+
 /* -------------------------------------------------------------------------- */
 /* Recurring service tables                                                    */
 /* -------------------------------------------------------------------------- */

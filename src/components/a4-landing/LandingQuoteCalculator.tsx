@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, BOOKKEEPING_MONTHLY, PAYROLL_PER_HEAD, SOFTWARE_TIERS, SOFTWARE_TIER_LABELS } from "@/data/a4QuotePack";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
 // The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
@@ -52,25 +52,21 @@ const QSIZE: [string, string, string][] = [
   ["big", "Bigger", "above that"],
   ["unsure", "Not sure", "we'll check"],
 ];
+// Every table reads the pack, so this calculator can never quote a different
+// figure from /accounting-services, /audit-services, /quote or the Vacei side.
+// Owner decision 2026-08-02: the local `book` table (69/119/199/329/549/899)
+// was retired in favour of the pack's BOOKKEEPING_MONTHLY.
 const QT: Record<string, Record<string, number>> = {
-  // ⚠ `book` is the one table still local to this component and it does NOT
-  // match BOOKKEEPING_MONTHLY in the pack (69/119/199/329/549/899 here vs
-  // 59/99/169/279/469/769 there), so this calculator quotes bookkeeping higher
-  // than /accounting-services does. Left as-is because reconciling it is a
-  // pricing decision, not a refactor — flagged to the owner 2026-08-02.
-  book: { "0": 0, "1-20": 69, "21-60": 119, "61-150": 199, "151-400": 329, "401-1000": 549, "1000+": 899 },
-  // The rest read the pack directly, so a fee change lands here automatically.
+  book: BOOKKEEPING_MONTHLY,
   vat: VAT_MONTHLY,
   taxret: TAX_RETURN_YEARLY,
   assure: AUDIT_YEARLY,
 };
-const QPAY = [
-  { upTo: 5, rate: 32 },
-  { upTo: 10, rate: 29 },
-  { upTo: 1e9, rate: 25 },
-];
+const QPAY = PAYROLL_PER_HEAD.map((t) => ({ upTo: t.upTo ?? 1e9, rate: t.rate }));
 const QSTEPS = ["What you do", "Volume", "Payroll", "Up to date?", "VAT", "Company size", "Your services", "Your quote"];
-const QTIERP: Record<string, [number, string]> = { book: [39, "Bookkeeper"], senior: [99, "Senior"], manager: [198, "Manager"], cfo: [357, "CFO"] };
+const QTIERP: Record<string, [number, string]> = Object.fromEntries(
+  (Object.keys(SOFTWARE_TIERS) as (keyof typeof SOFTWARE_TIERS)[]).map((k) => [k, [SOFTWARE_TIERS[k], SOFTWARE_TIER_LABELS[k]]]),
+) as Record<string, [number, string]>;
 
 type QState = {
   step: number;

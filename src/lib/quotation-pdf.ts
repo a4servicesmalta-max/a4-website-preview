@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { readFile } from "fs/promises";
 import path from "path";
 import type { QuoteInput, QuoteResult } from "@/lib/quotation";
+import { SECTORS } from "@/data/a4QuotePack";
 import { euro } from "@/lib/quotation";
 
 const PAGE_W = 595.28; // A4 portrait, points
@@ -63,7 +64,7 @@ export async function renderQuotationPdf(
     { x: 40, y, size: 10, font, color: MUTE }
   );
   y -= 12;
-  page.drawText(`Requested by ${input.name} · ${input.email} · Industry: ${input.industry}`, { x: 40, y, size: 10, font, color: MUTE });
+  page.drawText(`Requested by ${input.name} · ${input.email} · Sector: ${SECTORS.find((x) => x.id === input.sector)?.label ?? input.sector}`, { x: 40, y, size: 10, font, color: MUTE });
   y -= 10;
   page.drawLine({ start: { x: 40, y }, end: { x: PAGE_W - 40, y }, thickness: 1, color: ACCENT });
   y -= 26;
