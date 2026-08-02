@@ -8,15 +8,21 @@
  * The ladder stacks: each level adds its `add` to the level below it, so the
  * running total is what the client actually pays.
  *
- *   A4 Books   €35        software only, no accountant
- *   + Senior   +€60  =  €95   a qualified accountant on your books
- *   + Manager  +€99  = €194   oversight and management reporting
- *   + CFO      +€159 = €353   the full finance function
+ *   A4 Books   €39        software only, no accountant
+ *   + Senior   +€60  =  €99   a qualified accountant on your books
+ *   + Manager  +€99  = €198   oversight and management reporting
+ *   + CFO      +€159 = €357   the full finance function
+ *
+ * The totals are the SOFTWARE_TIERS of quote pack `mt-2026-08-01`
+ * (src/data/a4QuotePack.ts) — the same figures the Vacei calculator and the
+ * portal backend serve. Change them there, not here.
  *
  * IMPORTANT: the base level is SOFTWARE ONLY. Every surface that shows the
- * base price must say so — the whole point of this file is that "€35" is never
+ * base price must say so — the whole point of this file is that "€39" is never
  * shown as if it included an accountant.
  */
+
+import { PRICING_VAT_NOTE, SOFTWARE_TIERS } from "./a4QuotePack";
 
 export const LADDER_BASE_LABEL = "A4 Books";
 
@@ -37,8 +43,8 @@ export const A4_LADDER: LadderLevel[] = [
   {
     id: "books",
     name: "A4 Books",
-    add: 35,
-    total: 35,
+    add: SOFTWARE_TIERS.book,
+    total: SOFTWARE_TIERS.book,
     human: false,
     tagline: "The automated core — software only.",
     detail:
@@ -47,8 +53,8 @@ export const A4_LADDER: LadderLevel[] = [
   {
     id: "senior",
     name: "Senior accountant",
-    add: 60,
-    total: 95,
+    add: SOFTWARE_TIERS.senior - SOFTWARE_TIERS.book,
+    total: SOFTWARE_TIERS.senior,
     human: true,
     tagline: "A qualified accountant on your books.",
     detail:
@@ -57,8 +63,8 @@ export const A4_LADDER: LadderLevel[] = [
   {
     id: "manager",
     name: "Manager",
-    add: 99,
-    total: 194,
+    add: SOFTWARE_TIERS.manager - SOFTWARE_TIERS.senior,
+    total: SOFTWARE_TIERS.manager,
     human: true,
     tagline: "Oversight across the whole picture.",
     detail:
@@ -67,8 +73,8 @@ export const A4_LADDER: LadderLevel[] = [
   {
     id: "cfo",
     name: "CFO",
-    add: 159,
-    total: 353,
+    add: SOFTWARE_TIERS.cfo - SOFTWARE_TIERS.manager,
+    total: SOFTWARE_TIERS.cfo,
     human: true,
     tagline: "The full finance function.",
     detail:
@@ -82,7 +88,7 @@ export const LADDER_FIRST_HUMAN = A4_LADDER[1];
 
 /** One line every pricing surface can reuse, so the caveat is never dropped. */
 export const LADDER_CAVEAT =
-  `€${LADDER_BASE.add}/month is the A4 Books software on its own. ` +
-  `Accountants start at €${LADDER_FIRST_HUMAN.total}/month.`;
+  `€${LADDER_BASE.add}/mo is the A4 Books software on its own. ` +
+  `Accountants start at €${LADDER_FIRST_HUMAN.total}/mo. ${PRICING_VAT_NOTE}`;
 
 export const euro = (n: number) => "€" + n.toLocaleString("en-MT");

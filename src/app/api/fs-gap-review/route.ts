@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
     // What the client actually saw on screen: our own quotation figures.
     const revenueBand = String(form.get("revenueBand") || "");
     const quotedFee = String(form.get("quotedFee") || "");
+    // Free-text scoping context from the audit estimator (year to audit, major
+    // changes, tax return, anything else) — for the scoping call, not the engine.
+    const scoping = String(form.get("scoping") || "").slice(0, 2000);
 
     if (!(file instanceof File)) return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
@@ -84,11 +87,12 @@ export async function POST(req: NextRequest) {
       `FS/TB review request — ${name || email} (${kind.toUpperCase()})`,
       `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nKind: ${kind}\nFile: ${file.name}\nEngine status: ${engine.status}` +
         (revenueBand ? `\nShown to client: €${quotedFee}/yr (quotation figures, ${revenueBand} band)` : "") +
+        (scoping ? `\n\nScoping notes from the estimator:\n${scoping}` : "") +
         quoteText,
       email,
     ).catch(() => {});
 
-    await pushToPortal({ name, email, company, message: `Uploaded ${file.name} for ${kind === "tb" ? "trial balance" : "financial statements"} review`, service: `FS/TB review (${kind})`, source: "fs-review", priority: "High", meta: { kind, fileName: file.name, ...(fullQuote ? { quote: fullQuote } : {}) } });
+    await pushToPortal({ name, email, company, message: `Uploaded ${file.name} for ${kind === "tb" ? "trial balance" : "financial statements"} review`, service: `FS/TB review (${kind})`, source: "fs-review", priority: "High", meta: { kind, fileName: file.name, ...(scoping ? { scoping } : {}), ...(fullQuote ? { quote: fullQuote } : {}) } });
 
     if (!engine.ok) {
       const msg = engine.status === 422
