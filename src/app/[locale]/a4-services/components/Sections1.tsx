@@ -102,7 +102,7 @@ export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit F
             <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
           </div>
           <div style={{ display: "flex", gap: "6px 22px", marginTop: 22, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
-            {["Quotes within 24 hours", "A4 Books software €35/mo · accountants from €95", "Free accounting health check"].map((fact, i) => (
+            {["Quotes within 24 hours", "A4 Books software €39/mo · accountants from €99", "Free accounting health check"].map((fact, i) => (
               <span key={fact} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 500, color: "var(--a4-on-dark-mute)" }}>
                 <Icon name="check" size={14} color="var(--a4-primary-bright)" stroke={2.5} />
                 {fact}

@@ -529,7 +529,7 @@ export default function BookkeepingContent({ relatedBlogs = [] }: { relatedBlogs
                       <td className="py-5 px-5 text-center"><Check className="mx-auto text-primary-blue" size={18} strokeWidth={3} /></td>
                       <td className="py-5 px-5 text-center"><Check className="mx-auto text-primary-blue" size={18} strokeWidth={3} /></td>
                       <td className="py-5 px-5 text-center font-bold text-primary-blue text-xs">Full Service</td>
-                      <td className="py-5 px-5 text-right font-bold text-primary-blue">€79/mo</td>
+                      <td className="py-5 px-5 text-right font-bold text-primary-blue">€99/mo</td>
                     </tr>
                   </tbody>
                 </table>

@@ -3,8 +3,19 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-// Bookkeeping €39/mo flat (unlimited documents), + bank reconciliations, accounting,
-// and optional VAT / payroll / annual accounts. Drives toward "create account".
+import {
+  SOFTWARE_TIERS,
+  VAT_FROM,
+  TAX_RETURN_FROM,
+  PAYROLL_ENTRY_RATE,
+  PAYROLL_BEST_RATE,
+  payrollRate,
+  PRICING_VAT_NOTE,
+} from "@/data/a4QuotePack";
+// A4 Books software €39/mo flat (unlimited documents), + bank reconciliations,
+// accounting, and optional VAT / payroll / annual accounts. Every figure comes
+// from quote pack mt-2026-08-01 (src/data/a4QuotePack.ts).
+// Drives toward "create account".
 
 const PR_BANDS = [
   { label: "Under €100k", acct: 0 },
@@ -47,16 +58,16 @@ export function Pricing() {
   const [emps, setEmps] = useState(2);
   const [annual, setAnnual] = useState(false);
 
-  const book = 39;
+  const book = SOFTWARE_TIERS.book;
   const recon = banks * 15;
   const acct = PR_BANDS[rev].acct;
-  const vatFee = vat ? 35 : 0;
-  const payFee = payroll ? 15 + emps * 5 : 0;
-  const annualFee = annual ? 40 : 0;
+  const vatFee = vat ? VAT_FROM : 0;
+  const payFee = payroll ? emps * payrollRate(emps) : 0;
+  const annualFee = annual ? Math.round(TAX_RETURN_FROM / 12) : 0;
   const total = book + recon + acct + vatFee + payFee + annualFee;
 
   const lines = [
-    { k: "Bookkeeping — unlimited documents", v: book },
+    { k: "A4 Books — unlimited documents", v: book },
     { k: `Bank reconciliations · ${banks} account${banks > 1 ? "s" : ""}`, v: recon },
     { k: "Accounting & management reports", v: acct, included: acct === 0 },
     vat && { k: "VAT returns", v: vatFee },
@@ -73,7 +84,7 @@ export function Pricing() {
         <Reveal><SectionHead
           dark align="center"
           eyebrow="Pricing calculator"
-          title={<>Build your plan — from €39/month</>}
+          title={<>Build your plan — from €{SOFTWARE_TIERS.book}/month</>}
           sub="Transparent, fixed monthly pricing that scales with your business. Adjust the inputs to see your estimate, then create your account to confirm."
           maxWidth={640}
         /></Reveal>
@@ -99,8 +110,8 @@ export function Pricing() {
 
               {/* bookkeeping — flat */}
               <div>
-                <div style={fieldLabel}>Bookkeeping — €39/mo flat</div>
-                <div style={fieldSub}>Unlimited documents, no per-document fees — invoices, expenses and bank lines included.</div>
+                <div style={fieldLabel}>A4 Books — €{SOFTWARE_TIERS.book}/mo flat</div>
+                <div style={fieldSub}>Unlimited documents, no per-document fees — invoices, expenses and bank lines included. Software only; add a Senior accountant from €{SOFTWARE_TIERS.senior}/mo.</div>
               </div>
 
               {/* bank accounts */}
@@ -118,14 +129,14 @@ export function Pricing() {
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--a4-stone)" }}>Optional add-ons</div>
                 {[
-                  { label: "VAT returns", sub: "All four quarters filed with the CFR", on: vat, set: setVat, fee: "€35" },
-                  { label: "Payroll", sub: "FS5 submissions & payslips", on: payroll, set: setPayroll, fee: "from €25", emps: true },
-                  { label: "Annual accounts & tax", sub: "Year-end financial statements & return", on: annual, set: setAnnual, fee: "€40" },
+                  { label: "VAT returns", sub: "Every return prepared and filed with the CFR", on: vat, set: setVat, fee: `from €${VAT_FROM}/mo` },
+                  { label: "Payroll", sub: `FS5 submissions & payslips · €${PAYROLL_ENTRY_RATE}/head up to five, €${PAYROLL_BEST_RATE}/head at scale`, on: payroll, set: setPayroll, fee: `from €${PAYROLL_ENTRY_RATE}/head/mo`, emps: true },
+                  { label: "Annual accounts & tax", sub: "Year-end financial statements & return", on: annual, set: setAnnual, fee: `from €${Math.round(TAX_RETURN_FROM / 12)}/mo` },
                 ].map((a) => (
                   <div key={a.label}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ ...fieldLabel, fontWeight: 500, fontSize: 14 }}>{a.label} <span style={{ color: "var(--a4-stone)", fontWeight: 500 }}>· {a.fee}/mo</span></div>
+                        <div style={{ ...fieldLabel, fontWeight: 500, fontSize: 14 }}>{a.label} <span style={{ color: "var(--a4-stone)", fontWeight: 500 }}>· {a.fee}</span></div>
                         <div style={fieldSub}>{a.sub}</div>
                       </div>
                       <Toggle on={a.on} set={a.set} />
@@ -162,7 +173,7 @@ export function Pricing() {
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 14 }}>
                 <Icon name="lock" size={13} color="var(--a4-stone)" />
-                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)" }}>Fixed price confirmed on signup · cancel anytime</span>
+                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)" }}>Fixed price confirmed on signup · cancel anytime · {PRICING_VAT_NOTE}</span>
               </div>
             </div>
           </div>

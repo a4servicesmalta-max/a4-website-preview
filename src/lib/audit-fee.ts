@@ -9,6 +9,8 @@
  * design's figures on the audit landing page only, and align later.
  */
 
+import { AUDIT_FROM, TAX_RETURN_FROM } from "@/data/a4QuotePack";
+
 export type TierId = "standard" | "elevated" | "high" | "refer";
 
 export const SECTORS: { id: string; label: string; tier: TierId }[] = [
@@ -31,7 +33,7 @@ export const TIERS: Record<TierId, { label: string; mult: number; refer?: boolea
 
 /** Monthly transaction bands — `assure` is the base audit fee, `tax` the annual tax-return add-on. */
 export const TXN: { id: string; label: string; assure: number; tax: number }[] = [
-  { id: "0", label: "None yet", assure: 600, tax: 175 },
+  { id: "0", label: "None yet", assure: AUDIT_FROM, tax: TAX_RETURN_FROM },
   { id: "1-20", label: "Up to 20", assure: 750, tax: 275 },
   { id: "21-60", label: "20 to 60", assure: 1150, tax: 375 },
   { id: "61-150", label: "60 to 150", assure: 1750, tax: 525 },
@@ -156,7 +158,7 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   const taxAdd = s.taxret === "yes" ? Math.round(txn.tax * tier.mult) : 0;
 
   const fee =
-    Math.max(600, Math.round(((txn.assure * (review ? 0.55 : 1) + payAdd + vatAdd + bankAdd) * tier.mult) / 50) * 50) +
+    Math.max(AUDIT_FROM, Math.round(((txn.assure * (review ? 0.55 : 1) + payAdd + vatAdd + bankAdd) * tier.mult) / 50) * 50) +
     taxAdd;
 
   const yearsN = s.year === "multi" ? Math.max(2, parseInt(s.nyrs, 10) || 2) : 1;
@@ -175,18 +177,18 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
     }
     if (fee <= 900) {
       cap = 0.05;
-      reasons.push("the fee is already near the €600 floor of our scale");
+      reasons.push(`the fee is already near the €${AUDIT_FROM} floor of our scale`);
     }
     if (bigVol && fee <= 1500) {
       cap = Math.min(cap, 0.05);
       reasons.push("trading volume is intensive relative to the fee, so the planning saving is smaller");
     }
     disc = Math.min(base, cap);
-    final = Math.max(600, Math.round((fee * (1 - disc)) / 50) * 50);
+    final = Math.max(AUDIT_FROM, Math.round((fee * (1 - disc)) / 50) * 50);
     if (final >= fee) {
       disc = 0;
       final = fee;
-      reasons = ["there is no honest room to discount without going below €600"];
+      reasons = [`there is no honest room to discount without going below €${AUDIT_FROM}`];
     }
     if (disc > 0 && !reasons.length) {
       reasons.push(

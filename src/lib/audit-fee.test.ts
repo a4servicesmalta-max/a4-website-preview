@@ -14,8 +14,8 @@ describe("audit fee engine", () => {
     expect(r).toMatchObject({ refer: false, fee: 650, final: 650, review: true, yearsN: 1 });
   });
 
-  it("never goes below the €600 floor", () => {
-    expect(at({ txn: "0" })).toMatchObject({ fee: 600, final: 600 });
+  it("never goes below the €750 floor", () => {
+    expect(at({ txn: "0" })).toMatchObject({ fee: 750, final: 750 });
   });
 
   it("refers the sectors we do not price instantly", () => {
@@ -45,7 +45,7 @@ describe("audit fee engine", () => {
 
   it("refuses to discount below the floor instead of faking a saving", () => {
     const r = at({ txn: "0", uploaded: true, doc: "fs" });
-    expect(r).toMatchObject({ disc: 0, fee: 600, final: 600 });
+    expect(r).toMatchObject({ disc: 0, fee: 750, final: 750 });
     expect(r.refer === false && r.reasons[0]).toMatch(/no honest room/);
   });
 

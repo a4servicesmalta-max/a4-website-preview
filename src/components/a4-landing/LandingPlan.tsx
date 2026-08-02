@@ -3,6 +3,10 @@
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { A4_LADDER, LADDER_BASE, LADDER_FIRST_HUMAN, LADDER_CAVEAT } from "@/data/a4Ladder";
+import {
+  VAT_MONTHLY, VAT_RULES, AUDIT_FROM, TAX_RETURN_FROM,
+  PAYROLL_ENTRY_RATE, PAYROLL_BEST_RATE, payrollRate, PRICING_VAT_NOTE,
+} from "@/data/a4QuotePack";
 // Pick a bookkeeping tier + add-ons → live monthly price → two exits:
 // (1) Create account & request services, (2) Book a 15-min call.
 
@@ -17,12 +21,13 @@ const LP_TIERS = A4_LADDER.map((l) => ({
   blurb: l.tagline,
 })) as { id: string; name: string; price: number; docs: string; blurb: string }[];
 
-// VAT returns — frequency drives the monthly-equivalent fee. Quarterly is the
-// Malta default; some businesses file monthly, some annually.
+// VAT returns — priced the way quote pack mt-2026-08-01 prices them: a monthly
+// fee set by transaction volume, whatever the filing frequency. Art. 11 small-
+// exempt businesses instead pay one flat yearly declaration.
 const LP_VAT = {
-  annual: { label: "Annually", fee: 15 },
-  quarterly: { label: "Quarterly", fee: 35 },
-  monthly: { label: "Monthly", fee: 60 },
+  low: { label: "Up to 20 / mo", fee: VAT_MONTHLY["1-20"] },
+  mid: { label: "20 to 60 / mo", fee: VAT_MONTHLY["21-60"] },
+  high: { label: "60 to 150 / mo", fee: VAT_MONTHLY["61-150"] },
 };
 
 type AnnualItemId = "accounts" | "tax" | "audit";
@@ -32,8 +37,8 @@ type AnnualItemId = "accounts" | "tax" | "audit";
 const LP_ANNUAL_ITEMS: Record<"company" | "personal", { id: AnnualItemId; label: string; sub: string; fee: number; from: boolean }[]> = {
   company: [
     { id: "accounts", label: "Annual financial statements", sub: "Year-end statutory accounts", fee: 300, from: true },
-    { id: "tax", label: "Corporate tax return", sub: "Prepared & filed with the CFR", fee: 250, from: true },
-    { id: "audit", label: "Statutory audit", sub: "Independent audit, if your company requires one", fee: 600, from: true },
+    { id: "tax", label: "Corporate tax return", sub: "Prepared & filed with the CFR", fee: TAX_RETURN_FROM, from: true },
+    { id: "audit", label: "Statutory audit", sub: "Independent audit, if your company requires one", fee: AUDIT_FROM, from: true },
   ],
   personal: [
     { id: "tax", label: "Personal tax return", sub: "Year-end income tax return, prepared & filed", fee: 250, from: true },
@@ -74,7 +79,7 @@ export function LandingPlan() {
   const [recon, setRecon] = useState(true);
   const [banks, setBanks] = useState(1);
   const [vat, setVat] = useState(true);
-  const [vatFreq, setVatFreq] = useState<keyof typeof LP_VAT>("quarterly");
+  const [vatFreq, setVatFreq] = useState<keyof typeof LP_VAT>("mid");
   const [payroll, setPayroll] = useState(false);
   const [emps, setEmps] = useState(2);
   const [annualSel, setAnnualSel] = useState<Record<AnnualItemId, boolean>>({ accounts: true, tax: true, audit: false });
@@ -93,7 +98,7 @@ export function LandingPlan() {
   const base = LP_TIERS.find((t) => t.id === tier)!.price;
   const reconFee = recon ? banks * 15 : 0;
   const vatFee = vat ? LP_VAT[vatFreq].fee : 0;
-  const payFee = isCompany && payroll ? 15 + emps * 5 : 0;
+  const payFee = isCompany && payroll ? emps * payrollRate(emps) : 0;
   const monthly = base + reconFee + vatFee + payFee;                   // recurring
   const annualItems = LP_ANNUAL_ITEMS[entity];
   const selectedAnnual = annualItems.filter((it) => annualSel[it.id]);
@@ -134,8 +139,8 @@ export function LandingPlan() {
   type Addon = { id: string; label: string; sub: string; on: boolean; set: (v: boolean) => void; fee: string; stepper?: boolean; freq?: boolean; emps?: boolean };
   const monthlyAddons = ([
     { id: "recon", label: "Bank reconciliation", sub: "We match & reconcile every account", on: recon, set: setRecon, fee: "€15 / account", stepper: true },
-    { id: "vat", label: "VAT returns", sub: "Filed with the CFR", on: vat, set: setVat, fee: `€${LP_VAT[vatFreq].fee} / mo`, freq: true },
-    isCompany && { id: "pay", label: "Payroll", sub: "FS5 submissions & payslips", on: payroll, set: setPayroll, fee: "from €25 / mo", emps: true },
+    { id: "vat", label: "VAT returns", sub: `Every return filed with the CFR · art. 11 small-exempt is €${VAT_RULES.art11FlatYearly}/yr instead`, on: vat, set: setVat, fee: `€${LP_VAT[vatFreq].fee} / mo`, freq: true },
+    isCompany && { id: "pay", label: "Payroll", sub: `FS5 submissions & payslips · €${PAYROLL_ENTRY_RATE}/head up to five, €${PAYROLL_BEST_RATE}/head at scale`, on: payroll, set: setPayroll, fee: `from €${PAYROLL_ENTRY_RATE} / head / mo`, emps: true },
   ] as (Addon | false)[]).filter((a): a is Addon => Boolean(a));
 
   const fieldLabel = { fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" };
@@ -307,7 +312,7 @@ export function LandingPlan() {
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 14 }}>
                 <Icon name="shield-check" size={13} color="var(--a4-stone)" />
-                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)" }}>Fixed price · reviewed by a licensed audit firm · service begins upon KYC approval</span>
+                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)" }}>Fixed price · reviewed by a licensed audit firm · service begins upon KYC approval · {PRICING_VAT_NOTE}</span>
               </div>
             </div>
           </div>

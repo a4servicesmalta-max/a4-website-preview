@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
+import { SOFTWARE_TIERS } from "@/data/a4QuotePack";
 
 export default function PricingSection() {
   const { t } = useTranslation("services");
@@ -16,7 +17,7 @@ export default function PricingSection() {
       title: t("bookkeeping.pricing.pkg0.title"),
       price: (
         <>
-          €39<sub>{t("bookkeeping.pricing.month")}</sub>
+          €{SOFTWARE_TIERS.book}<sub>{t("bookkeeping.pricing.month")}</sub>
         </>
       ),
       desc: t("bookkeeping.pricing.pkg0.desc"),
@@ -39,7 +40,7 @@ export default function PricingSection() {
       title: t("bookkeeping.pricing.pkg1.title"),
       price: (
         <>
-          €79<sub>{t("bookkeeping.pricing.month")}</sub>
+          €{SOFTWARE_TIERS.senior}<sub>{t("bookkeeping.pricing.month")}</sub>
         </>
       ),
       desc: t("bookkeeping.pricing.pkg1.desc"),

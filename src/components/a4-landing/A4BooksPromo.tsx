@@ -4,7 +4,7 @@ import { Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primit
 import LocalizedLink from "@/components/common/LocalizedLink";
 
 // A4 Books — the firm's bookkeeping software product. Copy and pricing mirror
-// the Books landing (books.a4.com.mt): €35/mo, unlimited documents, SOFTWARE ONLY.
+// the Books landing (books.a4.com.mt): €39/mo, unlimited documents, SOFTWARE ONLY.
 // Prices live in src/data/a4Ladder.ts — change them there, not here.
 const PLAN_LINES = [
   "Unlimited document uploads",
@@ -57,14 +57,14 @@ export function A4BooksPromo() {
               }}
             >
               A4 Books is our bookkeeping software: upload documents, AI posts the
-              entries, anything uncertain waits for your review. €35 a month,
+              entries, anything uncertain waits for your review. €39 a month,
               unlimited documents — no per-document fees, no hourly meters.
             </p>
             <p
               className="a4-font-body"
               style={{ fontSize: 13.5, color: "var(--a4-stone)", margin: "14px 0 0" }}
             >
-              Software only — no accountant at this price. Add a qualified accountant from €95/month. Price excludes VAT.
+              Software only — no accountant at this price. Add a qualified accountant from €99/month. All fees exclude VAT.
             </p>
             <div style={{ display: "flex", gap: 12, marginTop: 28, flexWrap: "wrap" }}>
               <LocalizedLink
@@ -105,7 +105,7 @@ export function A4BooksPromo() {
                   className="a4-font-display"
                   style={{ fontWeight: 500, fontSize: 54, color: "#fff", letterSpacing: "-2px", lineHeight: 1 }}
                 >
-                  €35
+                  €39
                 </span>
                 <span className="a4-font-body" style={{ fontSize: 15, color: "var(--a4-on-dark-mute)" }}>
                   / month
