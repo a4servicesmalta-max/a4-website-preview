@@ -273,7 +273,7 @@ describe("call-site baskets", () => {
   // The exact baskets /pricing builds, one per tab. Each must reprice to the
   // same totals it shows, or the backend 202s and no quote email is sent.
   const baskets: Record<string, A4Item[]> = {
-    "accounting · Bookkeeper": [{ service: "software", tier: "book" }],
+    "accounting · Junior": [{ service: "software", tier: "book" }],
     "accounting · Senior": [{ service: "software", tier: "senior" }],
     "accounting · Manager": [{ service: "software", tier: "manager" }],
     "accounting · CFO": [{ service: "software", tier: "cfo" }],

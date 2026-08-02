@@ -405,7 +405,7 @@ function PricingStartingTiers() {
             className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4"
             style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}
           >
-            The same ladder as the A4 Books landing page: start with the software on its own, then add a Senior accountant, a Manager, or the full CFO finance function. VAT, audit, tax and company formation are priced separately below. Prefer us to keep the books for you? Full-service bookkeeping starts at {prEuro(BOOKKEEPING_FROM)}/mo, set by your transaction volume.
+            The same ladder as the A4 Books landing page: start with the software on its own, then add a Senior, a Manager, or the full CFO finance function. VAT, audit, tax and company formation are priced separately below. Prefer us to keep the books for you? Full-service bookkeeping starts at {prEuro(BOOKKEEPING_FROM)}/mo, set by your transaction volume.
           </p>
           {isPromoActive() && (
             <p className="a4-font-body text-[13px] font-semibold text-[var(--a4-primary-bright)] mt-3">

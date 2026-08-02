@@ -111,7 +111,7 @@ export function Pricing() {
               {/* bookkeeping — flat */}
               <div>
                 <div style={fieldLabel}>A4 Books — €{SOFTWARE_TIERS.book}/mo flat</div>
-                <div style={fieldSub}>Unlimited documents, no per-document fees — invoices, expenses and bank lines included. Software only; add a Senior accountant from €{SOFTWARE_TIERS.senior}/mo.</div>
+                <div style={fieldSub}>Unlimited documents, no per-document fees — invoices, expenses and bank lines included. Software only; add a Senior from €{SOFTWARE_TIERS.senior}/mo.</div>
               </div>
 
               {/* bank accounts */}

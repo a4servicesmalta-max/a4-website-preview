@@ -153,7 +153,7 @@ export function LandingPlan() {
           align="center"
           eyebrow="Build your price"
           title="Build your plan"
-          sub={`Start with the A4 Books software on its own, then add a Senior accountant, a Manager, or the full CFO finance function — the same ladder as the A4 Books site. ${LADDER_CAVEAT} Fixed monthly price, cancel anytime.`}
+          sub={`Start with the A4 Books software on its own, then add a Senior, a Manager, or the full CFO finance function — the same ladder as the A4 Books site. ${LADDER_CAVEAT} Fixed monthly price, cancel anytime.`}
           maxWidth={620}
         /></Reveal>
 
