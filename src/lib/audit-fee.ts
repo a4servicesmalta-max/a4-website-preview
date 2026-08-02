@@ -9,7 +9,10 @@
  * design's figures on the audit landing page only, and align later.
  */
 
-import { AUDIT_FROM, TAX_RETURN_FROM } from "@/data/a4QuotePack";
+import {
+  AUDIT_YEARLY, TAX_RETURN_YEARLY, TXN_BANDS, RISK_TIERS, REVIEW_ENGAGEMENT_FACTOR, AUDIT_PRE_TRADING,
+  type TxnBand,
+} from "@/data/a4QuotePack";
 
 export type TierId = "standard" | "elevated" | "high" | "refer";
 
@@ -25,22 +28,23 @@ export const SECTORS: { id: string; label: string; tier: TierId }[] = [
 ];
 
 export const TIERS: Record<TierId, { label: string; mult: number; refer?: boolean }> = {
-  standard: { label: "Standard", mult: 1 },
-  elevated: { label: "Elevated", mult: 1.2 },
-  high: { label: "High", mult: 1.45 },
-  refer: { label: "Referral", mult: 1, refer: true },
+  standard: { label: RISK_TIERS.standard.label, mult: RISK_TIERS.standard.multiplier ?? 1 },
+  elevated: { label: RISK_TIERS.elevated.label, mult: RISK_TIERS.elevated.multiplier ?? 1 },
+  high: { label: RISK_TIERS.high.label, mult: RISK_TIERS.high.multiplier ?? 1 },
+  refer: { label: RISK_TIERS.refer.label, mult: 1, refer: true },
 };
 
-/** Monthly transaction bands — `assure` is the base audit fee, `tax` the annual tax-return add-on. */
-export const TXN: { id: string; label: string; assure: number; tax: number }[] = [
-  { id: "0", label: "None yet", assure: AUDIT_FROM, tax: TAX_RETURN_FROM },
-  { id: "1-20", label: "Up to 20", assure: 750, tax: 275 },
-  { id: "21-60", label: "20 to 60", assure: 1150, tax: 375 },
-  { id: "61-150", label: "60 to 150", assure: 1750, tax: 525 },
-  { id: "151-400", label: "150 to 400", assure: 2600, tax: 750 },
-  { id: "401-1000", label: "400 to 1,000", assure: 3900, tax: 1100 },
-  { id: "1000+", label: "1,000+", assure: 5800, tax: 1650 },
-];
+/**
+ * Monthly transaction bands — `assure` is the base audit fee, `tax` the annual
+ * tax-return add-on. Both come straight from the price pack; never hardcode a
+ * fee here or the page will drift from what the firm actually charges.
+ */
+export const TXN: { id: TxnBand; label: string; assure: number; tax: number }[] = TXN_BANDS.map((b) => ({
+  id: b.id,
+  label: b.label,
+  assure: AUDIT_YEARLY[b.id],
+  tax: TAX_RETURN_YEARLY[b.id],
+}));
 
 export const SIZES = [
   { id: "small", label: "Small", sub: "under €93k turnover" },
@@ -158,7 +162,7 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   const taxAdd = s.taxret === "yes" ? Math.round(txn.tax * tier.mult) : 0;
 
   const fee =
-    Math.max(AUDIT_FROM, Math.round(((txn.assure * (review ? 0.55 : 1) + payAdd + vatAdd + bankAdd) * tier.mult) / 50) * 50) +
+    Math.max(AUDIT_PRE_TRADING, Math.round(((txn.assure * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) + payAdd + vatAdd + bankAdd) * tier.mult) / 50) * 50) +
     taxAdd;
 
   const yearsN = s.year === "multi" ? Math.max(2, parseInt(s.nyrs, 10) || 2) : 1;
@@ -177,18 +181,18 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
     }
     if (fee <= 900) {
       cap = 0.05;
-      reasons.push(`the fee is already near the €${AUDIT_FROM} floor of our scale`);
+      reasons.push(`the fee is already near the €${AUDIT_PRE_TRADING} floor of our scale`);
     }
     if (bigVol && fee <= 1500) {
       cap = Math.min(cap, 0.05);
       reasons.push("trading volume is intensive relative to the fee, so the planning saving is smaller");
     }
     disc = Math.min(base, cap);
-    final = Math.max(AUDIT_FROM, Math.round((fee * (1 - disc)) / 50) * 50);
+    final = Math.max(AUDIT_PRE_TRADING, Math.round((fee * (1 - disc)) / 50) * 50);
     if (final >= fee) {
       disc = 0;
       final = fee;
-      reasons = [`there is no honest room to discount without going below €${AUDIT_FROM}`];
+      reasons = [`there is no honest room to discount without going below €${AUDIT_PRE_TRADING}`];
     }
     if (disc > 0 && !reasons.length) {
       reasons.push(

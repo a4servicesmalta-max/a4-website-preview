@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { calcAuditFee, feeLines, type AuditInput } from "./audit-fee";
+import { calcAuditFee, feeLines, TXN, type AuditInput } from "./audit-fee";
+import { AUDIT_YEARLY, AUDIT_FROM, AUDIT_PRE_TRADING } from "@/data/a4QuotePack";
 
 const base: AuditInput = {
   sector: "shop", txn: "21-60", size: "small", pay: "none", vat: "no", banks: "1",
@@ -8,14 +9,23 @@ const base: AuditInput = {
 const at = (p: Partial<AuditInput>) => calcAuditFee({ ...base, ...p });
 
 describe("audit fee engine", () => {
+  it("takes every fee from the price pack, never a local copy", () => {
+    expect(TXN.map((t) => t.assure)).toEqual(TXN.map((t) => AUDIT_YEARLY[t.id]));
+  });
+
   it("prices the default small company as a review engagement", () => {
     const r = at({});
     // 1150 assure × 0.55 review = 632.50 → rounded to the nearest €50
     expect(r).toMatchObject({ refer: false, fee: 650, final: 650, review: true, yearsN: 1 });
   });
 
-  it("never goes below the €750 floor", () => {
-    expect(at({ txn: "0" })).toMatchObject({ fee: 750, final: 750 });
+  it("never goes below the pre-trading floor", () => {
+    // The advertised "from" is the cheapest TRADING company, not the dormant one.
+    expect(AUDIT_FROM).toBe(750);
+    expect(AUDIT_PRE_TRADING).toBe(600);
+    expect(at({ txn: "0" })).toMatchObject({ fee: 600, final: 600 });
+    // Any company that actually trades starts at the advertised floor.
+    expect(at({ txn: "1-20", size: "big" })).toMatchObject({ fee: AUDIT_FROM });
   });
 
   it("refers the sectors we do not price instantly", () => {
@@ -45,7 +55,7 @@ describe("audit fee engine", () => {
 
   it("refuses to discount below the floor instead of faking a saving", () => {
     const r = at({ txn: "0", uploaded: true, doc: "fs" });
-    expect(r).toMatchObject({ disc: 0, fee: 750, final: 750 });
+    expect(r).toMatchObject({ disc: 0, fee: 600, final: 600 });
     expect(r.refer === false && r.reasons[0]).toMatch(/no honest room/);
   });
 

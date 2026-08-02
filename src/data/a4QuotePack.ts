@@ -74,7 +74,9 @@ export const VAT_MONTHLY: Record<TxnBand, number> = {
 
 /** Annual company tax return — €/yr by transaction band, × risk. */
 export const TAX_RETURN_YEARLY: Record<TxnBand, number> = {
-  "0": 0,
+  // Pre-trading company: still a return to file, just a much smaller one.
+  // Owner decision 2026-08-02 — see AUDIT_YEARLY["0"].
+  "0": 175,
   "1-20": 275,
   "21-60": 375,
   "61-150": 525,
@@ -85,7 +87,11 @@ export const TAX_RETURN_YEARLY: Record<TxnBand, number> = {
 
 /** Statutory audit — €/yr by transaction band, × risk. */
 export const AUDIT_YEARLY: Record<TxnBand, number> = {
-  "0": 0,
+  // Pre-trading / dormant company. Owner decision 2026-08-02: price it rather
+  // than leave it unpriced, so the "audit from €600/yr" headline on
+  // /audit-services is true of an actual quote the calculator will produce.
+  // Any trading company starts at €750 (the "1-20" band).
+  "0": 600,
   "1-20": 750,
   "21-60": 1150,
   "61-150": 1750,
@@ -164,6 +170,28 @@ export const SOFTWARE_TIERS = { book: 39, senior: 99, manager: 198, cfo: 357 };
 
 export type SoftwareTierId = keyof typeof SOFTWARE_TIERS;
 
+/** Client-facing names for the software plans. */
+export const SOFTWARE_TIER_LABELS: Record<SoftwareTierId, string> = {
+  book: "Bookkeeper",
+  senior: "Senior",
+  manager: "Manager",
+  cfo: "CFO",
+};
+
+/**
+ * Which software plan a company needs, by transaction volume. Volume is what
+ * drives the plan — a busier ledger needs the heavier review tooling.
+ */
+export const SOFTWARE_TIER_BY_BAND: Record<TxnBand, SoftwareTierId> = {
+  "0": "book",
+  "1-20": "book",
+  "21-60": "book",
+  "61-150": "senior",
+  "151-400": "manager",
+  "401-1000": "cfo",
+  "1000+": "cfo",
+};
+
 /** Company formation. MGA licence → priced on a director call, never instantly. */
 export const INCORPORATION = {
   base: 2000,
@@ -231,14 +259,21 @@ export const PAYROLL_BEST_RATE = PAYROLL_PER_HEAD[PAYROLL_PER_HEAD.length - 1].r
 
 /** Full-service bookkeeping floor — the "from €59/mo" headline. */
 export const BOOKKEEPING_FROM = fromPrice(BOOKKEEPING_MONTHLY);
-/** Statutory audit floor — the "from €750/yr" headline. */
-export const AUDIT_FROM = fromPrice(AUDIT_YEARLY);
+/**
+ * Statutory audit floor for a company that actually TRADES — the "from €750/yr"
+ * headline. Deliberately the "1-20" band, not the table minimum: the "0" band
+ * below is a dormant/pre-trading company, which is a different conversation and
+ * must not set the advertised price for a real business.
+ */
+export const AUDIT_FROM = AUDIT_YEARLY["1-20"];
+/** Dormant / pre-trading audit — the absolute floor the estimator may quote. */
+export const AUDIT_PRE_TRADING = AUDIT_YEARLY["0"];
 /** Review engagement floor, where a review rather than an audit is eligible. */
 export const REVIEW_FROM = roundEur(AUDIT_FROM * REVIEW_ENGAGEMENT_FACTOR);
 /** VAT returns floor (art. 10 monthly band). */
 export const VAT_FROM = fromPrice(VAT_MONTHLY);
 /** Annual tax return floor. */
-export const TAX_RETURN_FROM = fromPrice(TAX_RETURN_YEARLY);
+export const TAX_RETURN_FROM = TAX_RETURN_YEARLY["1-20"];
 /** Company formation floor — one shareholder, one director, filed with the MBR. */
 export const INCORPORATION_FROM = INCORPORATION.base;
 

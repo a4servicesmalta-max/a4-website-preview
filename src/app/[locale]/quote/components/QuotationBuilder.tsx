@@ -11,6 +11,13 @@ import {
   type QuoteServiceId,
   type RevenueBandId,
 } from "@/lib/quotation";
+import {
+  submitWebsiteQuotation,
+  type QuoteCadence,
+  type QuoteLineItem,
+  type WebsiteQuoteResult,
+} from "@/lib/websiteQuotation";
+import { PRICING_GOV_NOTE } from "@/data/a4QuotePack";
 
 const panel: React.CSSProperties = {
   background: "var(--a4-surface-card)",
@@ -60,6 +67,7 @@ export function QuotationBuilder() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ pdfBase64: string; pdfName: string } | null>(null);
+  const [quoteSent, setQuoteSent] = useState<WebsiteQuoteResult | null>(null);
 
   const quote = useMemo(
     () =>
@@ -99,6 +107,39 @@ export function QuotationBuilder() {
       if (!res.ok || data.error) throw new Error(data.error || "Something went wrong.");
       setDone({ pdfBase64: data.pdfBase64, pdfName: data.pdfName });
       download(data.pdfBase64, data.pdfName);
+
+      // Also raise a real quotation in the portal, so the prospect gets the
+      // emailed, acceptable quote and can see it once they have an account.
+      // Separate pipeline from /api/quotation, which feeds the leads inbox.
+      const monthly = quote.lines
+        .filter((l) => l.display.includes("/ month"))
+        .reduce((s, l) => s + (l.annualEur ?? 0) / 12, 0);
+      const yearly = quote.lines
+        .filter((l) => l.display.includes("/ year"))
+        .reduce((s, l) => s + (l.annualEur ?? 0), 0);
+      const oneOff = quote.lines
+        .filter((l) => l.display.includes("one-off"))
+        .reduce((s, l) => s + (l.annualEur ?? 0), 0);
+      const cadenceOf = (display: string): QuoteCadence =>
+        display.includes("/ month") ? "monthly" : display.includes("/ year") ? "yearly" : "oneoff";
+      const lines: QuoteLineItem[] = quote.lines
+        .filter((l) => l.annualEur != null)
+        .map((l) => ({
+          label: l.name,
+          amount: cadenceOf(l.display) === "monthly" ? Math.round((l.annualEur as number) / 12) : (l.annualEur as number),
+          cadence: cadenceOf(l.display),
+        }));
+      setQuoteSent(
+        await submitWebsiteQuotation({
+          name,
+          email,
+          selections: { kind: "quote-builder", company, regNo, industry, revenueBand, services: [...services], overdueYears },
+          lines,
+          monthly: Math.round(monthly),
+          yearly: Math.round(yearly),
+          oneOff: Math.round(oneOff),
+        })
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not generate the quotation.");
     } finally {
@@ -224,7 +265,7 @@ export function QuotationBuilder() {
                 </span>
               </div>
               <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)", marginTop: 8, lineHeight: 1.5 }}>
-                Indicative, excl. VAT. Confirmed in writing within 24 hours — no obligation.
+                Indicative. All fees exclude VAT. {PRICING_GOV_NOTE} Confirmed in writing within 24 hours — no obligation.
               </p>
             </div>
 
@@ -234,12 +275,19 @@ export function QuotationBuilder() {
                   <Icon name="check" size={22} color="var(--a4-accent-teal)" stroke={2.4} />
                 </span>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 14.5, color: "var(--a4-ink)", margin: "12px 0 0", fontWeight: 600 }}>
-                  Your quotation has downloaded — and our team has it too.
+                  {quoteSent && quoteSent.status !== "error"
+                    ? quoteSent.message
+                    : "Your quotation has downloaded — and our team has it too."}
                 </p>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)", margin: "6px 0 0" }}>
                   Prefer to talk it through? Request information and our team will follow up with next steps.
                 </p>
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 14 }}>
+                  {quoteSent && quoteSent.status === "quoted" ? (
+                    <Button variant="dark" size="md" href={quoteSent.portalHref} target="_blank">
+                      Create your account <Icon name="arrow-right" size={15} color="#fff" />
+                    </Button>
+                  ) : null}
                   <Button variant="dark" size="md" href="/contact">
                     Request information <Icon name="arrow-right" size={15} color="#fff" />
                   </Button>

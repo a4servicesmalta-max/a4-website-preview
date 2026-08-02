@@ -1,11 +1,32 @@
 /**
  * Deterministic indicative-quote engine for the website quotation builder.
  *
- * Figures are INDICATIVE baselines (from A4's fee shapes) scaled by revenue
- * band; every output is labelled as subject to written confirmation within
- * 24 hours, matching the firm's published quoting process. No AI involved —
- * pure arithmetic so a quote is always reproducible.
+ * Every baseline comes from quote pack `mt-2026-08-01` (src/data/a4QuotePack.ts)
+ * so /quote can never contradict /pricing or the Vacei calculator. The builder
+ * asks for a revenue band rather than a transaction count, so where the pack
+ * bands by volume this engine takes the middle '21-60' band as its default and
+ * advertises the real floor as "from €X".
+ *
+ * Every output is labelled as subject to written confirmation within 24 hours,
+ * matching the firm's published quoting process. No AI involved — pure
+ * arithmetic so a quote is always reproducible.
  */
+
+import {
+  A4_QUOTE_PACK_VERSION,
+  AUDIT_FROM,
+  AUDIT_YEARLY,
+  BOOKKEEPING_FROM,
+  BOOKKEEPING_MONTHLY,
+  CATCH_UP,
+  MBR_ANNUAL_RETURN,
+  PAYROLL_BEST_RATE,
+  PAYROLL_ENTRY_RATE,
+  VAT_FROM,
+  VAT_MONTHLY,
+} from "@/data/a4QuotePack";
+
+export const QUOTE_PACK_VERSION = A4_QUOTE_PACK_VERSION;
 
 export type RevenueBandId = "under100k" | "100k-500k" | "500k-1m" | "1m-5m" | "over5m";
 export type QuoteServiceId = "accounts" | "audit" | "vat" | "mbr" | "payroll";
@@ -30,19 +51,61 @@ export const QUOTE_INDUSTRIES = [
   "Other",
 ] as const;
 
-/** Baseline annual/monthly fees at multiplier 1.0 (€). */
+/**
+ * Baseline monthly/annual fees at multiplier 1.0 (€), straight from the pack.
+ *
+ * `passThrough` marks a government fee: it is charged at cost, so it never
+ * scales with the revenue band and is never discounted.
+ */
 const BASELINES: Record<
   QuoteServiceId,
-  { name: string; hint: string; type: "monthly" | "annual" | "on-request"; base: number }
+  {
+    name: string;
+    hint: string;
+    type: "monthly" | "annual" | "on-request";
+    base: number;
+    /** Government fee charged at cost — no band scaling, no discount. */
+    passThrough?: boolean;
+  }
 > = {
-  accounts: { name: "Monthly bookkeeping", hint: "Categorisation, reconciliation & monthly reports", type: "monthly", base: 79 },
-  // 705 x the cheapest band (0.85), rounded to 5, lands on €600 — matching the
-  // "Statutory audit, from €600/year" headline on /audit-services and /pricing.
-  // At base 1200 the floor was €1,020, i.e. 70% above the advertised "from".
-  audit: { name: "Statutory audit", hint: "GAPSME/IFRS, signed by a licensed audit firm", type: "annual", base: 705 },
-  vat: { name: "VAT returns", hint: "All quarterly returns filed with the CFR", type: "annual", base: 360 },
-  mbr: { name: "MBR annual return", hint: "Filed within 42 days of the anniversary", type: "annual", base: 180 },
-  payroll: { name: "Payroll processing", hint: "Depends on headcount — quoted on request", type: "on-request", base: 0 },
+  // Full-service bookkeeping is banded by transaction volume in the pack; the
+  // builder collects revenue, not transactions, so it quotes the middle band
+  // and advertises the real floor in the hint.
+  accounts: {
+    name: "Monthly bookkeeping",
+    hint: `Categorisation, reconciliation & monthly reports — from €${BOOKKEEPING_FROM}/mo, set by transaction volume`,
+    type: "monthly",
+    base: BOOKKEEPING_MONTHLY["21-60"],
+  },
+  // Floored at the pack's audit floor so the cheapest band can never quote
+  // below the advertised "from €750/year".
+  audit: {
+    name: "Statutory audit",
+    hint: `GAPSME/IFRS, signed by a licensed audit firm — from €${AUDIT_FROM}/yr`,
+    type: "annual",
+    base: AUDIT_YEARLY["21-60"],
+  },
+  vat: {
+    name: "VAT returns",
+    hint: `Every return prepared and filed with the CFR — from €${VAT_FROM}/mo, set by transaction volume`,
+    type: "monthly",
+    base: VAT_MONTHLY["21-60"],
+  },
+  // Our €50 fee. The MBR registry fee (€100–€379 by share capital) is added at
+  // cost once the company's capital is known — see the assumptions.
+  mbr: {
+    name: "MBR annual return",
+    hint: `Our €${MBR_ANNUAL_RETURN.ourFee} fee, filed within 42 days of the anniversary — MBR registry fee passed through at cost`,
+    type: "annual",
+    base: MBR_ANNUAL_RETURN.ourFee,
+    passThrough: true,
+  },
+  payroll: {
+    name: "Payroll processing",
+    hint: `€${PAYROLL_ENTRY_RATE}/head up to five, €${PAYROLL_BEST_RATE}/head at scale — quoted on headcount`,
+    type: "on-request",
+    base: 0,
+  },
 };
 
 export type QuoteInput = {
@@ -93,10 +156,15 @@ export function buildQuote(input: QuoteInput): QuoteResult {
       lines.push({ id, name: b.name, hint: b.hint, display: "On request", annualEur: null });
       continue;
     }
-    // Monthly bookkeeping is a FLAT price everywhere else on the site
-    // ("€79/mo, no hourly surprises"), so it must not scale with revenue here
-    // or the quote contradicts the headline. Everything else scales by band.
-    const fee = id === "accounts" ? b.base : round5(b.base * band.mult);
+    // Bookkeeping and VAT are banded by transaction volume in the pack, not by
+    // revenue, so they stay at their band price here rather than double-scaling.
+    // Government fees are charged at cost. Everything else scales by band, with
+    // the audit floored at the advertised "from" price.
+    const fee = b.passThrough || id === "accounts" || id === "vat"
+      ? b.base
+      : id === "audit"
+        ? Math.max(AUDIT_FROM, round5(b.base * band.mult))
+        : round5(b.base * band.mult);
     if (b.type === "monthly") {
       monthly += fee;
       lines.push({ id, name: b.name, hint: b.hint, display: `${euro(fee)} / month`, annualEur: fee * 12 });
@@ -107,8 +175,9 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   }
 
   if (overdue > 0 && input.services.includes("accounts")) {
-    const perYear = round5(BASELINES.accounts.base * band.mult * 12 * 0.8);
-    const fee = perYear * overdue;
+    // Pack catch-up, full service: min(months × €25, years × €240). Whole years
+    // in, so the yearly cap always wins.
+    const fee = Math.min(overdue * 12 * CATCH_UP.fullPerMonth, overdue * CATCH_UP.fullPerYearCap);
     annual += fee;
     lines.push({
       id: "catchup",
@@ -128,8 +197,10 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     assumptions: [
       `Revenue band: ${band.label} · Industry: ${input.industry || "—"}`,
       "Single Malta company; standard transaction volumes for the size band.",
-      "Figures are indicative and exclude VAT; confirmed in writing within 24 hours.",
+      "All fees exclude VAT. Figures are indicative and confirmed in writing within 24 hours.",
+      "Government and registry fees (including the MBR registry fee, €100–€379 by share capital) are passed through at cost.",
       "Regulated-sector obligations (e.g. MGA reporting) may adjust scope.",
+      `Priced on fee schedule ${QUOTE_PACK_VERSION}.`,
     ],
   };
 }
