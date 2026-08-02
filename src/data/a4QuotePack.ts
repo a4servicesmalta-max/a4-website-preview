@@ -88,9 +88,11 @@ export const TAX_RETURN_YEARLY: Record<TxnBand, number> = {
 /** Statutory audit — €/yr by transaction band, × risk. */
 export const AUDIT_YEARLY: Record<TxnBand, number> = {
   // Pre-trading / dormant company. Owner decision 2026-08-02: price it rather
-  // than leave it unpriced, so the "audit from €600/yr" headline on
-  // /audit-services is true of an actual quote the calculator will produce.
-  // Any trading company starts at €750 (the "1-20" band).
+  // than leave it unpriced, so the estimator can quote a dormant company
+  // instead of refusing. NOTE the pack this file transcribes has "0": 0 — this
+  // is a deliberate A4-site divergence, and it is why the advertised floor is
+  // AUDIT_FROM (the "1-20" band, €750) rather than the table minimum. Every
+  // company that actually trades starts at €750.
   "0": 600,
   "1-20": 750,
   "21-60": 1150,

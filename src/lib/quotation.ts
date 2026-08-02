@@ -122,7 +122,7 @@ export type QuoteLine = {
   id: QuoteServiceId | "catchup";
   name: string;
   hint: string;
-  /** "€1,200 / year", "€79 / month", "On request" */
+  /** "€1,200 / year", "€99 / month", "On request" */
   display: string;
   annualEur: number | null;
 };
