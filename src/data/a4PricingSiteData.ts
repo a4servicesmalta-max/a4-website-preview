@@ -48,7 +48,7 @@ export const PRICING_COMMIT = [
 ];
 
 export const PRICING_HERO_CHIPS = [
-  "Fixed bookkeeping from €25/mo",
+  "A4 Books from €39/mo · accountants from €99",
   "No hidden fees",
   "Clear communication",
   "Tailored quotes for audit & complex work",

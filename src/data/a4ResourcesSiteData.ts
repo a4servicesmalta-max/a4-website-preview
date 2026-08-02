@@ -20,7 +20,6 @@ export const RESOURCE_HUB_CARDS: ResourceCard[] = [
 export const RESOURCE_NAV_CARDS: ResourceCard[] = [
   { icon: "mail", t: "Contact", s: "Send a message, call the team, or book a free 15-minute call.", href: "/contact" },
   { icon: "bot", t: "Automated Bookkeeping", s: "AI-assisted bookkeeping with human review and a structured client portal.", href: "/automated-bookkeeping" },
-  { icon: "book-open", t: "Automated Bookkeeping (Standalone)", s: "Standalone landing experience for automated bookkeeping services.", href: "/automated-bookkeeping-standalone" },
   { icon: "file-search", t: "Audit Services", s: "Statutory audit delivered with transparency, structure and qualified review.", href: "/audit-services" },
   { icon: "handshake", t: "Partner Program", s: "Refer clients and earn recurring commission on every engagement.", href: "/partner-program" },
   { icon: "notebook", t: "Bookkeeping", s: "Reliable bookkeeping support for owner-managed and growing businesses.", href: "/bookkeeping" },

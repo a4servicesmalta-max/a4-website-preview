@@ -136,3 +136,44 @@ export function getRelatedBlogs(currentSlug: string, limit: number = 3): BlogPos
         )
         .slice(0, limit);
 }
+
+// ---------------------------------------------------------------------------
+// Portal-published posts (Supabase) merged with the file-based posts above.
+// The A4 internal portal publishes agent-written blogs straight to the DB —
+// these appear on the site with NO redeploy. On a slug clash the DB post wins.
+// ---------------------------------------------------------------------------
+import { fetchPublishedPosts, fetchPublishedPostBySlug, type DbBlogPost } from '@/lib/cms';
+
+function dbToBlogPost(row: DbBlogPost): BlogPost {
+    const wordCount = row.content_md.split(/\s+/).length;
+    return {
+        slug: row.slug,
+        title: row.title,
+        date: (row.published_at ?? '').slice(0, 10) || format(new Date(), 'yyyy-MM-dd'),
+        excerpt: row.excerpt,
+        content: row.content_md,
+        readingTime: `${Math.ceil(wordCount / 200)} min read`,
+        featuredImage: row.featured_image ?? undefined,
+        category: row.category ?? undefined,
+        tags: row.tags ?? [],
+        author: row.author || 'A4 Team',
+        keyTakeaways: Array.isArray(row.key_takeaways) && row.key_takeaways.length ? row.key_takeaways : undefined,
+        faq: Array.isArray(row.faq) && row.faq.length ? row.faq : undefined,
+    };
+}
+
+/** All posts: portal-published (DB) + file-based, deduped by slug (DB wins), newest first. */
+export async function getAllBlogsMerged(): Promise<BlogPost[]> {
+    const [dbRows, fileBlogs] = await Promise.all([fetchPublishedPosts(), Promise.resolve(getAllBlogs())]);
+    const dbPosts = dbRows.map(dbToBlogPost);
+    const dbSlugs = new Set(dbPosts.map(p => p.slug));
+    return [...dbPosts, ...fileBlogs.filter(b => !dbSlugs.has(b.slug))]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+/** One post by slug: DB first, then the file fallback. */
+export async function getBlogBySlugMerged(slug: string): Promise<BlogPost | null> {
+    const dbRow = await fetchPublishedPostBySlug(slug);
+    if (dbRow) return dbToBlogPost(dbRow);
+    return getBlogBySlug(slug);
+}

@@ -5,6 +5,31 @@ import LocalizedLink from "@/components/common/LocalizedLink";
 import { Button, Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import { useLocalizedHref } from "./useLocalizedHref";
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
+import { A4_LADDER, LADDER_FIRST_HUMAN, LADDER_BASE, LADDER_CAVEAT } from "@/data/a4Ladder";
+import {
+  VAT_MONTHLY,
+  VAT_RULES,
+  VAT_FROM,
+  AUDIT_YEARLY,
+  AUDIT_FROM,
+  BOOKKEEPING_FROM,
+  INCORPORATION,
+  INCORPORATION_FROM,
+  INCORPORATION_ADDONS,
+  INCORPORATION_MGA_NOTE,
+  LAUNCH_PROMO,
+  isPromoActive,
+  PRICING_VAT_NOTE,
+  PRICING_GOV_NOTE,
+  type SoftwareTierId,
+} from "@/data/a4QuotePack";
+import {
+  evaluateA4Items,
+  submitWebsiteQuotation,
+  type A4Item,
+  type QuoteCadence,
+  type WebsiteQuoteResult,
+} from "@/lib/websiteQuotation";
 
 const prEuro = (n: number) => "€" + Math.round(n).toLocaleString();
 
@@ -12,7 +37,28 @@ const PR_SERVICES = [
   { id: "accounting", label: "Accounting", icon: "book-open-check" },
   { id: "vat", label: "VAT", icon: "receipt-text" },
   { id: "audit", label: "Audit", icon: "clipboard-check" },
+  { id: "incorporation", label: "Incorporation", icon: "building-2" },
 ] as const;
+
+/**
+ * Transaction-volume bands, exactly as quote pack mt-2026-08-01 bands them.
+ * VAT and audit are both priced off volume, not filing frequency or turnover.
+ */
+const PR_VOLUME_BANDS = ["1-20", "21-60", "61-150", "151-400"] as const;
+const PR_VOLUME_LABELS = ["Up to 20", "20 to 60", "60 to 150", "150 to 400"];
+
+/**
+ * Ladder position → pack software tier. NOT a cast: the ladder calls its base
+ * level "books" while the pack tier key is "book", so the mapping is explicit
+ * and a missing entry is a type error rather than an unpriceable submission.
+ */
+const PR_TIER_BY_LADDER_ID: Record<string, SoftwareTierId> = {
+  books: "book",
+  senior: "senior",
+  manager: "manager",
+  cfo: "cfo",
+};
+const PR_TIER_IDS: SoftwareTierId[] = A4_LADDER.map((l) => PR_TIER_BY_LADDER_ID[l.id]);
 
 type ServiceId = (typeof PR_SERVICES)[number]["id"];
 
@@ -83,6 +129,22 @@ function PrToggle({ on, set }: { on: boolean; set: (v: boolean) => void }) {
   );
 }
 
+function PrStepper({ value, set, min = 1, max = 10 }: { value: number; set: (v: number) => void; min?: number; max?: number }) {
+  const btn =
+    "w-[32px] h-[32px] rounded-[var(--a4-r-md)] grid place-items-center cursor-pointer bg-[var(--a4-surface-deep)] border border-[var(--a4-hairline-dark)] text-white";
+  return (
+    <div className="flex items-center gap-3 shrink-0">
+      <button type="button" aria-label="decrease" onClick={() => set(Math.max(min, value - 1))} className={btn}>
+        <Icon name="minus" size={14} color="#fff" />
+      </button>
+      <span className="a4-font-display font-medium text-[17px] text-white text-center min-w-[20px] tabular-nums">{value}</span>
+      <button type="button" aria-label="increase" onClick={() => set(Math.min(max, value + 1))} className={btn}>
+        <Icon name="plus" size={14} color="#fff" />
+      </button>
+    </div>
+  );
+}
+
 function PrRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
   return (
     <div
@@ -137,46 +199,61 @@ function PricingHero() {
   );
 }
 
+// The ladder, straight from src/data/a4Ladder.ts so this page can never drift
+// from the A4 Books landing page. Level 1 is software only; every level above
+// it includes A4 accountants.
+const PR_LADDER_ICONS: Record<string, string> = {
+  books: "layers",
+  senior: "user-check",
+  manager: "users",
+  cfo: "briefcase",
+};
+
 const PR_STARTING_TIERS = [
-  {
-    id: "starter",
-    name: "Starter",
-    icon: "file-stack",
-    tag: "Bookkeeping",
-    price: 25,
+  ...A4_LADDER.map((l) => ({
+    id: l.id,
+    name: l.name,
+    icon: PR_LADDER_ICONS[l.id] ?? "layers",
+    tag: l.human ? "With accountants" : "Software only",
+    price: l.total,
     unit: "/ mo",
-    blurb: "Up to 100 documents per month — ideal for lighter volumes.",
-    popular: false,
-  },
-  {
-    id: "unlimited",
-    name: "Unlimited",
-    icon: "layers",
-    tag: "Bookkeeping",
-    price: 50,
-    unit: "/ mo",
-    blurb: "Unlimited documents — best value for active, growing books.",
-    popular: true,
-  },
+    blurb:
+      l.id === "books"
+        ? `${l.detail} Add accountants from €${LADDER_FIRST_HUMAN.total}/mo.`
+        : `${l.tagline} ${l.detail}`,
+    popular: l.id === LADDER_FIRST_HUMAN.id,
+    stack: l.id === "books" ? null : `+€${l.add}/mo on the level below`,
+    ladder: true,
+  })),
   {
     id: "vat",
     name: "VAT returns",
     icon: "receipt-text",
     tag: "Compliance",
-    price: 15,
+    price: VAT_FROM,
     unit: "/ mo",
     from: true,
-    blurb: "Quarterly filing from €35/mo; annual plans from €15/mo.",
+    blurb: `Every return prepared and filed with the CFR — a monthly fee set by your transaction volume, whatever your filing frequency. Art. 11 small-exempt businesses pay one flat €${VAT_RULES.art11FlatYearly}/yr declaration instead.`,
   },
   {
     id: "audit",
     name: "Statutory audit",
     icon: "clipboard-check",
     tag: "Assurance",
-    price: 600,
+    price: AUDIT_FROM,
     unit: "/ yr",
     from: true,
-    blurb: "Independent audit for companies that require one.",
+    blurb: "Independent audit for companies that require one. Where a review engagement is enough, it is 55% of the audit fee.",
+  },
+  {
+    id: "incorporation",
+    name: "Incorporation",
+    icon: "building-2",
+    tag: "Company formation",
+    price: INCORPORATION_FROM,
+    unit: "one-off",
+    from: true,
+    blurb: "One individual shareholder and one director, filed with the MBR. Extra shareholders, directors and registrations are itemised below.",
   },
   {
     id: "tax",
@@ -305,8 +382,8 @@ function PricingTierCard({ tier }: { tier: StartingTier }) {
 
 function PricingStartingTiers() {
   const href = useLocalizedHref();
-  const bookkeeping = PR_STARTING_TIERS.filter((t) => t.tag === "Bookkeeping");
-  const other = PR_STARTING_TIERS.filter((t) => t.tag !== "Bookkeeping");
+  const bookkeeping = PR_STARTING_TIERS.filter((t) => (t as { ladder?: boolean }).ladder);
+  const other = PR_STARTING_TIERS.filter((t) => !(t as { ladder?: boolean }).ladder);
 
   return (
     <section
@@ -328,13 +405,21 @@ function PricingStartingTiers() {
             className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4"
             style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}
           >
-            Fixed monthly bookkeeping and VAT plans — audit and complex tax work quoted after a quick review.
+            The same ladder as the A4 Books landing page: start with the software on its own, then add a Senior, a Manager, or the full CFO finance function. VAT, audit, tax and company formation are priced separately below. Prefer us to keep the books for you? Full-service bookkeeping starts at {prEuro(BOOKKEEPING_FROM)}/mo, set by your transaction volume.
+          </p>
+          {isPromoActive() && (
+            <p className="a4-font-body text-[13px] font-semibold text-[var(--a4-primary-bright)] mt-3">
+              {LAUNCH_PROMO.note}
+            </p>
+          )}
+          <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-2">
+            {PRICING_VAT_NOTE} {PRICING_GOV_NOTE}
           </p>
         </Reveal>
 
         {/* Bookkeeping — featured row */}
         <Reveal delay={60}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-12 mx-auto max-w-[720px]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 mx-auto max-w-[1100px]">
             {bookkeeping.map((tier, i) => (
               <Reveal key={tier.id} delay={i * 70}>
                 <PricingTierCard tier={tier} />
@@ -406,39 +491,89 @@ function PricingInfoBanner() {
 
 function PricingCalc() {
   const [svc, setSvc] = useState<ServiceId>("accounting");
-  const [docs, setDocs] = useState(1);
-  const [recon, setRecon] = useState(true);
-  const [review, setReview] = useState(false);
-  const [vatFreq, setVatFreq] = useState(1);
+  const [tierIdx, setTierIdx] = useState(0);
+  const [vatVol, setVatVol] = useState(1);
   const [turn, setTurn] = useState(1);
+  const [incShareholders, setIncShareholders] = useState(1);
+  const [incDirectors, setIncDirectors] = useState(1);
+  const [incRegistrations, setIncRegistrations] = useState(true);
+  const [incBank, setIncBank] = useState(false);
+  const [incRegOffice, setIncRegOffice] = useState(false);
+  const [incSecretary, setIncSecretary] = useState(false);
 
-  const VAT_FEE = [15, 35, 60];
-  const TURN_MULT = [1, 1.4, 1.9, 2.8];
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState<WebsiteQuoteResult | null>(null);
 
-  let unit = "/ mo";
-  let price = 0;
+  let unit: "/ mo" | "/ yr" | "one-off" = "/ mo";
   let complex = false;
-  let lines: [string, number][] = [];
+
+  /**
+   * The priced basket, in the ONLY shape the backend can reprice. Everything
+   * shown to the visitor is derived from `evaluateA4Items(items)` below, so the
+   * figures on screen and the figures we submit are the same arithmetic — if
+   * they diverged the backend's reprice would disagree and the quote would fall
+   * back to 202 RECEIVED with no email ever sent.
+   */
+  let items: A4Item[] = [];
 
   if (svc === "accounting") {
-    const base = docs === 0 ? 25 : 50;
-    const r = recon ? 15 : 0;
-    const rv = review ? 40 : 0;
-    price = base + r + rv;
-    lines = [
-      ["Bookkeeping — " + (docs === 0 ? "Starter" : "Unlimited"), base],
-      ...(recon ? ([["Bank reconciliation", r]] as [string, number][]) : []),
-      ...(review ? ([["Accountant review", rv]] as [string, number][]) : []),
-    ];
+    items = [{ service: "software", tier: PR_TIER_IDS[tierIdx] }];
   } else if (svc === "vat") {
-    price = VAT_FEE[vatFreq];
-    lines = [["VAT returns · " + ["annual", "quarterly", "monthly"][vatFreq], price]];
-  } else {
-    price = Math.round((600 * TURN_MULT[turn]) / 50) * 50;
+    items = [{ service: "vat", txn: PR_VOLUME_BANDS[vatVol], vatreg: "art10" }];
+  } else if (svc === "audit") {
     unit = "/ yr";
-    lines = [["Statutory audit", price]];
+    items = [{ service: "audit", txn: PR_VOLUME_BANDS[turn] }];
     if (turn >= 3) complex = true;
+  } else {
+    // Incorporation is NOT in the backend's priceable item set, so it can never
+    // be submitted as an instant quote — it goes down the lead path instead.
+    unit = "one-off";
   }
+
+  const totals = evaluateA4Items(items);
+  const promo = totals.promoApplied;
+
+  /** Incorporation is priced client-side for display only (lead path). */
+  const incLines: { label: string; amount: number; cadence: QuoteCadence }[] = [];
+  if (svc === "incorporation") {
+    incLines.push({ label: "Incorporation — one shareholder, one director, filed with the MBR", amount: INCORPORATION.base, cadence: "oneoff" });
+    if (incShareholders > 1)
+      incLines.push({ label: `Additional shareholders · ${incShareholders - 1}`, amount: (incShareholders - 1) * INCORPORATION.extraShareholder, cadence: "oneoff" });
+    if (incDirectors > 1)
+      incLines.push({ label: `Additional directors · ${incDirectors - 1}`, amount: (incDirectors - 1) * INCORPORATION.extraDirector, cadence: "oneoff" });
+    if (incRegistrations)
+      incLines.push({ label: "VAT and tax registrations", amount: INCORPORATION.vatTaxRegistrations, cadence: "oneoff" });
+    if (incBank) incLines.push({ label: "Bank account assistance", amount: INCORPORATION.bankAssistance, cadence: "oneoff" });
+    if (incRegOffice)
+      incLines.push({ label: "Registered office", amount: INCORPORATION.registeredOfficeYearly, cadence: "yearly" });
+    if (incSecretary)
+      incLines.push({ label: "Company secretary", amount: INCORPORATION.companySecretaryYearly, cadence: "yearly" });
+  }
+
+  const isLeadPath = svc === "incorporation";
+  const lines = isLeadPath ? incLines : totals.lines;
+
+  const incOneOff = incLines.filter((l) => l.cadence === "oneoff").reduce((s, l) => s + l.amount, 0);
+
+  /** The headline figure for the cadence this service is billed in. */
+  const gross = isLeadPath
+    ? incOneOff
+    : unit === "/ mo"
+      ? totals.grossMonthly
+      : totals.grossYearly;
+  const price = isLeadPath ? incOneOff : unit === "/ mo" ? totals.monthly : totals.yearly;
+  const discounted = promo && price < gross;
+
+  const canSend = !isLeadPath && name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  const send = async () => {
+    if (!canSend || sending) return;
+    setSending(true);
+    setSent(await submitWebsiteQuotation({ name, email, items }));
+    setSending(false);
+  };
 
   return (
     <section id="calc" style={{ background: "#000", padding: "clamp(40px,5vw,64px) 0 clamp(64px,9vw,104px)" }}>
@@ -482,34 +617,68 @@ function PricingCalc() {
           >
             {svc === "accounting" && (
               <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">Monthly document volume</div>
-                <PrChip items={["Up to 100 / mo", "Unlimited"]} value={docs} set={setDocs} />
-                <div className="mt-2">
-                  <PrRow label="Bank reconciliation" sub="We match & reconcile every account">
-                    <PrToggle on={recon} set={setRecon} />
-                  </PrRow>
-                  <PrRow label="Accountant review" sub="A qualified accountant reviews postings & passes journals">
-                    <PrToggle on={review} set={setReview} />
-                  </PrRow>
-                </div>
+                <div className="a4-font-body text-[14px] font-semibold text-white">How much of the finance function do you want?</div>
+                <PrChip items={A4_LADDER.map((l) => l.name)} value={tierIdx} set={setTierIdx} cols={2} />
+                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
+                  {A4_LADDER[tierIdx].tagline} {A4_LADDER[tierIdx].detail}
+                </p>
+                <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[10px]">
+                  {LADDER_CAVEAT}
+                </p>
               </div>
             )}
             {svc === "vat" && (
               <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">VAT filing frequency</div>
-                <PrChip items={["Annual", "Quarterly", "Monthly"]} value={vatFreq} set={setVatFreq} />
+                <div className="a4-font-body text-[14px] font-semibold text-white">Transactions a month</div>
+                <PrChip items={PR_VOLUME_LABELS} value={vatVol} set={setVatVol} cols={2} />
                 <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
-                  Preparation and filing of your VAT return with the CFR each period, reviewed before submission.
+                  Every VAT return prepared and filed with the CFR, reviewed before submission. The fee is a monthly one
+                  set by your transaction volume, whatever your filing frequency. Art. 11 small-exempt businesses instead
+                  pay one flat €{VAT_RULES.art11FlatYearly}/yr declaration.
                 </p>
               </div>
             )}
             {svc === "audit" && (
               <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">Annual turnover</div>
-                <PrChip items={["< €100k", "€100k–500k", "€500k–1M", "€1M+"]} value={turn} set={setTurn} cols={2} />
+                <div className="a4-font-body text-[14px] font-semibold text-white">Transactions a month</div>
+                <PrChip items={PR_VOLUME_LABELS} value={turn} set={setTurn} cols={2} />
                 <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
-                  A standard statutory audit of your financial statements, signed by a licensed audit firm. Groups and
-                  regulated entities are scoped on a call.
+                  A standard statutory audit of your financial statements, signed by a licensed audit firm. Where a review
+                  engagement is enough instead, it is 55% of this fee. Groups and regulated entities are scoped on a call.
+                </p>
+              </div>
+            )}
+            {svc === "incorporation" && (
+              <div>
+                <div className="a4-font-body text-[14px] font-semibold text-white">
+                  Company formation — from {prEuro(INCORPORATION_FROM)} one-off
+                </div>
+                <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[6px]">
+                  One individual shareholder and one director, filed with the MBR. {PRICING_VAT_NOTE}
+                </p>
+                <div className="mt-2">
+                  <PrRow label="Shareholders" sub={`Each beyond the first is €${INCORPORATION.extraShareholder}`}>
+                    <PrStepper value={incShareholders} set={setIncShareholders} />
+                  </PrRow>
+                  <PrRow label="Directors" sub={`Each beyond the first is €${INCORPORATION.extraDirector}`}>
+                    <PrStepper value={incDirectors} set={setIncDirectors} />
+                  </PrRow>
+                  <PrRow label="VAT and tax registrations" sub={`Filed with the incorporation · €${INCORPORATION.vatTaxRegistrations}`}>
+                    <PrToggle on={incRegistrations} set={setIncRegistrations} />
+                  </PrRow>
+                  <PrRow label="Bank account assistance" sub={`Introductions and application support · €${INCORPORATION.bankAssistance}`}>
+                    <PrToggle on={incBank} set={setIncBank} />
+                  </PrRow>
+                  <PrRow label="Registered office" sub={`Statutory address, post passed to you · €${INCORPORATION.registeredOfficeYearly}/yr`}>
+                    <PrToggle on={incRegOffice} set={setIncRegOffice} />
+                  </PrRow>
+                  <PrRow label="Company secretary" sub={`Registers, minutes and MBR filings · €${INCORPORATION.companySecretaryYearly}/yr`}>
+                    <PrToggle on={incSecretary} set={setIncSecretary} />
+                  </PrRow>
+                </div>
+                <p className="a4-font-body text-[12.5px] leading-[1.55] text-[var(--a4-stone)] mt-[14px]">
+                  Corporate shareholders add €{INCORPORATION.corporateShareholderChecks} for checks on each company in the
+                  structure; regulated sectors add €{INCORPORATION.regulatedOnboarding} onboarding. {INCORPORATION_MGA_NOTE}
                 </p>
               </div>
             )}
@@ -546,42 +715,107 @@ function PricingCalc() {
                 <div className="a4-font-body text-[11px] uppercase tracking-[.12em] text-[var(--a4-mute)]">
                   Your fixed price
                 </div>
-                <div className="flex items-baseline gap-2 mt-[10px]">
-                  {unit === "/ yr" && (
-                    <span className="a4-font-body text-[17px] text-[var(--a4-mute)]">from</span>
-                  )}
+                <div className="flex flex-wrap items-baseline gap-2 mt-[10px]">
+                  {unit !== "/ mo" && <span className="a4-font-body text-[17px] text-[var(--a4-mute)]">from</span>}
                   <span
                     className="a4-font-display font-medium text-[52px] text-[var(--a4-ink)] leading-none"
                     style={{ letterSpacing: "-2px" }}
                   >
                     {prEuro(price)}
                   </span>
+                  {discounted && (
+                    <span className="a4-font-body text-[17px] text-[var(--a4-mute)] line-through">{prEuro(gross)}</span>
+                  )}
                   <span className="a4-font-body text-[14px] text-[var(--a4-mute)]">{unit}</span>
                 </div>
+                {discounted && (
+                  <div className="a4-font-body text-[12px] font-semibold text-[var(--a4-primary)] mt-2">
+                    {LAUNCH_PROMO.label}
+                  </div>
+                )}
                 <div className="h-px bg-[var(--a4-hairline-light)] my-5" />
                 <div className="flex flex-col gap-[9px]">
-                  {lines.map(([k, v]) => (
-                    <div key={k} className="flex justify-between gap-3">
-                      <span className="a4-font-body text-[13.5px] text-[var(--a4-mute)]">{k}</span>
-                      <span className="a4-font-body text-[13.5px] font-semibold text-[var(--a4-ink)]">
-                        {prEuro(v)}
-                        {unit === "/ yr" ? "/yr" : "/mo"}
+                  {lines.map((l) => (
+                    <div key={l.label} className="flex justify-between gap-3">
+                      <span className="a4-font-body text-[13.5px] text-[var(--a4-mute)]">{l.label}</span>
+                      <span className="a4-font-body text-[13.5px] font-semibold text-[var(--a4-ink)] whitespace-nowrap">
+                        {prEuro(l.amount)}
+                        {l.cadence === "monthly" ? "/mo" : l.cadence === "yearly" ? "/yr" : " one-off"}
                       </span>
                     </div>
                   ))}
                 </div>
-                <Button variant="dark" size="md" href={CLIENT_ONBOARDING_URL} target="_blank" style={{ width: "100%", marginTop: 22 }}>
-                  Create account &amp; request <Icon name="arrow-right" size={16} color="#fff" />
-                </Button>
+
+                {isLeadPath ? (
+                  // Company formation is not on the instant-quote fee schedule —
+                  // shareholder structure decides the real price, so a person
+                  // scopes it. Same figures, different route.
+                  <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)]">
+                    <Button variant="dark" size="md" href="/contact" style={{ width: "100%" }}>
+                      Request this incorporation <Icon name="arrow-right" size={16} color="#fff" />
+                    </Button>
+                    <p className="a4-font-body text-[11.5px] leading-[1.5] text-[var(--a4-mute)] text-center mt-2.5">
+                      Company formation is confirmed by a director before anything is filed.
+                    </p>
+                  </div>
+                ) : sent ? (
+                  <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)] text-center">
+                    <p className="a4-font-body text-[14px] font-semibold text-[var(--a4-ink)] m-0">{sent.message}</p>
+                    {sent.status === "quoted" && (
+                      <Button variant="dark" size="md" href={sent.portalHref} target="_blank" style={{ width: "100%", marginTop: 14 }}>
+                        Create your account <Icon name="arrow-right" size={16} color="#fff" />
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)]">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Your name"
+                        className="w-full rounded-[var(--a4-r-md)] border border-[var(--a4-hairline-light)] px-3 py-2.5 a4-font-body text-[13.5px] text-[var(--a4-ink)] outline-none"
+                      />
+                      <input
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        type="email"
+                        placeholder="Work email"
+                        className="w-full rounded-[var(--a4-r-md)] border border-[var(--a4-hairline-light)] px-3 py-2.5 a4-font-body text-[13.5px] text-[var(--a4-ink)] outline-none"
+                      />
+                    </div>
+                    <Button
+                      variant="dark"
+                      size="md"
+                      onClick={send}
+                      style={{ width: "100%", marginTop: 12, opacity: canSend && !sending ? 1 : 0.6, pointerEvents: canSend && !sending ? "auto" : "none" }}
+                    >
+                      {sending ? "Sending your quote…" : "Email me this quote"}
+                      {!sending && <Icon name="arrow-right" size={16} color="#fff" />}
+                    </Button>
+                    <LocalizedLink
+                      href="/contact"
+                      className="block text-center mt-3 a4-font-body text-[13px] font-semibold no-underline"
+                      style={{ color: "var(--a4-link)" }}
+                    >
+                      Prefer to talk? Request information →
+                    </LocalizedLink>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-center gap-[7px] mt-3">
                   <Icon name="shield-check" size={13} color="var(--a4-stone)" />
                   <span className="a4-font-body text-[11.5px] text-[var(--a4-mute)]">
                     Fixed fee · service begins upon KYC approval
                   </span>
                 </div>
+                <p className="a4-font-body text-[11.5px] leading-[1.5] text-[var(--a4-mute)] text-center mt-2">
+                  {PRICING_VAT_NOTE} {PRICING_GOV_NOTE}
+                  {promo ? ` ${LAUNCH_PROMO.note}` : ""}
+                </p>
                 <LocalizedLink
                   href="/pricing-info"
-                  className="block text-center mt-4 a4-font-body text-[13px] font-semibold no-underline"
+                  className="block text-center mt-3 a4-font-body text-[13px] font-semibold no-underline"
                   style={{ color: "var(--a4-link)" }}
                 >
                   How is this price calculated? →
@@ -666,12 +900,68 @@ function PricingComplex() {
   );
 }
 
+/**
+ * Incorporation fee table — the full itemised list from quote pack
+ * mt-2026-08-01, mirroring the wording on vacei.com.
+ */
+function PricingIncorporation() {
+  return (
+    <section id="incorporation" className="bg-black border-t border-[var(--a4-hairline-dark)]" style={{ padding: "clamp(48px,6vw,80px) 0" }}>
+      <Container>
+        <Reveal style={{ textAlign: "center", maxWidth: 660, margin: "0 auto" }}>
+          <Eyebrow dark>Incorporation</Eyebrow>
+          <h2
+            className="a4-font-display font-medium text-white mt-4"
+            style={{ fontSize: "clamp(28px,3.6vw,44px)", lineHeight: 1.06, letterSpacing: "-.025em", textWrap: "balance" }}
+          >
+            A Malta company, from {prEuro(INCORPORATION_FROM)} one-off.
+          </h2>
+          <p className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4" style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}>
+            One individual shareholder and one director, filed with the MBR. Everything beyond that is itemised — no
+            bundles you did not ask for. A partnership adds €{INCORPORATION.typeSurcharge.partner}; a branch of a foreign
+            company adds €{INCORPORATION.typeSurcharge.branch}.
+          </p>
+        </Reveal>
+
+        <Reveal delay={80}>
+          <div className="mx-auto max-w-[760px] mt-10 rounded-[var(--a4-r-lg)] overflow-hidden" style={{ border: "1px solid var(--a4-hairline-dark)", background: "var(--a4-surface-elevated)" }}>
+            <div className="flex items-baseline justify-between gap-4 px-5 py-4" style={{ borderBottom: "1px solid var(--a4-hairline-dark)" }}>
+              <span className="a4-font-body text-[14.5px] font-semibold text-white">
+                Incorporation — one shareholder, one director
+              </span>
+              <span className="a4-font-body text-[14.5px] font-semibold text-white whitespace-nowrap tabular-nums">
+                {prEuro(INCORPORATION.base)} one-off
+              </span>
+            </div>
+            {INCORPORATION_ADDONS.map((a) => (
+              <div key={a.label} className="flex items-start justify-between gap-4 px-5 py-3.5" style={{ borderBottom: "1px solid var(--a4-hairline-dark)" }}>
+                <span className="min-w-0">
+                  <span className="block a4-font-body text-[14px] text-white">{a.label}</span>
+                  <span className="block a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[2px]">{a.detail}</span>
+                </span>
+                <span className="a4-font-body text-[14px] font-semibold text-[var(--a4-on-dark-mute)] whitespace-nowrap tabular-nums shrink-0">
+                  +{prEuro(a.amount)} {a.cadence === "yearly" ? "/yr" : "one-off"}
+                </span>
+              </div>
+            ))}
+            <p className="a4-font-body text-[12.5px] leading-[1.6] text-[var(--a4-stone)] px-5 py-4 m-0">
+              {INCORPORATION_MGA_NOTE} {PRICING_VAT_NOTE} {PRICING_GOV_NOTE} The launch discount does not apply to
+              incorporation — it is a one-off fee.
+            </p>
+          </div>
+        </Reveal>
+      </Container>
+    </section>
+  );
+}
+
 export function PricingCalculatorContent() {
   return (
     <div className="a4-pricing-page">
       <PricingHero />
       <PricingStartingTiers />
       <PricingCalc />
+      <PricingIncorporation />
       <PricingComplex />
     </div>
   );

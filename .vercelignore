@@ -1,0 +1,7 @@
+# Large source videos not referenced anywhere in src/ — excluded from preview deploy to keep upload small.
+public/assets/videos/Vacei_Explainer_V1.mp4
+public/assets/videos/Vacei Fix (1) X1V1.mp4
+public/assets/videos/Vacei (2) X2V2.mp4
+public/assets/videos/Vacei_Fix_1.mp4
+public/assets/videos/banner-gip-2-new.mp4
+public/assets/videos/hero-banner-v1.mp4

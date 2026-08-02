@@ -14,6 +14,48 @@ export type CaseStudy = {
 
 export const CASE_STUDIES: CaseStudy[] = [
   {
+    id: "b2b-gaming-licence",
+    sector: "iGaming",
+    service: "Licensing & compliance",
+    headline: "B2B gaming licence secured with a complete financial compliance pack",
+    challenge:
+      "A platform provider applying for an MGA B2B licence needed audited financial statements, capital-requirement evidence and fit-and-proper financial documentation — under authority deadlines.",
+    result:
+      "A4 prepared the financial submissions end to end: audited accounts, share-capital and own-funds evidence, projections and an ongoing compliance calendar. The licence was granted with no financial follow-up requests.",
+    metric: "MGA B2B",
+    metricLabel: "Licence granted",
+    timeline: "Licensing engagement · 2026",
+    variant: "spotlight",
+  },
+  {
+    id: "cross-border-merger",
+    sector: "Corporate group",
+    service: "Corporate restructuring",
+    headline: "Cross-border merger completed into a single Malta entity",
+    challenge:
+      "An EU company merging into its Malta counterpart faced statutory timelines across two jurisdictions — merger accounts, creditor protections and coordinated registry filings on both sides.",
+    result:
+      "A4 prepared the merger accounts and financial documentation, coordinated with counsel in both jurisdictions and sequenced the MBR filings — the merger registered without objections or delays.",
+    metric: "2 → 1",
+    metricLabel: "Jurisdictions merged into one entity",
+    timeline: "Completed 2026",
+    variant: "dark",
+  },
+  {
+    id: "share-buy-back",
+    sector: "Private company",
+    service: "Corporate & tax",
+    headline: "Shareholder exit delivered through a compliant share buy-back",
+    challenge:
+      "A shareholder exit was best served by a company buy-back rather than an external sale — requiring distributable-reserves testing, valuation support, tax treatment and Companies Act procedure.",
+    result:
+      "A4 tested reserves, supported the valuation, structured the buy-back tranches and handled the tax analysis and MBR filings — a clean exit with the remaining shareholders in full control.",
+    metric: "100%",
+    metricLabel: "Companies Act compliant exit",
+    timeline: "Completed 2026",
+    variant: "tinted",
+  },
+  {
     id: "bookkeeping-catch-up",
     sector: "Retail & FMCG",
     service: "Bookkeeping",

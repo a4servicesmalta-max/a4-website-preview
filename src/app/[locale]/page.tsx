@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import HomePage from "@/components/HomePage/Homepage";
-import { getAllBlogs } from "@/utils/blog";
+import { getAllBlogsMerged } from "@/utils/blog";
+import { fetchSiteOverride, type SectionConfig } from "@/lib/cms";
 import { A4ServicesApp } from "./a4-services/components/A4ServicesApp";
 import { pageMetadata } from "@/lib/page-metadata";
 import { defaultLocale, locales } from "@/lib/i18n-config";
@@ -10,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   const base = pageMetadata(
     "Accounting, Audit & Corporate Services in Malta",
-    "A4 Services Limited — licensed Malta accounting and audit firm. Fixed monthly bookkeeping from €25/mo, VAT, payroll, audit and corporate services.",
+    "A4 Services Limited — licensed Malta accounting and audit firm. A4 Books software from €39/mo, with accountants from €99/mo, VAT, payroll, audit and corporate services.",
   );
   // The default-locale homepage is served at the root ("/"), not "/en".
   const homeHref = (l: string) => (l === defaultLocale ? "/" : `/${l}`);
@@ -19,8 +20,16 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { ...base, alternates: { canonical: homeHref(locale), languages } };
 }
 
-export default function Home() {
-  const recentBlogs = getAllBlogs().slice(0, 3);
+// Re-render at most every 2 minutes so portal edits (sections, blog posts)
+// go live without a redeploy.
+export const revalidate = 120;
+
+export default async function Home() {
+  const [allBlogs, sectionConfig] = await Promise.all([
+    getAllBlogsMerged(),
+    fetchSiteOverride<SectionConfig[]>("homepage.sections"),
+  ]);
+  const recentBlogs = allBlogs.slice(0, 3);
 
   const accountingService = {
     "@context": "https://schema.org",
@@ -30,7 +39,7 @@ export default function Home() {
     logo: "https://a4.com.mt/og-image.jpg",
     image: "https://a4.com.mt/og-image.jpg",
     description:
-      "Licensed Malta accounting and audit firm — accounting, statutory audit, tax, VAT, payroll, fractional CFO and automated bookkeeping from €25/mo.",
+      "Licensed Malta accounting and audit firm — accounting, statutory audit, tax, VAT, payroll, fractional CFO and A4 Books software from €39/mo, accountants from €99/mo.",
     priceRange: "€€",
     telephone: "+35627900007",
     email: "info@a4.com.mt",
@@ -106,7 +115,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }}
       />
-      <A4ServicesApp />
+      <A4ServicesApp sections={sectionConfig} />
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { pushToPortal } from "@/lib/portal";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -42,28 +43,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
-    if (!toAddress) {
-      return NextResponse.json(
-        { error: "Email destination is not configured." },
-        { status: 500 },
-      );
-    }
+    // Portal push is primary — always capture the lead first.
+    await pushToPortal({ name, email, message, service: "Contact form", source: "contact", priority: "Med", meta: { subject, context } });
 
-    await getTransport().sendMail({
-      from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-      to: toAddress,
-      subject: subject || `New contact from ${name || "A4 website"}`,
-      replyTo: email,
-      text: `
+    // Email is best-effort — a missing/broken SMTP config must never cause a 5xx.
+    try {
+      const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
+      if (toAddress) {
+        await getTransport().sendMail({
+          from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+          to: toAddress,
+          subject: subject || `New contact from ${name || "A4 website"}`,
+          replyTo: email,
+          text: `
 Name: ${name || "N/A"}
 Email: ${email}
 Context: ${context || "General contact"}
 
 Message:
 ${message}
-      `.trim(),
-    });
+          `.trim(),
+        });
+
+        // Confirmation to the sender — without it they have no proof the message landed.
+        await getTransport().sendMail({
+          from: `"A4" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+          to: email,
+          subject: "Message received - A4",
+          text: `Hi ${name || "there"},\n\nThank you for contacting A4. We have received your message and will get back to you within 24 hours.\n\nBest regards,\nThe A4 Team`,
+        });
+      }
+    } catch (emailErr) {
+      console.warn("Contact form email skipped (SMTP not configured or failed):", emailErr);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

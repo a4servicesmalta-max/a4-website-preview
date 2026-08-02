@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import LocalizedLink from "@/components/common/LocalizedLink";
 
 interface PricingSectionProps {
   namespace: "accounting" | "business";
@@ -46,9 +47,9 @@ const PricingSection = ({ namespace }: PricingSectionProps) => {
                 </div>
               ))}
             </div>
-            <a href="#" className="block w-full text-center mt-10 bg-zinc-50 hover:bg-zinc-100 text-zinc-900 text-sm font-semibold py-3.5 rounded-xl transition-colors border border-zinc-200 hover:border-zinc-300 shadow-sm">
+            <LocalizedLink href="/quote" className="block w-full text-center mt-10 bg-zinc-50 hover:bg-zinc-100 text-zinc-900 text-sm font-semibold py-3.5 rounded-xl transition-colors border border-zinc-200 hover:border-zinc-300 shadow-sm">
               Get Started
-            </a>
+            </LocalizedLink>
           </div>
 
           {/* Premium Plan */}
@@ -73,9 +74,9 @@ const PricingSection = ({ namespace }: PricingSectionProps) => {
                 </div>
               ))}
             </div>
-            <a href="#" className="block w-full text-center mt-10 bg-white text-zinc-900 hover:bg-zinc-100 text-sm font-semibold py-3.5 rounded-xl transition-all hover:-translate-y-0.5 shadow-sm">
+            <LocalizedLink href="/quote" className="block w-full text-center mt-10 bg-white text-zinc-900 hover:bg-zinc-100 text-sm font-semibold py-3.5 rounded-xl transition-all hover:-translate-y-0.5 shadow-sm">
               Contact Sales
-            </a>
+            </LocalizedLink>
           </div>
 
         </div>

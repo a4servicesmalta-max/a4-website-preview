@@ -1,14 +1,12 @@
-// @ts-nocheck
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { HeroFX } from "@/components/a4-landing/HeroFX";
+import React from "react";
+import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { PortalMockup } from "@/components/a4-landing/PortalMockup";
 import { LandingPlan } from "@/components/a4-landing/LandingPlan";
 import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
-// for the automated-bookkeeping conversion landing page. Reuses Primitives,
-// HeroFX and PortalMockup from the main app.
+// for the automated-bookkeeping conversion landing page. Reuses Primitives
+// and PortalMockup from the main app.
 
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
@@ -58,14 +56,14 @@ export function LandingHero({ accent = "#494fdf" }) {
             <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-on-dark-mute)" }}>Malta accounting &amp; audit firm</span>
           </div>
           <h1 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(44px,6vw,80px)", lineHeight: 1.0, letterSpacing: "-.03em", margin: "20px 0 0", textWrap: "balance" }}>
-            Bookkeeping<br />from <span style={{ color: "var(--a4-primary-bright)" }}>€25</span>/month.
+            Bookkeeping<br />at <span style={{ color: "var(--a4-primary-bright)" }}>€39</span>/month.
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 480, margin: "24px 0 0", textWrap: "pretty" }}>
             <strong style={{ color: "#fff", fontWeight: 600 }}>A4 Services is a licensed accounting &amp; audit firm in Malta.</strong> Upload your invoices and receipts to your A4 portal — it syncs with Sage, QuickBooks and Xero, automation does the heavy lifting, and our licensed audit firm reviews everything. Clean books — without the price tag.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
             <Button variant="primary" size="lg" href="#pricing">See your price <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account</Button>
+            <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
           </div>
           <div style={{ display: "flex", gap: 22, marginTop: 32, flexWrap: "wrap" }}>
             {["No setup fee", "No long contracts", "Cancel anytime"].map((t) => (
@@ -141,7 +139,7 @@ export function HowItWorks() {
 
 export function Why() {
   const items = [
-    { icon: "piggy-bank", t: "Low, fixed pricing", s: "From €25/month. Automation keeps our costs down, so we keep yours down." },
+    { icon: "piggy-bank", t: "Low, fixed pricing", s: "€39/month for the software alone, €99/month with a qualified accountant on your books. Automation keeps our costs down, so we keep yours down. All fees exclude VAT." },
     { icon: "layout-dashboard", t: "Everything in one portal", s: "Documents, reports and communication in a single secure workspace." },
     { icon: "refresh-cw", t: "Synced with your tools", s: "Works with Sage, QuickBooks and Xero — no double entry." },
     { icon: "shield-check", t: "Reviewed by professionals", s: "A licensed audit firm checks and finalises every set of books." },
@@ -218,13 +216,13 @@ export function FinalCTA() {
           <div aria-hidden="true" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "90%", height: 360, background: "radial-gradient(50% 50% at 50% 50%, rgba(73,79,223,.22), transparent 72%)", pointerEvents: "none" }} />
           <div style={{ position: "relative" }}>
             <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(32px,4.6vw,58px)", lineHeight: 1.04, letterSpacing: "-.025em", margin: 0, textWrap: "balance", maxWidth: 700, marginInline: "auto" }}>
-              Ready for clean books from €25/month?
+              Ready for clean books from €39/month?
             </h2>
             <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 18, lineHeight: 1.6, color: "var(--a4-on-dark-mute)", margin: "20px auto 0", maxWidth: 540, textWrap: "pretty" }}>
-              Create your account and request services in minutes — or book a quick call and we'll set everything up with you.
+              Create your account and request services in minutes — or book a quick call and we&apos;ll set everything up with you.
             </p>
             <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
-              <Button variant="primary" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account <Icon name="arrow-right" size={18} color="#000" /></Button>
+              <Button variant="primary" size="lg" href="/contact">Request information <Icon name="arrow-right" size={18} color="#000" /></Button>
               <Button variant="outline-dark" size="lg" href="#pricing">See your price</Button>
             </div>
           </div>

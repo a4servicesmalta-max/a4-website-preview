@@ -6,6 +6,7 @@ import { Button, Container, Icon, Reveal, SectionHead } from "@/components/a4-la
 import { QUOTE_SERVICE_OPTS, QUOTE_STEPS } from "@/data/a4QuoteSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
+import { QuotationBuilder } from "./QuotationBuilder";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
 
 function QuoteForm() {
@@ -197,8 +198,10 @@ export function QuoteContent() {
       <PageHero
         eyebrow="Get instant quote"
         title="A tailored quote, with no obligation"
-        sub="Tell us what you need and we'll come back within 24 hours with a clear, written quote — scoped to your business, with no hidden fees."
+        sub="Build an instant indicative quote below — or tell us what you need and we'll come back within 24 hours with a clear, written quote."
       />
+
+      <QuotationBuilder />
 
       <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,88px) 0" }}>
         <Container style={{ maxWidth: 860 }}>

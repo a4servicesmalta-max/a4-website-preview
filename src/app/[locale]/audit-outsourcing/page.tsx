@@ -3,7 +3,7 @@ import "@/components/a4-landing/styles.css";
 import { OutsourceApp } from "./components/OutsourceParts";
 
 export const metadata: Metadata = {
-  title: "Audit Outsourcing — Vacei × A4 Services",
+  title: "Audit Outsourcing — A4 Services",
   description:
     "Outsource your audits and keep the final say. Full white-label audit delivery from 15% of the fee — first small-client audit free.",
 };

@@ -3,8 +3,19 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-// Bookkeeping from €50/mo (Unlimited €75), + bank reconciliations, accounting,
-// and optional VAT / payroll / annual accounts. Drives toward "create account".
+import {
+  SOFTWARE_TIERS,
+  VAT_FROM,
+  TAX_RETURN_FROM,
+  PAYROLL_ENTRY_RATE,
+  PAYROLL_BEST_RATE,
+  payrollRate,
+  PRICING_VAT_NOTE,
+} from "@/data/a4QuotePack";
+// A4 Books software €39/mo flat (unlimited documents), + bank reconciliations,
+// accounting, and optional VAT / payroll / annual accounts. Every figure comes
+// from quote pack mt-2026-08-01 (src/data/a4QuotePack.ts).
+// Drives toward "create account".
 
 const PR_BANDS = [
   { label: "Under €100k", acct: 0 },
@@ -15,11 +26,6 @@ const PR_BANDS = [
   { label: "€2.5M+", acct: 240 },
 ];
 
-function prBookkeeping(t) {
-  if (t <= 50) return 50;
-  if (t >= 200) return 75;
-  return Math.round((50 + ((t - 50) / 150) * 25) / 5) * 5;
-}
 const prEuro = (n) => "€" + n.toLocaleString();
 
 export function Stepper({ value, set, min = 1, max = 12 }) {
@@ -46,24 +52,22 @@ export function Toggle({ on, set }) {
 
 export function Pricing() {
   const [rev, setRev] = useState(1);
-  const [txns, setTxns] = useState(80);
   const [banks, setBanks] = useState(1);
   const [vat, setVat] = useState(true);
   const [payroll, setPayroll] = useState(false);
   const [emps, setEmps] = useState(2);
   const [annual, setAnnual] = useState(false);
 
-  const book = prBookkeeping(txns);
-  const unlimited = txns >= 200;
+  const book = SOFTWARE_TIERS.book;
   const recon = banks * 15;
   const acct = PR_BANDS[rev].acct;
-  const vatFee = vat ? 35 : 0;
-  const payFee = payroll ? 15 + emps * 5 : 0;
-  const annualFee = annual ? 40 : 0;
+  const vatFee = vat ? VAT_FROM : 0;
+  const payFee = payroll ? emps * payrollRate(emps) : 0;
+  const annualFee = annual ? Math.round(TAX_RETURN_FROM / 12) : 0;
   const total = book + recon + acct + vatFee + payFee + annualFee;
 
   const lines = [
-    { k: unlimited ? "Bookkeeping — Unlimited" : "Monthly bookkeeping", v: book },
+    { k: "A4 Books — unlimited documents", v: book },
     { k: `Bank reconciliations · ${banks} account${banks > 1 ? "s" : ""}`, v: recon },
     { k: "Accounting & management reports", v: acct, included: acct === 0 },
     vat && { k: "VAT returns", v: vatFee },
@@ -80,7 +84,7 @@ export function Pricing() {
         <Reveal><SectionHead
           dark align="center"
           eyebrow="Pricing calculator"
-          title={<>Build your plan — from €50/month</>}
+          title={<>Build your plan — from €{SOFTWARE_TIERS.book}/month</>}
           sub="Transparent, fixed monthly pricing that scales with your business. Adjust the inputs to see your estimate, then create your account to confirm."
           maxWidth={640}
         /></Reveal>
@@ -104,17 +108,10 @@ export function Pricing() {
                 </div>
               </div>
 
-              {/* transactions */}
+              {/* bookkeeping — flat */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <div style={fieldLabel}>Average monthly transactions</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 17, color: "#fff", fontVariantNumeric: "tabular-nums" }}>{txns >= 400 ? "400+" : txns}</span>
-                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", padding: "3px 9px", borderRadius: "var(--a4-r-full)", background: unlimited ? "var(--a4-primary)" : "var(--a4-surface-deep)", color: unlimited ? "#fff" : "var(--a4-on-dark-mute)", border: unlimited ? "none" : "1px solid var(--a4-hairline-dark)" }}>{unlimited ? "UNLIMITED" : "STANDARD"}</span>
-                  </div>
-                </div>
-                <input className="a4-range" type="range" min="0" max="400" step="10" value={txns} onChange={(e) => setTxns(+e.target.value)} style={{ marginTop: 16 }} />
-                <div style={fieldSub}>Invoices, expenses and bank lines we process each month.</div>
+                <div style={fieldLabel}>A4 Books — €{SOFTWARE_TIERS.book}/mo flat</div>
+                <div style={fieldSub}>Unlimited documents, no per-document fees — invoices, expenses and bank lines included. Software only; add a Senior from €{SOFTWARE_TIERS.senior}/mo.</div>
               </div>
 
               {/* bank accounts */}
@@ -132,14 +129,14 @@ export function Pricing() {
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--a4-stone)" }}>Optional add-ons</div>
                 {[
-                  { label: "VAT returns", sub: "All four quarters filed with the CFR", on: vat, set: setVat, fee: "€35" },
-                  { label: "Payroll", sub: "FS5 submissions & payslips", on: payroll, set: setPayroll, fee: "from €25", emps: true },
-                  { label: "Annual accounts & tax", sub: "Year-end financial statements & return", on: annual, set: setAnnual, fee: "€40" },
+                  { label: "VAT returns", sub: "Every return prepared and filed with the CFR", on: vat, set: setVat, fee: `from €${VAT_FROM}/mo` },
+                  { label: "Payroll", sub: `FS5 submissions & payslips · €${PAYROLL_ENTRY_RATE}/head up to five, €${PAYROLL_BEST_RATE}/head at scale`, on: payroll, set: setPayroll, fee: `from €${PAYROLL_ENTRY_RATE}/head/mo`, emps: true },
+                  { label: "Annual accounts & tax", sub: "Year-end financial statements & return", on: annual, set: setAnnual, fee: `from €${Math.round(TAX_RETURN_FROM / 12)}/mo` },
                 ].map((a) => (
                   <div key={a.label}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ ...fieldLabel, fontWeight: 500, fontSize: 14 }}>{a.label} <span style={{ color: "var(--a4-stone)", fontWeight: 500 }}>· {a.fee}/mo</span></div>
+                        <div style={{ ...fieldLabel, fontWeight: 500, fontSize: 14 }}>{a.label} <span style={{ color: "var(--a4-stone)", fontWeight: 500 }}>· {a.fee}</span></div>
                         <div style={fieldSub}>{a.sub}</div>
                       </div>
                       <Toggle on={a.on} set={a.set} />
@@ -172,11 +169,11 @@ export function Pricing() {
                 ))}
               </div>
               <div style={{ marginTop: 24 }}>
-                <Button variant="primary" size="md" style={{ width: "100%" }}>Create account &amp; request <Icon name="arrow-right" size={16} color="#000" /></Button>
+                <Button variant="primary" size="md" href="/contact" style={{ width: "100%" }}>Request information <Icon name="arrow-right" size={16} color="#000" /></Button>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 14 }}>
                 <Icon name="lock" size={13} color="var(--a4-stone)" />
-                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)" }}>Fixed price confirmed on signup · cancel anytime</span>
+                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)" }}>Fixed price confirmed on signup · cancel anytime · {PRICING_VAT_NOTE}</span>
               </div>
             </div>
           </div>

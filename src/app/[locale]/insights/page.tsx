@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import "@/components/a4-landing/styles.css";
 import "@/components/a4-site/site-pages.css";
-import { getAllBlogs } from "@/utils/blog";
+import { getAllBlogsMerged } from "@/utils/blog";
 import { InsightsContent } from "./components/InsightsContent";
+
+// Pick up portal-published posts without a redeploy.
+export const revalidate = 120;
 
 export const metadata: Metadata = {
   title: "Insights | A4 - Accounting, Audit & Compliance",
@@ -15,8 +18,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function InsightsPage() {
-  const blogs = getAllBlogs();
+export default async function InsightsPage() {
+  const blogs = await getAllBlogsMerged();
   return <InsightsContent blogs={blogs} />;
 
   // --- Previous implementation (commented out) ---

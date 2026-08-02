@@ -23,9 +23,9 @@ const QT_SERVICES = [
 ];
 
 const LOAD_STEPS = [
-  ["Connecting to Malta Business Registry…", "Connected to Malta Business Registry"],
-  ["Reading company profile…", "Company profile loaded"],
-  ["Checking filing status…", "Filing status verified"],
+  ["Preparing your indicative estimate…", "Estimate prepared"],
+  ["Reading company details…", "Company details loaded"],
+  ["Checking selected services…", "Services checked"],
   ["Calculating your fixed-price quote…", "Quote calculated"],
 ];
 
@@ -54,6 +54,8 @@ export function QuoteTool() {
   const [selected, setSelected] = useState(() => new Set(["audit"]));
   const [modal, setModal] = useState(false);
   const [booked, setBooked] = useState(null);
+  const [booking, setBooking] = useState(false);
+  const [bookErr, setBookErr] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", time: "Morning (9:00 – 12:00)" });
   const timers = useRef([]);
   const wrapRef = useRef(null);
@@ -74,7 +76,7 @@ export function QuoteTool() {
   };
 
   const pick = (key) => {
-    const co = MBR_DATA[key];
+    const co = { ...MBR_DATA[key], isDemo: true };
     setDdOpen(false); setQuery(co.name); setCompany(co); setSubmitted(false);
     setIndustry(co.sector || ""); setRevenue("€100k – €500k");
     setSelected(new Set(co.overdue > 0 ? ["audit", "mbr"] : ["audit"]));
@@ -86,7 +88,7 @@ export function QuoteTool() {
     const key = Object.keys(MBR_DATA).find((k) => MBR_DATA[k].name.toLowerCase().includes(q) || k.includes(q));
     if (key) { pick(key); return; }
     if (q.length > 2) {
-      const co = { name: query.replace(/\b\w/g, (c) => c.toUpperCase()) + (/(ltd|limited)$/i.test(query) ? "" : " Ltd"), reg: "C " + Math.floor(10000 + Math.random() * 89999), sector: "Professional Services", size: "small", yearEnd: "December", overdue: 0, auditFee: 1200, monthlyFee: 150, vatFee: 360, mbrFee: 180 };
+      const co = { name: query.replace(/\b\w/g, (c) => c.toUpperCase()) + (/(ltd|limited)$/i.test(query) ? "" : " Ltd"), reg: null, isDemo: false, sector: "Professional Services", size: "small", yearEnd: "December", overdue: 0, auditFee: 1200, monthlyFee: 150, vatFee: 360, mbrFee: 180 };
       setCompany(co); setSubmitted(false); setIndustry(co.sector); setRevenue("€100k – €500k"); setSelected(new Set(["audit"])); setDdOpen(false); setStage("details");
     }
   };
@@ -122,8 +124,43 @@ export function QuoteTool() {
   const totalAnnual = gross - discount;
   const penalty = company ? company.overdue * 120 : 0;
 
-  const submitBooking = () => { if (!form.name || !form.email) return; setBooked("A4-" + Date.now().toString(36).toUpperCase().slice(-6)); };
-  const openModal = () => { setForm((f) => ({ ...f, company: company ? company.name : "" })); setBooked(null); setModal(true); };
+  const submitBooking = async () => {
+    if (!form.name || !form.email) return;
+    setBooking(true); setBookErr(false);
+    try {
+      const res = await fetch("/api/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          subject: `Quote tool booking — ${company ? company.name : form.company}`,
+          message: `Quote tool booking request. Preferred call time: ${form.time}`,
+          meta: {
+            service: "Quote tool booking",
+            companyName: company ? company.name : form.company,
+            companyRegistration: company ? (company.isDemo ? company.reg : "not verified") : undefined,
+            phone: form.phone,
+            jurisdiction: "Malta",
+            communicationChannel: form.time,
+            serviceDetails: company ? {
+              industry: industry || company.sector,
+              revenueBand: revenue,
+              selectedServices: QT_SERVICES.filter((s) => selected.has(s.id)).map((s) => ({ name: s.name, fee: s.type === "quote" ? "On request" : `${euro(adjFee(s))}${s.type === "monthly" ? "/mo" : "/yr"}` })),
+              estimatedAnnualTotal: totalAnnual,
+            } : undefined,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error("Booking request failed");
+      setBooked("A4-" + Date.now().toString(36).toUpperCase().slice(-6));
+    } catch {
+      setBookErr(true);
+    } finally {
+      setBooking(false);
+    }
+  };
+  const openModal = () => { setForm((f) => ({ ...f, company: company ? company.name : "" })); setBooked(null); setBookErr(false); setModal(true); };
 
   // light-mode surfaces
   const panel = { background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)" };
@@ -229,7 +266,8 @@ export function QuoteTool() {
                 {/* header */}
                 <div style={{ padding: "22px 26px", borderBottom: "1px solid var(--a4-hairline-light)" }}>
                   <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>{company.name}</div>
-                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-mute)", marginTop: 3 }}>{company.reg} · {industry || company.sector} · {company.yearEnd} year-end</div>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-mute)", marginTop: 3 }}>{company.isDemo ? `Registration no.: ${company.reg}` : "Registration no.: not verified"} · {industry || company.sector} · {company.yearEnd} year-end</div>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 6 }}>Indicative estimate — final quote confirmed after a short call.</div>
                 </div>
 
                 <div style={{ padding: "22px 26px" }}>
@@ -348,8 +386,13 @@ export function QuoteTool() {
                     <input type={type} value={form[key]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))} placeholder={ph} style={{ width: "100%", background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "11px 14px", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 14, outline: "none" }} />
                   </div>
                 ))}
+                {bookErr && (
+                  <div style={{ background: "rgba(220,38,38,.08)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "12px 14px", marginBottom: 14, fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.5, color: "var(--a4-mute)" }}>
+                    Something went wrong sending your request. Please try again, or reach us directly at <a href="mailto:info@a4.com.mt" style={{ color: "var(--a4-link)" }}>info@a4.com.mt</a> / <a href="tel:+35627900007" style={{ color: "var(--a4-link)" }}>+356 2790 0007</a>.
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-                  <Button variant="dark" size="md" onClick={submitBooking} style={{ flex: 1 }}>Confirm booking <Icon name="arrow-right" size={16} color="#fff" /></Button>
+                  <Button variant="dark" size="md" onClick={submitBooking} disabled={booking} style={{ flex: 1, opacity: booking ? 0.7 : 1 }}>{booking ? "Sending…" : "Confirm booking"} {!booking && <Icon name="arrow-right" size={16} color="#fff" />}</Button>
                   <Button variant="outline-light" size="md" onClick={() => setModal(false)}>Cancel</Button>
                 </div>
               </div>

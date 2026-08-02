@@ -21,10 +21,24 @@ export function withLocale(locale: Locale, path: string): string {
     search = pathname.slice(qIdx);
     pathname = pathname.slice(0, qIdx);
   }
+  // Pure same-page anchor (e.g. "#apply") - stay on the current page, no locale
+  // prefix. Query stays before the fragment per URL ordering.
+  if (!pathname && hash) return `${search}${hash}`;
   if (!pathname.startsWith("/")) pathname = `/${pathname}`;
+  // Already locale-prefixed (e.g. a caller pre-localized) - strip that prefix
+  // and retarget to the requested locale below. Never double-prefix, and never
+  // keep a stale prefix that contradicts the locale being asked for.
+  const first = pathname.split("/").filter(Boolean)[0];
+  if (first && isLocale(first)) {
+    const rest = pathname.slice(`/${first}`.length);
+    pathname = rest === "" || rest === "/" ? "/" : rest;
+  }
+  // The default locale is never shown in the URL - its paths stay bare.
+  if (locale === defaultLocale) {
+    return `${pathname}${search}${hash}`;
+  }
   if (pathname === "/") {
-    const home = locale === defaultLocale ? "" : `/${locale}`;
-    return `${home}${search}${hash}` || "/";
+    return `/${locale}${search}${hash}`;
   }
   return `/${locale}${pathname}${search}${hash}`;
 }

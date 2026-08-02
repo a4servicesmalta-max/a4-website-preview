@@ -75,13 +75,34 @@
 
 .a4-burger { display: none; }
 
+/* Audit page — scroll-grown video stage. Collapses to a plain card on small
+   screens and under reduced motion, where the JS transform is a no-op. */
+.av-stage { position: relative; height: 210vh; }
+.av-sticky { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.av-media { width: min(97vw, 1720px); will-change: transform; transform: scale(.7); transform-origin: 50% 50%; }
+@media (max-width: 900px), (prefers-reduced-motion: reduce) {
+  .av-stage { height: auto; }
+  .av-sticky { position: static; height: auto; padding: clamp(40px,7vw,72px) clamp(16px,4vw,40px); }
+  .av-media { width: 100%; transform: none !important; }
+}
+
+/* Audit fee estimator — 3-column rail / card / fee panel (Vacei Audit design) */
+.af-grid { display: grid; grid-template-columns: 230px 1fr 320px; gap: 24px; align-items: start; }
+@media (max-width: 1080px) {
+  .af-grid { grid-template-columns: 1fr; }
+  .af-rail { flex-direction: row !important; flex-wrap: wrap; position: static !important; }
+  .af-panel { position: static !important; }
+}
+
 /* Sticky summary panels — release on tablet/mobile */
 @media (max-width: 820px) {
   .a4-sum { position: static !important; }
   .lp-grid, .pe-grid, .ae-grid, .fs-resultgrid,
-  .pr-grid, .svc-grid, .dl-grid, .dl-modalgrid, .dl-calgrid, .fb-row {
+  .pr-grid, .svc-grid, .dl-grid, .dl-modalgrid, .dl-calgrid, .fb-row,
+  .lqc-grid {
     grid-template-columns: 1fr !important;
   }
+  .lqc-rail { position: static !important; flex-direction: row !important; flex-wrap: wrap; }
   .svc-grid { gap: 32px !important; }
   .portal-caps { grid-template-columns: 1fr !important; }
 }
@@ -185,4 +206,118 @@ html[data-reveal="off"] [data-areveal] {
 input.a4-range {
   -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
   border-radius: 999px; background: var(--a4-hairline-dark); outline: none;
+}
+
+/* Hero typewriter caret */
+@keyframes heroCaretBlink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+.hero-caret { animation: heroCaretBlink 1.05s steps(1) infinite; }
+@media (prefers-reduced-motion: reduce) { .hero-caret { animation: none; opacity: 0; } }
+
+/* ── Compliance journey: the homepage scroll film ─────────────────────────
+   Pinned viewport, camera pans a flow world, copy panels crossfade per stage.
+   The track's height IS the scrub distance. Stage height uses svh, NOT dvh:
+   dvh changes when the mobile URL bar collapses — which happens as a direct
+   consequence of scrolling — and would resize the pinned stage mid-scrub. */
+.a4-jf { position: relative; background: #000; }
+
+.a4-jf__intro { padding: 96px 0 24px; }
+.a4-jf__title {
+  margin: 14px 0 0; font-family: var(--a4-font-display, inherit);
+  font-size: clamp(30px, 5vw, 52px); line-height: 1.06; letter-spacing: -0.03em; color: #fff;
+}
+.a4-jf__lede {
+  margin: 16px 0 0; max-width: 58ch;
+  font-size: clamp(14.5px, 1.6vw, 17px); line-height: 1.65; color: rgba(255,255,255,0.62);
+}
+
+.a4-jf__track { height: 560svh; }
+@supports not (height: 100svh) { .a4-jf__track { height: 560vh; } }
+
+.a4-jf__viewport {
+  position: sticky; top: 0; height: 100svh;
+  overflow: clip;            /* clip, not hidden: never becomes a scrollport */
+  contain: paint;
+}
+@supports not (height: 100svh) { .a4-jf__viewport { height: 100vh; } }
+
+.a4-jf__world { position: absolute; inset: 0; }
+/* each cluster carries its own transform (set by GSAP) — no single wide layer */
+.a4-jf__cluster {
+  position: absolute; left: 0; top: 0;
+  transform-origin: 50% 50%; will-change: transform;
+}
+
+.a4-jf__node {
+  width: 280px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 22px; border-radius: 22px;
+  background: #08080a; border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 30px 80px -46px rgba(0,0,0,0.95);
+}
+.a4-jf__nodeArt { width: 100%; height: 120px; }
+.a4-jf__nodeLabel {
+  font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: rgba(255,255,255,0.82);
+  white-space: nowrap;
+}
+
+/* Scrim behind the copy column — the camera pans nodes and the dashed wire
+   straight through this area, so the text needs its own ground. */
+.a4-jf__scrim {
+  position: absolute; left: 0; top: 0; bottom: 0; width: min(58%, 820px);
+  pointer-events: none;
+  background: linear-gradient(90deg, #000 0%, #000 40%, rgba(0,0,0,0.88) 60%, rgba(0,0,0,0) 100%);
+}
+
+/* copy panel — left column on desktop, bottom sheet on narrow screens */
+.a4-jf__panel {
+  position: absolute; left: max(24px, calc((100vw - 1160px) / 2)); top: 50%;
+  transform: translateY(-50%); width: min(420px, 38vw);
+  will-change: transform, opacity;
+}
+.a4-jf__n {
+  font-family: var(--a4-font-display, inherit); font-size: 13px; font-weight: 700;
+  color: var(--a4-primary-bright, #7b80ff);
+}
+.a4-jf__kicker {
+  display: block; margin-top: 10px; font-size: 11.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.2em; color: rgba(255,255,255,0.42);
+}
+.a4-jf__stageTitle {
+  margin: 10px 0 0; font-family: var(--a4-font-display, inherit);
+  font-size: clamp(24px, 3vw, 40px); line-height: 1.1; letter-spacing: -0.025em; color: #fff;
+}
+.a4-jf__body {
+  margin: 14px 0 0; font-size: clamp(13.5px, 1.4vw, 16px); line-height: 1.65;
+  color: rgba(255,255,255,0.6);
+}
+
+.a4-jf__rail {
+  position: absolute; right: 26px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.a4-jf__rail span {
+  width: 7px; height: 7px; border-radius: 999px; background: rgba(255,255,255,0.2);
+  transition: height 0.3s ease, background 0.3s ease;
+}
+.a4-jf__rail span[data-on="true"] { height: 26px; background: var(--a4-primary-bright, #7b80ff); }
+
+.a4-jf__static { display: none; }
+
+/* Narrow: the world is framed high and the copy sits in a bottom sheet. */
+@media (max-width: 1023.98px) {
+  .a4-jf__panel {
+    left: 16px; right: 16px; width: auto; top: auto; bottom: 4svh; transform: none;
+    background: rgba(8,8,10,0.94); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px; padding: 20px;
+  }
+  .a4-jf__scrim { display: none; }
+  .a4-jf__rail { flex-direction: row; right: auto; left: 50%; top: 3svh; transform: translateX(-50%); }
+  .a4-jf__rail span[data-on="true"] { height: 7px; width: 26px; }
+}
+
+/* Reduced motion: no film at all — the same five stages as a plain list. */
+@media (prefers-reduced-motion: reduce) {
+  .a4-jf__track { display: none; }
+  .a4-jf__static { display: block; padding: 8px 0 88px; }
+  .a4-jf__static ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 34px; }
+  .a4-jf__static li { max-width: 62ch; }
 }

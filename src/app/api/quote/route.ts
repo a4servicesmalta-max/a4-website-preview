@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { pushToPortal } from "@/lib/portal";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -86,16 +87,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const toAddress =
-      process.env.QUOTE_TO_EMAIL ||
-      process.env.CONTACT_TO_EMAIL ||
-      process.env.SMTP_USER;
-    if (!toAddress) {
-      return NextResponse.json(
-        { error: "Email destination is not configured." },
-        { status: 500 },
-      );
-    }
+    // Portal push is primary — always capture the lead first.
+    await pushToPortal({ name, email, company: meta?.companyName, phone: meta?.phone, message, service: "Quote request" + (meta?.service ? ` — ${meta.service}` : ""), source: "quote", priority: "High", meta });
 
     const subjectLine = subject || `New quote request from ${name}`;
 
@@ -173,24 +166,31 @@ export async function POST(req: NextRequest) {
       </div>
     `;
 
-    const transport = getTransport();
-    const fromAddress = `"A4" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`;
+    // Emails are best-effort — a missing/broken SMTP config must never cause a 5xx.
+    try {
+      const toAddress =
+        process.env.QUOTE_TO_EMAIL ||
+        process.env.CONTACT_TO_EMAIL ||
+        process.env.SMTP_USER;
+      if (toAddress) {
+        const transport = getTransport();
+        const fromAddress = `"A4" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`;
 
-    // Send the notification email to the internal A4 team
-    await transport.sendMail({
-      from: fromAddress,
-      to: toAddress,
-      subject: subjectLine,
-      replyTo: email,
-      text: textBody,
-      html: htmlBody,
-      attachments,
-    });
+        // Send the notification email to the internal A4 team
+        await transport.sendMail({
+          from: fromAddress,
+          to: toAddress,
+          subject: subjectLine,
+          replyTo: email,
+          text: textBody,
+          html: htmlBody,
+          attachments,
+        });
 
-    // Send the auto-responder confirmation email to the user
-    const autoReplySubject = "Quote Request Received - A4";
-    const autoReplyText = `Hi ${name},\n\nThank you for reaching out to us.\n\nWe have received your quote request and our team will review the details. We will get back to you within 24 hours.\n\nBest regards,\nThe A4 Team`;
-    const autoReplyHtml = `
+        // Send the auto-responder confirmation email to the user
+        const autoReplySubject = "Quote Request Received - A4";
+        const autoReplyText = `Hi ${name},\n\nThank you for reaching out to us.\n\nWe have received your quote request and our team will review the details. We will get back to you within 24 hours.\n\nBest regards,\nThe A4 Team`;
+        const autoReplyHtml = `
       <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:14px; color:#111827;">
         <p>Hi ${name},</p>
         <p>Thank you for reaching out to us.</p>
@@ -199,13 +199,17 @@ export async function POST(req: NextRequest) {
       </div>
     `;
 
-    await transport.sendMail({
-      from: fromAddress,
-      to: email,
-      subject: autoReplySubject,
-      text: autoReplyText,
-      html: autoReplyHtml,
-    });
+        await transport.sendMail({
+          from: fromAddress,
+          to: email,
+          subject: autoReplySubject,
+          text: autoReplyText,
+          html: autoReplyHtml,
+        });
+      }
+    } catch (emailErr) {
+      console.warn("Quote form email skipped (SMTP not configured or failed):", emailErr);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

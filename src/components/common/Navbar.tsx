@@ -14,13 +14,9 @@ import {
   ShieldCheck,
   BookOpen,
   Layers,
-  Facebook,
-  Instagram,
   Linkedin,
-  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import GetInstantQuoteButton from "./GetInstantQuoteButton";
 import { useReduceMotion, usePerformance } from "@/contexts/ReduceMotionContext";
 import { A4_SERVICES_VISIBLE } from "@/data/a4ServicesSiteData";
 import { RESOURCE_CARDS } from "@/data/a4ResourcesSiteData";
@@ -28,6 +24,7 @@ import {
   CONTACT_EMAIL,
   CONTACT_EMAIL_HREF,
   CONTACT_PHONES,
+  LINKEDIN_COMPANY_URL,
 } from "@/lib/contact";
 import { CLIENT_LOGIN_URL, CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
@@ -667,11 +664,6 @@ const Navbar = () => {
                     <span>{t("nav.login")}</span>
                   </a>
 
-                  <GetInstantQuoteButton
-                    hasShadow={false}
-                    href={CLIENT_ONBOARDING_URL}
-                    text={t("nav.registerQuote")}
-                  />
                 </div>
 
                 {/* Mobile: hamburger opens full-screen menu. Desktop: hamburger opens sidebar. */}
@@ -876,14 +868,6 @@ const Navbar = () => {
                   >
                     {t("nav.login")}
                   </a>
-                  <div onClick={() => setMobileMenuOpen(false)}>
-                    <GetInstantQuoteButton
-                      hasShadow={false}
-                      className="w-full justify-center"
-                      href={CLIENT_ONBOARDING_URL}
-                      text={t("nav.registerQuote")}
-                    />
-                  </div>
                 </div>
               </div>
             </motion.div>
@@ -1069,47 +1053,15 @@ const Navbar = () => {
                   <h3 className="text-white font-bold text-lg">{t("nav.sidebar.followUs")}</h3>
                   <div className="flex items-center gap-4">
                     <a
-                      href="#"
-                      className="w-12 h-12 flex items-center justify-center rounded-full bg-primary-blue text-white hover:bg-primary-zinc-hover transition-colors"
-                      aria-label="Facebook"
-                    >
-                      <Facebook className="w-5 h-5" strokeWidth={1.75} aria-hidden />
-                    </a>
-                    <a
-                      href="#"
-                      className="w-12 h-12 flex items-center justify-center rounded-full bg-primary-blue text-white hover:bg-primary-zinc-hover transition-colors"
-                      aria-label="Instagram"
-                    >
-                      <Instagram className="w-5 h-5" strokeWidth={1.75} aria-hidden />
-                    </a>
-                    <a
-                      href="#"
-                      className="w-12 h-12 flex items-center justify-center rounded-full bg-primary-blue text-white hover:bg-primary-zinc-hover transition-colors"
-                      aria-label="X (Twitter)"
-                    >
-                      <X className="w-5 h-5" strokeWidth={1.75} aria-hidden />
-                    </a>
-                    <a
-                      href="#"
+                      href={LINKEDIN_COMPANY_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="w-12 h-12 flex items-center justify-center rounded-full bg-primary-blue text-white hover:bg-primary-zinc-hover transition-colors"
                       aria-label="LinkedIn"
                     >
                       <Linkedin className="w-5 h-5" strokeWidth={1.75} aria-hidden />
                     </a>
                   </div>
-                </div>
-
-                {/* Download Brochure PDF Icon - Matches provided screenshot */}
-                <div className="absolute bottom-6 right-6 z-20">
-                  <a
-                    href="#"
-                    className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform group"
-                    aria-label="Download PDF"
-                  >
-                    <svg className="w-6 h-6 text-primary-blue" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M11.293 1.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1-1.414 1.414L13 4.414V14a1 1 0 1 1-2 0V4.414L6.707 8.707a1 1 0 0 1-1.414-1.414l6-6zM5 16a1 1 0 0 1 1 1v4h12v-4a1 1 0 1 1 2 0v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4a1 1 0 0 1 1-1z" />
-                    </svg>
-                  </a>
                 </div>
 
               </div>

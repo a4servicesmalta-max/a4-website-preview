@@ -1,16 +1,11 @@
-// @ts-nocheck
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { HeroFX } from "@/components/a4-landing/HeroFX";
+import React, { useState } from "react";
+import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { AuditEstimator } from "./AuditEstimator";
-import { AuditOverdue } from "./AuditOverdue";
-import { FSReview } from "./FSReview";
 // services, process, overdue check, FAQ, final CTA, footer. Reuses Primitives
 // and HeroFX from the main app.
 
-import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 // export function AuditNav() {
 //   const [open, setOpen] = useState(false);
@@ -44,7 +39,7 @@ import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 //   );
 // }
 
-function AuditHero({ accent = "#494fdf" }) {
+function AuditHero() {
   return (
     <section style={{ background: "#000", padding: "clamp(64px,9vw,120px) 0 clamp(60px,8vw,104px)", position: "relative", overflow: "hidden" }}>
       <div aria-hidden="true" className="hero-bg" />
@@ -60,7 +55,7 @@ function AuditHero({ accent = "#494fdf" }) {
             Need an audit?<br /><span style={{ color: "var(--a4-primary-bright)" }}>We make it simple.</span>
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 620, margin: "24px auto 0", textWrap: "pretty" }}>
-            Every company in Malta must file audited financial statements. As a licensed audit firm, A4 delivers a rigorous, independent, on-time audit — with a fixed fee agreed up front, <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;600/month</strong>.
+            Every company in Malta must file audited financial statements. As a licensed audit firm, A4 delivers a rigorous, independent, on-time audit — with a fixed fee agreed up front, <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;750/year</strong> (dormant companies from &euro;600).
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get your audit estimate <Icon name="arrow-right" size={18} color="#000" /></Button>
@@ -175,7 +170,7 @@ function AuditFAQ() {
         <Reveal style={{ flex: "1 1 300px", minWidth: 280 }}>
           <Eyebrow>FAQ</Eyebrow>
           <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "var(--a4-ink)", fontSize: "clamp(32px,4vw,48px)", lineHeight: 1.05, letterSpacing: "-.02em", margin: "18px 0 0", textWrap: "balance" }}>Audit questions, answered</h2>
-          <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 17, lineHeight: 1.55, color: "var(--a4-mute)", margin: "18px 0 28px", maxWidth: 340 }}>Still unsure? Book a free consultation and we'll talk it through.</p>
+          <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 17, lineHeight: 1.55, color: "var(--a4-mute)", margin: "18px 0 28px", maxWidth: 340 }}>Still unsure? Book a free consultation and we&apos;ll talk it through.</p>
           <Button variant="dark" size="md" href="#estimate">Book a consultation <Icon name="arrow-right" size={17} color="#fff" /></Button>
         </Reveal>
         <Reveal delay={100} style={{ flex: "1 1 520px", minWidth: 300 }}>
@@ -210,7 +205,7 @@ function AuditCTA() {
           <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 19, lineHeight: 1.6, color: "var(--a4-on-dark-mute)", margin: "22px auto 0", maxWidth: 560, textWrap: "pretty" }}>A two-minute estimate, then a quick call to confirm scope. On-time filing, by registered auditors.</p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get your audit estimate <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href={CLIENT_ONBOARDING_URL} target="_blank">Create your account</Button>
+            <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
           </div>
         </Reveal>
       </Container>
@@ -239,9 +234,8 @@ export function AuditApp() {
       {/* <AuditNav /> */}
       <main>
         <AuditHero />
-        <FSReview />
+        {/* <FSReview /> — component was never committed; see commit message. */}
         <WhyMalta />
-        <AuditOverdue />
         <AuditEstimator />
         <AuditServices />
         <AuditProcess />

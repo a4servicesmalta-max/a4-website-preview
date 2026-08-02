@@ -5,26 +5,11 @@ import {
   LOCALE_HEADER,
   type Locale,
 } from "@/lib/i18n-config";
-import {
-  LOCALE_COOKIE,
-  resolvePreferredLocale,
-} from "@/lib/locale-resolution";
-
 const SESSION_COOKIE = "A4_session";
 
 function getLocaleFromPath(pathname: string): Locale | null {
   const seg = pathname.split("/").filter(Boolean)[0];
   return seg && isLocale(seg) ? seg : null;
-}
-
-function resolveLocale(request: NextRequest): Locale {
-  return resolvePreferredLocale({
-    cookieLocale: request.cookies.get(LOCALE_COOKIE)?.value,
-    acceptLanguage: request.headers.get("accept-language"),
-    cfCountry:
-      request.headers.get("cf-ipcountry") ??
-      request.headers.get("CF-IPCountry"),
-  });
 }
 
 export function middleware(request: NextRequest) {
@@ -64,11 +49,35 @@ export function middleware(request: NextRequest) {
 
   const pathLocale = getLocaleFromPath(pathname);
 
-  if (!pathLocale) {
-    const locale = resolveLocale(request);
+  // The default locale is never shown in the URL: collapse any "/en" or
+  // "/en/<anything>" onto the canonical bare path (preserving search params).
+  if (pathLocale === defaultLocale) {
     const url = request.nextUrl.clone();
-    url.pathname = `/${locale}${pathname.endsWith("/") ? pathname.slice(0, -1) : pathname}`;
-    const response = NextResponse.redirect(url);
+    const rest = pathname.slice(`/${defaultLocale}`.length);
+    const bare = rest === "" || rest === "/" ? "/" : rest.endsWith("/") ? rest.slice(0, -1) : rest;
+    url.pathname = bare;
+    return ensureSessionCookie(request, NextResponse.redirect(url, 308));
+  }
+
+  if (!pathLocale) {
+    // Bare paths ARE the default-locale pages — they're the canonical English
+    // URLs in the sitemap and hreflang set, so they must always return English
+    // content. Never preference-redirect off them (a cookie/accept-language/geo
+    // redirect here would bounce crawlers and shared links away from the
+    // canonical URL); visitors pick another language via the switcher, which
+    // navigates to the "/fr"-style prefixed URLs directly.
+    // Trailing slash falls away here too, so root ("/") normalizes to "" and
+    // concatenates cleanly below (e.g. `/${defaultLocale}` not `/${defaultLocale}/`).
+    const normalizedPath = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+    const url = request.nextUrl.clone();
+    url.pathname = `/${defaultLocale}${normalizedPath}`;
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(LOCALE_HEADER, defaultLocale);
+    requestHeaders.set("x-pathname", pathname);
+    const response = NextResponse.rewrite(url, {
+      request: { headers: requestHeaders },
+    });
+    response.headers.set(LOCALE_HEADER, defaultLocale);
     return ensureSessionCookie(request, response);
   }
 
@@ -103,6 +112,6 @@ export const config = {
   /** Include `/` explicitly — some setups skip root with a single complex negative pattern. */
   matcher: [
     "/",
-    "/((?!api|_next|_vercel|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot|pdf|mp4|webm)$).*)",
+    "/((?!api|_next|_vercel|lp/|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot|pdf|mp4|webm|html)$).*)",
   ],
 };

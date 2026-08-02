@@ -355,6 +355,34 @@
   color: var(--text-light-gray);
 }
 
+/* Skip-to-content: off-screen until it takes keyboard focus, then pinned
+   top-left above everything. Not `display:none` — that would make it
+   unreachable by the Tab key, which defeats the point. */
+.a4-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10000;
+  padding: 12px 20px;
+  border-radius: 0 0 8px 0;
+  background: #ffffff;
+  color: #000000;
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.a4-skip-link:focus,
+.a4-skip-link:focus-visible {
+  left: 0;
+  outline: 3px solid var(--a4-primary, #494fdf);
+  outline-offset: 2px;
+}
+
+#main-content:focus {
+  outline: none;
+}
+
 .focus-ring-purple {
   --tw-ring-color: var(--purple-bg);
 }

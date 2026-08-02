@@ -22,4 +22,7 @@ export type ReviewResponse = {
   reportName: string;
   annotatedDocxBase64: string | null;
   annotatedName: string | null;
+  // Client-safe quote only — never expose basis/detail here (could reveal the
+  // client's previous auditor's fee). Full quote goes to staff channels only.
+  quote?: { fee: number; docKind: "audited_fs" | "management_accounts" } | null;
 };

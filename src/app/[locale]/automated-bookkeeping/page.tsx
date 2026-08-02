@@ -4,7 +4,7 @@ import { LandingApp } from "./components/LandingParts";
 
 export const metadata: Metadata = {
   title: "Automated Bookkeeping | A4 Services",
-  description: "Bookkeeping from €25/month. Automation handles the heavy lifting, MIA-licensed accountants handle the review.",
+  description: "A4 Books software from €39/month. Add a MIA-licensed accountant from €99/month — automation does the heavy lifting, the accountant reviews and signs off.",
 };
 
 export default function AutomatedBookkeepingPage() {

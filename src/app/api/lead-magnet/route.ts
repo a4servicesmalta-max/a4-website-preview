@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { buildComplianceCalendarIcs } from "@/lib/compliance-calendar";
+import { pushToPortal } from "@/lib/portal";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -40,6 +41,8 @@ export async function POST(req: NextRequest) {
         text: `Email: ${email}\nMagnet: Malta compliance deadline calendar 2026`,
       });
     }
+
+    await pushToPortal({ email, service: `Lead magnet: ${magnet}`, source: "lead-magnet", priority: "Low", meta: { magnet } });
 
     const ics = buildComplianceCalendarIcs();
     return new NextResponse(ics, {
