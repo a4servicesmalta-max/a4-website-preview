@@ -1,5 +1,11 @@
-// Push a website submission into the A4 internal portal's Requests inbox.
-// Fire-and-forget: never throws, never blocks the user response.
+// Push a website submission into BOTH inboxes that need to see it:
+//   1. the A4 internal ops portal's Requests inbox (team.a4.com.mt), and
+//   2. the partner portal's Leads CRM (partner.a4.com.mt / partner.vacei.com),
+//      via the shared portal-backend endpoint vacei.com's forms already use.
+// Both are fire-and-forget: neither throws, neither blocks the user response,
+// and a failure of one never suppresses the other.
+import { QUOTE_API_BASE } from "@/lib/websiteQuotation";
+
 type PortalRequest = {
   requester?: string;
   name?: string;
@@ -13,7 +19,7 @@ type PortalRequest = {
   meta?: Record<string, unknown>;
 };
 
-export async function pushToPortal(req: PortalRequest): Promise<void> {
+async function pushToOpsPortal(req: PortalRequest): Promise<void> {
   const url = process.env.A4_PORTAL_URL;
   const key = process.env.A4_PORTAL_INGEST_KEY;
   if (!url || !key) return;
@@ -26,4 +32,50 @@ export async function pushToPortal(req: PortalRequest): Promise<void> {
   } catch {
     /* swallow — portal push must never break the user-facing flow */
   }
+}
+
+/**
+ * Mirror the same submission into the partner portal's Leads CRM.
+ *
+ * The public contract is narrow (portal-backend websiteLeadSchema): `name` and
+ * `email` are required, and `source` is a two-value enum — every A4 enquiry is
+ * a 'contact'. The richer A4 source ("fs-review", "lead-magnet", …) has no
+ * field of its own, so it is prefixed onto `message`, which is what staff
+ * actually read in the Leads list.
+ */
+async function pushToPartnerLeads(req: PortalRequest): Promise<void> {
+  const email = req.email?.trim();
+  if (!email) return; // nothing to file a lead against
+
+  // `name` is required (min 1). Never invent one: fall back to what they gave.
+  const name = (req.name?.trim() || req.company?.trim() || email.split("@")[0] || "Website enquiry").slice(0, 200);
+
+  const label = [req.service, req.source && `source: ${req.source}`, req.priority && `priority: ${req.priority}`]
+    .filter(Boolean)
+    .join(" · ");
+  const message = [label && `[A4 website — ${label}]`, req.message?.trim()]
+    .filter(Boolean)
+    .join("\n\n")
+    .slice(0, 4000);
+
+  try {
+    await fetch(`${QUOTE_API_BASE}/public/website-leads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        email,
+        ...(req.phone?.trim() ? { phone: req.phone.trim().slice(0, 50) } : {}),
+        ...(message ? { message } : {}),
+        source: "contact",
+      }),
+    });
+  } catch {
+    /* swallow — lead mirroring must never break the user-facing flow */
+  }
+}
+
+export async function pushToPortal(req: PortalRequest): Promise<void> {
+  // allSettled: one inbox being down must not cost us the other.
+  await Promise.allSettled([pushToOpsPortal(req), pushToPartnerLeads(req)]);
 }
