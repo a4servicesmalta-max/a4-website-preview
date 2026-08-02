@@ -268,7 +268,10 @@ const Footer = () => {
         </div>
 
         <div className="mt-12 pt-8 border-t border-gray-100 text-center md:text-left">
-          <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-4xl mx-auto md:mx-0">
+          {/* text-gray-400 on this white panel measured 2.6:1 — below the 4.5:1
+              WCAG AA floor for body text. --text-gray (#52525b) is the token
+              already used elsewhere in this footer and measures 7.7:1. */}
+          <p className="text-xs text-gray font-medium leading-relaxed max-w-4xl mx-auto md:mx-0">
             {t('footer.disclaimer')}
           </p>
         </div>
@@ -290,7 +293,9 @@ const Footer = () => {
                 {t('footer.cookies')}
               </LocalizedLink>
             </div>
-            <div className="text-light-gray">
+            {/* Was text-light-gray (#a1a1aa) = 2.56:1 on this white bar, an AA
+                fail. The parent already carries text-gray (7.7:1); inherit it. */}
+            <div>
               {t('footer.copyright')}
             </div>
           </div>

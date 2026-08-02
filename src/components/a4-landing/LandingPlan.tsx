@@ -2,14 +2,20 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { A4_LADDER, LADDER_BASE, LADDER_FIRST_HUMAN, LADDER_CAVEAT } from "@/data/a4Ladder";
 // Pick a bookkeeping tier + add-ons → live monthly price → two exits:
 // (1) Create account & request services, (2) Book a 15-min call.
 
 
-const LP_TIERS = [
-  { id: "starter", name: "Starter", price: 25, docs: "Up to 100 documents / month", blurb: "Perfect for lighter monthly volumes." },
-  { id: "unlimited", name: "Unlimited", price: 50, docs: "Unlimited documents", blurb: "Best value for active, growing books.", popular: true },
-] as const;
+// Mirrors the A4 Books landing page exactly — see src/data/a4Ladder.ts.
+// Level 1 is the software on its own; every level above includes accountants.
+const LP_TIERS = A4_LADDER.map((l) => ({
+  id: l.id,
+  name: l.name,
+  price: l.total,
+  docs: l.human ? `Includes ${l.name.toLowerCase()}` : "Software only — no accountant",
+  blurb: l.tagline,
+})) as { id: string; name: string; price: number; docs: string; blurb: string }[];
 
 // VAT returns — frequency drives the monthly-equivalent fee. Quarterly is the
 // Malta default; some businesses file monthly, some annually.
@@ -62,14 +68,15 @@ const lpEuro = (n: number) => "€" + n.toLocaleString();
 
 export function LandingPlan() {
   const [entity, setEntity] = useState<"company" | "personal">("company");
-  const [tier, setTier] = useState<"starter" | "unlimited">("unlimited");
+  // Defaults to the first level that includes an accountant — most visitors
+  // are buying the service, not the software on its own.
+  const [tier, setTier] = useState<string>(LADDER_FIRST_HUMAN.id);
   const [recon, setRecon] = useState(true);
   const [banks, setBanks] = useState(1);
   const [vat, setVat] = useState(true);
   const [vatFreq, setVatFreq] = useState<keyof typeof LP_VAT>("quarterly");
   const [payroll, setPayroll] = useState(false);
   const [emps, setEmps] = useState(2);
-  const [review, setReview] = useState(false);
   const [annualSel, setAnnualSel] = useState<Record<AnnualItemId, boolean>>({ accounts: true, tax: true, audit: false });
 
   const [modal, setModal] = useState(false);
@@ -87,8 +94,7 @@ export function LandingPlan() {
   const reconFee = recon ? banks * 15 : 0;
   const vatFee = vat ? LP_VAT[vatFreq].fee : 0;
   const payFee = isCompany && payroll ? 15 + emps * 5 : 0;
-  const reviewFee = review ? 40 : 0;
-  const monthly = base + reconFee + vatFee + payFee + reviewFee;       // recurring
+  const monthly = base + reconFee + vatFee + payFee;                   // recurring
   const annualItems = LP_ANNUAL_ITEMS[entity];
   const selectedAnnual = annualItems.filter((it) => annualSel[it.id]);
   const annualFee = selectedAnnual.reduce((s, it) => s + it.fee, 0); // once a year
@@ -98,7 +104,6 @@ export function LandingPlan() {
     recon && { k: `Bank reconciliation · ${banks} acct${banks > 1 ? "s" : ""}`, v: reconFee },
     vat && { k: `VAT returns · ${LP_VAT[vatFreq].label.toLowerCase()}`, v: vatFee },
     isCompany && payroll && { k: `Payroll · ${emps} employee${emps > 1 ? "s" : ""}`, v: payFee },
-    review && { k: "Accountant review", v: reviewFee },
   ] as ({ k: string; v: number } | false)[]).filter((l): l is { k: string; v: number } => Boolean(l));
 
   const submit = async () => {
@@ -131,7 +136,6 @@ export function LandingPlan() {
     { id: "recon", label: "Bank reconciliation", sub: "We match & reconcile every account", on: recon, set: setRecon, fee: "€15 / account", stepper: true },
     { id: "vat", label: "VAT returns", sub: "Filed with the CFR", on: vat, set: setVat, fee: `€${LP_VAT[vatFreq].fee} / mo`, freq: true },
     isCompany && { id: "pay", label: "Payroll", sub: "FS5 submissions & payslips", on: payroll, set: setPayroll, fee: "from €25 / mo", emps: true },
-    { id: "review", label: "Accountant review", sub: "A qualified accountant reviews your postings and passes the necessary journal entries", on: review, set: setReview, fee: "€40 / mo" },
   ] as (Addon | false)[]).filter((a): a is Addon => Boolean(a));
 
   const fieldLabel = { fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" };
@@ -143,8 +147,8 @@ export function LandingPlan() {
         <Reveal><SectionHead
           align="center"
           eyebrow="Build your price"
-          title="Bookkeeping from €25/month"
-          sub="Create your account and run your bookkeeping on the A4 platform — you upload, our automation does the rest. Add an accountant review whenever you want a qualified accountant to check the postings. Fixed monthly price, cancel anytime."
+          title="Build your plan"
+          sub={`Start with the A4 Books software on its own, then add a Senior accountant, a Manager, or the full CFO finance function — the same ladder as the A4 Books site. ${LADDER_CAVEAT} Fixed monthly price, cancel anytime.`}
           maxWidth={620}
         /></Reveal>
 
@@ -174,8 +178,8 @@ export function LandingPlan() {
 
               {/* tier */}
               <div>
-                <div style={fieldLabel}>1 · Choose your bookkeeping plan</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }} className="lp-tiers">
+                <div style={fieldLabel}>1 · Your bookkeeping plan</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginTop: 14 }} className="lp-tiers">
                   {LP_TIERS.map((t) => {
                     const on = tier === t.id;
                     return (
@@ -185,7 +189,6 @@ export function LandingPlan() {
                         border: "1.5px solid " + (on ? "var(--a4-primary)" : "var(--a4-hairline-light)"),
                         borderRadius: "var(--a4-r-md)", padding: "18px 18px 20px", transition: "border-color .15s, background .15s",
                       }}>
-                        {("popular" in t) && t.popular && <span style={{ position: "absolute", top: 14, right: 14, fontFamily: "var(--a4-font-body)", fontSize: 10, fontWeight: 700, letterSpacing: ".04em", color: "#fff", background: "var(--a4-primary)", borderRadius: "var(--a4-r-full)", padding: "3px 9px" }}>POPULAR</span>}
                         <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 19, color: "var(--a4-ink)" }}>{t.name}</div>
                         <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: 6 }}>
                           <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 30, color: "var(--a4-ink)", letterSpacing: "-1px" }}>{lpEuro(t.price)}</span>

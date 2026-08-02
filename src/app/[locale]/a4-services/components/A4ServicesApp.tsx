@@ -2,9 +2,11 @@
 "use client";
 
 import React from "react";
-import { LandingPlan } from "@/components/a4-landing/LandingPlan";
+import { LandingQuoteCalculator } from "@/components/a4-landing/LandingQuoteCalculator";
 import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
+import { A4BooksPromo } from "@/components/a4-landing/A4BooksPromo";
 import { Hero, Statement } from "./Sections1";
+import { ComplianceJourney } from "./ComplianceJourney";
 import { IntroVideo } from "./IntroVideo";
 import { LinkedInVideoFeed } from "./LinkedInVideoFeed";
 import { Insights } from "./Insights";
@@ -32,6 +34,7 @@ import { MotionBand } from "./MotionBand";
 export const HOMEPAGE_SECTIONS = [
   { id: "hero", label: "Hero", el: Hero },
   { id: "statement", label: "Statement", el: Statement },
+  { id: "journey", label: "Compliance Journey (scroll story)", el: ComplianceJourney },
   { id: "intro-video", label: "Intro Video", el: IntroVideo },
   { id: "case-studies", label: "Case Studies Teaser", el: CaseStudiesTeaser },
   { id: "linkedin-videos", label: "LinkedIn Video Feed", el: LinkedInVideoFeed },
@@ -39,7 +42,8 @@ export const HOMEPAGE_SECTIONS = [
   { id: "testimonials", label: "Testimonials", el: TestimonialsSection },
   { id: "insights", label: "Insights", el: Insights },
   { id: "health-check", label: "Health Check Promo", el: HealthCheckPromo },
-  { id: "landing-plan", label: "Landing Plan", el: LandingPlan },
+  { id: "landing-plan", label: "Pricing Calculator", el: LandingQuoteCalculator },
+  { id: "a4-books", label: "A4 Books Promo", el: A4BooksPromo },
   { id: "capabilities", label: "Capabilities", el: Capabilities },
   { id: "services", label: "Services", el: Services },
   { id: "feature-bento", label: "Feature Bento", el: FeatureBento },
@@ -71,7 +75,7 @@ export function A4ServicesApp({
 
   return (
     <div>
-      <main>
+      <main id="main-content" tabIndex={-1}>
         {ordered.map((s) => (
           <s.el key={s.id} />
         ))}

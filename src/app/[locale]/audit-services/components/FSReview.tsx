@@ -5,6 +5,8 @@ import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-la
 import { Field, primaryBtn, outlineBtn, type Contact } from "@/app/[locale]/accounting-health-check/components/Field";
 import { FindingsList } from "@/app/[locale]/accounting-health-check/components/FindingsList";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
+import { AEPills } from "./AuditEstimator";
+import { REVENUE_BANDS, buildQuote, euro } from "@/lib/quotation";
 
 function download(b64: string, filename: string, mime: string) {
   const bin = atob(b64);
@@ -38,6 +40,13 @@ export function FSReview() {
   const [vBusy, setVBusy] = useState(false);
   const [vErr, setVErr] = useState("");
 
+  // Indicative fee comes from the site's own quotation figures (src/lib/quotation.ts),
+  // the same model behind /quote — not the review engine's quote, which is derived
+  // from the client's previous auditor's fee and stays internal to staff.
+  const [bandIdx, setBandIdx] = useState(1);
+  const band = REVENUE_BANDS[bandIdx];
+  const quoteFee = buildQuote({ company: contact.company, industry: "", revenueBand: band.id, services: ["audit"] }).indicativeAnnualEur;
+
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim());
   const verified = !!verifiedToken && verifiedEmail.toLowerCase() === contact.email.trim().toLowerCase();
 
@@ -47,6 +56,8 @@ export function FSReview() {
       const r = await fetch("/api/verify/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: contact.email }) });
       const b = await r.json();
       if (!r.ok) { setVErr(b.error || "Could not send a code."); return; }
+      // Server tells us whether the email actually went out — never claim "sent" when it didn't.
+      if (!b.delivered && !b.devCode) { setVErr("We couldn't send the code email right now. Please try again in a few minutes, or email info@a4.com.mt."); return; }
       setChallengeToken(b.challengeToken); setCodeSent(true);
       if (b.devCode) setDevCode(b.devCode);
     } catch { setVErr("Could not send a code. Please try again."); }
@@ -79,6 +90,8 @@ export function FSReview() {
     fd.append("verifiedToken", verifiedToken);
     fd.append("file", file);
     fd.append("kind", "fs");
+    fd.append("revenueBand", band.label);
+    fd.append("quotedFee", String(quoteFee));
     try {
       const res = await fetch("/api/fs-gap-review", { method: "POST", body: fd });
       const body = await res.json();
@@ -119,6 +132,16 @@ export function FSReview() {
                 {data.stats.checks_run} checks · {data.stats.checks_passed} passed · {data.stats.checks_failed} flagged
               </div>
               <div style={{ padding: "0 24px 22px" }}>
+                <div style={{ background: "#000", borderRadius: "var(--a4-r-lg)", padding: "clamp(20px,3vw,28px)", color: "#fff", marginBottom: 18 }}>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--a4-on-dark-mute)" }}>Indicative A4 audit fee</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 10 }}>
+                    <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 40, letterSpacing: "-1.5px", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{euro(quoteFee)}</span>
+                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-on-dark-mute)" }}>/ year</span>
+                  </div>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)", marginTop: 10, lineHeight: 1.5 }}>
+                    Statutory audit for the {band.label} revenue band, from our published quotation figures — excludes VAT and is confirmed in writing after a short scoping call.
+                  </div>
+                </div>
                 <FindingsList findings={data.findings} />
               </div>
               <div style={{ padding: "16px 24px", background: "var(--a4-surface-soft)", display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -126,7 +149,7 @@ export function FSReview() {
                 {data.annotatedDocxBase64 && (
                   <button type="button" style={outlineBtn} onClick={() => download(data.annotatedDocxBase64!, data.annotatedName || "review.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}>⬇ Annotated Word</button>
                 )}
-                <Button variant="cobalt" size="md" href="#estimate">Get an audit quote <Icon name="arrow-right" size={16} color="#fff" /></Button>
+                <Button variant="cobalt" size="md" href="#estimate">Request this fixed fee <Icon name="arrow-right" size={16} color="#fff" /></Button>
               </div>
             </div>
           ) : (
@@ -165,6 +188,12 @@ export function FSReview() {
                   <Field required type="email" placeholder="Work email" autoComplete="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
                   <Field required placeholder="Your name" autoComplete="name" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
                   <Field placeholder="Company (optional)" autoComplete="organization" value={contact.company} onChange={(e) => setContact({ ...contact, company: e.target.value })} />
+
+                  <div>
+                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" }}>Annual revenue</div>
+                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-mute)", marginTop: 4 }}>Used for your indicative audit fee — the same quotation figures as our instant quote.</div>
+                    <AEPills items={REVENUE_BANDS} value={bandIdx} set={setBandIdx} />
+                  </div>
 
                   {!verified ? (
                     <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: 12, padding: 14, background: "var(--a4-surface-soft)", display: "grid", gap: 10 }}>

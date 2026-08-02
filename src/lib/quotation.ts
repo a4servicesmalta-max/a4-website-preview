@@ -35,8 +35,11 @@ const BASELINES: Record<
   QuoteServiceId,
   { name: string; hint: string; type: "monthly" | "annual" | "on-request"; base: number }
 > = {
-  accounts: { name: "Monthly bookkeeping", hint: "Categorisation, reconciliation & monthly reports", type: "monthly", base: 140 },
-  audit: { name: "Statutory audit", hint: "GAPSME/IFRS, signed by a licensed audit firm", type: "annual", base: 1200 },
+  accounts: { name: "Monthly bookkeeping", hint: "Categorisation, reconciliation & monthly reports", type: "monthly", base: 79 },
+  // 705 x the cheapest band (0.85), rounded to 5, lands on €600 — matching the
+  // "Statutory audit, from €600/year" headline on /audit-services and /pricing.
+  // At base 1200 the floor was €1,020, i.e. 70% above the advertised "from".
+  audit: { name: "Statutory audit", hint: "GAPSME/IFRS, signed by a licensed audit firm", type: "annual", base: 705 },
   vat: { name: "VAT returns", hint: "All quarterly returns filed with the CFR", type: "annual", base: 360 },
   mbr: { name: "MBR annual return", hint: "Filed within 42 days of the anniversary", type: "annual", base: 180 },
   payroll: { name: "Payroll processing", hint: "Depends on headcount — quoted on request", type: "on-request", base: 0 },
@@ -56,7 +59,7 @@ export type QuoteLine = {
   id: QuoteServiceId | "catchup";
   name: string;
   hint: string;
-  /** "€1,200 / year", "€140 / month", "On request" */
+  /** "€1,200 / year", "€79 / month", "On request" */
   display: string;
   annualEur: number | null;
 };
@@ -90,7 +93,10 @@ export function buildQuote(input: QuoteInput): QuoteResult {
       lines.push({ id, name: b.name, hint: b.hint, display: "On request", annualEur: null });
       continue;
     }
-    const fee = round5(b.base * band.mult);
+    // Monthly bookkeeping is a FLAT price everywhere else on the site
+    // ("€79/mo, no hourly surprises"), so it must not scale with revenue here
+    // or the quote contradicts the headline. Everything else scales by band.
+    const fee = id === "accounts" ? b.base : round5(b.base * band.mult);
     if (b.type === "monthly") {
       monthly += fee;
       lines.push({ id, name: b.name, hint: b.hint, display: `${euro(fee)} / month`, annualEur: fee * 12 });

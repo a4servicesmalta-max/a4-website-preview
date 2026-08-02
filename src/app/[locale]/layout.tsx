@@ -64,6 +64,12 @@ export default async function LocaleLayout({
             {/* <IntroAnimationGate /> */}
             {/* <MainGifLoaderGate> */}
               <SmoothScroll>
+                {/* Keyboard users had no way past the nav: every page began with
+                    the full Navbar, and this homepage runs 23 sections deep.
+                    Visible only on focus. */}
+                <a href="#main-content" className="a4-skip-link">
+                  Skip to main content
+                </a>
                 <Navbar />
                 <PageTransition>{children}</PageTransition>
                 <Footer />

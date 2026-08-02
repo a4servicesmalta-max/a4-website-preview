@@ -5,6 +5,7 @@ import LocalizedLink from "@/components/common/LocalizedLink";
 import { Button, Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import { useLocalizedHref } from "./useLocalizedHref";
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
+import { A4_LADDER, LADDER_FIRST_HUMAN, LADDER_BASE, LADDER_CAVEAT } from "@/data/a4Ladder";
 
 const prEuro = (n: number) => "€" + Math.round(n).toLocaleString();
 
@@ -137,27 +138,32 @@ function PricingHero() {
   );
 }
 
+// The ladder, straight from src/data/a4Ladder.ts so this page can never drift
+// from the A4 Books landing page. Level 1 is software only; every level above
+// it includes A4 accountants.
+const PR_LADDER_ICONS: Record<string, string> = {
+  books: "layers",
+  senior: "user-check",
+  manager: "users",
+  cfo: "briefcase",
+};
+
 const PR_STARTING_TIERS = [
-  {
-    id: "starter",
-    name: "Starter",
-    icon: "file-stack",
-    tag: "Bookkeeping",
-    price: 25,
+  ...A4_LADDER.map((l) => ({
+    id: l.id,
+    name: l.name,
+    icon: PR_LADDER_ICONS[l.id] ?? "layers",
+    tag: l.human ? "With accountants" : "Software only",
+    price: l.total,
     unit: "/ mo",
-    blurb: "Up to 100 documents per month — ideal for lighter volumes.",
-    popular: false,
-  },
-  {
-    id: "unlimited",
-    name: "Unlimited",
-    icon: "layers",
-    tag: "Bookkeeping",
-    price: 50,
-    unit: "/ mo",
-    blurb: "Unlimited documents — best value for active, growing books.",
-    popular: true,
-  },
+    blurb:
+      l.id === "books"
+        ? `${l.detail} Add accountants from €${LADDER_FIRST_HUMAN.total}/mo.`
+        : `${l.tagline} ${l.detail}`,
+    popular: l.id === LADDER_FIRST_HUMAN.id,
+    stack: l.id === "books" ? null : `+€${l.add}/mo on the level below`,
+    ladder: true,
+  })),
   {
     id: "vat",
     name: "VAT returns",
@@ -305,8 +311,8 @@ function PricingTierCard({ tier }: { tier: StartingTier }) {
 
 function PricingStartingTiers() {
   const href = useLocalizedHref();
-  const bookkeeping = PR_STARTING_TIERS.filter((t) => t.tag === "Bookkeeping");
-  const other = PR_STARTING_TIERS.filter((t) => t.tag !== "Bookkeeping");
+  const bookkeeping = PR_STARTING_TIERS.filter((t) => (t as { ladder?: boolean }).ladder);
+  const other = PR_STARTING_TIERS.filter((t) => !(t as { ladder?: boolean }).ladder);
 
   return (
     <section
@@ -328,13 +334,13 @@ function PricingStartingTiers() {
             className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4"
             style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}
           >
-            Fixed monthly bookkeeping and VAT plans — audit and complex tax work quoted after a quick review.
+            The same ladder as the A4 Books landing page: start with the software on its own, then add a Senior accountant, a Manager, or the full CFO finance function. VAT, audit and tax are priced separately below.
           </p>
         </Reveal>
 
         {/* Bookkeeping — featured row */}
         <Reveal delay={60}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-12 mx-auto max-w-[720px]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 mx-auto max-w-[1100px]">
             {bookkeeping.map((tier, i) => (
               <Reveal key={tier.id} delay={i * 70}>
                 <PricingTierCard tier={tier} />
@@ -406,9 +412,7 @@ function PricingInfoBanner() {
 
 function PricingCalc() {
   const [svc, setSvc] = useState<ServiceId>("accounting");
-  const [docs, setDocs] = useState(1);
   const [recon, setRecon] = useState(true);
-  const [review, setReview] = useState(false);
   const [vatFreq, setVatFreq] = useState(1);
   const [turn, setTurn] = useState(1);
 
@@ -421,14 +425,12 @@ function PricingCalc() {
   let lines: [string, number][] = [];
 
   if (svc === "accounting") {
-    const base = docs === 0 ? 25 : 50;
+    const base = LADDER_BASE.total;
     const r = recon ? 15 : 0;
-    const rv = review ? 40 : 0;
-    price = base + r + rv;
+    price = base + r;
     lines = [
-      ["Bookkeeping — " + (docs === 0 ? "Starter" : "Unlimited"), base],
+      [`${LADDER_BASE.name} — software only`, base],
       ...(recon ? ([["Bank reconciliation", r]] as [string, number][]) : []),
-      ...(review ? ([["Accountant review", rv]] as [string, number][]) : []),
     ];
   } else if (svc === "vat") {
     price = VAT_FEE[vatFreq];
@@ -482,14 +484,13 @@ function PricingCalc() {
           >
             {svc === "accounting" && (
               <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">Monthly document volume</div>
-                <PrChip items={["Up to 100 / mo", "Unlimited"]} value={docs} set={setDocs} />
+                <div className="a4-font-body text-[14px] font-semibold text-white">{LADDER_BASE.name} — {prEuro(LADDER_BASE.total)}/mo</div>
+                <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[6px]">
+                  {LADDER_CAVEAT}
+                </p>
                 <div className="mt-2">
                   <PrRow label="Bank reconciliation" sub="We match & reconcile every account">
                     <PrToggle on={recon} set={setRecon} />
-                  </PrRow>
-                  <PrRow label="Accountant review" sub="A qualified accountant reviews postings & passes journals">
-                    <PrToggle on={review} set={setReview} />
                   </PrRow>
                 </div>
               </div>

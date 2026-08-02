@@ -524,12 +524,12 @@ export default function BookkeepingContent({ relatedBlogs = [] }: { relatedBlogs
                       </tr>
                     ))}
                     <tr className="bg-primary-blue/5 border-b border-primary-blue/20">
-                      <td className="py-5 px-5 font-bold text-primary-blue">A4 Managed</td>
+                      <td className="py-5 px-5 font-bold text-primary-blue">A4 Accountant</td>
                       <td className="py-5 px-5 text-center"><Check className="mx-auto text-primary-blue" size={18} strokeWidth={3} /></td>
                       <td className="py-5 px-5 text-center"><Check className="mx-auto text-primary-blue" size={18} strokeWidth={3} /></td>
                       <td className="py-5 px-5 text-center"><Check className="mx-auto text-primary-blue" size={18} strokeWidth={3} /></td>
                       <td className="py-5 px-5 text-center font-bold text-primary-blue text-xs">Full Service</td>
-                      <td className="py-5 px-5 text-right font-bold text-primary-blue">€350/mo</td>
+                      <td className="py-5 px-5 text-right font-bold text-primary-blue">€79/mo</td>
                     </tr>
                   </tbody>
                 </table>
@@ -665,7 +665,7 @@ export default function BookkeepingContent({ relatedBlogs = [] }: { relatedBlogs
                   Copy Link
                 </button>
                 <a
-                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://a4.com.mt/en/insights/bookkeeping')}`}
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://a4.com.mt/insights/bookkeeping')}`}
                   target="_blank" rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-100 rounded-lg text-xs font-bold text-gray-600 hover:border-primary-blue hover:text-primary-blue transition-all"
                 >

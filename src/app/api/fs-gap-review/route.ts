@@ -28,6 +28,9 @@ export async function POST(req: NextRequest) {
     const company = String(form.get("company") || "");
     const consent = String(form.get("consent") || "");
     const verifiedToken = String(form.get("verifiedToken") || "");
+    // What the client actually saw on screen: our own quotation figures.
+    const revenueBand = String(form.get("revenueBand") || "");
+    const quotedFee = String(form.get("quotedFee") || "");
 
     if (!(file instanceof File)) return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
@@ -53,24 +56,48 @@ export async function POST(req: NextRequest) {
 
     const engine = await engineFetch(endpoint, out);
 
-    await emailLead(
+    // Only the engine's own /api/review returns a `quote`; read it here (once
+    // the engine result is available) so the staff notification can include
+    // the full basis/detail. The browser must NEVER see basis/detail — it can
+    // reveal the client's previous auditor's fee — so the response we send
+    // back to the client strips quote down to {fee, docKind} (or null).
+    let clientPayload: Record<string, unknown> | null = null;
+    let fullQuote: { fee: number; docKind: string; basis: string; detail?: unknown } | null = null;
+    let engineErrorDetail = "";
+
+    if (engine.ok) {
+      const data = await engine.json();
+      fullQuote = data && typeof data === "object" && data.quote ? data.quote : null;
+      if (data && typeof data === "object") delete data.quote; // strip defensively before spreading
+      clientPayload = { ...data, quote: fullQuote ? { fee: fullQuote.fee, docKind: fullQuote.docKind } : null };
+    } else {
+      const detail = await engine.json().catch(() => ({}));
+      engineErrorDetail = detail.detail || "";
+    }
+
+    const quoteText = fullQuote
+      ? `\n\nQuote (internal only — do not share fee basis with client): €${fullQuote.fee} (${fullQuote.docKind}, basis: ${fullQuote.basis})\nDetail: ${JSON.stringify(fullQuote.detail)}`
+      : "";
+
+    // Fire-and-forget — never delays the user response.
+    emailLead(
       `FS/TB review request — ${name || email} (${kind.toUpperCase()})`,
-      `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nKind: ${kind}\nFile: ${file.name}\nEngine status: ${engine.status}`,
+      `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nKind: ${kind}\nFile: ${file.name}\nEngine status: ${engine.status}` +
+        (revenueBand ? `\nShown to client: €${quotedFee}/yr (quotation figures, ${revenueBand} band)` : "") +
+        quoteText,
       email,
     ).catch(() => {});
 
-    await pushToPortal({ name, email, company, message: `Uploaded ${file.name} for ${kind === "tb" ? "trial balance" : "financial statements"} review`, service: `FS/TB review (${kind})`, source: "fs-review", priority: "High", meta: { kind, fileName: file.name } });
+    await pushToPortal({ name, email, company, message: `Uploaded ${file.name} for ${kind === "tb" ? "trial balance" : "financial statements"} review`, service: `FS/TB review (${kind})`, source: "fs-review", priority: "High", meta: { kind, fileName: file.name, ...(fullQuote ? { quote: fullQuote } : {}) } });
 
     if (!engine.ok) {
-      const detail = await engine.json().catch(() => ({}));
       const msg = engine.status === 422
         ? "We couldn't read that file. For statements, try a clearer PDF; for a trial balance, try CSV or Excel."
-        : (detail.detail || "The review service had a problem. We've logged your request and will follow up.");
+        : (engineErrorDetail || "The review service had a problem. We've logged your request and will follow up.");
       return NextResponse.json({ error: msg }, { status: engine.status === 422 ? 422 : 502 });
     }
 
-    const data = await engine.json();
-    return NextResponse.json(data);
+    return NextResponse.json(clientPayload);
   } catch (e) {
     console.error("fs-gap-review error:", e);
     return NextResponse.json({ error: "Review failed. Please try again or book a call." }, { status: 500 });

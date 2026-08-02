@@ -1471,6 +1471,9 @@ function AuditEstimator() {
     rTimers.current.forEach(clearTimeout);
     rTimers.current = [];
     const h = rHash(name || "accounts.pdf");
+    // `detected` is an internal sizing seed for A4's own indicative-fee model —
+    // never presented as a fee read from the uploaded statements, and `a4` is
+    // never rendered as a discount/comparison off it. Only `a4` renders.
     const detected = 600 + h % 30 * 50;
     const a4 = Math.round(detected * 0.75 / 50) * 50;
     setRFile(name);
@@ -1525,7 +1528,7 @@ function AuditEstimator() {
   }, /*#__PURE__*/React.createElement(Container, null, /*#__PURE__*/React.createElement(Reveal, null, /*#__PURE__*/React.createElement(SectionHead, {
     align: "center",
     eyebrow: "Audit fee estimator",
-    title: "Statutory audit, from \u20AC600/month",
+    title: "Statutory audit, from \u20AC600/year",
     sub: "Every Maltese company must file audited financial statements. Get a transparent estimate of your audit fee in seconds \u2014 the final fee is fixed after a short scoping call.",
     maxWidth: 640
   })), /*#__PURE__*/React.createElement(Reveal, {
@@ -1639,7 +1642,7 @@ function AuditEstimator() {
       marginLeft: "auto",
       marginRight: "auto"
     }
-  }, "We read the audit fee disclosed in your statements and quote it 25% less. PDF, Word or Excel \xB7 ", /*#__PURE__*/React.createElement("span", {
+  }, "We assess the size and complexity indicated by your statements and give you an indicative A4 fee. PDF, Word or Excel \xB7 ", /*#__PURE__*/React.createElement("span", {
     style: {
       color: "var(--primary)",
       fontWeight: 600
@@ -1695,7 +1698,7 @@ function AuditEstimator() {
       color: "var(--ink)",
       marginTop: 18
     }
-  }, "Reading the auditor's-remuneration note\u2026"), /*#__PURE__*/React.createElement("div", {
+  }, "Assessing size & complexity\u2026"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "var(--font-body)",
       fontSize: 13.5,
@@ -1744,40 +1747,12 @@ function AuditEstimator() {
   }, "New")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: "1fr",
       gap: 14,
       marginTop: 18
     },
     className: "ae-grid"
   }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "var(--surface-soft)",
-      borderRadius: "var(--r-md)",
-      padding: "18px 20px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "var(--font-body)",
-      fontSize: 10.5,
-      textTransform: "uppercase",
-      letterSpacing: ".1em",
-      color: "var(--mute)"
-    }
-  }, "Fee disclosed"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "var(--font-display)",
-      fontWeight: 500,
-      fontSize: 28,
-      color: "var(--charcoal)",
-      textDecoration: "line-through",
-      textDecorationColor: "var(--faint)",
-      marginTop: 6
-    }
-  }, aeEuro(rData.detected), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 13
-    }
-  }, " /yr"))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: "#000",
       borderRadius: "var(--r-md)",
@@ -1791,7 +1766,7 @@ function AuditEstimator() {
       letterSpacing: ".1em",
       color: "var(--primary-bright)"
     }
-  }, "A4 fee \xB7 25% less"), /*#__PURE__*/React.createElement("div", {
+  }, "Estimated A4 audit fee"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "var(--font-display)",
       fontWeight: 500,
@@ -1805,27 +1780,6 @@ function AuditEstimator() {
       color: "var(--on-dark-mute)"
     }
   }, " /yr")))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 8,
-      marginTop: 14,
-      background: "rgba(0,168,126,.1)",
-      borderRadius: "var(--r-full)",
-      padding: "7px 14px"
-    }
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: "trending-down",
-    size: 15,
-    color: "var(--accent-teal)"
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-body)",
-      fontSize: 13.5,
-      fontWeight: 600,
-      color: "var(--accent-green-text)"
-    }
-  }, "Save ", aeEuro(rData.save), "/yr")), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 16
     }
@@ -2293,15 +2247,16 @@ Object.assign(window, {
   AuditEstimator
 });</script>
 <script>// FSReview.jsx — "Free financial-statements review" lead magnet for the audit
-// page. Upload (or sample) → animated AI analysis → severity-tagged findings +
-// the audit fee detected from the auditor's-remuneration note → A4's fixed fee
-// at 25% less → capture/CTA.
-// NOTE: indicative demo. Findings + detected fee are generated client-side from
-// the file name (deterministic) — wire to the real internal FS-review engine in
-// production, with explicit consent + no-retention handling.
+// page. Upload (or sample) → animated AI analysis → severity-tagged findings →
+// capture/CTA. Any indicative A4 fee shown elsewhere on the page is generated
+// by A4's own scoping model — never a comparison to, or reproduction of, a
+// fee disclosed in the uploaded statements.
+// NOTE: indicative demo. Findings are generated client-side from the file name
+// (deterministic) — wire to the real internal FS-review engine in production,
+// with explicit consent + no-retention handling.
 
 const FS_PORTAL = "https://client.a4.com.mt";
-const FS_STEPS = ["Reading the document…", "Checking disclosures & accounting policies…", "Casting & cross-referencing the notes…", "Detecting the auditor's remuneration…", "Comparing against A4 fixed pricing…"];
+const FS_STEPS = ["Reading the document…", "Checking disclosures & accounting policies…", "Casting & cross-referencing the notes…", "Assessing scope, size & complexity…", "Comparing against A4 fixed pricing…"];
 const FS_FINDINGS = [{
   sev: "high",
   cat: "Disclosure",
@@ -2379,8 +2334,8 @@ function FSReview() {
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const analyse = name => {
     const h = fsHash(name || "sample-financial-statements.pdf");
-    const detected = 1800 + h % 25 * 100; // €1,800–€4,200
-    const a4 = Math.round(detected * 0.75 / 50) * 50; // 25% less, rounded
+    const detected = 1800 + h % 25 * 100; // internal sizing seed only — never shown as a "disclosed" fee
+    const a4 = Math.round(detected * 0.75 / 50) * 50; // A4's own indicative fee, rounded — not rendered as a discount off `detected`
     const high = 1 + h % 2; // 1–2
     const med = 1 + (h >> 2) % 3; // 1–3
     const low = 1 + (h >> 4) % 3; // 1–3
@@ -4318,7 +4273,7 @@ function AuditHero({
       color: "#fff",
       fontWeight: 600
     }
-  }, "from \u20AC600/month"), "."), /*#__PURE__*/React.createElement("div", {
+  }, "from \u20AC600/year"), "."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 12,

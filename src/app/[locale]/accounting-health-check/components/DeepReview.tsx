@@ -67,6 +67,8 @@ export function DeepReview({
       const r = await fetch("/api/verify/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: contact.email }) });
       const b = await r.json();
       if (!r.ok) { setVErr(b.error || "Could not send a code."); return; }
+      // Server tells us whether the email actually went out — never claim "sent" when it didn't.
+      if (!b.delivered && !b.devCode) { setVErr("We couldn't send the code email right now. Please try again in a few minutes, or email info@a4.com.mt."); return; }
       setChallengeToken(b.challengeToken); setCodeSent(true);
       if (b.devCode) setDevCode(b.devCode);
     } catch { setVErr("Could not send a code. Please try again."); }

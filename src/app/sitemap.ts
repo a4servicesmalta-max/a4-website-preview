@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { locales } from "@/lib/i18n-config";
+import { defaultLocale, locales } from "@/lib/i18n-config";
 import { getSiteUrl } from "@/lib/site-url";
 import { getBlogSlugs, getAllBlogsMerged } from "@/utils/blog";
 
@@ -48,8 +48,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [];
 
   for (const locale of locales) {
+    // The default locale is never shown in the URL.
+    const prefix = locale === defaultLocale ? "" : `/${locale}`;
     for (const p of STATIC_PATHS) {
-      const path = p === "" ? `/${locale}` : `/${locale}${p}`;
+      const path = p === "" ? prefix || "/" : `${prefix}${p}`;
       entries.push({
         url: `${base}${path}`,
         lastModified: new Date(),
@@ -59,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
     for (const slug of slugs) {
       entries.push({
-        url: `${base}/${locale}/insights/${slug}`,
+        url: `${base}${prefix}/insights/${slug}`,
         lastModified: new Date(),
         changeFrequency: "monthly",
         priority: 0.7,

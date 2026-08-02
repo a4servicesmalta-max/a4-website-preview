@@ -100,6 +100,8 @@ export function AuditEstimator() {
       const r = await fetch("/api/verify/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: form.email }) });
       const b = await r.json();
       if (!r.ok) { setRVErr(b.error || "Could not send a code."); return; }
+      // Server tells us whether the email actually went out — never claim "sent" when it didn't.
+      if (!b.delivered && !b.devCode) { setRVErr("We couldn't send the code email right now. Please try again in a few minutes, or email info@a4.com.mt."); return; }
       setRChallengeToken(b.challengeToken); setRCodeSent(true);
       if (b.devCode) setRDevCode(b.devCode);
     } catch { setRVErr("Could not send a code. Please try again."); }
@@ -139,6 +141,9 @@ export function AuditEstimator() {
   };
 
   const fee = Math.round((600 * AE_TURNOVER[turn].mult + AE_BS[bs].add + AE_TX[tx].add + (group ? 600 : 0) + (regulated ? 450 : 0)) / 50) * 50;
+  // When a real engine quote exists (returning-client review), use it in the
+  // proposal/consultation request instead of the size-model estimator fee.
+  const modalFee = rData?.quote?.fee ?? fee;
 
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [modalError, setModalError] = useState("");
@@ -155,7 +160,7 @@ export function AuditEstimator() {
           name: form.name,
           email: form.email,
           subject: `Audit ${intent === "proposal" ? "proposal request" : "consultation booking"} — ${form.company || form.name}`,
-          message: `Company: ${form.company}\nPhone: ${form.phone}\nEstimated audit fee: ${aeEuro(fee)}/yr\nReference: ${ref}`,
+          message: `Company: ${form.company}\nPhone: ${form.phone}\nEstimated audit fee: ${aeEuro(modalFee)}/yr\nReference: ${ref}`,
           context: `audit-estimator-${intent}`,
         }),
       });
@@ -201,6 +206,20 @@ export function AuditEstimator() {
                       <button onClick={rReset} style={{ background: "none", border: 0, cursor: "pointer", color: "var(--a4-mute)", fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>New</button>
                     </div>
                     <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)", marginTop: 10 }}>{rData.stats.checks_run} checks · {rData.stats.checks_passed} passed · {rData.stats.checks_failed} flagged</div>
+                    {rData.quote && (
+                      <div style={{ background: "#000", borderRadius: "var(--a4-r-lg)", padding: "clamp(20px,3vw,28px)", color: "#fff", marginTop: 16 }}>
+                        <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--a4-on-dark-mute)" }}>Estimated A4 audit fee</div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 10 }}>
+                          <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 40, letterSpacing: "-1.5px", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{aeEuro(rData.quote.fee)}</span>
+                          <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-on-dark-mute)" }}>/ year</span>
+                        </div>
+                        <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)", marginTop: 10, lineHeight: 1.5 }}>
+                          {rData.quote.docKind === "management_accounts"
+                            ? "Based on the size and complexity of your management accounts — fixed after a short scoping call."
+                            : "From our own scoping model — fixed after a short scoping call."}
+                        </div>
+                      </div>
+                    )}
                     <div style={{ marginTop: 14 }}><FindingsList findings={rData.findings} /></div>
                     <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid var(--a4-hairline-light)" }}>
                       <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)", marginBottom: 10 }}>Want a fixed fee for your next audit?</div>
@@ -350,13 +369,13 @@ export function AuditEstimator() {
                 <div style={{ width: 54, height: 54, borderRadius: 999, background: "rgba(0,168,126,.12)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}><Icon name="check" size={26} color="var(--a4-accent-teal)" stroke={2.5} /></div>
                 <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>{intent === "proposal" ? "Proposal request received" : "Consultation requested"}</div>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, lineHeight: 1.6, color: "var(--a4-mute)", margin: "10px 0 0" }}>Thanks, {form.name.split(" ")[0]}. Our licensed audit firm will contact you within 1 business day at <strong style={{ color: "var(--a4-ink)" }}>{form.email}</strong>.</div>
-                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 14 }}>Reference: {done} · estimate from {aeEuro(fee)}/yr</div>
+                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 14 }}>Reference: {done} · estimate from {aeEuro(modalFee)}/yr</div>
                 <Button variant="outline-light" size="md" onClick={() => setModal(false)} style={{ width: "100%", marginTop: 22 }}>Close</Button>
               </div>
             ) : (
               <div>
                 <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>{intent === "proposal" ? "Request your audit proposal" : "Book your audit consultation"}</div>
-                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-mute)", margin: "6px 0 22px" }}>We&apos;ll confirm scope and a fixed fee (estimate from {aeEuro(fee)}/yr). No obligation.</div>
+                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-mute)", margin: "6px 0 22px" }}>We&apos;ll confirm scope and a fixed fee (estimate from {aeEuro(modalFee)}/yr). No obligation.</div>
                 {([["name", "Your name", "text"], ["company", "Company name", "text"], ["email", "Email address", "email"], ["phone", "Phone (optional)", "tel"]] as const).map(([k, label, type]) => (
                   <div key={k} style={{ marginBottom: 14 }}>
                     <label style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--a4-mute)", marginBottom: 6 }}>{label}</label>

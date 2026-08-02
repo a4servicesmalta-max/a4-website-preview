@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-// Bookkeeping from €50/mo (Unlimited €75), + bank reconciliations, accounting,
+// Bookkeeping €39/mo flat (unlimited documents), + bank reconciliations, accounting,
 // and optional VAT / payroll / annual accounts. Drives toward "create account".
 
 const PR_BANDS = [
@@ -15,11 +15,6 @@ const PR_BANDS = [
   { label: "€2.5M+", acct: 240 },
 ];
 
-function prBookkeeping(t) {
-  if (t <= 50) return 50;
-  if (t >= 200) return 75;
-  return Math.round((50 + ((t - 50) / 150) * 25) / 5) * 5;
-}
 const prEuro = (n) => "€" + n.toLocaleString();
 
 export function Stepper({ value, set, min = 1, max = 12 }) {
@@ -46,15 +41,13 @@ export function Toggle({ on, set }) {
 
 export function Pricing() {
   const [rev, setRev] = useState(1);
-  const [txns, setTxns] = useState(80);
   const [banks, setBanks] = useState(1);
   const [vat, setVat] = useState(true);
   const [payroll, setPayroll] = useState(false);
   const [emps, setEmps] = useState(2);
   const [annual, setAnnual] = useState(false);
 
-  const book = prBookkeeping(txns);
-  const unlimited = txns >= 200;
+  const book = 39;
   const recon = banks * 15;
   const acct = PR_BANDS[rev].acct;
   const vatFee = vat ? 35 : 0;
@@ -63,7 +56,7 @@ export function Pricing() {
   const total = book + recon + acct + vatFee + payFee + annualFee;
 
   const lines = [
-    { k: unlimited ? "Bookkeeping — Unlimited" : "Monthly bookkeeping", v: book },
+    { k: "Bookkeeping — unlimited documents", v: book },
     { k: `Bank reconciliations · ${banks} account${banks > 1 ? "s" : ""}`, v: recon },
     { k: "Accounting & management reports", v: acct, included: acct === 0 },
     vat && { k: "VAT returns", v: vatFee },
@@ -80,7 +73,7 @@ export function Pricing() {
         <Reveal><SectionHead
           dark align="center"
           eyebrow="Pricing calculator"
-          title={<>Build your plan — from €50/month</>}
+          title={<>Build your plan — from €39/month</>}
           sub="Transparent, fixed monthly pricing that scales with your business. Adjust the inputs to see your estimate, then create your account to confirm."
           maxWidth={640}
         /></Reveal>
@@ -104,17 +97,10 @@ export function Pricing() {
                 </div>
               </div>
 
-              {/* transactions */}
+              {/* bookkeeping — flat */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <div style={fieldLabel}>Average monthly transactions</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 17, color: "#fff", fontVariantNumeric: "tabular-nums" }}>{txns >= 400 ? "400+" : txns}</span>
-                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", padding: "3px 9px", borderRadius: "var(--a4-r-full)", background: unlimited ? "var(--a4-primary)" : "var(--a4-surface-deep)", color: unlimited ? "#fff" : "var(--a4-on-dark-mute)", border: unlimited ? "none" : "1px solid var(--a4-hairline-dark)" }}>{unlimited ? "UNLIMITED" : "STANDARD"}</span>
-                  </div>
-                </div>
-                <input className="a4-range" type="range" min="0" max="400" step="10" value={txns} onChange={(e) => setTxns(+e.target.value)} style={{ marginTop: 16 }} />
-                <div style={fieldSub}>Invoices, expenses and bank lines we process each month.</div>
+                <div style={fieldLabel}>Bookkeeping — €39/mo flat</div>
+                <div style={fieldSub}>Unlimited documents, no per-document fees — invoices, expenses and bank lines included.</div>
               </div>
 
               {/* bank accounts */}

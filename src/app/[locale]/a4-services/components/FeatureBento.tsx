@@ -42,8 +42,8 @@ export function FeatureBento() {
               <h3 style={{ ...h3, marginTop: 22 }}>Fixed monthly pricing</h3>
               <p style={p}>Know exactly what you'll pay. No hourly surprises, no hidden fees — just a clear fixed fee.</p>
               <div style={{ marginTop: "auto", paddingTop: 22, display: "flex", alignItems: "baseline", gap: 6 }}>
-                <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 40, color: "var(--a4-ink)", letterSpacing: "-1.5px" }}>€25</span>
-                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-mute)" }}>/ mo to start</span>
+                <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 40, color: "var(--a4-ink)", letterSpacing: "-1.5px" }}>€35</span>
+                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-mute)" }}>/ mo software</span>
               </div>
             </Reveal>
 
