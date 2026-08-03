@@ -128,7 +128,15 @@
     "botErrorSend": "We couldn't send your request. Please try again or email us at info@a4.com.mt.",
     "submitErrorFailed": "Failed to submit.",
     "startNewChat": "Start new chat",
-    "inputPlaceholder": "Type a message..."
+    "inputPlaceholder": "Type a message...",
+    "botSessionLive": "You're connected. If someone from our team is available they'll reply right here — otherwise we'll answer by email.",
+    "botResumed": "Welcome back — here's your conversation so far.",
+    "botSessionEnded": "This conversation has closed. Start a new chat and we'll pick things up from there.",
+    "botMessageFailed": "That message didn't go through. Please try sending it again.",
+    "statusLive": "Someone is with you",
+    "statusOffline": "We'll reply by email",
+    "staffFallbackName": "Support team",
+    "sendAria": "Send message"
   },
   "cookieConsent": {
     "title": "We use cookies",

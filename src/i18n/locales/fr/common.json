@@ -124,7 +124,15 @@
     "botErrorSend": "Envoi impossible. Réessayez ou écrivez-nous à info@a4.com.mt.",
     "submitErrorFailed": "Échec de l'envoi.",
     "startNewChat": "Nouvelle conversation",
-    "inputPlaceholder": "Écrivez un message…"
+    "inputPlaceholder": "Écrivez un message…",
+    "botSessionLive": "Vous êtes connecté. Si un membre de notre équipe est disponible, il vous répondra ici même ; sinon, nous vous répondrons par e-mail.",
+    "botResumed": "Bon retour – voici votre conversation jusqu'ici.",
+    "botSessionEnded": "Cette conversation est terminée. Démarrez une nouvelle discussion et nous reprendrons à partir de là.",
+    "botMessageFailed": "Ce message n'a pas été envoyé. Merci de réessayer.",
+    "statusLive": "Quelqu'un est avec vous",
+    "statusOffline": "Nous répondrons par e-mail",
+    "staffFallbackName": "Équipe support",
+    "sendAria": "Envoyer le message"
   },
   "cookieConsent": {
     "title": "Nous utilisons des cookies",

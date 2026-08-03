@@ -124,7 +124,15 @@
     "botErrorSend": "Verzenden mislukt. Probeer opnieuw of mail info@a4.com.mt.",
     "submitErrorFailed": "Verzenden mislukt.",
     "startNewChat": "Nieuwe chat",
-    "inputPlaceholder": "Typ een bericht…"
+    "inputPlaceholder": "Typ een bericht…",
+    "botSessionLive": "U bent verbonden. Is er iemand van ons team beschikbaar, dan antwoordt die hier – anders reageren we per e-mail.",
+    "botResumed": "Welkom terug – dit is uw gesprek tot nu toe.",
+    "botSessionEnded": "Dit gesprek is afgesloten. Start een nieuwe chat, dan pakken we het daar weer op.",
+    "botMessageFailed": "Dit bericht is niet verzonden. Probeer het opnieuw.",
+    "statusLive": "Iemand helpt u nu",
+    "statusOffline": "We antwoorden per e-mail",
+    "staffFallbackName": "Supportteam",
+    "sendAria": "Bericht versturen"
   },
   "cookieConsent": {
     "title": "Wij gebruiken cookies",
