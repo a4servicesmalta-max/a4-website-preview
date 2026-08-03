@@ -39,8 +39,12 @@ describe("per-item pricing", () => {
     expect(gross([{ service: "software", tier: "senior" }]).monthly).toBe(99);
     expect(gross([{ service: "software", tier: "manager" }]).monthly).toBe(198);
     expect(gross([{ service: "software", tier: "cfo" }]).monthly).toBe(357);
-    // Software is risk-independent: high risk must not move it.
+    // Software is a fixed product price, NOT labour: no risk uplift at any
+    // tier. Applying one here would put every elevated/high-risk software
+    // quote outside the server's tolerance and silently drop it to 202.
+    expect(gross([{ service: "software", tier: "book" }], "elevated").monthly).toBe(39);
     expect(gross([{ service: "software", tier: "book" }], "high").monthly).toBe(39);
+    expect(gross([{ service: "software", tier: "cfo" }], "high").monthly).toBe(357);
   });
 
   it("prices full bookkeeping off the band table, with risk uplift", () => {
@@ -225,6 +229,43 @@ describe("mixed basket, hand-computed", () => {
     expect(record.oneOff).toBe(displayed.oneOff);
     expect(record.catchup).toBe(displayed.catchup);
     expect(record.lines).toEqual(displayed.lines);
+  });
+});
+
+describe("server input bounds", () => {
+  it("rejects a headcount outside 1..500, and fractional people", () => {
+    const heads = (n: number) => evaluateA4Items([{ service: "payroll", heads: n }], "standard", AFTER).lines;
+    expect(heads(1)).toHaveLength(1);
+    expect(heads(500)).toHaveLength(1);
+    expect(heads(0)).toEqual([]);
+    expect(heads(501)).toEqual([]);
+    expect(heads(-3)).toEqual([]);
+    expect(heads(2.5)).toEqual([]);
+    expect(heads(Number.NaN)).toEqual([]);
+  });
+
+  it("rejects catch-up months outside 1..240", () => {
+    const m = (n: number) =>
+      evaluateA4Items([{ service: "catchup", months: n, mode: "full" }], "standard", AFTER).lines;
+    expect(m(1)).toHaveLength(1);
+    expect(m(240)).toHaveLength(1);
+    expect(m(0)).toEqual([]);
+    expect(m(241)).toEqual([]);
+    expect(m(6.5)).toEqual([]);
+  });
+
+  it("prices the top of each range at the pack rate", () => {
+    // 500 heads is comfortably past the >10 tier, so €25/head throughout.
+    expect(gross([{ service: "payroll", heads: 500 }]).monthly).toBe(12_500);
+    // 240 months = 20 years, capped at 20 × €240.
+    expect(gross([{ service: "catchup", months: 240, mode: "full" }]).oneOff).toBe(4_800);
+  });
+
+  it("rounds every line to whole euros, like the server", () => {
+    // 45 × 0.6 (art. 12) × 1.45 (high) = 39.15 → €39, not 39.15
+    const t = evaluateA4Items([{ service: "vat", txn: "21-60", vatreg: "art12" }], "high", AFTER);
+    expect(t.lines[0].amount).toBe(39);
+    expect(Number.isInteger(t.lines[0].amount)).toBe(true);
   });
 });
 
