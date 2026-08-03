@@ -2,11 +2,40 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY } from "@/data/a4QuotePack";
+import {
+  ACCOUNTING_REVIEW,
+  AUDIT_YEARLY,
+  BOOKKEEPING_MONTHLY,
+  CATCH_UP,
+  LAUNCH_PROMO,
+  MBR_ANNUAL_RETURN,
+  PAYROLL_PER_HEAD,
+  REGISTERED_OFFICE_YEARLY,
+  REVIEW_ENGAGEMENT_FACTOR,
+  RISK_TIERS,
+  SOFTWARE_TIERS,
+  TAX_RETURN_YEARLY,
+  VAT_MONTHLY,
+  VAT_RULES,
+  isPromoActive,
+} from "@/data/a4QuotePack";
+import {
+  submitWebsiteQuotation,
+  type QuoteCadence,
+  type QuoteLineItem,
+  type WebsiteQuoteResult,
+} from "@/lib/websiteQuotation";
 
-// Homepage pricing calculator — ported from the Vacei site's cost calculator.
-// The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
-// change it there first and mirror it here.
+// Homepage pricing calculator — the same wizard as the Vacei site's cost
+// calculator, and the same quote pipeline behind it.
+//
+// EVERY figure comes from `@/data/a4QuotePack`, which transcribes the portal
+// backend's `malta-pack` byte-for-byte. That is not tidiness: the backend
+// re-prices `selections` from its own pack and refuses to auto-issue a quote
+// whose totals disagree with ours by more than €1 / 1%. A local rate table
+// (this component carried one for `book`, plus its own review/MBR figures)
+// meant the visitor saw one price, the server computed another, and the
+// submission silently degraded to "a human will follow up".
 
 const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["shop", "Shop, trade or services", "standard"],
@@ -18,11 +47,12 @@ const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["regulated", "Gaming, crypto or financial services", "high"],
   ["other", "Something else", "refer"],
 ];
+// Multiplier and onboarding fee come from the pack; only the copy is local.
 const QTIERS = {
-  standard: { l: "Standard", mult: 1, onb: 95, refer: false, note: null as [string, string] | null },
-  elevated: { l: "Elevated", mult: 1.2, onb: 250, refer: false, note: ["info", "Sectors like this need a few extra checks when we take you on. It is built into the price rather than added later."] as [string, string] },
-  high: { l: "High", mult: 1.45, onb: 550, refer: false, note: ["warn", "Licensed and regulated sectors need full source-of-funds checks and closer monitoring. A director signs off before we take the work on."] as [string, string] },
-  refer: { l: "Referral", mult: 1, onb: 0, refer: true, note: ["warn", "We price most companies on the spot, but yours needs a short call with a director before we put a number on it. Usually the same day."] as [string, string] },
+  standard: { l: RISK_TIERS.standard.label, mult: RISK_TIERS.standard.multiplier ?? 1, onb: RISK_TIERS.standard.onboarding ?? 0, refer: false, note: null as [string, string] | null },
+  elevated: { l: RISK_TIERS.elevated.label, mult: RISK_TIERS.elevated.multiplier ?? 1, onb: RISK_TIERS.elevated.onboarding ?? 0, refer: false, note: ["info", "Sectors like this need a few extra checks when we take you on. It is built into the price rather than added later."] as [string, string] },
+  high: { l: RISK_TIERS.high.label, mult: RISK_TIERS.high.multiplier ?? 1, onb: RISK_TIERS.high.onboarding ?? 0, refer: false, note: ["warn", "Licensed and regulated sectors need full source-of-funds checks and closer monitoring. A director signs off before we take the work on."] as [string, string] },
+  refer: { l: RISK_TIERS.refer.label, mult: 1, onb: 0, refer: true, note: ["warn", "We price most companies on the spot, but yours needs a short call with a director before we put a number on it. Usually the same day."] as [string, string] },
 };
 const QTXN: [string, string, string][] = [
   ["0", "None yet", "not trading"],
@@ -52,27 +82,32 @@ const QSIZE: [string, string, string][] = [
   ["big", "Bigger", "above that"],
   ["unsure", "Not sure", "we'll check"],
 ];
+// Every table reads the pack, so a fee change lands here automatically and the
+// figures can never drift from what the server will price.
 const QT: Record<string, Record<string, number>> = {
-  // ⚠ `book` is the one table still local to this component and it does NOT
-  // match BOOKKEEPING_MONTHLY in the pack (69/119/199/329/549/899 here vs
-  // 59/99/169/279/469/769 there), so this calculator quotes bookkeeping higher
-  // than /accounting-services does. Left as-is because reconciling it is a
-  // pricing decision, not a refactor — flagged to the owner 2026-08-02.
-  book: { "0": 0, "1-20": 69, "21-60": 119, "61-150": 199, "151-400": 329, "401-1000": 549, "1000+": 899 },
-  // The rest read the pack directly, so a fee change lands here automatically.
+  book: BOOKKEEPING_MONTHLY,
   vat: VAT_MONTHLY,
   taxret: TAX_RETURN_YEARLY,
   assure: AUDIT_YEARLY,
 };
-const QPAY = [
-  { upTo: 5, rate: 32 },
-  { upTo: 10, rate: 29 },
-  { upTo: 1e9, rate: 25 },
-];
+const QPAY = PAYROLL_PER_HEAD.map((t) => ({ upTo: t.upTo ?? Number.MAX_SAFE_INTEGER, rate: t.rate }));
 const QSTEPS = ["What you do", "Volume", "Payroll", "Up to date?", "VAT", "Company size", "Your services", "Your quote"];
-const QTIERP: Record<string, [number, string]> = { book: [39, "Bookkeeper"], senior: [99, "Senior"], manager: [198, "Manager"], cfo: [357, "CFO"] };
+const QTIERP: Record<string, [number, string]> = {
+  book: [SOFTWARE_TIERS.book, "Bookkeeper"],
+  senior: [SOFTWARE_TIERS.senior, "Senior"],
+  manager: [SOFTWARE_TIERS.manager, "Manager"],
+  cfo: [SOFTWARE_TIERS.cfo, "CFO"],
+};
 
-type QState = {
+/**
+ * Share capital drives the MBR registry fee, and this wizard never asks for it
+ * — so it quotes the commonest band and says so. Same default the backend
+ * applies when `cap` is absent, which keeps the two in agreement.
+ */
+const ASSUMED_CAPITAL_BAND = "1500" as const;
+const MBR_REGISTRY_FEE = MBR_ANNUAL_RETURN.registryFeeByCapital[ASSUMED_CAPITAL_BAND];
+
+export type QState = {
   step: number;
   sector: string;
   txn: string;
@@ -90,7 +125,7 @@ type QState = {
   regoff: string;
 };
 
-const Q_INIT: QState = {
+export const Q_INIT: QState = {
   step: 0, sector: "shop", txn: "21-60", head: 2, behind: "0", vatreg: "art10", size: "small",
   book: "none", tier: "book", review: "none", pay: "none", vat: "none", taxret: "none", assure: "none", regoff: "none",
 };
@@ -98,18 +133,18 @@ const Q_INIT: QState = {
 type Line = { n: string; e: string; v: number };
 type Note = [string, string];
 
-function qCalc(q: QState) {
+export function qCalc(q: QState, now: Date = new Date()) {
   const tier = QTIERS[(QSECT.find((s) => s[0] === q.sector) || QSECT[0])[2]];
   const notes: Note[] = [];
   if (tier.note) notes.push(tier.note);
-  if (tier.refer) return { refer: true as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0 };
+  if (tier.refer) return { refer: true as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, catchup: 0, promoApplied: false };
   const rm = tier.mult;
   const mo: Line[] = [], yr: Line[] = [], one: Line[] = [];
   if (q.book === "self") { const t = QTIERP[q.tier || "book"]; mo.push({ n: "Bookkeeping", e: t[1] + " plan — automation only, run by you", v: t[0] }); }
   if (q.book === "full") mo.push({ n: "Bookkeeping", e: "you upload, we do it", v: QT.book[q.txn] * rm });
   const revBase = QT.book[q.txn];
-  if (q.book === "self" && q.review === "quarter" && revBase > 0) mo.push({ n: "Accounting review", e: "before each VAT return — you do the bulk of the work, so it costs a fraction", v: Math.max(15, revBase * 0.15) * rm });
-  if (q.book === "self" && q.review === "month" && revBase > 0) mo.push({ n: "Accounting review", e: "every month — you do the bulk of the work, so it costs a fraction", v: Math.max(20, revBase * 0.3) * rm });
+  if (q.book === "self" && q.review === "quarter" && revBase > 0) mo.push({ n: "Accounting review", e: "before each VAT return — you do the bulk of the work, so it costs a fraction", v: Math.max(ACCOUNTING_REVIEW.quarter.minEur, revBase * ACCOUNTING_REVIEW.quarter.shareOfBook) * rm });
+  if (q.book === "self" && q.review === "month" && revBase > 0) mo.push({ n: "Accounting review", e: "every month — you do the bulk of the work, so it costs a fraction", v: Math.max(ACCOUNTING_REVIEW.month.minEur, revBase * ACCOUNTING_REVIEW.month.shareOfBook) * rm });
   if (q.pay === "we" && q.head > 0) {
     const t = QPAY.find((t) => q.head <= t.upTo)!;
     mo.push({ n: "Payroll", e: q.head + " × €" + t.rate + " per person", v: q.head * t.rate * rm });
@@ -119,9 +154,9 @@ function qCalc(q: QState) {
     if (selfFile) {
       notes.push(["warn", 'You would be filing your own VAT returns. We only put our name to a return when we have worked the ledger or reviewed it — choose "You upload, we do it" or add an accounting review and we take the returns over.']);
     } else if (q.vatreg === "art11") {
-      yr.push({ n: "VAT declaration", e: "small exempt — one declaration a year", v: 145 * rm });
+      yr.push({ n: "VAT declaration", e: "small exempt — one declaration a year", v: VAT_RULES.art11FlatYearly * rm });
     } else {
-      const mult = q.vatreg === "art12" ? 0.6 : 1;
+      const mult = q.vatreg === "art12" ? VAT_RULES.art12Factor : 1;
       mo.push({ n: "VAT returns", e: "filed quarterly, billed monthly", v: QT.vat[q.txn] * mult * rm });
       if (q.vatreg === "unsure") notes.push(["info", "We have priced you as fully VAT registered, the most common case. If the register says otherwise the price drops — we tell you before you commit."]);
     }
@@ -130,30 +165,95 @@ function qCalc(q: QState) {
   if (q.assure === "we") {
     const bigVol = ["151-400", "401-1000", "1000+"].indexOf(q.txn) !== -1;
     const review = (q.size === "small" || q.size === "unsure") && !bigVol;
-    yr.push({ n: "Financial audit", e: review ? "review engagement — the lighter option" : "full financial audit", v: QT.assure[q.txn] * (review ? 0.55 : 1) * rm });
+    yr.push({ n: "Financial audit", e: review ? "review engagement — the lighter option" : "full financial audit", v: QT.assure[q.txn] * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) * rm });
     if (review) notes.push(["ok", "You likely qualify for a review instead of a full audit — about half the cost. We confirm it against your figures before anything is agreed."]);
     if (bigVol && q.size !== "big") notes.push(["warn", "At that volume a company is unlikely to stay under the small-company thresholds, so we priced a full audit. If your figures come in under, the price drops."]);
   }
-  if (q.regoff === "we") yr.push({ n: "Registered office", e: "statutory address, post passed to you", v: 1200 });
+  if (q.regoff === "we") yr.push({ n: "Registered office", e: "statutory address, post passed to you", v: REGISTERED_OFFICE_YEARLY });
   const softLine = q.book === "self" ? QTIERP[q.tier || "book"][0] : 0;
   const labourVal = mo.reduce((s, l) => s + l.v, 0) - softLine + yr.reduce((s, l) => s + l.v, 0);
   const labour = labourVal > 0;
   if (labour) {
-    yr.push({ n: "MBR annual return fee", e: "government fee — passed through at cost", v: 100 });
+    // Our fee to prepare and file, PLUS the MBR registry fee. The old flat
+    // €100 was the registry slice alone, so the wizard was quoting the filing
+    // work at nothing and undercutting the server by our whole fee.
+    yr.push({ n: "Annual return — filed with the MBR", e: `our €${MBR_ANNUAL_RETURN.ourFee} fee plus the €${MBR_REGISTRY_FEE} registry fee, passed through at cost`, v: MBR_ANNUAL_RETURN.ourFee + MBR_REGISTRY_FEE });
     if (tier.onb) one.push({ n: "Onboarding and due diligence", e: tier.l + " risk — charged once, at acceptance", v: tier.onb });
   }
   if (!labour && tier.note && notes.indexOf(tier.note) !== -1) notes.splice(notes.indexOf(tier.note), 1);
   const months = +q.behind;
   if (months > 0 && q.book === "self") {
-    one.push({ n: "Catch-up processing", e: months + " months of extra uploads through the automation — " + months + " × €10", v: months * 10 });
+    one.push({ n: "Catch-up processing", e: months + " months of extra uploads through the automation — " + months + " × €" + CATCH_UP.selfPerMonth, v: months * CATCH_UP.selfPerMonth });
   } else if (months > 0 && q.book === "full") {
-    const byMonth = months * 25, byYear = Math.ceil(months / 12) * 240;
+    const byMonth = months * CATCH_UP.fullPerMonth, byYear = Math.ceil(months / 12) * CATCH_UP.fullPerYearCap;
     const v = Math.min(byMonth, byYear);
     one.push({ n: "Bringing the books up to date", e: "charged once, on its own — whichever basis is cheaper", v });
   }
   [mo, yr, one].forEach((a) => a.forEach((l) => { l.v = Math.round(l.v); }));
   const sum = (a: Line[]) => a.reduce((s, l) => s + l.v, 0);
-  return { refer: false as const, mo, yr, one, notes, moTot: sum(mo), yrTot: sum(yr), oneTot: sum(one) };
+  const grossMo = sum(mo), grossYr = sum(yr), grossOne = sum(one);
+
+  // The catch-up slice of the one-offs, reported separately because the
+  // backend's record carries it as its own field.
+  const catchup = one
+    .filter((l) => /catch-up|up to date/i.test(l.n))
+    .reduce((s, l) => s + l.v, 0);
+
+  // Launch discount, applied EXACTLY as the pack specifies and the server
+  // re-computes it: monthly and yearly × (1 − pct), with the MBR registry fee
+  // held out at cost, and one-offs never discounted. The wizard used to show
+  // undiscounted totals while the emailed quote was discounted, so the two
+  // could never agree and no submission could be auto-quoted.
+  const registry = labour ? MBR_REGISTRY_FEE : 0;
+  const promoApplied = isPromoActive(now) && grossMo + grossYr > 0;
+  const keep = 1 - LAUNCH_PROMO.pct;
+  const moTot = promoApplied ? Math.round(grossMo * keep) : grossMo;
+  const yrTot = grossYr > 0 ? (promoApplied ? Math.round((grossYr - registry) * keep) + registry : grossYr) : 0;
+
+  return {
+    refer: false as const,
+    mo, yr, one, notes,
+    // Discounted — what the visitor pays and what we submit.
+    moTot, yrTot, oneTot: grossOne,
+    // Undiscounted — the struck-through "before" figures.
+    grossMo, grossYr,
+    catchup, promoApplied,
+  };
+}
+
+/**
+ * The wizard state as the backend's `evaluateSiteQuote` expects it. Fields the
+ * wizard never asks about are sent at the server's own defaults so both sides
+ * price the same basket: one bank account, and the assumed capital band behind
+ * the MBR annual return.
+ */
+export function qSelections(q: QState, labour: boolean): Record<string, unknown> {
+  return {
+    sector: q.sector,
+    txn: q.txn,
+    banks: 1,
+    cap: ASSUMED_CAPITAL_BAND,
+    annret: labour ? "we" : "none",
+    head: q.head,
+    behind: q.behind,
+    vatreg: q.vatreg,
+    size: q.size,
+    book: q.book,
+    tier: q.tier,
+    review: q.review,
+    pay: q.pay,
+    vat: q.vat,
+    taxret: q.taxret,
+    assure: q.assure,
+    regoff: q.regoff,
+  };
+}
+
+/** Display lines → the backend's line-item shape (undiscounted, with cadence). */
+export function qLines(r: { mo: Line[]; yr: Line[]; one: Line[] }): QuoteLineItem[] {
+  const map = (arr: Line[], cadence: QuoteCadence): QuoteLineItem[] =>
+    arr.filter((l) => l.v > 0).map((l) => ({ label: l.n, amount: l.v, cadence }));
+  return [...map(r.mo, "monthly"), ...map(r.yr, "yearly"), ...map(r.one, "oneoff")];
 }
 
 function qSummarise(q: QState) {
@@ -180,6 +280,19 @@ const NOTE_STYLE: Record<string, { bg: string; fg: string; bc: string }> = {
   ok: { bg: "rgba(0,168,126,.10)", fg: "#0b7a5d", bc: "rgba(0,168,126,.30)" },
   warn: { bg: "#FFF7E9", fg: "#8A6100", bc: "#E8D2A4" },
   info: { bg: "rgba(73,79,223,.08)", fg: "var(--a4-primary-deep)", bc: "rgba(73,79,223,.25)" },
+};
+
+const quoteInput: React.CSSProperties = {
+  height: 40,
+  flex: "1 1 170px",
+  minWidth: 0,
+  padding: "0 14px",
+  borderRadius: "var(--a4-r-full)",
+  border: "1px solid var(--a4-hairline-light)",
+  background: "#fff",
+  color: "var(--a4-ink)",
+  fontFamily: "var(--a4-font-body)",
+  fontSize: 12.5,
 };
 
 type Opt = { key: string; label: string; sub: string; on: boolean; pick: () => void };
@@ -209,8 +322,37 @@ export function LandingQuoteCalculator() {
   const [q, setQState] = useState<QState>(Q_INIT);
   const setQ = (patch: Partial<QState>) => setQState((prev) => ({ ...prev, ...patch }));
 
+  // Quote capture — same three fields and the same pipeline as the Vacei
+  // calculator and /pricing: name, email, send.
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState<WebsiteQuoteResult | null>(null);
+
   const step = q.step;
   const r = qCalc(q);
+
+  const canSend = name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  const sendQuote = async () => {
+    if (!canSend || sending || r.refer) return;
+    setSending(true);
+    // `labour` — whether an MBR annual return was quoted — is what the wizard
+    // itself used to decide the line, so derive it the same way here.
+    const labour = r.yr.some((l) => /Annual return/i.test(l.n));
+    const result = await submitWebsiteQuotation({
+      name,
+      email,
+      selections: qSelections(q, labour),
+      lines: qLines(r),
+      monthly: r.moTot,
+      yearly: r.yrTot,
+      oneOff: r.oneTot,
+      catchup: r.catchup,
+    });
+    setSent(result);
+    setSending(false);
+  };
 
   const pill = (on: boolean) => ({ on });
   const opts = (list: [string, string, string][], key: keyof QState): Opt[] =>
@@ -409,14 +551,83 @@ export function LandingQuoteCalculator() {
                       ? "We price most sectors instantly. This one needs a short conversation with a director before we put a number to it — usually the same day."
                       : qSummarise(q)}
                   </p>
+                  {/* The lines above are standard fees; the totals carry the
+                      discount. Say so, rather than leaving the reader to
+                      reconcile two sets of numbers. */}
+                  {!r.refer && r.promoApplied && (
+                    <p style={{ margin: "10px 0 0", padding: "11px 14px", borderRadius: 10, fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55, background: NOTE_STYLE.ok.bg, color: NOTE_STYLE.ok.fg, border: "1px solid " + NOTE_STYLE.ok.bc }}>
+                      {LAUNCH_PROMO.label} — the monthly and yearly totals already have it deducted; the lines above show standard pricing. Government and registry fees are passed through at cost and are never discounted.
+                    </p>
+                  )}
                   {(r.notes || []).map(([tone, text], i) => {
                     const s = NOTE_STYLE[tone] || NOTE_STYLE.info;
                     return <p key={i} style={{ margin: "10px 0 0", padding: "11px 14px", borderRadius: 10, fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55, background: s.bg, color: s.fg, border: "1px solid " + s.bc }}>{text}</p>;
                   })}
-                  <div style={{ marginTop: 16, alignSelf: "flex-start" }}>
-                    <Button variant="dark" size="sm" href="/contact">{r.refer ? "Request a call" : "Send me this quote"} <Icon name="arrow-right" size={14} color="#fff" /></Button>
-                  </div>
-                  <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-mute)" }}>KYC required before work starts. All fees exclude VAT.</p>
+                  {/* A referral sector has no instant price, so there is nothing
+                      to email — that path still books the call. Everything else
+                      captures name + email and issues the quote, exactly as the
+                      Vacei calculator does. */}
+                  {r.refer ? (
+                    <div style={{ marginTop: 16, alignSelf: "flex-start" }}>
+                      <Button variant="dark" size="sm" href="/contact">Request a call <Icon name="arrow-right" size={14} color="#fff" /></Button>
+                    </div>
+                  ) : sent ? (
+                    <div role="status" aria-live="polite" style={{
+                      marginTop: 16, padding: "13px 16px", borderRadius: "var(--a4-r-md)",
+                      fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55,
+                      ...(sent.status === "error"
+                        ? { background: NOTE_STYLE.warn.bg, color: NOTE_STYLE.warn.fg, border: "1px solid " + NOTE_STYLE.warn.bc }
+                        : { background: NOTE_STYLE.ok.bg, color: NOTE_STYLE.ok.fg, border: "1px solid " + NOTE_STYLE.ok.bc }),
+                    }}>
+                      {sent.message}
+                      {sent.status === "quoted" && (
+                        <>
+                          {" "}
+                          <a href={sent.portalHref} style={{ color: "inherit", fontWeight: 600, textDecoration: "underline" }}>
+                            Create your account
+                          </a>{" "}
+                          <span style={{ opacity: 0.8 }}>(reference {sent.reference})</span>
+                        </>
+                      )}
+                      {sent.status === "error" && (
+                        <>
+                          {" "}
+                          <button type="button" onClick={() => setSent(null)} style={{ background: "none", border: 0, padding: 0, color: "inherit", font: "inherit", fontWeight: 600, textDecoration: "underline", cursor: "pointer" }}>
+                            Try again
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={(e) => { e.preventDefault(); void sendQuote(); }}
+                      style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-start" }}
+                    >
+                      <input
+                        type="text" value={name} onChange={(e) => setName(e.target.value)}
+                        placeholder="Your name" aria-label="Your name" autoComplete="name"
+                        style={quoteInput}
+                      />
+                      <input
+                        type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Your email" aria-label="Your email" autoComplete="email"
+                        style={quoteInput}
+                      />
+                      <button type="submit" disabled={!canSend || sending} style={{
+                        height: 40, padding: "0 20px", borderRadius: "var(--a4-r-full)", border: "1px solid var(--a4-ink)",
+                        background: "var(--a4-ink)", color: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600,
+                        cursor: !canSend || sending ? "default" : "pointer", opacity: !canSend || sending ? 0.45 : 1,
+                        transition: "opacity .15s ease",
+                      }}>
+                        {sending ? "Sending…" : "Send me this quote"}
+                      </button>
+                    </form>
+                  )}
+                  <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-mute)" }}>
+                    {r.refer
+                      ? "KYC required before work starts. All fees exclude VAT."
+                      : "We email you this quote and nothing else. KYC required before work starts. All fees exclude VAT."}
+                  </p>
                 </div>
               )}
 
@@ -437,6 +648,11 @@ export function LandingQuoteCalculator() {
                 )}
                 <span style={{ marginLeft: "auto", display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>
                   <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-mute)" }}>{r.refer ? "" : "Every month"}</span>
+                  {/* Struck-through original whenever the launch discount moved
+                      the figure — the total shown IS the total we submit. */}
+                  {!r.refer && r.promoApplied && r.grossMo > r.moTot && (
+                    <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 13, color: "var(--a4-mute)", textDecoration: "line-through" }}>{euro(r.grossMo)}</span>
+                  )}
                   <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 18, fontWeight: 600, color: "var(--a4-ink)" }}>{r.refer ? "Let's talk first" : euro(r.moTot)}</span>
                   {!r.refer && r.yrTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.yrTot) + " /yr"}</span>}
                   {!r.refer && r.oneTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.oneTot) + " once"}</span>}
