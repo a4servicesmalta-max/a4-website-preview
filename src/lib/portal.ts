@@ -4,7 +4,7 @@
 //      via the shared portal-backend endpoint vacei.com's forms already use.
 // Both are fire-and-forget: neither throws, neither blocks the user response,
 // and a failure of one never suppresses the other.
-import { QUOTE_API_BASE } from "@/lib/websiteQuotation";
+import { QUOTE_API_BASE, SOURCE_SITE } from "@/lib/websiteQuotation";
 
 type PortalRequest = {
   requester?: string;
@@ -75,6 +75,11 @@ async function pushToPartnerLeads(req: PortalRequest): Promise<void> {
         ...(req.phone?.trim() ? { phone: req.phone.trim().slice(0, 50) } : {}),
         ...(message ? { message } : {}),
         source: "contact",
+        // Structured origin, not just the "[a4.com.mt — …]" text stamp above.
+        // This call is made server-side, so the backend's Origin/Referer
+        // fallback has nothing to read: without this field every A4 lead is
+        // stored with sourceSite = null and cannot be filtered in the portal.
+        site: SOURCE_SITE,
       }),
     });
   } catch {

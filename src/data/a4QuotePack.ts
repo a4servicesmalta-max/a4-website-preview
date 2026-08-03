@@ -1,7 +1,7 @@
 /**
  * THE single source of truth for every A4 fee shown on this website.
  *
- * It transcribes quote pack `mt-2026-08-01` — the pack that already drives the
+ * It transcribes quote pack `mt-2026-08-02b` — the pack that already drives the
  * Vacei calculator (`vacei-marketing-site/index.html`) and the portal backend
  * (`portal-backend/src/modules/quote-pack/malta-pack.ts`). Those three copies
  * are byte-equivalent by design: if a fee changes, bump `A4_QUOTE_PACK_VERSION`
@@ -26,10 +26,15 @@
  * "audit from €600/yr" headline on /audit-services is a price the calculator
  * will actually quote). Every other fee is unchanged from mt-2026-08-01.
  *
- * ⚠ The two sibling copies still carry mt-2026-08-01 and must be updated to
- * match before they quote a dormant company:
+ * VERIFIED IN SYNC 2026-08-03. The two sibling copies carry the same figures,
+ * pre-trading band included — checked line by line against
+ * `GET https://vacei-portal-backend.onrender.com/api/v1/public/quote-pack` and
+ * against vacei.com:
  *   - vacei-marketing-site/index.html
  *   - portal-backend/src/modules/quote-pack/malta-pack.ts
+ * In particular AUDIT_YEARLY["0"] = 600 and TAX_RETURN_YEARLY["0"] = 175 are
+ * canonical, not local to this file. An earlier note here claimed the canonical
+ * pack still had 0 in that band; it does not, and that note was wrong.
  */
 export const A4_QUOTE_PACK_VERSION = "mt-2026-08-02b";
 

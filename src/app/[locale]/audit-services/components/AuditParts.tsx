@@ -4,7 +4,9 @@ import React, { useState } from "react";
 import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { AuditEstimator } from "./AuditEstimator";
 import { ScrollVideo } from "@/components/a4-landing/ScrollVideo";
+import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
 import { AUDIT_FAQS } from "@/data/serviceFaqs";
+import { AUDIT_FROM, AUDIT_PRE_TRADING } from "@/data/a4QuotePack";
 
 // Structure and copy ported from the Vacei "Audit" design
 // (Vacei Marketing Site Design.zip → Audit.dc.html), rendered in A4's palette,
@@ -32,7 +34,7 @@ function AuditHero() {
             Need an audit?<br /><span style={{ color: "var(--a4-primary-bright)" }}>We make it simple.</span>
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 640, margin: "24px auto 0", textWrap: "pretty" }}>
-            A rigorous, independent, on-time audit with a fixed fee agreed up front — <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;600 a year</strong>. See your figure in sixty seconds, before you talk to anyone.
+            A rigorous, independent, on-time audit with a fixed fee agreed up front — <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;{AUDIT_FROM}/year</strong> (dormant companies from &euro;{AUDIT_PRE_TRADING}). See your figure in sixty seconds, before you talk to anyone.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get my audit fee <Icon name="arrow-right" size={18} color="#000" /></Button>
@@ -210,6 +212,12 @@ export function AuditApp() {
       <AuditEstimator />
       <AuditServices />
       <AuditProcess />
+      {/* The free FS / trial-balance check. It reads the visitor's own numbers
+          and is the single strongest reason an audit prospect gives us an
+          email, but until now it was reachable only from the homepage and
+          /automated-bookkeeping — never from the two service pages the ads
+          point at. */}
+      <HealthCheckPromo />
       <AuditFAQ />
       <AuditCTA />
     </main>

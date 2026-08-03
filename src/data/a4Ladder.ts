@@ -13,7 +13,7 @@
  *   + Manager  +€99  = €198   oversight and management reporting
  *   + CFO      +€159 = €357   the full finance function
  *
- * The totals are the SOFTWARE_TIERS of quote pack `mt-2026-08-01`
+ * The totals are the SOFTWARE_TIERS of quote pack `mt-2026-08-02b`
  * (src/data/a4QuotePack.ts) — the same figures the Vacei calculator and the
  * portal backend serve. Change them there, not here.
  *

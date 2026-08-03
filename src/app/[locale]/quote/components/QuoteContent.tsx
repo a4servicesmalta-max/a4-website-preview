@@ -6,7 +6,12 @@ import { Button, Container, Icon, Reveal, SectionHead } from "@/components/a4-la
 import { QUOTE_SERVICE_OPTS, QUOTE_STEPS } from "@/data/a4QuoteSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
-import { QuotationBuilder } from "./QuotationBuilder";
+// /quote and /pricing render the SAME calculator. The builder that used to sit
+// here priced off a revenue band while the backend reprices off transaction
+// bands, so its figure could never agree with the server's and every
+// submission was destined for a silent 202 RECEIVED. See the git history of
+// QuotationBuilder.tsx for the arithmetic that was retired.
+import { ServiceQuoteCalculator } from "@/components/pricing/ServiceQuoteCalculator";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
 
 function QuoteForm() {
@@ -201,7 +206,7 @@ export function QuoteContent() {
         sub="Build an instant indicative quote below — or tell us what you need and we'll come back within 24 hours with a clear, written quote."
       />
 
-      <QuotationBuilder />
+      <ServiceQuoteCalculator pdf />
 
       <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,88px) 0" }}>
         <Container style={{ maxWidth: 860 }}>
