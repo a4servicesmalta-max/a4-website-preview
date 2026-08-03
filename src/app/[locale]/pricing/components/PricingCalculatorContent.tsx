@@ -1035,7 +1035,7 @@ function PricingComplex() {
 
 /**
  * Incorporation fee table — the full itemised list from quote pack
- * mt-2026-08-01, mirroring the wording on vacei.com.
+ * mt-2026-08-02b, mirroring the wording on vacei.com.
  */
 function PricingIncorporation() {
   return (

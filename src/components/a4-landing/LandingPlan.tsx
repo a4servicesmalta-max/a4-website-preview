@@ -21,7 +21,7 @@ const LP_TIERS = A4_LADDER.map((l) => ({
   blurb: l.tagline,
 })) as { id: string; name: string; price: number; docs: string; blurb: string }[];
 
-// VAT returns — priced the way quote pack mt-2026-08-01 prices them: a monthly
+// VAT returns — priced the way quote pack mt-2026-08-02b prices them: a monthly
 // fee set by transaction volume, whatever the filing frequency. Art. 11 small-
 // exempt businesses instead pay one flat yearly declaration.
 const LP_VAT = {

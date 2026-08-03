@@ -14,7 +14,7 @@ import {
 } from "@/data/a4QuotePack";
 // A4 Books software €39/mo flat (unlimited documents), + bank reconciliations,
 // accounting, and optional VAT / payroll / annual accounts. Every figure comes
-// from quote pack mt-2026-08-01 (src/data/a4QuotePack.ts).
+// from quote pack mt-2026-08-02b (src/data/a4QuotePack.ts).
 // Drives toward "create account".
 
 const PR_BANDS = [
