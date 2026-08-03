@@ -637,8 +637,10 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
                   </Button>
                   {pdf && (
                     <>
+                      {/* The summary card is white, so the light outline (ink
+                          text on a strong hairline) is the readable one. */}
                       <Button
-                        variant="outline"
+                        variant="outline-light"
                         size="md"
                         onClick={downloadPdf}
                         style={{ width: "100%", marginTop: 8, opacity: canPdf && !pdfBusy ? 1 : 0.6, pointerEvents: canPdf && !pdfBusy ? "auto" : "none" }}

@@ -267,7 +267,11 @@ export function evaluateA4Items(
 export type WebsiteQuoteRecord = {
   pack: string;
   currency: string;
-  selections: A4Selections;
+  /**
+   * `A4Selections` from the items path; raw wizard state from the wizard path.
+   * The server switches on `kind` to decide which evaluator reprices it.
+   */
+  selections: A4Selections | Record<string, unknown>;
   /** Totals AS DISPLAYED — i.e. with the launch promo already applied. */
   monthly: number;
   yearly: number;
@@ -278,14 +282,52 @@ export type WebsiteQuoteRecord = {
   lines: QuoteLineItem[];
 };
 
-export type WebsiteQuoteInput = {
+type WebsiteQuoteContact = {
   name: string;
   email: string;
   phone?: string;
+};
+
+/**
+ * The normalized basket. The server classifies `selections.kind` and prices
+ * this one with `evaluateA4ServicesQuote`.
+ *
+ * Preferred for any new call site: the totals are derived from the items on
+ * both sides, so there is nothing to keep in step by hand.
+ */
+export type WebsiteQuoteItemsInput = WebsiteQuoteContact & {
   /** Priceable items only — anything else belongs on the lead path. */
   items: A4Item[];
   risk?: A4Risk;
 };
+
+/**
+ * Raw wizard state, the shape vacei.com has always sent. The server has no
+ * `kind` to switch on here, so it falls through to `evaluateSiteQuote` — a
+ * second evaluator that prices the wizard's own question set.
+ *
+ * Kept because the homepage wizard asks questions (sector, company size,
+ * "are you behind") that do not decompose into A4Items without changing the
+ * questions themselves, and its arithmetic is verified against that server
+ * evaluator. The caller owns the totals here, which is exactly why this path
+ * is the fragile one: display and server agree only as long as both
+ * implementations agree. Do not reach for it in new code.
+ */
+export type WebsiteQuoteWizardInput = WebsiteQuoteContact & {
+  selections: Record<string, unknown>;
+  /** Undiscounted line detail. */
+  lines: QuoteLineItem[];
+  /** Totals AS DISPLAYED — promo already applied. */
+  monthly: number;
+  yearly: number;
+  oneOff: number;
+  catchup?: number;
+};
+
+export type WebsiteQuoteInput = WebsiteQuoteItemsInput | WebsiteQuoteWizardInput;
+
+const isItemsInput = (i: WebsiteQuoteInput): i is WebsiteQuoteItemsInput =>
+  Array.isArray((i as WebsiteQuoteItemsInput).items);
 
 export type WebsiteQuoteResult =
   | { status: "quoted"; reference: string; message: string; portalHref: string }
@@ -317,6 +359,21 @@ export function buildQuoteRecord(
   input: WebsiteQuoteInput,
   now: Date = new Date()
 ): WebsiteQuoteRecord {
+  if (!isItemsInput(input)) {
+    // Wizard path: the caller has already priced its own question set against
+    // the server's `evaluateSiteQuote`, so its figures pass through verbatim.
+    return {
+      pack: A4_QUOTE_PACK_VERSION,
+      currency: PRICING_CURRENCY,
+      selections: input.selections,
+      monthly: input.monthly,
+      yearly: input.yearly,
+      oneOff: input.oneOff,
+      catchup: input.catchup ?? 0,
+      quotedAt: now.toISOString(),
+      lines: input.lines,
+    };
+  }
   const risk = input.risk ?? "standard";
   const totals = evaluateA4Items(input.items, risk, now);
   return {
@@ -345,13 +402,17 @@ export async function submitWebsiteQuotation(
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { status: "error", message: "Add your name and email so we can send it." };
   }
-  if (!input.items.length) {
+  if (isItemsInput(input)) {
+    if (!input.items.length) {
+      return { status: "error", message: "Pick at least one service so we have something to quote." };
+    }
+    if (input.items.length > A4_LIMITS.maxItems) {
+      // Over the server's cap the whole submission is refused, so say so here
+      // rather than firing a request that can only come back as a 202.
+      return { status: "error", message: "That's more services than we can quote online — let's scope it on a call." };
+    }
+  } else if (!input.lines.length) {
     return { status: "error", message: "Pick at least one service so we have something to quote." };
-  }
-  if (input.items.length > A4_LIMITS.maxItems) {
-    // Over the server's cap the whole submission is refused, so say so here
-    // rather than firing a request that can only come back as a 202.
-    return { status: "error", message: "That's more services than we can quote online — let's scope it on a call." };
   }
 
   try {
