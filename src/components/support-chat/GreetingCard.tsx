@@ -1,16 +1,76 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import LocalizedLink from "@/components/common/LocalizedLink";
-
-const HAND_WAVE_GIF = "https://cdn.livechat-static.com/api/file/lc/img/rich-greetings/handwave.gif";
 
 interface GreetingCardProps {
   onChatNow: () => void;
   onClose: () => void;
+}
+
+/**
+ * The friendly wave at the top of the greeting card.
+ *
+ * Deliberately inline SVG rather than an image: this card renders on EVERY page
+ * of the site, and the artwork it used to show was hot-linked straight from
+ * `cdn.livechat-static.com` — a third-party CDN we have no integration with, no
+ * contract with and no control over. That was one uncacheable cross-origin
+ * request per pageview, leaking visitor IP and referrer to LiveChat, and a
+ * broken card on every page the day they moved the file. Inline costs no
+ * request at all and cannot 404.
+ *
+ * Rendered at 220×220 — the same box the old <Image> occupied — so the card
+ * keeps its exact height and nothing below it shifts.
+ */
+function HandWave() {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <svg
+      width={220}
+      height={220}
+      viewBox="0 0 220 220"
+      aria-hidden="true"
+      focusable="false"
+      role="presentation"
+    >
+      <circle cx="110" cy="110" r="80" fill="#FEF3C7" opacity="0.7" />
+      <circle cx="110" cy="110" r="58" fill="#FDE68A" opacity="0.55" />
+
+      <motion.g
+        // `fill-box` makes the origin the group's own bounding box, so 50%/100%
+        // is the wrist — the hand pivots there instead of around the viewBox.
+        style={{ transformBox: "fill-box", transformOrigin: "50% 100%" }}
+        // Respect the OS "reduce motion" setting: the hand still reads as a
+        // wave when it is held still, so we simply do not animate it.
+        initial={{ rotate: reduceMotion ? 0 : -14 }}
+        animate={reduceMotion ? { rotate: 0 } : { rotate: [-14, 12, -14] }}
+        transition={
+          reduceMotion
+            ? { duration: 0 }
+            : { duration: 1.5, times: [0, 0.5, 1], repeat: Infinity, repeatDelay: 0.7, ease: "easeInOut" }
+        }
+      >
+        {/* thumb */}
+        <path
+          d="M88 118 L66 141"
+          stroke="#E8A33D"
+          strokeWidth="19"
+          strokeLinecap="round"
+          fill="none"
+        />
+        {/* four fingers */}
+        <rect x="85" y="61" width="17" height="76" rx="8.5" fill="#F6B93B" />
+        <rect x="104" y="55" width="17" height="82" rx="8.5" fill="#F6B93B" />
+        <rect x="123" y="61" width="17" height="76" rx="8.5" fill="#F6B93B" />
+        <rect x="142" y="73" width="16" height="64" rx="8" fill="#F6B93B" />
+        {/* palm */}
+        <rect x="83" y="103" width="76" height="59" rx="27" fill="#F6B93B" />
+      </motion.g>
+    </svg>
+  );
 }
 
 export default function GreetingCard({ onChatNow, onClose }: GreetingCardProps) {
@@ -37,16 +97,7 @@ export default function GreetingCard({ onChatNow, onClose }: GreetingCardProps) 
 
       <div className="flex justify-center p-4 bg-linear-to-b from-gray-50/80 to-white">
         <div className="relative flex items-center justify-center w-[180px] h-[180px] ">
-          <Image
-            src={HAND_WAVE_GIF}
-            alt=""
-            width={220}
-            height={220}
-            unoptimized
-            loading="lazy"
-            decoding="async"
-            className="object-cover"
-          />
+          <HandWave />
         </div>
       </div>
 
