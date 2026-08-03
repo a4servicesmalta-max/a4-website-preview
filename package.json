@@ -19,6 +19,7 @@
     "git:lfs-push-all": "git lfs push --all origin"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.2",
     "@fontsource/mona-sans": "^5.2.8",
     "@types/three": "^0.183.1",
     "clsx": "^2.1.1",
