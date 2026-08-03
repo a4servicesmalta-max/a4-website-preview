@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { ScrollVideo } from "@/components/a4-landing/ScrollVideo";
+import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
 import { AccountingEstimator } from "./AccountingEstimator";
 import { SOFTWARE_TIERS, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
 import { ACCOUNTING_FAQS } from "@/data/serviceFaqs";
@@ -205,6 +206,8 @@ export function AccountingApp() {
       <AccountingEstimator />
       <WhatsCovered />
       <MonthCloses />
+      {/* Same orphaned lead magnet as on /audit-services — see the note there. */}
+      <HealthCheckPromo />
       <AccountingFAQ />
       <AccountingCTA />
     </main>

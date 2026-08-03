@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { AuditEstimator } from "./AuditEstimator";
 import { ScrollVideo } from "@/components/a4-landing/ScrollVideo";
+import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
 import { AUDIT_FAQS } from "@/data/serviceFaqs";
 import { AUDIT_FROM, AUDIT_PRE_TRADING } from "@/data/a4QuotePack";
 
@@ -211,6 +212,12 @@ export function AuditApp() {
       <AuditEstimator />
       <AuditServices />
       <AuditProcess />
+      {/* The free FS / trial-balance check. It reads the visitor's own numbers
+          and is the single strongest reason an audit prospect gives us an
+          email, but until now it was reachable only from the homepage and
+          /automated-bookkeeping — never from the two service pages the ads
+          point at. */}
+      <HealthCheckPromo />
       <AuditFAQ />
       <AuditCTA />
     </main>

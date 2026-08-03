@@ -42,6 +42,12 @@ export const QUOTE_API_BASE =
   process.env.NEXT_PUBLIC_QUOTE_API_BASE?.trim().replace(/\/+$/, "") ||
   "https://vacei-portal-backend.onrender.com/api/v1";
 
+/**
+ * This site, as the backend's `sourceSite` enum spells it. Every submission
+ * from a4.com.mt carries it; vacei.com sends 'vacei' from the same contract.
+ */
+export const SOURCE_SITE = "a4" as const;
+
 export type QuoteCadence = "monthly" | "yearly" | "oneoff";
 
 export type QuoteLineItem = {
@@ -357,6 +363,13 @@ export async function submitWebsiteQuotation(
         email,
         phone: input.phone?.trim() || "",
         record: buildQuoteRecord(input),
+        // Which marketing site this came from. a4.com.mt and vacei.com post to
+        // the same endpoint, and the backend stores this as `sourceSite` so an
+        // A4 quotation is never mixed up with a Vacei one in the portal. It
+        // falls back to the Origin/Referer host when absent, but that is a
+        // guess — declaring it is the contract (website-intake.domain.ts:
+        // sourceSiteFieldSchema = z.enum(['vacei','a4'])).
+        site: SOURCE_SITE,
       }),
     });
     if (!res.ok) return { status: "error", message: ERROR_MESSAGE };

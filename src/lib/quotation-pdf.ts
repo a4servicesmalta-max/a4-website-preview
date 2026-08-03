@@ -1,8 +1,41 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { readFile } from "fs/promises";
 import path from "path";
-import type { QuoteInput, QuoteResult } from "@/lib/quotation";
-import { euro } from "@/lib/quotation";
+export const euro = (n: number) => "€" + n.toLocaleString("en-MT");
+
+/**
+ * Who the quotation is for. Deliberately just the identity fields the page
+ * prints — the figures arrive already priced in `QuotationPdfQuote`, because
+ * this renderer must never be a second place where a fee is decided.
+ */
+export type QuotationPdfParty = {
+  company: string;
+  regNo?: string;
+  name: string;
+  email: string;
+};
+
+/** One printed fee line. `display` is pre-formatted ("€99 / month"). */
+export type QuotationPdfLine = {
+  name: string;
+  hint: string;
+  display: string;
+};
+
+/**
+ * The priced quotation, as the caller computed it. The only supported source
+ * is `evaluateA4Items` (src/lib/websiteQuotation.ts) — the same evaluator the
+ * on-screen calculator and the portal backend use, so the PDF, the screen and
+ * the emailed quotation are three renderings of one arithmetic.
+ */
+export type QuotationPdfQuote = {
+  lines: QuotationPdfLine[];
+  monthlyTotalEur: number;
+  annualTotalEur: number;
+  /** Monthlies annualised + annual + one-off — the headline figure. */
+  indicativeAnnualEur: number;
+  assumptions: string[];
+};
 
 const PAGE_W = 595.28; // A4 portrait, points
 const PAGE_H = 841.89;
@@ -23,8 +56,8 @@ async function tryReadPublic(rel: string): Promise<Buffer | null> {
 
 /** Render the branded indicative-quotation PDF. Returns raw PDF bytes. */
 export async function renderQuotationPdf(
-  input: QuoteInput & { name: string; email: string },
-  quote: QuoteResult,
+  input: QuotationPdfParty,
+  quote: QuotationPdfQuote,
   opts?: { onboardingUrl?: string }
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
@@ -63,7 +96,7 @@ export async function renderQuotationPdf(
     { x: 40, y, size: 10, font, color: MUTE }
   );
   y -= 12;
-  page.drawText(`Requested by ${input.name} · ${input.email} · Industry: ${input.industry}`, { x: 40, y, size: 10, font, color: MUTE });
+  page.drawText(`Requested by ${input.name} · ${input.email}`, { x: 40, y, size: 10, font, color: MUTE });
   y -= 10;
   page.drawLine({ start: { x: 40, y }, end: { x: PAGE_W - 40, y }, thickness: 1, color: ACCENT });
   y -= 26;
@@ -100,10 +133,13 @@ export async function renderQuotationPdf(
   y -= 4;
   page.drawRectangle({ x: 40, y: y - 26, width: PAGE_W - 80, height: 38, color: rgb(0.96, 0.96, 0.99), borderColor: ACCENT, borderWidth: 0.8 });
   page.drawText("INDICATIVE FIRST-YEAR TOTAL", { x: 52, y: y - 10, size: 10, font: bold, color: MUTE });
-  page.drawText(
-    `${euro(quote.indicativeAnnualEur)}${quote.hasOnRequestLines ? " + items on request" : ""}`,
-    { x: PAGE_W - 40 - 150, y: y - 12, size: 15, font: bold, color: ACCENT }
-  );
+  page.drawText(euro(quote.indicativeAnnualEur), {
+    x: PAGE_W - 40 - 150,
+    y: y - 12,
+    size: 15,
+    font: bold,
+    color: ACCENT,
+  });
   y -= 50;
 
   // Assumptions

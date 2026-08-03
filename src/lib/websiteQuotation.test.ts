@@ -3,6 +3,8 @@ import {
   buildA4Selections,
   buildQuoteRecord,
   evaluateA4Items,
+  submitWebsiteQuotation,
+  SOURCE_SITE,
   type A4Item,
 } from "./websiteQuotation";
 import { A4_QUOTE_PACK_VERSION, LAUNCH_PROMO } from "@/data/a4QuotePack";
@@ -335,5 +337,50 @@ describe("the submitted record", () => {
       { label: "Financial audit (if applicable)", amount: 995, cadence: "yearly" },
     ]);
     expect(r.yearly).toBe(746); // 995 × 0.75 = 746.25 → 746
+  });
+});
+
+describe("submission", () => {
+  const items: A4Item[] = [{ service: "audit", txn: "21-60" }];
+
+  /** Capture the outgoing request without hitting the network. */
+  function captureSubmit(response: { ok: boolean; body?: unknown }) {
+    const calls: { url: string; body: Record<string, unknown> }[] = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init: { body: string }) => {
+      calls.push({ url: String(url), body: JSON.parse(init.body) });
+      return {
+        ok: response.ok,
+        json: async () => response.body ?? {},
+      } as unknown as Response;
+    }) as unknown as typeof fetch;
+    return { calls, restore: () => { globalThis.fetch = original; } };
+  }
+
+  it("declares the originating site so the backend can set sourceSite", async () => {
+    const { calls, restore } = captureSubmit({ ok: true, body: { data: { reference: "Q-1", status: "QUOTED" } } });
+    try {
+      const res = await submitWebsiteQuotation({ name: "A", email: "a@b.com", items });
+      expect(res.status).toBe("quoted");
+    } finally {
+      restore();
+    }
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toContain("/public/website-quotations");
+    // The enum the backend accepts is ['vacei','a4'] — vacei.com sends the
+    // other member from the same contract.
+    expect(calls[0].body.site).toBe("a4");
+    expect(SOURCE_SITE).toBe("a4");
+  });
+
+  it("refuses to post a basket with nothing priceable in it", async () => {
+    const { calls, restore } = captureSubmit({ ok: true });
+    try {
+      const res = await submitWebsiteQuotation({ name: "A", email: "a@b.com", items: [] });
+      expect(res.status).toBe("error");
+    } finally {
+      restore();
+    }
+    expect(calls).toHaveLength(0);
   });
 });
