@@ -82,12 +82,12 @@ describe("per-item pricing", () => {
   });
 
   it("prices the tax return and the audit yearly", () => {
-    expect(gross([{ service: "taxret", txn: "61-150" }]).yearly).toBe(525);
-    expect(gross([{ service: "audit", txn: "21-60" }]).yearly).toBe(1150);
-    // Review engagement — 1150 × 0.55 = 632.5 → €633
-    expect(gross([{ service: "audit", txn: "21-60", review: true }]).yearly).toBe(633);
-    // 1150 × 1.45 = 1667.5 → €1,668
-    expect(gross([{ service: "audit", txn: "21-60" }], "high").yearly).toBe(1668);
+    expect(gross([{ service: "taxret", txn: "61-150" }]).yearly).toBe(420);
+    expect(gross([{ service: "audit", txn: "21-60" }]).yearly).toBe(995);
+    // Review engagement — 995 × 0.55 = 547.25 → €547
+    expect(gross([{ service: "audit", txn: "21-60", review: true }]).yearly).toBe(547);
+    // 995 × 1.45 = 1442.75 → €1,443
+    expect(gross([{ service: "audit", txn: "21-60" }], "high").yearly).toBe(1443);
   });
 
   it("bills the whole payroll at its headcount tier", () => {
@@ -146,7 +146,7 @@ describe("launch promo", () => {
     const t = evaluateA4Items(items, "standard", DURING);
     expect(t.promoApplied).toBe(true);
     expect(t.monthly).toBe(74); // 99 × 0.75 = 74.25 → 74
-    expect(t.yearly).toBe(281); // 375 × 0.75 = 281.25 → 281
+    expect(t.yearly).toBe(244); // 325 × 0.75 = 243.75 → 244
     expect(t.oneOff).toBe(95); // untouched
     expect(LAUNCH_PROMO.pct).toBe(0.25);
   });
@@ -199,9 +199,9 @@ describe("mixed basket, hand-computed", () => {
     //        + payroll  8 × 29 = 232 × 1.2 = 278.4 → 278
     expect(t.grossMonthly).toBe(99 + 37 + 83 + 278);
     expect(t.grossMonthly).toBe(497);
-    // Yearly: tax return 525 × 1.2 = 630, + MBR (50 + 210) = 260
-    expect(t.grossYearly).toBe(630 + 260);
-    expect(t.grossYearly).toBe(890);
+    // Yearly: tax return 420 × 1.2 = 504, + MBR (50 + 210) = 260
+    expect(t.grossYearly).toBe(504 + 260);
+    expect(t.grossYearly).toBe(764);
     // One-off: onboarding 250 (elevated) + catch-up 12 × 10 = 120
     expect(t.grossOneOff).toBe(370);
     expect(t.catchup).toBe(120);
@@ -212,7 +212,7 @@ describe("mixed basket, hand-computed", () => {
   it("applies the promo to the right slices", () => {
     const t = evaluateA4Items(items, "elevated", DURING);
     expect(t.monthly).toBe(373); // 497 × 0.75 = 372.75 → 373
-    expect(t.yearly).toBe(720); // (890 − 210) × 0.75 = 510, + 210 = 720
+    expect(t.yearly).toBe(626); // (764 − 210) × 0.75 = 415.5 → 416, + 210 = 626
     expect(t.oneOff).toBe(370); // one-offs never discounted
   });
 
@@ -314,7 +314,7 @@ describe("the submitted record", () => {
   it("stamps the pack version and currency the backend validates against", () => {
     const r = buildQuoteRecord({ name: "A", email: "a@b.com", items }, DURING);
     expect(r.pack).toBe(A4_QUOTE_PACK_VERSION);
-    expect(r.pack).toBe("mt-2026-08-01");
+    expect(r.pack).toBe("mt-2026-08-02b");
     expect(r.currency).toBe("EUR");
     expect(r.quotedAt).toBe(DURING.toISOString());
   });
@@ -332,8 +332,8 @@ describe("the submitted record", () => {
   it("sends undiscounted line detail alongside discounted totals", () => {
     const r = buildQuoteRecord({ name: "A", email: "a@b.com", items }, DURING);
     expect(r.lines).toEqual([
-      { label: "Financial audit (if applicable)", amount: 1150, cadence: "yearly" },
+      { label: "Financial audit (if applicable)", amount: 995, cadence: "yearly" },
     ]);
-    expect(r.yearly).toBe(863); // 1150 × 0.75 = 862.5 → 863
+    expect(r.yearly).toBe(746); // 995 × 0.75 = 746.25 → 746
   });
 });

@@ -16,7 +16,22 @@
  * Nothing in here is confidential — it is the published price list.
  */
 
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-01";
+/**
+ * mt-2026-08-02b flattens the audit volume curve and mirrors the cut onto the
+ * tax-return table (owner decision 2026-08-02): entry bands held, reductions
+ * deepening from −13% to −37% as volume rises. Top audit band 5,800 → 3,650.
+ *
+ * mt-2026-08-02 adds the pre-trading band only: AUDIT_YEARLY["0"] 0 → 600 and
+ * TAX_RETURN_YEARLY["0"] 0 → 175 (owner decision 2026-08-02, so that the
+ * "audit from €600/yr" headline on /audit-services is a price the calculator
+ * will actually quote). Every other fee is unchanged from mt-2026-08-01.
+ *
+ * ⚠ The two sibling copies still carry mt-2026-08-01 and must be updated to
+ * match before they quote a dormant company:
+ *   - vacei-marketing-site/index.html
+ *   - portal-backend/src/modules/quote-pack/malta-pack.ts
+ */
+export const A4_QUOTE_PACK_VERSION = "mt-2026-08-02b";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -72,34 +87,44 @@ export const VAT_MONTHLY: Record<TxnBand, number> = {
   "1000+": 189,
 };
 
-/** Annual company tax return — €/yr by transaction band, × risk. */
+/**
+ * Annual company tax return — €/yr by transaction band, × risk.
+ *
+ * Owner decision 2026-08-02 (pack mt-2026-08-02b): same volume-flattening cut
+ * as AUDIT_YEARLY, band for band, so the combined audit + tax-return quote
+ * stays coherent. Entry bands held; reductions deepen with volume.
+ *   21-60 −13% · 61-150 −20% · 151-400 −25% · 401-1000 −31% · 1000+ −37%
+ */
 export const TAX_RETURN_YEARLY: Record<TxnBand, number> = {
   // Pre-trading company: still a return to file, just a much smaller one.
-  // Owner decision 2026-08-02 — see AUDIT_YEARLY["0"].
-  "0": 175,
-  "1-20": 275,
-  "21-60": 375,
-  "61-150": 525,
-  "151-400": 750,
-  "401-1000": 1100,
-  "1000+": 1650,
+  "0": 175, //   unchanged
+  "1-20": 275, // unchanged
+  "21-60": 325, //    was 375
+  "61-150": 420, //   was 525
+  "151-400": 560, //  was 750
+  "401-1000": 760, // was 1100
+  "1000+": 1040, //   was 1650
 };
 
-/** Statutory audit — €/yr by transaction band, × risk. */
+/**
+ * Statutory audit — €/yr by transaction band, × risk.
+ *
+ * Owner decision 2026-08-02 (pack mt-2026-08-02b): the volume escalation was
+ * too steep — the top band was 7.7× the entry, which priced busy ledgers out.
+ * Entry bands are held so the advertised "from" price does not move; the cut
+ * deepens with volume, bringing the top band to 4.9× the entry.
+ */
 export const AUDIT_YEARLY: Record<TxnBand, number> = {
-  // Pre-trading / dormant company. Owner decision 2026-08-02: price it rather
-  // than leave it unpriced, so the estimator can quote a dormant company
-  // instead of refusing. NOTE the pack this file transcribes has "0": 0 — this
-  // is a deliberate A4-site divergence, and it is why the advertised floor is
-  // AUDIT_FROM (the "1-20" band, €750) rather than the table minimum. Every
-  // company that actually trades starts at €750.
-  "0": 600,
-  "1-20": 750,
-  "21-60": 1150,
-  "61-150": 1750,
-  "151-400": 2600,
-  "401-1000": 3900,
-  "1000+": 5800,
+  // Pre-trading / dormant company. Priced rather than left unpriced, so the
+  // "audit from €600/yr" headline on /audit-services is true of an actual
+  // quote the calculator will produce. Any trading company starts at €750.
+  "0": 600, //     unchanged
+  "1-20": 750, //  unchanged
+  "21-60": 995, //    was 1150  −13%
+  "61-150": 1395, //  was 1750  −20%
+  "151-400": 1950, // was 2600  −25%
+  "401-1000": 2700, //was 3900  −31%
+  "1000+": 3650, //   was 5800  −37%
 };
 
 /** An independent review engagement is 55% of the audit fee, where eligible. */
@@ -174,7 +199,7 @@ export type SoftwareTierId = keyof typeof SOFTWARE_TIERS;
 
 /** Client-facing names for the software plans. */
 export const SOFTWARE_TIER_LABELS: Record<SoftwareTierId, string> = {
-  book: "Junior",
+  book: "Bookkeeper",
   senior: "Senior",
   manager: "Manager",
   cfo: "CFO",

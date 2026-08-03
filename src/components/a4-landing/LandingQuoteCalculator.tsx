@@ -2,10 +2,15 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { AUDIT_YEARLY, BOOKKEEPING_MONTHLY, TAX_RETURN_YEARLY, VAT_MONTHLY } from "@/data/a4QuotePack";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
-// The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
-// change it there first and mirror it here.
+//
+// The rate tables read `@/data/a4QuotePack`, which transcribes the portal
+// backend's pack. They used to be copied literals here and had drifted a whole
+// pack version behind it (bookkeeping 69/119/199… against 59/99/169…, and the
+// pre-02b tax-return and audit curves), so the homepage quoted a different
+// price from /pricing and /accounting-services on the same visit.
 
 const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["shop", "Shop, trade or services", "standard"],
@@ -52,10 +57,10 @@ const QSIZE: [string, string, string][] = [
   ["unsure", "Not sure", "we'll check"],
 ];
 const QT: Record<string, Record<string, number>> = {
-  book: { "0": 0, "1-20": 69, "21-60": 119, "61-150": 199, "151-400": 329, "401-1000": 549, "1000+": 899 },
-  vat: { "0": 0, "1-20": 29, "21-60": 45, "61-150": 69, "151-400": 99, "401-1000": 139, "1000+": 189 },
-  taxret: { "0": 0, "1-20": 275, "21-60": 375, "61-150": 525, "151-400": 750, "401-1000": 1100, "1000+": 1650 },
-  assure: { "0": 0, "1-20": 750, "21-60": 1150, "61-150": 1750, "151-400": 2600, "401-1000": 3900, "1000+": 5800 },
+  book: BOOKKEEPING_MONTHLY,
+  vat: VAT_MONTHLY,
+  taxret: TAX_RETURN_YEARLY,
+  assure: AUDIT_YEARLY,
 };
 const QPAY = [
   { upTo: 5, rate: 32 },
