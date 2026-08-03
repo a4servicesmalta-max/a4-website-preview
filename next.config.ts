@@ -19,7 +19,10 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "cdn.livechat-static.com" },
+      // cdn.livechat-static.com was here for a hot-linked hand-wave GIF in the
+      // support-chat greeting card. That artwork is now an inline SVG, so the
+      // host is no longer allow-listed — nothing may load from it again by
+      // accident.
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },

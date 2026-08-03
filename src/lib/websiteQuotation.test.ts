@@ -4,6 +4,7 @@ import {
   buildQuoteRecord,
   evaluateA4Items,
   submitWebsiteQuotation,
+  A4_LIMITS,
   SOURCE_SITE,
   type A4Item,
 } from "./websiteQuotation";
@@ -382,5 +383,157 @@ describe("submission", () => {
       restore();
     }
     expect(calls).toHaveLength(0);
+  });
+
+  it("hands back a signup deep-link carrying the reference and the email", async () => {
+    // The quote only reaches the visitor's portal if this link carries both:
+    // the client app forwards `quote` and `email` into the onboarding wizard.
+    const { restore } = captureSubmit({ ok: true, body: { data: { reference: "Q-77", status: "QUOTED" } } });
+    try {
+      const res = await submitWebsiteQuotation({ name: "A", email: "a+tag@b.com", items });
+      expect(res.status).toBe("quoted");
+      if (res.status !== "quoted") return;
+      expect(res.reference).toBe("Q-77");
+      expect(res.portalHref).toContain("/signup?quote=Q-77");
+      // The address must survive as a query param, '+' and all.
+      expect(res.portalHref).toContain(`email=${encodeURIComponent("a+tag@b.com")}`);
+    } finally {
+      restore();
+    }
+  });
+
+  it("falls back to RECEIVED when the backend declines to price it", async () => {
+    // 202 { reference: null, status: 'RECEIVED' } — the backend repriced our
+    // basket, disagreed with our total, and captured the lead instead of
+    // issuing a quote. That is a SUCCESS for the visitor, not an error: the
+    // quote follows by email. Treating it as an error here would tell a
+    // perfectly good lead that their submission failed.
+    const { calls, restore } = captureSubmit({
+      ok: true,
+      body: { data: { reference: null, status: "RECEIVED" } },
+    });
+    try {
+      const res = await submitWebsiteQuotation({ name: "A", email: "a@b.com", items });
+      expect(res.status).toBe("received");
+    } finally {
+      restore();
+    }
+    expect(calls).toHaveLength(1);
+  });
+
+  it("treats a reference without a QUOTED status as RECEIVED, not quoted", async () => {
+    // Both halves are required before we promise a quote. A reference alone
+    // must not surface a portal link to a quotation that was never issued.
+    const { restore } = captureSubmit({
+      ok: true,
+      body: { data: { reference: "Q-2", status: "RECEIVED" } },
+    });
+    try {
+      expect((await submitWebsiteQuotation({ name: "A", email: "a@b.com", items })).status).toBe("received");
+    } finally {
+      restore();
+    }
+  });
+
+  it("reports an error on a non-2xx response, and never invents a reference", async () => {
+    const { restore } = captureSubmit({ ok: false, body: { data: { reference: "Q-3", status: "QUOTED" } } });
+    try {
+      const res = await submitWebsiteQuotation({ name: "A", email: "a@b.com", items });
+      expect(res.status).toBe("error");
+    } finally {
+      restore();
+    }
+  });
+
+  it("never throws when the network does", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      throw new Error("offline");
+    }) as unknown as typeof fetch;
+    try {
+      const res = await submitWebsiteQuotation({ name: "A", email: "a@b.com", items });
+      expect(res.status).toBe("error");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("will not post without a name and a plausible email", async () => {
+    const { calls, restore } = captureSubmit({ ok: true });
+    try {
+      for (const contact of [
+        { name: "", email: "a@b.com" },
+        { name: "   ", email: "a@b.com" },
+        { name: "A", email: "not-an-email" },
+        { name: "A", email: "a@b" },
+        { name: "A", email: "" },
+      ]) {
+        expect((await submitWebsiteQuotation({ ...contact, items })).status).toBe("error");
+      }
+    } finally {
+      restore();
+    }
+    // Nobody to send a quote to means there is nothing worth sending.
+    expect(calls).toHaveLength(0);
+  });
+
+  it("refuses a basket over the server's item cap instead of firing a doomed request", async () => {
+    const { calls, restore } = captureSubmit({ ok: true });
+    const tooMany: A4Item[] = Array.from({ length: A4_LIMITS.maxItems + 1 }, () => ({
+      service: "registered-office" as const,
+    }));
+    try {
+      expect((await submitWebsiteQuotation({ name: "A", email: "a@b.com", items: tooMany })).status).toBe("error");
+      // Exactly at the cap is still allowed through.
+      const atCap = tooMany.slice(0, A4_LIMITS.maxItems);
+      expect((await submitWebsiteQuotation({ name: "A", email: "a@b.com", items: atCap })).status).not.toBe("error");
+    } finally {
+      restore();
+    }
+    expect(calls).toHaveLength(1);
+  });
+});
+
+describe("the wizard path", () => {
+  // The legacy vacei.com shape: no `items`, so the caller owns the totals and
+  // the backend reprices with its own `evaluateSiteQuote`. Verbatim passthrough
+  // is the whole contract here — if buildQuoteRecord re-derived or rounded any
+  // of these, display and server would part company and every wizard quote
+  // would drop to 202.
+  const wizard = {
+    name: "A",
+    email: "a@b.com",
+    selections: { sector: "igaming", behind: true },
+    lines: [{ label: "Bookkeeping", amount: 123, cadence: "monthly" as const }],
+    monthly: 111,
+    yearly: 222,
+    oneOff: 333,
+    catchup: 44,
+  };
+
+  it("passes the caller's own totals through untouched", () => {
+    const r = buildQuoteRecord(wizard, DURING);
+    expect(r.monthly).toBe(111);
+    expect(r.yearly).toBe(222);
+    expect(r.oneOff).toBe(333);
+    expect(r.catchup).toBe(44);
+    expect(r.lines).toEqual(wizard.lines);
+    // Raw wizard state, NOT the a4-services envelope — the server switches on
+    // the absent `kind` to pick the other evaluator.
+    expect(r.selections).toEqual({ sector: "igaming", behind: true });
+    expect(r.selections).not.toHaveProperty("kind");
+  });
+
+  it("still stamps the pack, currency and quote time", () => {
+    const r = buildQuoteRecord(wizard, DURING);
+    expect(r.pack).toBe(A4_QUOTE_PACK_VERSION);
+    expect(r.currency).toBe("EUR");
+    expect(r.quotedAt).toBe(DURING.toISOString());
+  });
+
+  it("defaults a missing catch-up to zero rather than undefined", () => {
+    const { name, email, selections, lines, monthly, yearly, oneOff } = wizard;
+    const withoutCatchup = { name, email, selections, lines, monthly, yearly, oneOff };
+    expect(buildQuoteRecord(withoutCatchup, DURING).catchup).toBe(0);
   });
 });
