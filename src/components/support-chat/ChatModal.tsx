@@ -1,11 +1,38 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import TypingIndicator from "./TypingIndicator";
+import {
+  POLL_BASE_MS,
+  buildProvenance,
+  clearStoredSession,
+  fetchChatMessages,
+  isSessionGone,
+  mergeServerMessages,
+  nextPollDelayMs,
+  nextSinceCursor,
+  openChatSession,
+  postChatMessage,
+  readStoredSession,
+  writeStoredSession,
+  type ChatServerMessage,
+} from "@/lib/chatSession";
 
-export type Message = { role: "user" | "bot"; content: string };
+/**
+ * `bot` is scripted local copy (the opening three questions and status lines);
+ * `user` and `staff` are real messages that exist on the backend.
+ */
+export type Message = {
+  role: "user" | "bot" | "staff";
+  content: string;
+  /** Server message id once acknowledged — also the dedupe key against polling. */
+  id?: string;
+  authorName?: string;
+  pending?: boolean;
+  failed?: boolean;
+};
 
 const TYPING_DELAY_MS = 800;
 
@@ -20,35 +47,252 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [botTyping, setBotTyping] = useState(false);
-  const [step, setStep] = useState<"welcome" | "name" | "email" | "done">("welcome");
+  const [step, setStep] = useState<"welcome" | "name" | "email" | "live" | "done">("welcome");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [issue, setIssue] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const [staffJoined, setStaffJoined] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Ids the visitor has already been shown, whether they arrived by polling or
+   * were echoed back to us after we posted them. The poll merges against this
+   * so a message is never rendered twice.
+   */
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  /** `since` cursor for the next poll. */
+  const sinceRef = useRef<string>("");
+  /** The opening flow must run once, not on every re-open — reopening resumes. */
+  const initialisedRef = useRef(false);
+  const tempIdRef = useRef(0);
 
   const scrollToBottom = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   };
 
+  const say = useCallback((content: string) => {
+    setMessages((prev) => [...prev, { role: "bot", content }]);
+  }, []);
+
+  /** Render newly-arrived server messages, skipping anything already on screen. */
+  const applyServerMessages = useCallback((incoming: ChatServerMessage[], render: boolean) => {
+    const seen = seenIdsRef.current;
+    const fresh = mergeServerMessages([], incoming).filter((m) => !seen.has(m.id));
+    fresh.forEach((m) => seen.add(m.id));
+    if (!render || !fresh.length) return;
+    if (fresh.some((m) => m.role === "staff")) setStaffJoined(true);
+    setMessages((prev) => [
+      ...prev,
+      ...fresh.map<Message>((m) => ({
+        role: m.role === "staff" ? "staff" : "user",
+        content: m.content,
+        id: m.id,
+        authorName: m.role === "staff" ? m.authorName : undefined,
+      })),
+    ]);
+  }, []);
+
+  /* ---------------------------------------------------------------- *
+   * Open: resume an existing thread, or start the opening flow.
+   * There is deliberately NO state wipe here — closing the modal used to
+   * throw the whole conversation away.
+   * ---------------------------------------------------------------- */
   useEffect(() => {
-    if (!open) return;
-    setMessages([]);
-    setStep("welcome");
-    setName("");
-    setEmail("");
-    setIssue("");
-    setInput("");
-    setBotTyping(true);
-    const timer = setTimeout(() => {
-      setMessages([{ role: "bot", content: t("supportChat.botWelcome") }]);
+    if (!open || initialisedRef.current) return;
+    initialisedRef.current = true;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    /** No stored thread: the scripted opening flow, exactly as before. */
+    const startFresh = () => {
+      setBotTyping(true);
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        setMessages([{ role: "bot", content: t("supportChat.botWelcome") }]);
+        setBotTyping(false);
+      }, TYPING_DELAY_MS);
+    };
+
+    /** Stored thread: replay its history and go straight back to live. */
+    const resume = async (storedToken: string) => {
+      setToken(storedToken);
+      setStep("live");
+      setBotTyping(true);
+      const res = await fetchChatMessages(storedToken);
+      if (cancelled) return;
       setBotTyping(false);
-    }, TYPING_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [open, t]);
+      if (!res.ok) {
+        if (isSessionGone(res.status)) {
+          // The thread is genuinely gone — start over rather than polling a
+          // token the backend has forgotten.
+          clearStoredSession();
+          setToken(null);
+          setStep("welcome");
+          say(t("supportChat.botWelcome"));
+          return;
+        }
+        // Transient (offline / 429): keep the session, let polling recover.
+        say(t("supportChat.botResumed"));
+        return;
+      }
+      say(t("supportChat.botResumed"));
+      applyServerMessages(res.data.messages, true);
+      sinceRef.current = nextSinceCursor(res.data.messages, res.data.serverTime, sinceRef.current);
+    };
+
+    const stored = readStoredSession();
+    if (stored) void resume(stored.token);
+    else startFresh();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [open, t, say, applyServerMessages]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, botTyping]);
+
+  /* ---------------------------------------------------------------- *
+   * Poll for staff replies while the modal is open and the thread is live.
+   * Pauses on a hidden tab (no network at all), backs off on errors and 429,
+   * and stops for good only when the session itself is gone.
+   * ---------------------------------------------------------------- */
+  useEffect(() => {
+    if (!open || step !== "live" || !token) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let failures = 0;
+
+    const tick = async () => {
+      if (cancelled) return;
+      if (typeof document !== "undefined" && document.hidden) {
+        // Nobody is looking — do not spend a request, just re-check later.
+        timer = setTimeout(tick, POLL_BASE_MS);
+        return;
+      }
+      const res = await fetchChatMessages(token, sinceRef.current || undefined);
+      if (cancelled) return;
+      if (res.ok) {
+        failures = 0;
+        applyServerMessages(res.data.messages, true);
+        sinceRef.current = nextSinceCursor(res.data.messages, res.data.serverTime, sinceRef.current);
+        timer = setTimeout(tick, nextPollDelayMs(0));
+        return;
+      }
+      if (isSessionGone(res.status)) {
+        clearStoredSession();
+        setToken(null);
+        setStep("done");
+        say(t("supportChat.botSessionEnded"));
+        return; // stop polling — nothing to poll
+      }
+      failures += 1;
+      timer = setTimeout(tick, nextPollDelayMs(failures, res.retryAfterSeconds));
+    };
+
+    timer = setTimeout(tick, POLL_BASE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, step, token, applyServerMessages, say, t]);
+
+  /* ---------------------------------------------------------------- *
+   * The old one-shot path, kept verbatim as the FALLBACK. If the chat
+   * session cannot be opened the visitor still becomes a lead and we still
+   * get the email — exactly what happens today.
+   * ---------------------------------------------------------------- */
+  const submitLegacyFallback = useCallback(
+    async (visitorName: string, visitorEmail: string, visitorIssue: string, conversation: Message[]) => {
+      try {
+        const res = await fetch("/api/support", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: visitorName,
+            email: visitorEmail,
+            issue: visitorIssue,
+            conversation: conversation.map((m) => ({ role: m.role, content: m.content })),
+          }),
+        });
+        if (!res.ok) throw new Error(t("supportChat.submitErrorFailed"));
+        say(t("supportChat.botSuccess"));
+      } catch {
+        say(t("supportChat.botErrorSend"));
+      } finally {
+        setBotTyping(false);
+        setStep("done");
+      }
+    },
+    [say, t]
+  );
+
+  /** Email step: open the live session, or fall back. Never both. */
+  const startSession = useCallback(
+    async (visitorEmail: string, conversation: Message[]) => {
+      const provenance = buildProvenance(
+        typeof window === "undefined" ? "" : window.location.href,
+        typeof document === "undefined" ? "" : document.referrer
+      );
+      const res = await openChatSession({ name, email: visitorEmail, message: issue, provenance });
+
+      if (!res.ok) {
+        // Session unavailable (endpoint not deployed yet, offline, rate limited):
+        // do exactly what the widget did before this feature existed.
+        await submitLegacyFallback(name, visitorEmail, issue, conversation);
+        return;
+      }
+
+      writeStoredSession(res.data);
+      setToken(res.data.token);
+
+      // Prime the cursor and the dedupe set: the backend already holds the
+      // opening message, which is on screen locally. Mark it seen (render:
+      // false) so the first poll does not repeat it back at the visitor.
+      const primed = await fetchChatMessages(res.data.token);
+      if (primed.ok) {
+        applyServerMessages(primed.data.messages, false);
+        sinceRef.current = nextSinceCursor(primed.data.messages, primed.data.serverTime, sinceRef.current);
+      } else {
+        sinceRef.current = new Date().toISOString();
+      }
+
+      setBotTyping(false);
+      setStep("live");
+      say(t("supportChat.botSessionLive"));
+    },
+    [name, issue, applyServerMessages, say, t, submitLegacyFallback]
+  );
+
+  /** Live step: every further message goes to the thread, not to /api/support. */
+  const sendLiveMessage = useCallback(
+    async (content: string) => {
+      if (!token) return;
+      const tempId = `tmp-${++tempIdRef.current}`;
+      setMessages((prev) => [...prev, { role: "user", content, id: tempId, pending: true }]);
+      const res = await postChatMessage(token, content);
+      if (res.ok) {
+        seenIdsRef.current.add(res.data.messageId);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...m, id: res.data.messageId, pending: false } : m))
+        );
+        return;
+      }
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, pending: false, failed: true } : m)));
+      if (isSessionGone(res.status)) {
+        clearStoredSession();
+        setToken(null);
+        setStep("done");
+        say(t("supportChat.botSessionEnded"));
+        return;
+      }
+      say(t("supportChat.botMessageFailed"));
+    },
+    [token, say, t]
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,40 +324,56 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
       return;
     }
     if (step === "email") {
-      setEmail(trimmed);
       const userMessage: Message = { role: "user", content: trimmed };
       setMessages((prev) => [...prev, userMessage]);
       setInput("");
       setBotTyping(true);
-      const fullConversation: Message[] = [...messages, userMessage];
-      fetch("/api/support", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          email: trimmed,
-          issue,
-          conversation: fullConversation,
-        }),
-      })
-        .then((res) => {
-          if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error || t("supportChat.submitErrorFailed"))));
-          setMessages((prev) => [...prev, { role: "bot", content: t("supportChat.botSuccess") }]);
-        })
-        .catch(() => {
-          setMessages((prev) => [...prev, { role: "bot", content: t("supportChat.botErrorSend") }]);
-        })
-        .finally(() => {
-          setBotTyping(false);
-          setStep("done");
-        });
+      void startSession(trimmed, [...messages, userMessage]);
+      return;
+    }
+    if (step === "live") {
+      setInput("");
+      void sendLiveMessage(trimmed);
     }
   };
 
-  if (!open) return null;
+  /** "Start new chat" abandons the thread on purpose — clear it everywhere. */
+  const handleRestart = () => {
+    clearStoredSession();
+    seenIdsRef.current = new Set();
+    sinceRef.current = "";
+    initialisedRef.current = false;
+    setToken(null);
+    setStaffJoined(false);
+    setMessages([]);
+    setInput("");
+    setName("");
+    setIssue("");
+    setStep("welcome");
+    setBotTyping(true);
+    setTimeout(() => {
+      setMessages([{ role: "bot", content: t("supportChat.botWelcome") }]);
+      setBotTyping(false);
+      initialisedRef.current = true;
+    }, TYPING_DELAY_MS);
+    onRestart();
+  };
 
+  const statusLabel =
+    step === "live"
+      ? staffJoined
+        ? t("supportChat.statusLive")
+        : t("supportChat.statusOffline")
+      : null;
+
+  // NOTE: this component stays mounted while closed so a conversation survives
+  // the modal being dismissed. The exit animation lives here rather than in the
+  // parent for exactly that reason.
   return (
+    <AnimatePresence>
+      {open && (
     <motion.div
+      key="support-chat-modal"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -143,7 +403,18 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
                 />
               </svg>
             </div>
-            <span className="font-semibold text-gray-900">{t("supportChat.headerTitle")}</span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-semibold text-gray-900">{t("supportChat.headerTitle")}</span>
+              {statusLabel && (
+                <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <span
+                    className={`inline-block w-1.5 h-1.5 rounded-full ${staffJoined ? "bg-emerald-500" : "bg-gray-400"}`}
+                    aria-hidden
+                  />
+                  {statusLabel}
+                </span>
+              )}
+            </div>
           </div>
           <button
             type="button"
@@ -157,20 +428,34 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
           </button>
         </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto p-4 space-y-4"
+          aria-live="polite"
+          aria-atomic="false"
+        >
           {messages.map((msg, i) => (
             <div
-              key={i}
+              key={msg.id ?? `local-${i}`}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
-                  msg.role === "user"
-                    ? "rounded-br-md bg-[#111111] text-white"
-                    : "rounded-bl-md bg-gray-100 text-gray-900"
-                }`}
-              >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              <div className="max-w-[85%]">
+                {msg.role === "staff" && (
+                  <p className="mb-1 px-1 text-xs font-medium text-gray-500">
+                    {msg.authorName || t("supportChat.staffFallbackName")}
+                  </p>
+                )}
+                <div
+                  className={`rounded-2xl px-4 py-2.5 ${
+                    msg.role === "user"
+                      ? `rounded-br-md bg-[#111111] text-white ${msg.pending ? "opacity-60" : ""} ${msg.failed ? "opacity-50" : ""}`
+                      : msg.role === "staff"
+                        ? "rounded-bl-md bg-emerald-50 text-gray-900 border border-emerald-100"
+                        : "rounded-bl-md bg-gray-100 text-gray-900"
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                </div>
               </div>
             </div>
           ))}
@@ -185,7 +470,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
           <div className="p-4 border-t border-gray-100">
             <button
               type="button"
-              onClick={onRestart}
+              onClick={handleRestart}
               className="w-full py-3 rounded-xl bg-[#111111] hover:bg-[#222222] text-white font-semibold text-sm transition-colors"
             >
               {t("supportChat.startNewChat")}
@@ -200,11 +485,13 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
                 onChange={(e) => setInput(e.target.value)}
                 disabled={botTyping}
                 placeholder={t("supportChat.inputPlaceholder")}
+                aria-label={t("supportChat.inputPlaceholder")}
                 className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#111111]/30 focus:border-[#111111] disabled:opacity-60 text-sm"
               />
               <button
                 type="submit"
                 disabled={botTyping || !input.trim()}
+                aria-label={t("supportChat.sendAria")}
                 className="px-4 py-3 rounded-xl bg-[#111111] hover:bg-[#222222] text-white disabled:opacity-60 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,5 +503,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
         )}
       </motion.div>
     </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
