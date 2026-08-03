@@ -21,6 +21,13 @@ import {
   isPromoActive,
   PRICING_VAT_NOTE,
   PRICING_GOV_NOTE,
+  TXN_BANDS,
+  TAX_RETURN_YEARLY,
+  MBR_ANNUAL_RETURN,
+  CAPITAL_BANDS,
+  REGISTERED_OFFICE_YEARLY,
+  CATCH_UP,
+  payrollRate,
 } from "@/data/a4QuotePack";
 import {
   submitWebsiteQuotation,
@@ -33,16 +40,30 @@ const prEuro = (n: number) => "€" + Math.round(n).toLocaleString();
 const PR_SERVICES = [
   { id: "accounting", label: "Accounting", icon: "book-open-check" },
   { id: "vat", label: "VAT", icon: "receipt-text" },
+  { id: "payroll", label: "Payroll", icon: "users" },
+  { id: "taxret", label: "Tax return", icon: "file-text" },
   { id: "audit", label: "Audit", icon: "clipboard-check" },
+  { id: "annret", label: "Annual return", icon: "landmark" },
+  { id: "regoff", label: "Registered office", icon: "map-pin" },
+  { id: "catchup", label: "Catch-up", icon: "history" },
   { id: "incorporation", label: "Incorporation", icon: "building-2" },
 ] as const;
 
 /**
- * Transaction-volume bands, exactly as quote pack mt-2026-08-01 bands them.
- * VAT and audit are both priced off volume, not filing frequency or turnover.
+ * Transaction-volume bands, derived from the pack rather than restated, so this
+ * page can never again offer a narrower ladder than the engine actually prices.
+ * It previously listed only four of the seven, which meant a pre-trading company
+ * could not reach the €600 audit entry price and a 400+ ledger could not be
+ * quoted here at all.
  */
-const PR_VOLUME_BANDS = ["1-20", "21-60", "61-150", "151-400"] as const;
-const PR_VOLUME_LABELS = ["Up to 20", "20 to 60", "60 to 150", "150 to 400"];
+const PR_VOLUME_BANDS = TXN_BANDS.map((b) => b.id);
+const PR_VOLUME_LABELS = TXN_BANDS.map((b) => b.label);
+/** Default to "20 to 60" — the commonest small-company band. */
+const PR_DEFAULT_BAND = PR_VOLUME_BANDS.indexOf("21-60");
+/** Volumes at which a small-company review engagement is off the table. */
+const PR_BIG_VOLUME: readonly string[] = ["151-400", "401-1000", "1000+"];
+/** Months-behind options for the catch-up quote. */
+const PR_CATCHUP_MONTHS = [3, 6, 12, 24];
 
 type ServiceId = (typeof PR_SERVICES)[number]["id"];
 
@@ -476,8 +497,13 @@ function PricingInfoBanner() {
 function PricingCalc() {
   const [svc, setSvc] = useState<ServiceId>("accounting");
   const [recon, setRecon] = useState(true);
-  const [vatVol, setVatVol] = useState(1);
-  const [turn, setTurn] = useState(1);
+  const [vatVol, setVatVol] = useState(PR_DEFAULT_BAND);
+  const [turn, setTurn] = useState(PR_DEFAULT_BAND);
+  const [taxVol, setTaxVol] = useState(PR_DEFAULT_BAND);
+  const [heads, setHeads] = useState(3);
+  const [capital, setCapital] = useState(0);
+  const [catchupMonths, setCatchupMonths] = useState(1);
+  const [catchupFull, setCatchupFull] = useState(true);
   const [incShareholders, setIncShareholders] = useState(1);
   const [incDirectors, setIncDirectors] = useState(1);
   const [incRegistrations, setIncRegistrations] = useState(true);
@@ -510,14 +536,62 @@ function PricingCalc() {
     selections = { kind: "accounting", tier: LADDER_BASE.id, recon };
   } else if (svc === "vat") {
     const band = PR_VOLUME_BANDS[vatVol];
-    lines = [{ label: `VAT returns · ${PR_VOLUME_LABELS[vatVol].toLowerCase()} transactions a month`, amount: VAT_MONTHLY[band], cadence: "monthly" }];
+    const notTrading = band === "0";
+    lines = [
+      {
+        label: notTrading
+          ? "VAT returns · not trading yet, nothing to file"
+          : `VAT returns · ${PR_VOLUME_LABELS[vatVol].toLowerCase()} transactions a month`,
+        amount: VAT_MONTHLY[band],
+        cadence: "monthly",
+      },
+    ];
     selections = { kind: "vat", txn: band, vatreg: "art10" };
+  } else if (svc === "payroll") {
+    const rate = payrollRate(heads);
+    lines = [{ label: `Payroll · ${heads} ${heads === 1 ? "employee" : "employees"} at €${rate} each`, amount: heads * rate, cadence: "monthly" }];
+    selections = { kind: "payroll", heads };
+  } else if (svc === "taxret") {
+    const band = PR_VOLUME_BANDS[taxVol];
+    unit = "/ yr";
+    lines = [{ label: "Annual tax return — from the closed ledger, with schedules", amount: TAX_RETURN_YEARLY[band], cadence: "yearly" }];
+    selections = { kind: "taxret", txn: band, taxret: "we" };
   } else if (svc === "audit") {
     const band = PR_VOLUME_BANDS[turn];
     unit = "/ yr";
     lines = [{ label: "Statutory audit", amount: AUDIT_YEARLY[band], cadence: "yearly" }];
     selections = { kind: "audit", txn: band, assure: "we" };
-    if (turn >= 3) complex = true;
+    if (PR_BIG_VOLUME.includes(band)) complex = true;
+  } else if (svc === "annret") {
+    const cap = CAPITAL_BANDS[capital];
+    const registry = MBR_ANNUAL_RETURN.registryFeeByCapital[cap.id];
+    unit = "/ yr";
+    // The registry fee is a government pass-through: never discounted.
+    passThrough = registry;
+    lines = [
+      { label: "Annual return — prepared and filed with the MBR", amount: MBR_ANNUAL_RETURN.ourFee, cadence: "yearly" },
+      { label: `MBR registry fee · ${cap.label} share capital`, amount: registry, cadence: "yearly" },
+    ];
+    selections = { kind: "annret", cap: cap.id, annret: "we" };
+  } else if (svc === "regoff") {
+    unit = "/ yr";
+    lines = [{ label: "Registered office — statutory address, post passed to you", amount: REGISTERED_OFFICE_YEARLY, cadence: "yearly" }];
+    selections = { kind: "regoff", regoff: "we" };
+  } else if (svc === "catchup") {
+    const months = PR_CATCHUP_MONTHS[catchupMonths];
+    unit = "one-off";
+    // Full service is capped per year behind; self-service is a flat per-month rate.
+    const amount = catchupFull
+      ? Math.min(months * CATCH_UP.fullPerMonth, Math.ceil(months / 12) * CATCH_UP.fullPerYearCap)
+      : months * CATCH_UP.selfPerMonth;
+    lines = [
+      {
+        label: `Catch-up · ${months} ${months === 1 ? "month" : "months"} behind, ${catchupFull ? "we do the work" : "you post, we review"}`,
+        amount,
+        cadence: "oneoff",
+      },
+    ];
+    selections = { kind: "catchup", behind: String(months), book: catchupFull ? "full" : "self" };
   } else {
     unit = "one-off";
     const one: { label: string; amount: number; cadence: QuoteCadence }[] = [
@@ -643,6 +717,69 @@ function PricingCalc() {
                   Every VAT return prepared and filed with the CFR, reviewed before submission. The fee is a monthly one
                   set by your transaction volume, whatever your filing frequency. Art. 11 small-exempt businesses instead
                   pay one flat €{VAT_RULES.art11FlatYearly}/yr declaration.
+                </p>
+              </div>
+            )}
+            {svc === "payroll" && (
+              <div>
+                <div className="a4-font-body text-[14px] font-semibold text-white">How many on the payroll</div>
+                <div className="mt-2">
+                  <PrRow label="Employees" sub={`€${payrollRate(heads)} per head at this size — the rate steps down as the book grows`}>
+                    <PrStepper value={heads} set={setHeads} min={1} max={50} />
+                  </PrRow>
+                </div>
+                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
+                  Payslips, FS5s and the year-end FS3/FS7 chain, filed on time. The whole book is billed at the rate for
+                  its size, so the per-head price falls for everyone as you grow.
+                </p>
+              </div>
+            )}
+            {svc === "taxret" && (
+              <div>
+                <div className="a4-font-body text-[14px] font-semibold text-white">Transactions a month</div>
+                <PrChip items={PR_VOLUME_LABELS} value={taxVol} set={setTaxVol} cols={2} />
+                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
+                  Prepared once a year from the closed ledger, with the schedules the return needs. A company that is not
+                  trading yet still has a return to file — it is just a much smaller one.
+                </p>
+              </div>
+            )}
+            {svc === "annret" && (
+              <div>
+                <div className="a4-font-body text-[14px] font-semibold text-white">Share capital</div>
+                <PrChip items={CAPITAL_BANDS.map((c) => c.label)} value={capital} set={setCapital} cols={2} />
+                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
+                  Our €{MBR_ANNUAL_RETURN.ourFee} fee to prepare and file, plus the MBR registry fee set by your share
+                  capital. The registry fee is passed through at cost and is never discounted.
+                </p>
+              </div>
+            )}
+            {svc === "regoff" && (
+              <div>
+                <div className="a4-font-body text-[14px] font-semibold text-white">Registered office</div>
+                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
+                  A statutory address for the MBR and the CFR, with post scanned and passed to you the day it arrives.
+                  Flat €{REGISTERED_OFFICE_YEARLY}/yr — it does not move with your transaction volume.
+                </p>
+              </div>
+            )}
+            {svc === "catchup" && (
+              <div>
+                <div className="a4-font-body text-[14px] font-semibold text-white">How far behind</div>
+                <PrChip
+                  items={PR_CATCHUP_MONTHS.map((m) => (m >= 12 ? `${m / 12} ${m === 12 ? "year" : "years"}` : `${m} months`))}
+                  value={catchupMonths}
+                  set={setCatchupMonths}
+                  cols={2}
+                />
+                <div className="mt-2">
+                  <PrRow label="We do the work" sub="Off: you post it and we review — cheaper, but slower on your side">
+                    <PrToggle on={catchupFull} set={setCatchupFull} />
+                  </PrRow>
+                </div>
+                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
+                  A one-off to bring the ledger up to date before the regular monthly work starts. Full service is capped
+                  per year behind, so a long backlog costs less than the monthly rate suggests.
                 </p>
               </div>
             )}
