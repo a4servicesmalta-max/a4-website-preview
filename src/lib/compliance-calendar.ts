@@ -1,44 +1,59 @@
-/** Malta compliance deadlines for 2026 — used in calendar UI and ICS download. */
-export const COMPLIANCE_DEADLINES_2026 = [
-  { date: "2026-01-15", name: "VAT return filing (Q4 2025)" },
-  { date: "2026-03-30", name: "Provisional tax instalment" },
-  { date: "2026-04-15", name: "VAT return filing (Q1 2026)" },
-  { date: "2026-06-28", name: "MBR annual return (typical window — confirm your anniversary)" },
-  { date: "2026-07-15", name: "VAT return filing (Q2 2026)" },
-  { date: "2026-07-31", name: "Provisional tax instalment" },
-  { date: "2026-10-15", name: "VAT return filing (Q3 2026)" },
-  { date: "2026-10-30", name: "Audited accounts & tax return (typical — per company year-end)" },
-  { date: "2026-11-21", name: "Provisional tax instalment" },
-] as const;
+/**
+ * ICS export of the Malta compliance calendar — derived from the shared
+ * rules in compliance-deadlines.ts so the download always matches what the
+ * website shows. Events are materialised for the next 12 months.
+ */
+import { COMPLIANCE_DL_RULES, type ComplianceRule } from "@/lib/compliance-deadlines";
 
 export function escapeIcsText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 }
 
-export function buildComplianceCalendarIcs(): string {
-  const now = new Date();
+function occurrences(rule: ComplianceRule, from: Date): Date[] {
+  const out: Date[] = [];
+  const y = from.getFullYear();
+  if (rule.monthly) {
+    for (let i = 0; i < 12; i++) out.push(new Date(y, from.getMonth() + i + 1, 0));
+  } else if (rule.dates) {
+    for (const [m, day] of rule.dates) {
+      for (const yy of [y, y + 1]) {
+        const d = new Date(yy, m, day);
+        if (d.getTime() > from.getTime()) out.push(d);
+      }
+    }
+  }
+  const horizon = new Date(y + 1, from.getMonth(), from.getDate()).getTime();
+  return out.filter((d) => d.getTime() > from.getTime() && d.getTime() <= horizon);
+}
+
+export function buildComplianceCalendarIcs(now = new Date()): string {
   const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//A4 Services Limited//Malta Compliance Calendar 2026//EN",
+    "PRODID:-//A4 Services Limited//Malta Compliance Calendar//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    "X-WR-CALNAME:Malta Compliance Deadlines 2026 — A4 Services",
+    "X-WR-CALNAME:Malta Compliance Deadlines — A4 Services",
   ];
 
-  for (const item of COMPLIANCE_DEADLINES_2026) {
-    const compact = item.date.replace(/-/g, "");
-    lines.push(
-      "BEGIN:VEVENT",
-      `UID:${compact}-${item.name.replace(/\W+/g, "-").toLowerCase()}@a4.com.mt`,
-      `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${compact}`,
-      `SUMMARY:${escapeIcsText(item.name)}`,
-      "DESCRIPTION:Key Malta compliance date. Confirm exact deadlines for your entity with A4 Services.",
-      "END:VEVENT",
-    );
+  for (const rule of COMPLIANCE_DL_RULES) {
+    for (const date of occurrences(rule, now)) {
+      const compact = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+      const description = [rule.description, rule.note, "Confirm exact deadlines for your entity with A4 Services — info@a4.com.mt."]
+        .filter(Boolean)
+        .join(" ");
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:${compact}-${rule.id}@a4.com.mt`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${compact}`,
+        `SUMMARY:${escapeIcsText(rule.name)}`,
+        `DESCRIPTION:${escapeIcsText(description)}`,
+        "END:VEVENT",
+      );
+    }
   }
 
   lines.push("END:VCALENDAR");

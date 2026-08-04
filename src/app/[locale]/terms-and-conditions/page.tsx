@@ -15,7 +15,7 @@ export default function TermsAndConditionsPage() {
     <LegalDocPage
       eyebrow="Legal"
       title="Terms & Conditions"
-      updated="June 2026"
+      updated="August 2026"
       intro="Please read these terms carefully. They set out the basis on which we provide our website and professional services to you."
       sections={TERMS_SECTIONS}
     />

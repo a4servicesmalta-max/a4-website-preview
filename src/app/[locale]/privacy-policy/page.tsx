@@ -15,7 +15,7 @@ export default function PrivacyPolicyPage() {
     <LegalDocPage
       eyebrow="Legal"
       title="Privacy Policy"
-      updated="June 2026"
+      updated="August 2026"
       intro="Your privacy matters to us. This policy explains what personal data we collect, how we use it, and the rights you have over it."
       sections={PRIVACY_POLICY_SECTIONS}
     />
