@@ -3,6 +3,8 @@ import nodemailer from "nodemailer";
 import { isVerified } from "@/lib/email-verify";
 import { pushToPortal } from "@/lib/portal";
 import { engineFetch } from "@/lib/fs-review-engine";
+import { augmentWithAiCommentary } from "@/lib/ai-review";
+import type { ReviewResponse } from "./types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -73,6 +75,7 @@ export async function POST(req: NextRequest) {
       fullQuote = data && typeof data === "object" && data.quote ? data.quote : null;
       if (data && typeof data === "object") delete data.quote; // strip defensively before spreading
       clientPayload = { ...data, quote: fullQuote ? { fee: fullQuote.fee, docKind: fullQuote.docKind } : null };
+      clientPayload = await augmentWithAiCommentary(clientPayload as unknown as ReviewResponse);
     } else {
       const detail = await engine.json().catch(() => ({}));
       engineErrorDetail = detail.detail || "";
@@ -92,7 +95,22 @@ export async function POST(req: NextRequest) {
       email,
     ).catch(() => {});
 
-    await pushToPortal({ name, email, company, message: `Uploaded ${file.name} for ${kind === "tb" ? "trial balance" : "financial statements"} review`, service: `FS/TB review (${kind})`, source: "fs-review", priority: "High", meta: { kind, fileName: file.name, ...(scoping ? { scoping } : {}), ...(fullQuote ? { quote: fullQuote } : {}) } });
+    await pushToPortal({
+      name,
+      email,
+      company,
+      message: `Uploaded ${file.name} for ${kind === "tb" ? "trial balance" : "financial statements"} review`,
+      service: `FS/TB review (${kind})`,
+      source: "fs-review",
+      priority: "High",
+      meta: {
+        kind,
+        fileName: file.name,
+        ...(scoping ? { scoping } : {}),
+        ...(fullQuote ? { quote: fullQuote } : {}),
+        ...(clientPayload ? { findings: (clientPayload as unknown as ReviewResponse).findings, aiCommentary: (clientPayload as unknown as ReviewResponse).aiCommentary } : {}),
+      },
+    });
 
     if (!engine.ok) {
       const msg = engine.status === 422
