@@ -1,12 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
-import { PageHero } from "@/app/[locale]/services/components/PageHero";
-import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
-import LocalizedLink from "@/components/common/LocalizedLink";
+import { Icon, Reveal } from "@/components/a4-landing/Primitives";
 
-export function ComplianceCalendarContent() {
+export function CalendarDownloadForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "success">("idle");
   const [error, setError] = useState("");
@@ -45,32 +42,8 @@ export function ComplianceCalendarContent() {
   };
 
   return (
-    <div className="a4-site-page">
-      <PageHero
-        eyebrow="Lead resource"
-        title="Malta compliance deadline calendar 2026"
-        sub="VAT, payroll, MBR, provisional tax and audit dates — add them to your calendar in one click."
-      />
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,96px) 0" }}>
-        <Container>
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12 items-start">
-            <Reveal>
-              <h2 className="a4-font-display font-medium text-[var(--a4-ink)]" style={{ fontSize: "clamp(24px,3vw,32px)" }}>
-                What&apos;s included
-              </h2>
-              <ul className="mt-5 space-y-3 a4-font-body text-[15px] text-[var(--a4-mute)] leading-relaxed">
-                <li>Quarterly VAT filing reminders</li>
-                <li>FS5 payroll &amp; SSC monthly cycle</li>
-                <li>Provisional tax instalment dates</li>
-                <li>MBR annual return window</li>
-                <li>Typical audited accounts &amp; tax return deadline</li>
-              </ul>
-              <p className="a4-font-body text-[13px] text-[var(--a4-mute)] mt-6">
-                Dates are indicative — your company&apos;s year-end and VAT scheme may shift exact deadlines. A4 clients get a tailored compliance calendar in their portal.
-              </p>
-            </Reveal>
-            <Reveal delay={80}>
-              <form
+    <Reveal delay={80}>
+      <form
                 onSubmit={download}
                 style={{
                   background: "var(--a4-surface-card)",
@@ -131,11 +104,6 @@ export function ComplianceCalendarContent() {
                   <Icon name="download" size={16} color="#fff" />
                 </button>
               </form>
-            </Reveal>
-          </div>
-        </Container>
-      </section>
-      <ServicePortalBand serviceName="MBR compliance" />
-    </div>
+    </Reveal>
   );
 }
