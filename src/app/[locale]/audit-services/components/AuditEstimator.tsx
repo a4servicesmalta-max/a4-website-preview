@@ -490,7 +490,7 @@ export function AuditEstimator() {
 
                     <label style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, display: "flex", gap: 9, alignItems: "flex-start", color: "var(--a4-charcoal)", lineHeight: 1.5 }}>
                       <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: "var(--a4-primary)", width: 16, height: 16 }} />
-                      I understand my file is processed to generate this review and is not stored.
+                      I understand my file is analysed automatically — including by AI models processing on A4&apos;s behalf — to generate this review, and is not stored. See our <a href="/privacy-policy" target="_blank" style={{ color: "var(--a4-primary)" }}>Privacy Policy</a>.
                     </label>
 
                     <button type="button" disabled={submitDisabled} onClick={runReview} style={primaryBtn(submitDisabled)}>
