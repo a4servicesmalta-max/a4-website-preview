@@ -3,6 +3,7 @@ import {
   POLL_BASE_MS,
   POLL_MAX_MS,
   buildProvenance,
+  extractIdentity,
   fetchChatMessages,
   isSessionGone,
   isStoredSessionUsable,
@@ -10,7 +11,9 @@ import {
   nextPollDelayMs,
   nextSinceCursor,
   openChatSession,
+  patchChatIdentity,
   postChatMessage,
+  unwrapEnvelope,
   type ChatServerMessage,
 } from "./chatSession";
 
@@ -36,6 +39,10 @@ const msg = (id: string, over: Partial<ChatServerMessage> = {}): ChatServerMessa
 
 const jsonResponse = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers });
+
+/** The portal backend's REAL success shape: {success, data, message}. */
+const envelope = (data: unknown, status = 200, headers: Record<string, string> = {}) =>
+  jsonResponse({ success: true, data, message: "ok" }, status, headers);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -142,13 +149,13 @@ describe("network wrappers", () => {
 
   it("always sends an EMPTY honeypot on session open and on every message", async () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      jsonResponse({ sessionToken: "tok", expiresAt: "2026-08-03T11:00:00.000Z" }, 201)
+      envelope({ sessionToken: "tok", expiresAt: "2026-08-03T11:00:00.000Z" }, 201)
     );
     await openChatSession({ name: "Jane", email: "jane@borg.mt", message: "hi" });
     expect(lastBody().company_website).toBe("");
 
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      jsonResponse({ messageId: "m1", sentAt: "2026-08-03T10:00:01.000Z" }, 201)
+      envelope({ messageId: "m1", sentAt: "2026-08-03T10:00:01.000Z" }, 201)
     );
     await postChatMessage("tok", "second message");
     expect(lastBody().company_website).toBe("");
@@ -156,7 +163,7 @@ describe("network wrappers", () => {
 
   it("returns a token on the happy path", async () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      jsonResponse({ sessionToken: "tok", expiresAt: "2026-08-03T11:00:00.000Z" }, 201)
+      envelope({ sessionToken: "tok", expiresAt: "2026-08-03T11:00:00.000Z" }, 201)
     );
     const res = await openChatSession({ name: "Jane", email: "jane@borg.mt" });
     expect(res).toEqual({ ok: true, data: { token: "tok", expiresAt: "2026-08-03T11:00:00.000Z" } });
@@ -200,5 +207,82 @@ describe("network wrappers", () => {
     const url = (globalThis.fetch as unknown as { mock: { calls: [string][] } }).mock.calls.at(-1)![0];
     expect(url).toContain("/public/chat/sessions/to%2Fken/messages?since=");
     expect(res.ok && res.data.messages).toEqual([]);
+  });
+});
+
+describe("unwrapEnvelope — the production body shape", () => {
+  it("unwraps {success, data} and tolerates a flat body", () => {
+    expect(unwrapEnvelope({ success: true, data: { sessionToken: "t" }, message: "ok" })).toEqual({
+      sessionToken: "t",
+    });
+    expect(unwrapEnvelope({ sessionToken: "t" })).toEqual({ sessionToken: "t" });
+    // `data` key without the envelope marker is payload, not wrapper.
+    expect(unwrapEnvelope({ data: [1], other: true })).toEqual({ data: [1], other: true });
+  });
+});
+
+describe("live-first session open", () => {
+  beforeEach(() => {
+    globalThis.fetch = vi.fn() as unknown as typeof fetch;
+  });
+
+  const lastBody = () =>
+    JSON.parse(
+      (globalThis.fetch as unknown as { mock: { calls: [string, { body: string }][] } }).mock.calls.at(-1)![1].body
+    );
+
+  it("opens with a message alone — no name/email keys at all", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      envelope({ sessionToken: "tok", expiresAt: "2026-08-03T11:00:00.000Z" }, 201)
+    );
+    const res = await openChatSession({ message: "hi there" });
+    expect(res.ok).toBe(true);
+    const body = lastBody();
+    expect(body.message).toBe("hi there");
+    expect("name" in body).toBe(false);
+    expect("email" in body).toBe(false);
+    expect(body.company_website).toBe("");
+  });
+
+  it("patchChatIdentity PATCHes only the provided fields plus the honeypot", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(envelope({ ok: true }, 200));
+    const res = await patchChatIdentity("tok", { email: "pat@example.com" });
+    expect(res.ok).toBe(true);
+    const call = (globalThis.fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls.at(-1)!;
+    expect(call[0]).toContain("/public/chat/sessions/tok/identity");
+    expect(call[1].method).toBe("PATCH");
+    const body = lastBody();
+    expect(body).toEqual({ email: "pat@example.com", company_website: "" });
+  });
+
+  it("patchChatIdentity failure is a plain result, never a throw", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("offline"));
+    await expect(patchChatIdentity("tok", { name: "Pat" })).resolves.toEqual({ ok: false, status: null });
+  });
+});
+
+describe("extractIdentity — conservative parsing of a free-text reply", () => {
+  it("finds an email and treats the remainder as the name", () => {
+    expect(extractIdentity("Pat Prospect, pat@example.com")).toEqual({
+      email: "pat@example.com",
+      name: "Pat Prospect",
+    });
+    expect(extractIdentity("pat@example.com")).toEqual({ email: "pat@example.com" });
+    expect(extractIdentity("My name is Pat and my email is PAT@Example.COM")).toEqual({
+      email: "pat@example.com",
+      name: "Pat",
+    });
+  });
+
+  it("accepts a short plain name without an email", () => {
+    expect(extractIdentity("Pat Prospect")).toEqual({ name: "Pat Prospect" });
+  });
+
+  it("refuses to guess from questions, sentences or URLs", () => {
+    expect(extractIdentity("what are your opening hours?")).toEqual({});
+    expect(
+      extractIdentity("we run a shipping company in Valletta with about forty employees on the payroll")
+    ).toEqual({});
+    expect(extractIdentity("see https://example.com for context")).toEqual({});
   });
 });

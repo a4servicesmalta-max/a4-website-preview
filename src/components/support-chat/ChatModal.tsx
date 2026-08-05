@@ -8,12 +8,14 @@ import {
   POLL_BASE_MS,
   buildProvenance,
   clearStoredSession,
+  extractIdentity,
   fetchChatMessages,
   isSessionGone,
   mergeServerMessages,
   nextPollDelayMs,
   nextSinceCursor,
   openChatSession,
+  patchChatIdentity,
   postChatMessage,
   readStoredSession,
   writeStoredSession,
@@ -52,6 +54,14 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
   const [issue, setIssue] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [staffJoined, setStaffJoined] = useState(false);
+  /**
+   * Live-first identity capture: the thread opens BEFORE we know who the
+   * visitor is; name/email are asked conversationally inside the live thread
+   * and are always optional — 'done' means "stop asking", never "answered".
+   */
+  const [identityStage, setIdentityStage] = useState<"unasked" | "asked" | "askedEmail" | "done">(
+    "unasked"
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -118,6 +128,9 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
     const resume = async (storedToken: string) => {
       setToken(storedToken);
       setStep("live");
+      // A resumed thread was already offered the identity question in its
+      // first life — never re-interrogate a returning visitor.
+      setIdentityStage("done");
       setBotTyping(true);
       const res = await fetchChatMessages(storedToken);
       if (cancelled) return;
@@ -230,7 +243,61 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
     [say, t]
   );
 
-  /** Email step: open the live session, or fall back. Never both. */
+  /** Shared tail of a successful session open: persist, prime, go live. */
+  const enterLiveThread = useCallback(
+    async (session: { token: string; expiresAt: string }) => {
+      writeStoredSession(session);
+      setToken(session.token);
+
+      // Prime the cursor and the dedupe set: the backend already holds the
+      // opening message, which is on screen locally. Mark it seen (render:
+      // false) so the first poll does not repeat it back at the visitor.
+      const primed = await fetchChatMessages(session.token);
+      if (primed.ok) {
+        applyServerMessages(primed.data.messages, false);
+        sinceRef.current = nextSinceCursor(primed.data.messages, primed.data.serverTime, sinceRef.current);
+      } else {
+        sinceRef.current = new Date().toISOString();
+      }
+
+      setBotTyping(false);
+      setStep("live");
+    },
+    [applyServerMessages]
+  );
+
+  /**
+   * LIVE-FIRST (2026-08-05): the visitor's FIRST message opens the thread —
+   * no name/email gate, staff are notified immediately. Identity is asked
+   * conversationally afterwards, inside the live thread, and stays optional.
+   * If the open fails we degrade to the scripted intake (which retries a
+   * session WITH identity, and only then the legacy one-shot).
+   */
+  const startLiveFirst = useCallback(
+    async (firstMessage: string) => {
+      const provenance = buildProvenance(
+        typeof window === "undefined" ? "" : window.location.href,
+        typeof document === "undefined" ? "" : document.referrer
+      );
+      const res = await openChatSession({ message: firstMessage, provenance });
+
+      if (!res.ok) {
+        // Backend without live-first support / offline / rate limited: run the
+        // scripted intake exactly as before — nothing is ever lost.
+        setBotTyping(false);
+        say(t("supportChat.botAskName"));
+        setStep("name");
+        return;
+      }
+
+      await enterLiveThread(res.data);
+      say(t("supportChat.botAskContact"));
+      setIdentityStage("asked");
+    },
+    [enterLiveThread, say, t]
+  );
+
+  /** Email step of the FALLBACK intake: open the live session with identity, or one-shot. */
   const startSession = useCallback(
     async (visitorEmail: string, conversation: Message[]) => {
       const provenance = buildProvenance(
@@ -246,25 +313,41 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
         return;
       }
 
-      writeStoredSession(res.data);
-      setToken(res.data.token);
-
-      // Prime the cursor and the dedupe set: the backend already holds the
-      // opening message, which is on screen locally. Mark it seen (render:
-      // false) so the first poll does not repeat it back at the visitor.
-      const primed = await fetchChatMessages(res.data.token);
-      if (primed.ok) {
-        applyServerMessages(primed.data.messages, false);
-        sinceRef.current = nextSinceCursor(primed.data.messages, primed.data.serverTime, sinceRef.current);
-      } else {
-        sinceRef.current = new Date().toISOString();
-      }
-
-      setBotTyping(false);
-      setStep("live");
+      await enterLiveThread(res.data);
+      // Identity already given through the intake — never re-ask.
+      setIdentityStage("done");
       say(t("supportChat.botSessionLive"));
     },
-    [name, issue, applyServerMessages, say, t, submitLegacyFallback]
+    [name, issue, enterLiveThread, say, t, submitLegacyFallback]
+  );
+
+  /**
+   * The optional in-thread identity capture. The reply ALWAYS goes to the
+   * thread as a normal message (staff read it in context); when it carries an
+   * email or a plausible name we ALSO patch it onto the session so the room is
+   * retitled and the CRM lead is created. Never nags beyond one follow-up.
+   */
+  const captureIdentity = useCallback(
+    (reply: string) => {
+      if (!token || (identityStage !== "asked" && identityStage !== "askedEmail")) return;
+      const identity = extractIdentity(reply);
+      if (identity.email) {
+        void patchChatIdentity(token, identity);
+        setIdentityStage("done");
+        say(t("supportChat.botIdentityThanks"));
+        return;
+      }
+      if (identityStage === "asked" && identity.name) {
+        void patchChatIdentity(token, { name: identity.name });
+        setIdentityStage("askedEmail");
+        say(t("supportChat.botAskEmailOptional"));
+        return;
+      }
+      // Anything else (a question, a long sentence, silence about identity):
+      // drop the subject for good — the conversation matters more.
+      setIdentityStage("done");
+    },
+    [token, identityStage, say, t]
   );
 
   /** Live step: every further message goes to the thread, not to /api/support. */
@@ -304,11 +387,8 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
       setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
       setInput("");
       setBotTyping(true);
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { role: "bot", content: t("supportChat.botAskName") }]);
-        setBotTyping(false);
-        setStep("name");
-      }, TYPING_DELAY_MS);
+      // LIVE-FIRST: this message opens the thread and reaches staff NOW.
+      void startLiveFirst(trimmed);
       return;
     }
     if (step === "name") {
@@ -334,6 +414,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
     if (step === "live") {
       setInput("");
       void sendLiveMessage(trimmed);
+      captureIdentity(trimmed);
     }
   };
 
@@ -345,6 +426,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
     initialisedRef.current = false;
     setToken(null);
     setStaffJoined(false);
+    setIdentityStage("unasked");
     setMessages([]);
     setInput("");
     setName("");

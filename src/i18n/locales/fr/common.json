@@ -132,7 +132,10 @@
     "statusLive": "Quelqu'un est avec vous",
     "statusOffline": "Nous répondrons par e-mail",
     "staffFallbackName": "Équipe support",
-    "sendAria": "Envoyer le message"
+    "sendAria": "Envoyer le message",
+    "botAskContact": "Vous êtes en ligne avec l'équipe — elle a été prévenue et répondra ici même. Pour que nous puissions vous recontacter si vous quittez la page, laissez-nous votre nom et votre e-mail (facultatif).",
+    "botAskEmailOptional": "Merci ! Et une adresse e-mail, au cas où la connexion serait interrompue ? (facultatif)",
+    "botIdentityThanks": "Parfait, c'est noté — nous pourrons vous joindre en cas d'interruption. Comment pouvons-nous vous aider d'autre ?"
   },
   "cookieConsent": {
     "title": "Nous utilisons des cookies",

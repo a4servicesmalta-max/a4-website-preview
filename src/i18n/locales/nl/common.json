@@ -132,7 +132,10 @@
     "statusLive": "Iemand helpt u nu",
     "statusOffline": "We antwoorden per e-mail",
     "staffFallbackName": "Supportteam",
-    "sendAria": "Bericht versturen"
+    "sendAria": "Bericht versturen",
+    "botAskContact": "U bent verbonden met het team — ze zijn op de hoogte en reageren hier direct. Zodat we u kunnen bereiken als u de pagina verlaat, mag u uw naam en e-mail achterlaten (optioneel).",
+    "botAskEmailOptional": "Bedankt! En een e-mailadres, voor het geval de verbinding wegvalt? (optioneel)",
+    "botIdentityThanks": "Perfect, genoteerd — we kunnen u bereiken als de verbinding wegvalt. Waarmee kunnen we nog meer helpen?"
   },
   "cookieConsent": {
     "title": "Wij gebruiken cookies",

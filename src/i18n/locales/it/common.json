@@ -132,7 +132,10 @@
     "statusLive": "C'è qualcuno con lei",
     "statusOffline": "Le risponderemo via email",
     "staffFallbackName": "Team di supporto",
-    "sendAria": "Invia messaggio"
+    "sendAria": "Invia messaggio",
+    "botAskContact": "Sei in contatto con il team — è stato avvisato e risponderà proprio qui. Per poterti ricontattare se lasci la pagina, lasciaci pure nome ed email (facoltativo).",
+    "botAskEmailOptional": "Grazie! E un indirizzo email, nel caso la connessione si interrompa? (facoltativo)",
+    "botIdentityThanks": "Perfetto, annotato — potremo ricontattarti se la connessione si interrompe. Come possiamo aiutarti ancora?"
   },
   "cookieConsent": {
     "title": "Usiamo i cookie",

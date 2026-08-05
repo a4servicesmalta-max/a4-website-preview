@@ -225,13 +225,34 @@ function retryAfterOf(res: Response): number | undefined {
   return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }
 
+/**
+ * The portal backend wraps every response as `{ success, data, message }`.
+ * The callers here want the PAYLOAD, so unwrap that envelope when present —
+ * and tolerate a flat body so a future backend change cannot break the widget.
+ *
+ * This unwrap is load-bearing: without it a 201 session-open "succeeds" with an
+ * undefined token, which the caller treats as failure — silently demoting every
+ * conversation to the legacy one-shot form.
+ */
+export function unwrapEnvelope<T>(body: unknown): T {
+  if (
+    body &&
+    typeof body === "object" &&
+    "data" in body &&
+    typeof (body as { success?: unknown }).success === "boolean"
+  ) {
+    return (body as { data: T }).data;
+  }
+  return body as T;
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<ChatResult<T>> {
   try {
     const res = await fetch(url, init);
     if (!res.ok) {
       return { ok: false, status: res.status, retryAfterSeconds: retryAfterOf(res) };
     }
-    const data = (await res.json()) as T;
+    const data = unwrapEnvelope<T>(await res.json());
     return { ok: true, data };
   } catch {
     // Offline, CORS, DNS, or the endpoint does not exist yet: all the same to
@@ -241,8 +262,10 @@ async function request<T>(url: string, init?: RequestInit): Promise<ChatResult<T
 }
 
 export type OpenChatSessionInput = {
-  name: string;
-  email: string;
+  /** OPTIONAL since live-first chat: the thread opens on the first message and
+   *  identity is offered conversationally afterwards, never as a gate. */
+  name?: string;
+  email?: string;
   /** The visitor's opening question — becomes the first message of the thread. */
   message?: string;
   provenance?: ChatProvenance;
@@ -255,8 +278,8 @@ export async function openChatSession(input: OpenChatSessionInput): Promise<Chat
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: input.name.trim().slice(0, 200),
-        email: input.email.trim().slice(0, 320),
+        ...(input.name?.trim() ? { name: input.name.trim().slice(0, 200) } : {}),
+        ...(input.email?.trim() ? { email: input.email.trim().slice(0, 320) } : {}),
         ...(input.message?.trim() ? { message: input.message.trim().slice(0, 4000) } : {}),
         ...(input.provenance ? { provenance: input.provenance } : {}),
         company_website: "", // honeypot — always present, always empty
@@ -271,6 +294,48 @@ export async function openChatSession(input: OpenChatSessionInput): Promise<Chat
     return { ok: false, status: 502 };
   }
   return { ok: true, data: { token: sessionToken, expiresAt } };
+}
+
+/**
+ * Pull an email address (and whatever surrounds it as a name candidate) out of
+ * a free-text chat reply. Pure and deliberately conservative: one plausible
+ * email or nothing — never guess.
+ */
+export function extractIdentity(text: string): { email?: string; name?: string } {
+  const emailMatch = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+  const email = emailMatch?.[0]?.toLowerCase();
+  const remainder = (emailMatch ? text.replace(emailMatch[0], " ") : text)
+    .replace(/[,;:|()<>[\]"']/g, " ")
+    .replace(/\b(my|name|is|email|e-mail|address|and|the|i'?m|it'?s|call|me)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  // A name candidate is short prose, not another question or a sentence.
+  const words = remainder.split(" ").filter(Boolean);
+  const name =
+    remainder && words.length > 0 && words.length <= 4 && !/[?@/\\]|https?:/i.test(remainder)
+      ? remainder.slice(0, 200)
+      : undefined;
+  if (!email && !name) return {};
+  return { ...(email ? { email } : {}), ...(name ? { name } : {}) };
+}
+
+/**
+ * PATCH the visitor's identity onto an open session. Fire-and-forget from the
+ * widget's perspective: failure never interrupts the conversation.
+ */
+export async function patchChatIdentity(
+  token: string,
+  identity: { name?: string; email?: string }
+): Promise<ChatResult<{ ok: boolean }>> {
+  return request(`${CHAT_API_BASE}/public/chat/sessions/${encodeURIComponent(token)}/identity`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...(identity.name ? { name: identity.name.slice(0, 200) } : {}),
+      ...(identity.email ? { email: identity.email.slice(0, 320) } : {}),
+      company_website: "",
+    }),
+  });
 }
 
 export async function postChatMessage(
