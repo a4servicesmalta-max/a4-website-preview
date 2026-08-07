@@ -141,7 +141,7 @@
     "serverBody": "Our review service didn't come back with a result. This is on our side, not your file.",
     "requestBody": "We couldn't run the review on that submission.",
     "networkBody": "We couldn't reach our review service. Please check your connection and try again — if it keeps failing, email us at info@a4.com.mt.",
-    "leadCaptured": "Your details and the file name did reach our team, so nothing is lost — someone will follow up by email within one business day.",
+    "leadCaptured": "We may not have a record of your request, so please don't wait on us — email info@a4.com.mt and we'll pick it up straight away.",
     "retry": "You can try again, or email info@a4.com.mt and we'll pick it up from there.",
     "connectRequestFailed": "We couldn't send your connection request."
   },
