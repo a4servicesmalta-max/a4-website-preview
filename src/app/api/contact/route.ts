@@ -25,16 +25,30 @@ export async function POST(req: NextRequest) {
     const {
       name,
       email,
+      phone,
       message,
       subject,
       context,
+      company_website: companyWebsite,
     }: {
       name?: string;
       email?: string;
+      phone?: string;
       message?: string;
       subject?: string;
       context?: string;
+      company_website?: string;
     } = body;
+
+    // Spam honeypot — mirrors vacei.com's `company_website` field: a hidden
+    // input no human ever fills in (off-screen, tabindex -1, aria-hidden).
+    // Bots that auto-fill every field trip it. Checked server-side (not just
+    // client-side) so a direct POST that skips the browser UI is still
+    // caught. Respond as if the submission succeeded — never tip off the
+    // bot that it was filtered.
+    if (companyWebsite && companyWebsite.trim().length > 0) {
+      return NextResponse.json({ ok: true });
+    }
 
     if (!email || !message) {
       return NextResponse.json(
@@ -44,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Portal push is primary — always capture the lead first.
-    await pushToPortal({ name, email, message, service: "Contact form", source: "contact", priority: "Med", meta: { subject, context } });
+    await pushToPortal({ name, email, phone, message, service: "Contact form", source: "contact", priority: "Med", meta: { subject, context } });
 
     // Email is best-effort — a missing/broken SMTP config must never cause a 5xx.
     try {
@@ -58,6 +72,7 @@ export async function POST(req: NextRequest) {
           text: `
 Name: ${name || "N/A"}
 Email: ${email}
+Phone: ${phone || "N/A"}
 Context: ${context || "General contact"}
 
 Message:
