@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, BOOKKEEPING_MONTHLY, PAYROLL_PER_HEAD, SOFTWARE_TIERS, SOFTWARE_TIER_LABELS, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXTRA_BANK_MONTHLY, type CapitalBand } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, BOOKKEEPING_MONTHLY, PAYROLL_PER_HEAD, SOFTWARE_TIERS, SOFTWARE_TIER_LABELS, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXTRA_BANK_MONTHLY, LAUNCH_PROMO, isPromoActive, type CapitalBand, type TxnBand, type SoftwareTierId } from "@/data/a4QuotePack";
+import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
 // The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
@@ -98,7 +99,21 @@ export const Q_INIT: QState = {
 type Line = { n: string; e: string; v: number };
 type Note = [string, string];
 
-export function qCalc(q: QState) {
+/** Volumes at which a company is unlikely to stay under the small-company thresholds. */
+const QT_BIG_VOL = ["151-400", "401-1000", "1000+"];
+
+/**
+ * Whether the assurance line is a review engagement rather than a full audit.
+ * Named so `qCalc` (what we show) and `qItems` (what we submit) can never
+ * disagree about which of the two the visitor was quoted.
+ */
+function qAuditIsReview(q: QState) {
+  return (q.size === "small" || q.size === "unsure") && QT_BIG_VOL.indexOf(q.txn) === -1;
+}
+
+/** `now` is injectable so the promo window can be pinned in tests, exactly as
+ *  `evaluateA4Items` does — otherwise every assertion here flips on 1 Sep. */
+export function qCalc(q: QState, now: Date = new Date()) {
   const tier = QTIERS[(QSECT.find((s) => s[0] === q.sector) || QSECT[0])[2]];
   const notes: Note[] = [];
   if (tier.note) notes.push(tier.note);
@@ -137,8 +152,8 @@ export function qCalc(q: QState) {
   }
   if (q.taxret === "we") yr.push({ n: "Annual tax return", e: "from the closed ledger, with schedules", v: QT.taxret[q.txn] * rm });
   if (q.assure === "we") {
-    const bigVol = ["151-400", "401-1000", "1000+"].indexOf(q.txn) !== -1;
-    const review = (q.size === "small" || q.size === "unsure") && !bigVol;
+    const bigVol = QT_BIG_VOL.indexOf(q.txn) !== -1;
+    const review = qAuditIsReview(q);
     yr.push({ n: "Financial audit", e: review ? "review engagement — the lighter option" : "full financial audit", v: QT.assure[q.txn] * (review ? 0.55 : 1) * rm });
     if (review) notes.push(["ok", "You likely qualify for a review instead of a full audit — about half the cost. We confirm it against your figures before anything is agreed."]);
     if (bigVol && q.size !== "big") notes.push(["warn", "At that volume a company is unlikely to stay under the small-company thresholds, so we priced a full audit. If your figures come in under, the price drops."]);
@@ -147,12 +162,20 @@ export function qCalc(q: QState) {
   const softLine = q.book === "self" ? QTIERP[q.tier || "book"][0] : 0;
   const labourVal = mo.reduce((s, l) => s + l.v, 0) - softLine + yr.reduce((s, l) => s + l.v, 0);
   const labour = labourVal > 0;
+  /** Government money inside the yearly total — never discounted. */
+  let registry = 0;
   if (labour) {
     // The registry fee is set by authorised share capital (electronic rates) and
     // passed through at cost. Read from the pack — never a literal, or every
     // prospect above €1,500 capital is silently under-quoted.
     const capRow = CAPITAL_BANDS.find((c) => c.id === (q.cap || "1500")) || CAPITAL_BANDS[0];
-    yr.push({ n: "MBR annual return fee", e: "government fee — passed through at cost, set by your share capital (" + capRow.note + ")", v: MBR_ANNUAL_RETURN.registryFeeByCapital[capRow.id] });
+    registry = MBR_ANNUAL_RETURN.registryFeeByCapital[capRow.id];
+    // Our fee AND the registry fee, exactly as the shared engine bills it. The
+    // registry slice alone was quoted here, so the annual return came out €50
+    // light against /pricing, vacei.com and the quotation we actually email.
+    // NOTE: the line NAME is the key `qItems` matches on to build the basket —
+    // renaming it silently drops the MBR item from the submitted quote.
+    yr.push({ n: "MBR annual return fee", e: "our €" + MBR_ANNUAL_RETURN.ourFee + " fee to prepare and file it, plus the government registry fee passed through at cost, set by your share capital (" + capRow.note + ")", v: MBR_ANNUAL_RETURN.ourFee + registry });
     if (tier.onb) one.push({ n: "Onboarding and due diligence", e: tier.l + " risk — charged once, at acceptance", v: tier.onb });
   }
   if (!labour && tier.note && notes.indexOf(tier.note) !== -1) notes.splice(notes.indexOf(tier.note), 1);
@@ -166,7 +189,80 @@ export function qCalc(q: QState) {
   }
   [mo, yr, one].forEach((a) => a.forEach((l) => { l.v = Math.round(l.v); }));
   const sum = (a: Line[]) => a.reduce((s, l) => s + l.v, 0);
-  return { refer: false as const, mo, yr, one, notes, moTot: sum(mo), yrTot: sum(yr), oneTot: sum(one) };
+
+  // The launch discount, on the same terms the shared engine applies it: the
+  // government registry fee is never discounted (it is not ours to discount),
+  // and one-off charges are billed in full. This wizard previously applied no
+  // discount at all, so it showed the list price while /pricing and the emailed
+  // quotation both showed 25% less — the same journey, two different prices.
+  const grossMo = sum(mo), grossYr = sum(yr);
+  const promo = isPromoActive(now);
+  const keep = 1 - LAUNCH_PROMO.pct;
+  const moTot = promo ? Math.round(grossMo * keep) : grossMo;
+  const yrTot = promo ? Math.round((grossYr - registry) * keep) + registry : grossYr;
+  if (promo && (grossMo > 0 || grossYr > 0)) notes.push(["ok", LAUNCH_PROMO.note]);
+
+  return {
+    refer: false as const, mo, yr, one, notes,
+    moTot, yrTot, oneTot: sum(one),
+    /** List prices, for the struck-through originals. */
+    grossMo, grossYr, promoApplied: promo && (grossMo > 0 || grossYr > 0),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Submitting the quote                                                        */
+/* -------------------------------------------------------------------------- */
+
+/** The wizard's sector answer → the risk tier the backend prices on. */
+export function qRisk(q: QState): A4Risk {
+  const k = (QSECT.find((s) => s[0] === q.sector) || QSECT[0])[2];
+  return k === "refer" ? "standard" : k;
+}
+
+/** The one line this wizard prices that the backend has no item for. */
+export const Q_UNPRICEABLE_LINE = "Additional bank accounts";
+
+/**
+ * The visitor's answers → the priceable basket we submit.
+ *
+ * Every entry is gated on a line `qCalc` ACTUALLY produced rather than on the
+ * raw answers, so the two can never disagree about what was quoted: the VAT
+ * block, the "no labour, no MBR/onboarding" rule and the catch-up mode are all
+ * decided once, in `qCalc`, and read back here.
+ *
+ * ⚠ Two known divergences, deliberately left alone (see FIXES-2 task 4):
+ *   - `Q_UNPRICEABLE_LINE` has no A4Item, so extra bank accounts are NOT
+ *     submitted. The visitor is told so on the form.
+ *   - `qCalc` applies no launch discount and omits MBR_ANNUAL_RETURN.ourFee,
+ *     so `evaluateA4Items` on this basket does not equal the figures on
+ *     screen. Closing that gap is an open pricing decision, not a code fix.
+ */
+export function qItems(q: QState): A4Item[] {
+  const r = qCalc(q);
+  if (r.refer) return [];
+  const all = [...r.mo, ...r.yr, ...r.one];
+  const has = (n: string) => all.some((l) => l.n === n);
+  const txn = q.txn as TxnBand;
+  const items: A4Item[] = [];
+
+  if (has("Bookkeeping")) {
+    if (q.book === "self") items.push({ service: "software", tier: (q.tier || "book") as SoftwareTierId });
+    else items.push({ service: "bookkeeping-full", txn });
+  }
+  if (has("Accounting review")) items.push({ service: "review", txn, cadence: q.review === "month" ? "monthly" : "quarterly" });
+  if (has("Payroll")) items.push({ service: "payroll", heads: q.head });
+  if (has("VAT returns")) items.push({ service: "vat", txn, vatreg: q.vatreg === "art12" ? "art12" : "art10" });
+  if (has("VAT declaration")) items.push({ service: "vat", txn, vatreg: "art11" });
+  if (has("Annual tax return")) items.push({ service: "taxret", txn });
+  if (has("Financial audit")) items.push({ service: "audit", txn, ...(qAuditIsReview(q) ? { review: true as const } : {}) });
+  if (has("Registered office")) items.push({ service: "registered-office" });
+  if (has("MBR annual return fee")) items.push({ service: "mbr", capital: q.cap || "1500" });
+  if (has("Onboarding and due diligence")) items.push({ service: "onboarding" });
+  if (has("Catch-up processing")) items.push({ service: "catchup", months: +q.behind, mode: "self" });
+  if (has("Bringing the books up to date")) items.push({ service: "catchup", months: +q.behind, mode: "full" });
+
+  return items;
 }
 
 function qSummarise(q: QState) {
@@ -195,6 +291,17 @@ const NOTE_STYLE: Record<string, { bg: string; fg: string; bc: string }> = {
   info: { bg: "rgba(73,79,223,.08)", fg: "var(--a4-primary-deep)", bc: "rgba(73,79,223,.25)" },
 };
 
+const Q_INPUT: React.CSSProperties = {
+  flex: "1 1 170px", minWidth: 0, height: 38, padding: "0 12px", borderRadius: "var(--a4-r-md)",
+  border: "1px solid var(--a4-hairline-light)", background: "#fff", color: "var(--a4-ink)",
+  fontFamily: "var(--a4-font-body)", fontSize: 13,
+};
+
+/** Off-screen honeypot — a real visitor never sees it, a bot fills it in. */
+const Q_HONEYPOT: React.CSSProperties = {
+  position: "absolute", left: -9999, top: "auto", width: 1, height: 1, opacity: 0, pointerEvents: "none",
+};
+
 type Opt = { key: string; label: string; sub: string; on: boolean; pick: () => void };
 
 function OptPills({ opts }: { opts: Opt[] }) {
@@ -220,7 +327,17 @@ function OptPills({ opts }: { opts: Opt[] }) {
 
 export function LandingQuoteCalculator() {
   const [q, setQState] = useState<QState>(Q_INIT);
-  const setQ = (patch: Partial<QState>) => setQState((prev) => ({ ...prev, ...patch }));
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [hp, setHp] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState<WebsiteQuoteResult | null>(null);
+  // Any answer changed after sending re-opens the form: the quote on screen is
+  // no longer the quote we emailed, so the visitor must be able to send again.
+  const setQ = (patch: Partial<QState>) => {
+    setQState((prev) => ({ ...prev, ...patch }));
+    if (Object.keys(patch).some((k) => k !== "step")) setSent(null);
+  };
 
   const step = q.step;
   const r = qCalc(q);
@@ -298,6 +415,24 @@ export function LandingQuoteCalculator() {
     ...r.yr.filter((l) => l.v > 0).map((l) => ({ n: l.n, e: l.e, v: euro(l.v) + " /yr" })),
     ...r.one.filter((l) => l.v > 0).map((l) => ({ n: l.n, e: l.e, v: euro(l.v) + " once" })),
   ];
+
+  // Capture. The basket is what the backend reprices, so the visitor gets a
+  // real quotation record rather than an empty contact form.
+  const items = isQuote && !r.refer ? qItems(q) : [];
+  const hasUnpriceable = r.mo.some((l) => l.n === Q_UNPRICEABLE_LINE);
+  const canSend = items.length > 0 && name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const send = async () => {
+    if (!canSend || sending) return;
+    // Honeypot: only a bot fills a field it cannot see. Rejected before submit,
+    // with the same acknowledgement a person gets so it learns nothing.
+    if (hp.trim()) {
+      setSent({ status: "received", message: "We've got your details — your quote follows by email." });
+      return;
+    }
+    setSending(true);
+    setSent(await submitWebsiteQuotation({ name, email, items, risk: qRisk(q), sourceDetail: "a4-homepage" }));
+    setSending(false);
+  };
 
   const soft = q.book === "self";
   const modeSoftOn = soft;
@@ -456,9 +591,40 @@ export function LandingQuoteCalculator() {
                     const s = NOTE_STYLE[tone] || NOTE_STYLE.info;
                     return <p key={i} style={{ margin: "10px 0 0", padding: "11px 14px", borderRadius: 10, fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55, background: s.bg, color: s.fg, border: "1px solid " + s.bc }}>{text}</p>;
                   })}
-                  <div style={{ marginTop: 16, alignSelf: "flex-start" }}>
-                    <Button variant="dark" size="sm" href="/contact">{r.refer ? "Request a call" : "Send me this quote"} <Icon name="arrow-right" size={14} color="#fff" /></Button>
-                  </div>
+                  {r.refer ? (
+                    <div style={{ marginTop: 16, alignSelf: "flex-start" }}>
+                      <Button variant="dark" size="sm" href="/contact">Request a call <Icon name="arrow-right" size={14} color="#fff" /></Button>
+                    </div>
+                  ) : sent ? (
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-light)" }}>
+                      <p style={{ margin: 0, fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, lineHeight: 1.55, color: "var(--a4-ink)" }}>{sent.message}</p>
+                      {sent.status === "quoted" && (
+                        <div style={{ marginTop: 12 }}>
+                          <Button variant="dark" size="sm" href={sent.portalHref} target="_blank">Create your account <Icon name="arrow-right" size={14} color="#fff" /></Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-light)" }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <input value={name} onChange={(e) => setName(e.target.value)} aria-label="Your name" placeholder="Your name" autoComplete="name" style={Q_INPUT} />
+                        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" aria-label="Work email" placeholder="Work email" autoComplete="email" style={Q_INPUT} />
+                      </div>
+                      <input value={hp} onChange={(e) => setHp(e.target.value)} name="company_website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={Q_HONEYPOT} />
+                      <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        <Button variant="dark" size="sm" onClick={send} style={{ opacity: canSend && !sending ? 1 : 0.55, pointerEvents: canSend && !sending ? "auto" : "none" }}>
+                          {sending ? "Sending your quote…" : "Send me this quote"}
+                          {!sending && <Icon name="arrow-right" size={14} color="#fff" />}
+                        </Button>
+                        <Button variant="soft" size="sm" href="/contact">Prefer to talk?</Button>
+                      </div>
+                      {hasUnpriceable && (
+                        <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11, lineHeight: 1.5, color: "var(--a4-mute)" }}>
+                          Your extra bank accounts are not on the emailed quote — we confirm those with you before anything is agreed.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-mute)" }}>KYC required before work starts. All fees exclude VAT.</p>
                 </div>
               )}

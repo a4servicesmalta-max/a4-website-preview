@@ -264,6 +264,12 @@ export type WebsiteQuoteInput = {
   /** Priceable items only — anything else belongs on the lead path. */
   items: A4Item[];
   risk?: A4Risk;
+  /**
+   * Which surface captured this quote, e.g. `a4-homepage`. Attribution only —
+   * it never touches pricing. The backend's schema is strict about the shape:
+   * lowercase alphanumeric, then `. _ -`.
+   */
+  sourceDetail?: string;
 };
 
 export type WebsiteQuoteResult =
@@ -328,6 +334,8 @@ export async function submitWebsiteQuotation(
     return { status: "error", message: "Pick at least one service so we have something to quote." };
   }
 
+  const sourceDetail = input.sourceDetail?.trim();
+
   try {
     const res = await fetch(`${QUOTE_API_BASE}/public/website-quotations`, {
       method: "POST",
@@ -337,6 +345,7 @@ export async function submitWebsiteQuotation(
         email,
         phone: input.phone?.trim() || "",
         record: buildQuoteRecord(input),
+        ...(sourceDetail && /^[a-z0-9][a-z0-9._-]*$/.test(sourceDetail) ? { sourceDetail } : {}),
       }),
     });
     if (!res.ok) return { status: "error", message: ERROR_MESSAGE };
