@@ -10,14 +10,22 @@
  */
 
 import {
-  AUDIT_YEARLY, TAX_RETURN_YEARLY, TXN_BANDS, RISK_TIERS, REVIEW_ENGAGEMENT_FACTOR, AUDIT_PRE_TRADING, sectorTier,
+  AUDIT_YEARLY, TAX_RETURN_YEARLY, TXN_BANDS, RISK_TIERS, REVIEW_ENGAGEMENT_FACTOR, AUDIT_PRE_TRADING,
   type TxnBand,
 } from "@/data/a4QuotePack";
 
 export type TierId = "standard" | "elevated" | "high" | "refer";
 
-// The sector list is pack data — one definition for every calculator.
-export { SECTORS } from "@/data/a4QuotePack";
+export const SECTORS: { id: string; label: string; tier: TierId }[] = [
+  { id: "shop", label: "Shop, trade or services", tier: "standard" },
+  { id: "consulting", label: "Consulting or freelancing", tier: "standard" },
+  { id: "property", label: "Property or rentals", tier: "standard" },
+  { id: "hospitality", label: "Restaurant, bar or hotel", tier: "elevated" },
+  { id: "online", label: "Online sales or cross-border", tier: "elevated" },
+  { id: "holding", label: "Holding or investment company", tier: "elevated" },
+  { id: "regulated", label: "Gaming, crypto or financial services", tier: "high" },
+  { id: "other", label: "Something else", tier: "refer" },
+];
 
 export const TIERS: Record<TierId, { label: string; mult: number; refer?: boolean }> = {
   standard: { label: RISK_TIERS.standard.label, mult: RISK_TIERS.standard.multiplier ?? 1 },
@@ -138,7 +146,7 @@ export const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB")
 const find = <T extends { id: string }>(list: T[], id: string) => list.find((x) => x.id === id) ?? list[0];
 
 export function calcAuditFee(s: AuditInput): AuditQuote {
-  const tier = TIERS[sectorTier(s.sector)];
+  const tier = TIERS[find(SECTORS, s.sector).tier];
   if (tier.refer) return { refer: true, tier };
 
   const txnIdx = TXN.findIndex((t) => t.id === s.txn);

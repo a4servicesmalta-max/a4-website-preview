@@ -5,13 +5,18 @@ import { Button, Container, Icon, Reveal, SectionHead } from "@/components/a4-la
 import {
   buildQuote,
   euro,
-  SECTORS,
+  QUOTE_INDUSTRIES,
   QUOTE_SERVICE_CATALOG,
-  QUOTE_TXN_BANDS,
+  REVENUE_BANDS,
   type QuoteServiceId,
   type RevenueBandId,
 } from "@/lib/quotation";
-import type { TxnBand } from "@/data/a4QuotePack";
+import {
+  submitWebsiteQuotation,
+  type QuoteCadence,
+  type QuoteLineItem,
+  type WebsiteQuoteResult,
+} from "@/lib/websiteQuotation";
 import { PRICING_GOV_NOTE } from "@/data/a4QuotePack";
 
 const panel: React.CSSProperties = {
@@ -53,8 +58,8 @@ function download(b64: string, name: string) {
 export function QuotationBuilder() {
   const [company, setCompany] = useState("");
   const [regNo, setRegNo] = useState("");
-  const [sector, setSector] = useState<string>("shop");
-  const [txnBand, setTxnBand] = useState<TxnBand>("21-60");
+  const [industry, setIndustry] = useState<string>(QUOTE_INDUSTRIES[5]);
+  const [revenueBand, setRevenueBand] = useState<RevenueBandId>("100k-500k");
   const [overdueYears, setOverdueYears] = useState(0);
   const [services, setServices] = useState<Set<QuoteServiceId>>(() => new Set(["accounts", "vat"] as QuoteServiceId[]));
   const [name, setName] = useState("");
@@ -62,18 +67,19 @@ export function QuotationBuilder() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ pdfBase64: string; pdfName: string } | null>(null);
+  const [quoteSent, setQuoteSent] = useState<WebsiteQuoteResult | null>(null);
 
   const quote = useMemo(
     () =>
       buildQuote({
         company: company || "Your company",
         regNo,
-        sector,
-        txnBand,
+        industry,
+        revenueBand,
         services: [...services],
         overdueYears,
       }),
-    [company, regNo, sector, txnBand, services, overdueYears]
+    [company, regNo, industry, revenueBand, services, overdueYears]
   );
 
   const toggle = (id: QuoteServiceId) =>
@@ -95,26 +101,45 @@ export function QuotationBuilder() {
       const res = await fetch("/api/quotation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, company, regNo, sector, txnBand, services: [...services], overdueYears }),
+        body: JSON.stringify({ name, email, company, regNo, industry, revenueBand, services: [...services], overdueYears }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Something went wrong.");
       setDone({ pdfBase64: data.pdfBase64, pdfName: data.pdfName });
       download(data.pdfBase64, data.pdfName);
 
-      // NOTE — deliberately NOT submitted as an instant portal quotation.
-      //
-      // This builder prices off a REVENUE band (and offers payroll "on
-      // request"), while the backend reprices off TRANSACTION bands from the
-      // fee schedule. The two disagree for the same company, so a submission
-      // here would always fail the server's ±€1/1% totals check and land as
-      // 202 RECEIVED — a quote that is never emailed, which is worse than not
-      // promising one. /api/quotation above already captures the lead and
-      // sends the team the PDF; a person follows up within 24 hours.
-      //
-      // To make this instant, the builder has to collect a transaction band and
-      // drop the on-request lines, so its displayed total is the sum of
-      // priceable A4Items — see /pricing, which does exactly that.
+      // Also raise a real quotation in the portal, so the prospect gets the
+      // emailed, acceptable quote and can see it once they have an account.
+      // Separate pipeline from /api/quotation, which feeds the leads inbox.
+      const monthly = quote.lines
+        .filter((l) => l.display.includes("/ month"))
+        .reduce((s, l) => s + (l.annualEur ?? 0) / 12, 0);
+      const yearly = quote.lines
+        .filter((l) => l.display.includes("/ year"))
+        .reduce((s, l) => s + (l.annualEur ?? 0), 0);
+      const oneOff = quote.lines
+        .filter((l) => l.display.includes("one-off"))
+        .reduce((s, l) => s + (l.annualEur ?? 0), 0);
+      const cadenceOf = (display: string): QuoteCadence =>
+        display.includes("/ month") ? "monthly" : display.includes("/ year") ? "yearly" : "oneoff";
+      const lines: QuoteLineItem[] = quote.lines
+        .filter((l) => l.annualEur != null)
+        .map((l) => ({
+          label: l.name,
+          amount: cadenceOf(l.display) === "monthly" ? Math.round((l.annualEur as number) / 12) : (l.annualEur as number),
+          cadence: cadenceOf(l.display),
+        }));
+      setQuoteSent(
+        await submitWebsiteQuotation({
+          name,
+          email,
+          selections: { kind: "quote-builder", company, regNo, industry, revenueBand, services: [...services], overdueYears },
+          lines,
+          monthly: Math.round(monthly),
+          yearly: Math.round(yearly),
+          oneOff: Math.round(oneOff),
+        })
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not generate the quotation.");
     } finally {
@@ -148,19 +173,17 @@ export function QuotationBuilder() {
                 <input value={regNo} onChange={(e) => setRegNo(e.target.value)} placeholder="C 12345" style={field} />
               </div>
               <div>
-                <span style={label}>What the company does</span>
-                <select value={sector} onChange={(e) => setSector(e.target.value)} style={{ ...field, cursor: "pointer" }}>
-                  {SECTORS.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.label}
-                    </option>
+                <span style={label}>Industry</span>
+                <select value={industry} onChange={(e) => setIndustry(e.target.value)} style={{ ...field, cursor: "pointer" }}>
+                  {QUOTE_INDUSTRIES.map((i) => (
+                    <option key={i}>{i}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <span style={label}>Transactions a month</span>
-                <select value={txnBand} onChange={(e) => setTxnBand(e.target.value as TxnBand)} style={{ ...field, cursor: "pointer" }}>
-                  {QUOTE_TXN_BANDS.map((r) => (
+                <span style={label}>Annual revenue</span>
+                <select value={revenueBand} onChange={(e) => setRevenueBand(e.target.value as RevenueBandId)} style={{ ...field, cursor: "pointer" }}>
+                  {REVENUE_BANDS.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.label}
                     </option>
@@ -252,12 +275,19 @@ export function QuotationBuilder() {
                   <Icon name="check" size={22} color="var(--a4-accent-teal)" stroke={2.4} />
                 </span>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 14.5, color: "var(--a4-ink)", margin: "12px 0 0", fontWeight: 600 }}>
-                  Your quotation has downloaded — and our team has it too.
+                  {quoteSent && quoteSent.status !== "error"
+                    ? quoteSent.message
+                    : "Your quotation has downloaded — and our team has it too."}
                 </p>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)", margin: "6px 0 0" }}>
                   Prefer to talk it through? Request information and our team will follow up with next steps.
                 </p>
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 14 }}>
+                  {quoteSent && quoteSent.status === "quoted" ? (
+                    <Button variant="dark" size="md" href={quoteSent.portalHref} target="_blank">
+                      Create your account <Icon name="arrow-right" size={15} color="#fff" />
+                    </Button>
+                  ) : null}
                   <Button variant="dark" size="md" href="/contact">
                     Request information <Icon name="arrow-right" size={15} color="#fff" />
                   </Button>

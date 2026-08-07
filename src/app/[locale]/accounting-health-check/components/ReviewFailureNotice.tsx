@@ -48,14 +48,17 @@ export function ReviewFailureNotice({
       <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
         {reason}
       </p>
-      {isServer && failure.leadCaptured && (
+      {/* One line, not two. It previously stacked a "we've got you" note on top
+          of a "you may not be on record" note, which contradicted itself. The
+          server now reports whether the lead actually landed, so say only the
+          true one — and never promise follow-up we cannot deliver. */}
+      {isServer && (
         <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
-          {t("reviewError.leadCaptured")}
+          {failure.leadCaptured
+            ? t("reviewError.leadCaptured")
+            : t("reviewError.leadNotCaptured")}
         </p>
       )}
-      <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-mute)" }}>
-        {t("reviewError.retry")}
-      </p>
     </div>
   );
 }

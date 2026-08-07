@@ -30,17 +30,12 @@ export const CLIENT_ONBOARDING_URL = resolveClientUrl(
 );
 
 /**
- * Calendly booking link — the 30-minute consultation, shared by A4 and Vacei
- * so a prospect books the same slot whichever brand they came through.
- * Owner-supplied 2026-08-02. Override with NEXT_PUBLIC_CALENDLY_BOOKING_URL.
- *
- * The previous default (calendly.com/a4-info) was a placeholder and no env var
- * was set in production, so every "Book a consultation" button on the live site
- * was pointing at it.
+ * Calendly booking link — set NEXT_PUBLIC_CALENDLY_BOOKING_URL to your branded event
+ * (e.g. https://calendly.com/a4-info/15-minute-consultation).
  */
 export const CALENDLY_BOOKING_URL =
   process.env.NEXT_PUBLIC_CALENDLY_BOOKING_URL?.trim() ||
-  "https://calendly.com/cleven-a4/30min";
+  "https://calendly.com/a4-info";
 
 /** @deprecated Use CALENDLY_BOOKING_URL */
 export const CALENDLY_DEMO_URL = CALENDLY_BOOKING_URL;

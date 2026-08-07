@@ -1,43 +1,71 @@
 /**
- * Website chat → the portal's WebsiteLead table.
+ * Website enquiry → the portal's WebsiteLead table.
  *
- * `pushChatToPortal` opens a thread staff can reply to, but it does NOT create
- * a lead row — which is why A4 chat sessions surface in the portal as an
- * anonymous "Website visitor" with no name, no email and nothing to follow up.
- * vacei.com's widget avoids that by also filing the enquiry through
- * /public/website-leads, and this mirrors that call exactly.
+ * `pushToPortal` (lib/portal.ts) posts to the A4 *internal ops* portal
+ * (`A4_PORTAL_URL` → team.a4.com.mt) — a different system that does NOT create
+ * a WebsiteLead. `pushChatToPortal` opens a Messages thread, which also creates
+ * no lead. So neither of those puts a row in front of whoever works the lead
+ * list; this does.
  *
- * Fire-and-forget by design, same as portal-chat: the thread, the Requests
- * fallback and the email are all independent, so a portal outage costs the
- * visitor nothing.
+ * Base URL is deliberately QUOTE_API_BASE — the same portal-backend origin the
+ * quotation path already uses successfully. Resolving it from A4_PORTAL_URL
+ * would silently post to the ops portal instead and create nothing.
+ *
+ * Contract verified against the backend's `websiteLeadSchema`
+ * (vacei-portal-backend, modules/website-intake/website-intake.domain.ts):
+ *   { name, email, phone?, message?, source: 'contact'|'callback',
+ *     sourceDetail?: slug, company_website? }
+ * `source` is the coarse category and is stored as WEBSITE_CONTACT;
+ * `sourceDetail` is the free-form slug naming the specific form.
+ *
+ * Never throws — a portal outage must not cost the visitor their submission.
  */
+
+import { QUOTE_API_BASE } from "@/lib/websiteQuotation";
+
+/** Origin the portal maps to the A4 property; it reads this header, never the body. */
+const A4_ORIGIN = "https://a4.com.mt";
 
 type LeadInput = {
   name: string;
   email: string;
-  message: string;
+  phone?: string;
+  message?: string;
+  /** Which form this came from, e.g. "fs-review". Lowercase slug. */
+  sourceDetail?: string;
+  source?: "contact" | "callback";
 };
 
 export async function pushLeadToPortal(input: LeadInput): Promise<boolean> {
-  const base = process.env.A4_PORTAL_API_URL || process.env.A4_PORTAL_URL;
+  const base = QUOTE_API_BASE;
   if (!base) return false;
   try {
-    const res = await fetch(`${base.replace(/\/$/, "")}/api/v1/public/website-leads`, {
+    const res = await fetch(`${base.replace(/\/$/, "")}/public/website-leads`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Server-to-server has no Origin, which the portal records as UNKNOWN.
+        // We are a4.com.mt's own server, so say so and the lead is filed to A4.
+        Origin: A4_ORIGIN,
+      },
       body: JSON.stringify({
         name: input.name,
         email: input.email,
-        // The prefix is what tells staff a "contact" lead arrived through the
-        // chat widget — vacei.com tags its own the same way.
-        message: `[a4.com.mt — Website chat] ${input.message}`,
-        source: "contact",
+        ...(input.phone ? { phone: input.phone } : {}),
+        ...(input.message ? { message: input.message } : {}),
+        source: input.source ?? "contact",
+        ...(input.sourceDetail ? { sourceDetail: input.sourceDetail } : {}),
       }),
       // Never hold the visitor's request open on a slow portal.
       signal: AbortSignal.timeout(8000),
     });
-    return res.ok;
-  } catch {
-    return false; // swallowed on purpose — the caller still has its fallbacks
+    if (!res.ok) {
+      console.warn("website-leads push failed:", res.status);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("website-leads push errored:", err);
+    return false;
   }
 }
