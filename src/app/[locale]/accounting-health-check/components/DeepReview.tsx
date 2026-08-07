@@ -1,7 +1,10 @@
 "use client";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FindingsList } from "./FindingsList";
 import { Field, primaryBtn, outlineBtn, type Contact } from "./Field";
+import { ReviewFailureNotice } from "./ReviewFailureNotice";
+import { NETWORK_FAILURE, readReviewFailure, type ReviewFailure } from "@/lib/review-failure";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
 
 type AccountingResponse = {
@@ -43,9 +46,10 @@ export function DeepReview({
   const [connectDone, setConnectDone] = useState(false);
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<ReviewFailure | null>(null);
   const [data, setData] = useState<AnyResponse | null>(null);
   const [editContact, setEditContact] = useState(false);
+  const { t } = useTranslation("common");
 
   // Email confirmation gate — the AI review only runs once the email is verified.
   const [verifiedToken, setVerifiedToken] = useState("");
@@ -90,21 +94,22 @@ export function DeepReview({
     e.preventDefault();
     if (path === "connect") {
       if (!verified || !consent || !provider) return;
-      setStatus("loading"); setError("");
+      setStatus("loading"); setFailure(null);
       try {
         const res = await fetch("/api/connect-accounting", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: contact.email, name: contact.name, company: contact.company, provider, verifiedToken, consent: true }),
         });
-        const body = await res.json();
-        if (!res.ok) { setError(body.error || "Request failed. Please try again."); setStatus("error"); return; }
+        // Read the status before the body: a gateway error page is not JSON, and
+        // letting res.json() throw here would report a server fault as a network one.
+        if (!res.ok) { setFailure(await readReviewFailure(res)); setStatus("error"); return; }
         setConnectDone(true); setStatus("idle");
-      } catch { setError("Request failed. Please try again."); setStatus("error"); }
+      } catch { setFailure(NETWORK_FAILURE); setStatus("error"); }
       return;
     }
     if (!verified || !file) return;
-    setStatus("loading"); setError("");
+    setStatus("loading"); setFailure(null);
     const fd = new FormData();
     fd.append("email", contact.email); fd.append("name", contact.name); fd.append("company", contact.company);
     fd.append("consent", String(consent)); fd.append("verifiedToken", verifiedToken);
@@ -116,10 +121,14 @@ export function DeepReview({
     }
     try {
       const res = await fetch(url, { method: "POST", body: fd });
+      if (!res.ok) { setFailure(await readReviewFailure(res)); setStatus("error"); return; }
       const body = await res.json();
-      if (!res.ok) { setError(body.error || "Review failed."); setStatus("error"); return; }
       setData(body); setStatus("idle");
-    } catch { setError("Review failed. Please try again."); setStatus("error"); }
+    } catch {
+      // fetch rejected, or a 2xx body that would not parse — nothing usable came
+      // back, and on a rejected fetch we cannot claim the lead reached us.
+      setFailure(NETWORK_FAILURE); setStatus("error");
+    }
   }
 
   if (data) {
@@ -309,7 +318,12 @@ export function DeepReview({
             ? (path === "connect" ? "Request my review" : "Run my review")
             : "Confirm your email to run"}
       </button>
-      {status === "error" && <p style={{ color: "#c2303d", fontSize: 14, margin: 0 }}>{error}</p>}
+      {status === "error" && failure && (
+        <ReviewFailureNotice
+          failure={failure}
+          title={path === "connect" ? t("reviewError.connectRequestFailed") : undefined}
+        />
+      )}
     </form>
   );
 }

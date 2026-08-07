@@ -37,6 +37,7 @@ import {
   type TxnBand,
 } from "@/data/a4QuotePack";
 import { resolveClientUrl } from "@/lib/external-links";
+import { BOOKS_BRAND_NAME } from "@/lib/site-config";
 
 export const QUOTE_API_BASE =
   process.env.NEXT_PUBLIC_QUOTE_API_BASE?.trim().replace(/\/+$/, "") ||
@@ -137,7 +138,7 @@ function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
   switch (item.service) {
     case "software": {
       const price = SOFTWARE_TIERS[item.tier];
-      return price == null ? null : mo(`A4 Books — ${item.tier} plan`, price);
+      return price == null ? null : mo(`${BOOKS_BRAND_NAME} — ${item.tier} plan`, price);
     }
     case "bookkeeping-full": {
       const price = BOOKKEEPING_MONTHLY[item.txn];

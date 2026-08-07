@@ -116,7 +116,10 @@ export async function POST(req: NextRequest) {
       const msg = engine.status === 422
         ? "We couldn't read that file. For statements, try a clearer PDF; for a trial balance, try CSV or Excel."
         : (engineErrorDetail || "The review service had a problem. We've logged your request and will follow up.");
-      return NextResponse.json({ error: msg }, { status: engine.status === 422 ? 422 : 502 });
+      // `leadCaptured` is reached only after pushToPortal above, so the browser
+      // can honestly tell the user their details are with us. Never set it on a
+      // path that returns before the portal push.
+      return NextResponse.json({ error: msg, leadCaptured: true }, { status: engine.status === 422 ? 422 : 502 });
     }
 
     return NextResponse.json(clientPayload);

@@ -4,9 +4,9 @@ import React, { useRef, useState } from "react";
 import { Button, Icon, Container } from "@/components/a4-landing/Primitives";
 import { Field, primaryBtn, outlineBtn } from "@/app/[locale]/accounting-health-check/components/Field";
 import { FindingsList } from "@/app/[locale]/accounting-health-check/components/FindingsList";
+import { ReviewFailureNotice } from "@/app/[locale]/accounting-health-check/components/ReviewFailureNotice";
+import { NETWORK_FAILURE, readReviewFailure, type ReviewFailure } from "@/lib/review-failure";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
-import { useQuoteActions } from "@/components/a4-landing/QuoteActions";
-import type { QuotePayload } from "@/lib/quote-handoff";
 import {
   SECTORS, TXN, SIZES, PAYROLL, VAT, BANKS, TAX_RETURN, YEARS, NYRS, CHANGES, STEPS,
   calcAuditFee, feeLines, euro, type AuditInput,
@@ -94,7 +94,7 @@ export function AuditEstimator() {
   const [contact, setContact] = useState({ email: "", name: "", company: "" });
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<ReviewFailure | null>(null);
   const [data, setData] = useState<ReviewResponse | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -140,7 +140,7 @@ export function AuditEstimator() {
 
   async function runReview() {
     if (submitDisabled || !file) return;
-    setStatus("loading"); setError("");
+    setStatus("loading"); setFailure(null);
     const scoping = [
       `Year to audit: ${labelOf(YEARS, answers.year)}${answers.year === "multi" ? ` (${labelOf(NYRS, answers.nyrs)})` : ""}`,
       `Major changes since: ${labelOf(CHANGES, answers.chg)}`,
@@ -160,14 +160,20 @@ export function AuditEstimator() {
     fd.append("scoping", scoping);
     try {
       const res = await fetch("/api/fs-gap-review", { method: "POST", body: fd });
+      // Status first: a gateway error page is not JSON, and letting res.json()
+      // throw here would report a server fault as a network one.
+      if (!res.ok) { setFailure(await readReviewFailure(res)); setStatus("error"); return; }
       const body = await res.json();
-      if (!res.ok) { setError(body.error || "Review failed."); setStatus("error"); return; }
       setData(body); setStatus("idle");
-    } catch { setError("Review failed. Please try again or book a call."); setStatus("error"); }
+    } catch {
+      // fetch rejected, or a 2xx body that would not parse — nothing reached us
+      // on a rejected fetch, so we must not claim the lead was captured.
+      setFailure(NETWORK_FAILURE); setStatus("error");
+    }
   }
 
   const resetReview = () => {
-    setFile(null); setData(null); setStatus("idle"); setError("");
+    setFile(null); setData(null); setStatus("idle"); setFailure(null);
     setConsent(false); setVerifiedToken(""); setVerifiedEmail(""); setCodeSent(false); setCode("");
   };
 
@@ -188,37 +194,46 @@ export function AuditEstimator() {
   // Only the engine returns a fee read from the actual file; never invent one.
   const engineFee = data?.quote?.fee ?? null;
 
-  // ---- Lead capture: one shared handler, so audit and accounting leads land
-  // in the portal and the inbox in exactly the same shape. ----
-  const payload = (): QuotePayload => ({
-    page: "audit",
-    service: "Statutory audit",
-    headline: engineFee !== null
-      ? `${euro(engineFee)} / year (priced from uploaded statements)`
-      : q.refer ? "Referral — needs a director call"
-      : `${euro(q.final)} / year${q.yearsN > 1 ? ` × ${q.yearsN} years = ${euro(q.total)}` : ""}`,
-    lines: q.refer ? [{ k: "Sector", v: "Needs a director call" }] : lines,
-    services: q.refer ? ["Statutory audit — referral"] : [
-      q.review ? "Review engagement (lighter than a full audit)" : "Full statutory audit",
-      ...(answers.taxret === "yes" ? ["Annual company tax return"] : []),
-      ...(q.yearsN > 1 ? [`${q.yearsN} financial years to audit`] : []),
-      ...(data ? [`Free FS review already run — ${data.stats.checks_run} checks, ${data.stats.checks_failed} flagged`] : []),
-    ],
-    answers: [
-      { k: "Sector", v: labelOf(SECTORS, answers.sector) },
-      { k: "Transactions / month", v: labelOf(TXN, answers.txn) },
-      { k: "Company size", v: labelOf(SIZES, answers.size) },
-      { k: "Payroll", v: labelOf(PAYROLL, answers.pay) },
-      { k: "VAT registered", v: labelOf(VAT, answers.vat) },
-      { k: "Bank accounts", v: labelOf(BANKS, answers.banks) },
-      { k: "Tax return too", v: labelOf(TAX_RETURN, answers.taxret) },
-      { k: "Year(s) to audit", v: labelOf(YEARS, answers.year) + (answers.year === "multi" ? ` (${labelOf(NYRS, answers.nyrs)})` : "") },
-      { k: "Risk tier", v: q.tier.label },
-    ],
-    note: feeNote,
-    clientNotes: notes,
-  });
-  const { start: openModal, modal: leadModal } = useQuoteActions(payload);
+  // ---- Lead capture ----
+  const [modal, setModal] = useState(false);
+  const [intent, setIntent] = useState<"proposal" | "consultation">("proposal");
+  const [done, setDone] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", company: "", email: "", phone: "" });
+  const [modalSubmitting, setModalSubmitting] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const openModal = (i: "proposal" | "consultation") => {
+    setIntent(i); setDone(null); setModalError("");
+    setForm((f) => ({ ...f, name: f.name || contact.name, company: f.company || contact.company, email: f.email || contact.email }));
+    setModal(true);
+  };
+  const submitLead = async () => {
+    if (!form.name || !form.email) return;
+    setModalSubmitting(true); setModalError("");
+    const ref = "A4-" + Date.now().toString(36).toUpperCase().slice(-6);
+    const quoted = engineFee !== null ? `${euro(engineFee)}/yr (priced from uploaded statements)` : q.refer ? "referral — director to price" : `${euro(q.final)}/yr${q.yearsN > 1 ? ` × ${q.yearsN} years = ${euro(q.total)}` : ""}`;
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          subject: `Audit ${intent === "proposal" ? "proposal request" : "consultation booking"} — ${form.company || form.name}`,
+          message: `Company: ${form.company}\nPhone: ${form.phone}\nEstimated audit fee: ${quoted}\n` +
+            `Scope: ${labelOf(SECTORS, answers.sector)} · ${labelOf(TXN, answers.txn)} txn/mo · ${labelOf(SIZES, answers.size)} · payroll ${labelOf(PAYROLL, answers.pay)} · VAT ${answers.vat} · ${labelOf(BANKS, answers.banks)} bank account(s) · tax return ${answers.taxret}\n` +
+            (notes.trim() ? `Notes: ${notes.trim()}\n` : "") +
+            `Reference: ${ref}`,
+          context: `audit-estimator-${intent}`,
+        }),
+      });
+      if (!res.ok) throw new Error("request failed");
+      setDone(ref);
+    } catch {
+      setModalError("Something went wrong sending your request. Please try again or email info@a4.com.mt.");
+    } finally {
+      setModalSubmitting(false);
+    }
+  };
 
   const modeBtn = (on: boolean): React.CSSProperties => ({
     height: 40, padding: "0 22px", borderRadius: "var(--a4-r-full)",
@@ -232,7 +247,7 @@ export function AuditEstimator() {
   return (
     <section
       id="estimate"
-      style={{ background: "radial-gradient(800px 420px at 15% 0%, rgba(73,79,223,.30) 0%, rgba(73,79,223,0) 65%), #0A0A0A", padding: "clamp(56px,8vw,88px) 0 clamp(60px,8vw,96px)" }}
+      style={{ background: "linear-gradient(180deg, #4f55f1 0%, #494fdf 50%, #3a40c4 100%)", padding: "clamp(56px,8vw,88px) 0 clamp(60px,8vw,96px)" }}
     >
       <Container>
         <div style={{ textAlign: "center" }}>
@@ -296,8 +311,8 @@ export function AuditEstimator() {
                 <div>
                   <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.65, color: "var(--a4-body)", margin: 0, textWrap: "pretty" }}>{summary}</p>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-                    <Button variant="dark" size="md" onClick={() => openModal("proposal", contact)}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
-                    <Button variant="outline-light" size="md" onClick={() => openModal("consultation", contact)}>Book a consultation</Button>
+                    <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
+                    <Button variant="outline-light" size="md" onClick={() => openModal("consultation")}>Book a consultation</Button>
                   </div>
                   <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "10px 0 0" }}>Fixed after a short scoping call. Never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}</p>
                 </div>
@@ -319,7 +334,7 @@ export function AuditEstimator() {
             </div>
 
             {/* fee panel */}
-            <div className="af-panel" style={{ background: "#101114", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 90, textAlign: "left" }}>
+            <div className="af-panel" style={{ background: "#000", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 90, textAlign: "left" }}>
               <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Estimated audit fee</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontVariantNumeric: "tabular-nums", fontSize: 38, letterSpacing: "-1.5px", lineHeight: 1 }}>{feeBig}</span>
@@ -334,7 +349,7 @@ export function AuditEstimator() {
                 ))}
               </div>
               <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "var(--a4-stone)", margin: "18px 0 0", paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)" }}>{feeNote}</p>
-              <Button variant="primary" size="md" onClick={() => openModal("proposal", contact)} style={{ width: "100%", marginTop: 18 }}>{ctaLabel} <Icon name="arrow-right" size={16} color="#000" /></Button>
+              <Button variant="primary" size="md" onClick={() => openModal("proposal")} style={{ width: "100%", marginTop: 18 }}>{ctaLabel} <Icon name="arrow-right" size={16} color="#000" /></Button>
             </div>
           </div>
         ) : (
@@ -375,6 +390,11 @@ export function AuditEstimator() {
                   )}
                 </div>
 
+                {data.aiCommentary && (
+                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.6, color: "var(--a4-body)", margin: "16px 0 0", padding: "12px 14px", background: "var(--a4-surface-soft)", borderRadius: 8, textWrap: "pretty" }}>
+                    {data.aiCommentary}
+                  </p>
+                )}
                 <div style={{ marginTop: 16 }}><FindingsList findings={data.findings} /></div>
 
                 <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid var(--a4-hairline-light)", display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -382,7 +402,7 @@ export function AuditEstimator() {
                   {data.annotatedDocxBase64 && (
                     <button type="button" style={outlineBtn} onClick={() => download(data.annotatedDocxBase64!, data.annotatedName || "review.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}>⬇ Annotated Word</button>
                   )}
-                  <Button variant="dark" size="md" onClick={() => openModal("proposal", contact)}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
+                  <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
                 </div>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "12px 0 0" }}>Indicative pre-check, not a substitute for audit. Fixed after a short scoping call, never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}</p>
               </div>
@@ -490,13 +510,13 @@ export function AuditEstimator() {
 
                     <label style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, display: "flex", gap: 9, alignItems: "flex-start", color: "var(--a4-charcoal)", lineHeight: 1.5 }}>
                       <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: "var(--a4-primary)", width: 16, height: 16 }} />
-                      I understand my file is processed to generate this review and is not stored.
+                      I understand my file is processed — including by AI models — to generate this review, and is not stored.
                     </label>
 
                     <button type="button" disabled={submitDisabled} onClick={runReview} style={primaryBtn(submitDisabled)}>
                       {status === "loading" ? "Analyzing… (up to ~60s)" : verified ? "Run my review" : "Confirm your email to run"}
                     </button>
-                    {status === "error" && <p style={{ color: "#c2303d", fontFamily: "var(--a4-font-body)", fontSize: 14, margin: 0 }}>{error}</p>}
+                    {status === "error" && failure && <ReviewFailureNotice failure={failure} />}
                   </div>
                 )}
 
@@ -509,7 +529,40 @@ export function AuditEstimator() {
         )}
       </Container>
 
-      {leadModal}
+      {/* lead modal */}
+      {modal && (
+        <div onClick={(e) => { if (e.target === e.currentTarget) setModal(false); }} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,.45)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", width: "100%", maxWidth: 450, padding: 30, boxShadow: "0 32px 80px rgba(0,0,0,.25)" }}>
+            {done ? (
+              <div style={{ textAlign: "center", padding: "10px 0" }}>
+                <div style={{ width: 54, height: 54, borderRadius: 999, background: "rgba(0,168,126,.12)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}><Icon name="check" size={26} color="var(--a4-accent-teal)" stroke={2.5} /></div>
+                <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>{intent === "proposal" ? "Proposal request received" : "Consultation requested"}</div>
+                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, lineHeight: 1.6, color: "var(--a4-mute)", margin: "10px 0 0" }}>Thanks, {form.name.split(" ")[0]}. Our licensed audit firm will contact you within 1 business day at <strong style={{ color: "var(--a4-ink)" }}>{form.email}</strong>.</div>
+                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 14 }}>Reference: {done}{q.refer ? "" : ` · estimate ${euro(engineFee ?? q.final)}/yr`}</div>
+                <Button variant="outline-light" size="md" onClick={() => setModal(false)} style={{ width: "100%", marginTop: 22 }}>Close</Button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>{intent === "proposal" ? "Request your audit proposal" : "Book your audit consultation"}</div>
+                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-mute)", margin: "6px 0 22px" }}>
+                  We&apos;ll confirm scope and a fixed fee{q.refer ? "" : ` (estimate ${euro(engineFee ?? q.final)}/yr)`}. No obligation.
+                </div>
+                {([["name", "Your name", "text"], ["company", "Company name", "text"], ["email", "Email address", "email"], ["phone", "Phone (optional)", "tel"]] as const).map(([k, label, type]) => (
+                  <div key={k} style={{ marginBottom: 14 }}>
+                    <label style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--a4-mute)", marginBottom: 6 }}>{label}</label>
+                    <input type={type} value={form[k]} onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.value }))} style={{ width: "100%", background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "11px 14px", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 14, outline: "none" }} />
+                  </div>
+                ))}
+                {modalError && <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "#c2303d", marginBottom: 10 }}>{modalError}</div>}
+                <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+                  <Button variant="dark" size="md" onClick={submitLead} style={{ flex: 1, opacity: modalSubmitting ? 0.6 : 1, pointerEvents: modalSubmitting ? "none" : "auto" }}>{modalSubmitting ? "Sending…" : intent === "proposal" ? "Send request" : "Request consultation"} <Icon name="arrow-right" size={16} color="#fff" /></Button>
+                  <Button variant="outline-light" size="md" onClick={() => setModal(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -13,8 +13,14 @@ function QuoteForm() {
   const href = useLocalizedHref();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [sel, setSel] = useState<string[]>([]);
+  // Spam honeypot — mirrors vacei.com's `company_website` field: an
+  // off-screen, unlabeled input a human never sees or fills in. Left in
+  // state (not a ref) purely so it round-trips through the same controlled-
+  // input pattern as every other field here.
+  const [companyWebsite, setCompanyWebsite] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -38,6 +44,14 @@ function QuoteForm() {
     e.preventDefault();
     if (!validate()) return;
 
+    // Honeypot tripped — a real visitor never sees or fills this field.
+    // Pretend success without ever hitting the network; the API route also
+    // rejects it server-side in case a bot posts to /api/quote directly.
+    if (companyWebsite.trim()) {
+      setSent(true);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const res = await fetch("/api/quote", {
@@ -48,7 +62,8 @@ function QuoteForm() {
           email,
           subject: "Website quote request",
           message: message || "Quote request from website",
-          meta: { services: sel.join(", "), service: sel.join(", ") },
+          meta: { services: sel.join(", "), service: sel.join(", "), phone: phone.trim() || undefined },
+          company_website: companyWebsite,
         }),
       });
 
@@ -138,6 +153,33 @@ function QuoteForm() {
             {errors.email && <span className="a4-font-body text-[13px] text-red-500">{errors.email}</span>}
           </label>
         </div>
+        <label className="flex flex-col gap-2">
+          <span className="a4-font-body text-[13.5px] font-semibold text-[var(--a4-charcoal)]">
+            Phone <span className="font-normal text-[var(--a4-mute)]">optional</span>
+          </span>
+          <input
+            className="q-input"
+            type="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+356 …"
+          />
+        </label>
+        {/* Honeypot — real visitors never see this field. Bots that
+            auto-fill every input on the form trip it; a filled value is
+            rejected both here (no network call) and server-side in
+            /api/quote. Matches vacei.com's `company_website` field exactly. */}
+        <input
+          type="text"
+          name="company_website"
+          value={companyWebsite}
+          onChange={(e) => setCompanyWebsite(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+        />
         <div>
           <span className="block a4-font-body text-[13.5px] font-semibold text-[var(--a4-charcoal)] mb-[10px]">Services needed</span>
           <div className="flex gap-2 flex-wrap">

@@ -6,6 +6,7 @@ import {
   quoteRef, quoteToText, booksSignupUrl,
   type QuotePayload, type QuoteContact,
 } from "@/lib/quote-handoff";
+import { BOOKS_BRAND_NAME } from "@/lib/site-config";
 
 export type Intent = "proposal" | "consultation" | "account";
 
@@ -117,7 +118,7 @@ export function useQuoteActions(quote: () => QuotePayload) {
             {done.next && (
               <>
                 <Button variant="primary" size="md" href={done.next} style={{ width: "100%", marginTop: 20 }}>
-                  Continue to A4 Books <Icon name="arrow-right" size={16} color="#000" />
+                  Continue to {BOOKS_BRAND_NAME} <Icon name="arrow-right" size={16} color="#000" />
                 </Button>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.6, color: "var(--a4-stone)", marginTop: 10 }}>
                   Set a password and you&apos;re in. Your quote is attached to reference {done.ref} — nothing to re-enter.
@@ -131,7 +132,7 @@ export function useQuoteActions(quote: () => QuotePayload) {
             <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>{INTENT_COPY[intent].title}</div>
             <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.6, color: "var(--a4-mute)", margin: "6px 0 20px" }}>
               {intent === "account"
-                ? "We record your quote, then take you straight to A4 Books to set a password. No obligation, cancel any time."
+                ? `We record your quote, then take you straight to ${BOOKS_BRAND_NAME} to set a password. No obligation, cancel any time.`
                 : `We'll confirm scope and a fixed price (${quote().headline}). No obligation.`}
             </p>
             {([["name", "Your name", "text", "name"], ["company", "Company name", "text", "organization"], ["email", "Email address", "email", "email"], ["phone", "Phone (optional)", "tel", "tel"]] as const).map(([k, label, type, ac]) => (

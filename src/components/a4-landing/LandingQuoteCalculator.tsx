@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, BOOKKEEPING_MONTHLY, PAYROLL_PER_HEAD, SOFTWARE_TIERS, SOFTWARE_TIER_LABELS } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, BOOKKEEPING_MONTHLY, PAYROLL_PER_HEAD, SOFTWARE_TIERS, SOFTWARE_TIER_LABELS, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXTRA_BANK_MONTHLY, type CapitalBand } from "@/data/a4QuotePack";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
 // The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
@@ -68,10 +68,14 @@ const QTIERP: Record<string, [number, string]> = Object.fromEntries(
   (Object.keys(SOFTWARE_TIERS) as (keyof typeof SOFTWARE_TIERS)[]).map((k) => [k, [SOFTWARE_TIERS[k], SOFTWARE_TIER_LABELS[k]]]),
 ) as Record<string, [number, string]>;
 
-type QState = {
+export type QState = {
   step: number;
   sector: string;
   txn: string;
+  /** Bank accounts the company runs. The first is included in the book price. */
+  banks: number;
+  /** Authorised share capital band — sets the MBR registry fee on the annual return. */
+  cap: CapitalBand;
   head: number;
   behind: string;
   vatreg: string;
@@ -86,15 +90,15 @@ type QState = {
   regoff: string;
 };
 
-const Q_INIT: QState = {
-  step: 0, sector: "shop", txn: "21-60", head: 2, behind: "0", vatreg: "art10", size: "small",
+export const Q_INIT: QState = {
+  step: 0, sector: "shop", txn: "21-60", banks: 1, cap: "1500", head: 2, behind: "0", vatreg: "art10", size: "small",
   book: "none", tier: "book", review: "none", pay: "none", vat: "none", taxret: "none", assure: "none", regoff: "none",
 };
 
 type Line = { n: string; e: string; v: number };
 type Note = [string, string];
 
-function qCalc(q: QState) {
+export function qCalc(q: QState) {
   const tier = QTIERS[(QSECT.find((s) => s[0] === q.sector) || QSECT[0])[2]];
   const notes: Note[] = [];
   if (tier.note) notes.push(tier.note);
@@ -109,6 +113,15 @@ function qCalc(q: QState) {
   if (q.pay === "we" && q.head > 0) {
     const t = QPAY.find((t) => q.head <= t.upTo)!;
     mo.push({ n: "Payroll", e: q.head + " × €" + t.rate + " per person", v: q.head * t.rate * rm });
+  }
+  // Each account beyond the first is reconciled separately. Same rule as
+  // src/lib/accounting-fee.ts: the full-service rate when we keep the books,
+  // the cheaper review rate when you keep them and we check them, and nothing
+  // at all on software-only — there is no reconciliation work on our side.
+  const extraBanks = Math.max(0, (q.banks || 1) - 1);
+  if (extraBanks > 0) {
+    if (q.book === "full") mo.push({ n: "Additional bank accounts", e: extraBanks + " × €" + EXTRA_BANK_MONTHLY.bookFull + " — each account reconciled monthly", v: extraBanks * EXTRA_BANK_MONTHLY.bookFull * rm });
+    else if (q.book === "self" && q.review !== "none") mo.push({ n: "Additional bank accounts", e: extraBanks + " × €" + EXTRA_BANK_MONTHLY.selfWithReview + " — covered in the review", v: extraBanks * EXTRA_BANK_MONTHLY.selfWithReview * rm });
   }
   const selfFile = q.book !== "full" && (q.book !== "self" || q.review === "none");
   if (q.vat === "we" && q.vatreg !== "none") {
@@ -135,7 +148,11 @@ function qCalc(q: QState) {
   const labourVal = mo.reduce((s, l) => s + l.v, 0) - softLine + yr.reduce((s, l) => s + l.v, 0);
   const labour = labourVal > 0;
   if (labour) {
-    yr.push({ n: "MBR annual return fee", e: "government fee — passed through at cost", v: 100 });
+    // The registry fee is set by authorised share capital (electronic rates) and
+    // passed through at cost. Read from the pack — never a literal, or every
+    // prospect above €1,500 capital is silently under-quoted.
+    const capRow = CAPITAL_BANDS.find((c) => c.id === (q.cap || "1500")) || CAPITAL_BANDS[0];
+    yr.push({ n: "MBR annual return fee", e: "government fee — passed through at cost, set by your share capital (" + capRow.note + ")", v: MBR_ANNUAL_RETURN.registryFeeByCapital[capRow.id] });
     if (tier.onb) one.push({ n: "Onboarding and due diligence", e: tier.l + " risk — charged once, at acceptance", v: tier.onb });
   }
   if (!labour && tier.note && notes.indexOf(tier.note) !== -1) notes.splice(notes.indexOf(tier.note), 1);
@@ -214,7 +231,7 @@ export function LandingQuoteCalculator() {
 
   const STEP_META: [string, string, (() => Opt[]) | null][] = [
     ["What does the company do?", "Some sectors carry heavier checks on our side. That is what moves the price — not the bookkeeping.", () => opts(QSECT.map((s) => [s[0], s[1], ""] as [string, string, string]), "sector")],
-    ["About how many transactions a month?", "Count each invoice, receipt and bank line. A rough number is fine — we confirm it before anything is agreed.", () => opts(QTXN, "txn")],
+    ["About how many transactions a month?", "Count each invoice, receipt and bank line. A rough number is fine — we confirm it before anything is agreed. Then tell us how many bank accounts the company runs and its authorised share capital.", () => opts(QTXN, "txn")],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person.", null],
     ["Are the books up to date?", "If you are behind, we bring you current first and quote that separately.", () => opts(QBEHIND, "behind")],
     ["Are you registered for VAT?", "Different registrations carry very different filing loads. Not sure? Pick the last option and we check the register for you.", () => QVATREG.map(([k, label, sub]) => ({ key: k, label, sub: sub || "", pick: () => setQ({ vatreg: k, vat: k === "none" ? "none" : "we" }), on: q.vatreg === k }))],
@@ -226,9 +243,17 @@ export function LandingQuoteCalculator() {
   const stepTag = step === 7 ? "Your quote" : "Question " + Math.min(step + 1, 7) + " of 7";
   const isOpts = !!STEP_META[step][2];
   const stepOpts = isOpts ? STEP_META[step][2]!() : [];
+  const isVol = step === 1;
   const isNum = step === 2;
   const isSvc = step === 6;
   const isQuote = step === 7;
+
+  // Bands and labels come straight from the pack — the same five rows the
+  // registry fee table is keyed on, so a label can never describe a band we
+  // do not price.
+  const capOpts: Opt[] = CAPITAL_BANDS.map((c) => ({
+    key: c.id, label: c.label, sub: c.note, on: (q.cap || "1500") === c.id, pick: () => setQ({ cap: c.id }),
+  }));
 
   // Service rows for step 6 — amount labels read from the live calc.
   const lineAmt = (name: string) => {
@@ -365,6 +390,28 @@ export function LandingQuoteCalculator() {
               </div>
 
               {isOpts && <OptPills opts={stepOpts} />}
+
+              {isVol && (
+                <>
+                  <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                    <label htmlFor="lqc-banks" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Bank accounts</label>
+                    <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                      The first is included — each additional account adds €{EXTRA_BANK_MONTHLY.bookFull} a month when we keep the books (€{EXTRA_BANK_MONTHLY.selfWithReview} on review).
+                    </div>
+                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16 }}>
+                      <input id="lqc-banks" type="range" min={1} max={8} step={1} value={q.banks} onChange={(e) => setQ({ banks: +e.target.value })} style={{ flex: 1, accentColor: "var(--a4-primary)", cursor: "pointer" }} />
+                      <span style={{ minWidth: 92, textAlign: "right", fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" }}>{q.banks + (q.banks === 1 ? " account" : " accounts")}</span>
+                    </div>
+                  </div>
+                  <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Authorised share capital</div>
+                    <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                      Sets the MBR registry fee on your annual return (electronic rates) — passed through at cost.
+                    </div>
+                    <div style={{ marginTop: 10 }}><OptPills opts={capOpts} /></div>
+                  </div>
+                </>
+              )}
 
               {isNum && (
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>

@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     let subject: string | undefined;
     let message: string | undefined;
     let meta: any;
+    let companyWebsite: string | undefined;
     let attachments: { filename: string; content: Buffer }[] = [];
 
     if (contentType.includes("multipart/form-data")) {
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
         form.get("subject")?.toString() ||
         "Homepage quote / project request";
       message = form.get("message")?.toString() || "";
+      companyWebsite = form.get("company_website")?.toString();
 
       const metaJson = form.get("metaJson")?.toString();
       if (metaJson) {
@@ -71,13 +73,25 @@ export async function POST(req: NextRequest) {
         subject,
         message,
         meta,
+        company_website: companyWebsite,
       } = body as {
         name?: string;
         email?: string;
         subject?: string;
         message?: string;
         meta?: any;
+        company_website?: string;
       });
+    }
+
+    // Spam honeypot — mirrors vacei.com's `company_website` field: a hidden
+    // input no human ever fills in (off-screen, tabindex -1, aria-hidden).
+    // Bots that auto-fill every field trip it. Checked server-side (not just
+    // client-side) so a direct POST that skips the browser UI is still
+    // caught. Respond as if the submission succeeded — never tip off the
+    // bot that it was filtered.
+    if (companyWebsite && companyWebsite.trim().length > 0) {
+      return NextResponse.json({ ok: true });
     }
 
     if (!email || !name) {

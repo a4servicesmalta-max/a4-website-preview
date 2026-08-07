@@ -10,6 +10,7 @@ import {
   type AccountingInput, type RouteId, type VatRegId,
 } from "@/lib/accounting-fee";
 import { LAUNCH_PROMO, PRICING_VAT_NOTE, type TxnBand } from "@/data/a4QuotePack";
+import { BOOKS_BRAND_NAME } from "@/lib/site-config";
 
 type Opt = { id: string; label: string; sub?: string };
 const labelOf = (list: Opt[], id: string) => (list.find((o) => o.id === id) ?? list[0]).label;
@@ -92,7 +93,7 @@ export function AccountingEstimator() {
       ...(q.discountPct > 0 ? [{ k: `Launch discount (${Math.round(q.discountPct * 100)}%)`, v: "− " + euro(q.monthlyFull - q.monthlyNet) + " /mo" }] : []),
     ],
     services: q.refer ? ["Accounting — referral"] : [
-      s.route === "self" ? `A4 Books ${q.softwareTier} plan — software only` : s.route === "review" ? `A4 Books ${q.softwareTier} plan + accountant review` : `A4 Books ${q.softwareTier} plan + full bookkeeping by A4`,
+      s.route === "self" ? `${BOOKS_BRAND_NAME} ${q.softwareTier} plan — software only` : s.route === "review" ? `${BOOKS_BRAND_NAME} ${q.softwareTier} plan + accountant review` : `${BOOKS_BRAND_NAME} ${q.softwareTier} plan + full bookkeeping by A4`,
       ...(s.head > 0 ? [`Payroll for ${s.head} ${s.head === 1 ? "person" : "people"}`] : []),
       ...(s.vatreg !== "none" && s.route !== "self" ? [`VAT returns (${labelOf(VAT_REG, s.vatreg)})`] : []),
       ...(s.banks > 1 ? [`${s.banks} bank accounts`] : []),
