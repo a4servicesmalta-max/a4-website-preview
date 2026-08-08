@@ -8,6 +8,7 @@ import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { QuotationBuilder } from "./QuotationBuilder";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { trackConversion } from "@/lib/analytics";
 
 function QuoteForm() {
   const href = useLocalizedHref();
@@ -71,6 +72,10 @@ function QuoteForm() {
         const data = await res.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error || "Something went wrong. Please try again.");
       }
+
+      // Past the !res.ok gate: the lead is written. The honeypot branch above
+      // fakes success without a network call and deliberately does not reach here.
+      trackConversion("quote_form_submit");
 
       setSent(true);
       setStatusType("success");

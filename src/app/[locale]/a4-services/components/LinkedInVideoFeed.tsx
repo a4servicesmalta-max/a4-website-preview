@@ -363,6 +363,13 @@ export function LinkedInVideoFeed() {
     };
   }, []);
 
+  // Feed loaded (or failed) with nothing to show — don't render the "Watch
+  // our latest videos" header and CTA over zero cards. `source` starts as
+  // "loading" so the skeleton below still gets its chance first.
+  if (source !== "loading" && posts.length === 0) {
+    return null;
+  }
+
   return (
     <section
       style={{

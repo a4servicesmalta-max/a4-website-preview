@@ -12,6 +12,7 @@ import {
   calcAuditFee, feeLines, euro, type AuditInput,
 } from "@/lib/audit-fee";
 import { AUDIT_PRE_TRADING, TAX_RETURN_FROM, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
+import { trackConversion } from "@/lib/analytics";
 
 type Opt = { id: string; label: string; sub?: string };
 
@@ -164,6 +165,9 @@ export function AuditEstimator() {
       // throw here would report a server fault as a network one.
       if (!res.ok) { setFailure(await readReviewFailure(res)); setStatus("error"); return; }
       const body = await res.json();
+      // The engine accepted the statements and the lead is recorded. Only here —
+      // a 502 from the review route lands on the !res.ok branch above.
+      trackConversion("financial_upload_submit");
       setData(body); setStatus("idle");
     } catch {
       // fetch rejected, or a 2xx body that would not parse — nothing reached us

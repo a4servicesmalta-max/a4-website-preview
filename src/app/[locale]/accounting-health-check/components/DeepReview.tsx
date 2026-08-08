@@ -6,6 +6,7 @@ import { Field, primaryBtn, outlineBtn, type Contact } from "./Field";
 import { ReviewFailureNotice } from "./ReviewFailureNotice";
 import { NETWORK_FAILURE, readReviewFailure, type ReviewFailure } from "@/lib/review-failure";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
+import { trackConversion } from "@/lib/analytics";
 
 type AccountingResponse = {
   company?: string;
@@ -123,6 +124,9 @@ export function DeepReview({
       const res = await fetch(url, { method: "POST", body: fd });
       if (!res.ok) { setFailure(await readReviewFailure(res)); setStatus("error"); return; }
       const body = await res.json();
+      // The engine accepted the file and the lead is recorded. Only here — a 502
+      // from the review route lands on the !res.ok branch above and reports nothing.
+      trackConversion("financial_upload_submit");
       setData(body); setStatus("idle");
     } catch {
       // fetch rejected, or a 2xx body that would not parse — nothing usable came

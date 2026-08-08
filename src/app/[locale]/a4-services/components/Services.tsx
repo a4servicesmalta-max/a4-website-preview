@@ -22,11 +22,20 @@ const PDASH_NAV = [
   { l: "Filings", i: "file-text" },
 ];
 
-const PDASH_NEED = [
-  { icon: "table-2", t: "Trial balance at period end", due: "Due Jun 11" },
-  { icon: "landmark", t: "Bank statements & confirmations", due: "Due Jun 18" },
-  { icon: "users-round", t: "Aged debtor & creditor listings", due: "Due Jun 25" },
+// Illustrative mock — dates are relative to today so this never goes stale
+// (was hardcoded to "Jun 11/18/25", which reads as overdue once that date
+// passes while the mock still says "On track · updated just now").
+const PDASH_NEED_ITEMS = [
+  { icon: "table-2", t: "Trial balance at period end", daysFromNow: 7 },
+  { icon: "landmark", t: "Bank statements & confirmations", daysFromNow: 14 },
+  { icon: "users-round", t: "Aged debtor & creditor listings", daysFromNow: 21 },
 ];
+
+function pdDueLabel(daysFromNow) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  return `Due ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+}
 
 export function PDChip({ children, style }) {
   return <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-full)", padding: "7px 13px", ...style }}>{children}</span>;
@@ -50,6 +59,7 @@ const ILLUSTRATIVE_BADGE = {
 };
 
 export function PortalDashboardMock() {
+  const PDASH_NEED = PDASH_NEED_ITEMS.map((it) => ({ ...it, due: pdDueLabel(it.daysFromNow) }));
   return (
     <div style={{ background: "#000", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-xl)", overflow: "hidden", boxShadow: "0 40px 100px -40px rgba(0,0,0,.95)" }}>
       <div style={{ padding: "10px 18px 0", borderBottom: "1px solid var(--a4-hairline-dark)" }}>

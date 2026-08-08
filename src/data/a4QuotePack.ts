@@ -266,7 +266,9 @@ export const INCORPORATION = {
 export const LAUNCH_PROMO = {
   pct: 0.25,
   until: "2026-08-31",
-  label: "25% off until 31 Aug",
+  // Always carry the year. An undated "until 31 Aug" reads as evergreen and
+  // will outlive the campaign pointing at it.
+  label: "25% off until 31 August 2026",
   note: "25% launch discount — a quarter off your whole quote, already deducted. Valid until 31 August 2026. Government fees stay at cost.",
 };
 

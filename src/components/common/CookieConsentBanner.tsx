@@ -4,8 +4,9 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import LocalizedLink from "@/components/common/LocalizedLink";
+import { CONSENT_COOKIE_NAME, updateConsent } from "@/lib/analytics";
 
-const COOKIE_NAME = "A4_cookie_consent";
+const COOKIE_NAME = CONSENT_COOKIE_NAME;
 
 function hasConsent() {
   if (typeof document === "undefined") return true;
@@ -27,14 +28,18 @@ export default function CookieConsentBanner() {
       document.cookie = `${COOKIE_NAME}=${value}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""
         }`;
     }
+    // Tell Google Consent Mode, in the same breath. Until this fires, the tag
+    // defaults set in GoogleTags keep ad_storage / ad_user_data /
+    // ad_personalization / analytics_storage denied. No-ops when no tag is
+    // configured, so the banner works with or without tracking.
+    updateConsent(value);
     setVisible(false);
   };
 
-  // Accept: record consent. Non-essential scripts/cookies should only be
-  // loaded once this value is "accepted".
+  // Accept: record consent and grant Consent Mode storage.
   const accept = () => persistConsent("accepted");
 
-  // Reject: persist the refusal and load nothing non-essential.
+  // Reject: persist the refusal and leave every non-essential storage denied.
   const reject = () => persistConsent("rejected");
 
   if (!visible) return null;

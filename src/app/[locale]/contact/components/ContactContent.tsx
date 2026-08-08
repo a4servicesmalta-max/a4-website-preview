@@ -7,6 +7,7 @@ import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONES } from "@/lib/contact";
 import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
+import { trackConversion } from "@/lib/analytics";
 
 function ContactForm() {
   const [f, setF] = useState({ name: "", email: "", phone: "", message: "" });
@@ -66,6 +67,10 @@ function ContactForm() {
         const data = await res.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error || "Something went wrong. Please try again.");
       }
+
+      // Past the !res.ok gate: the lead is written. Only now is it a conversion
+      // — the route answers 502 when the write fails, and that path throws above.
+      trackConversion("contact_form_submit");
 
       setF({ name: "", email: "", phone: "", message: "" });
       setStatusType("success");

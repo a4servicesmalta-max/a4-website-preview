@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, BOOKKEEPING_MONTHLY, PAYROLL_PER_HEAD, SOFTWARE_TIERS, SOFTWARE_TIER_LABELS, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXTRA_BANK_MONTHLY, LAUNCH_PROMO, isPromoActive, type CapitalBand, type TxnBand, type SoftwareTierId } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
+import { trackConversion } from "@/lib/analytics";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
 // The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
@@ -430,7 +431,14 @@ export function LandingQuoteCalculator() {
       return;
     }
     setSending(true);
-    setSent(await submitWebsiteQuotation({ name, email, items, risk: qRisk(q), sourceDetail: "a4-homepage" }));
+    const result = await submitWebsiteQuotation({ name, email, items, risk: qRisk(q), sourceDetail: "a4-homepage" });
+    setSent(result);
+    // Conversion on a CONFIRMED backend result only. `error` covers a 502 and a
+    // rejected fetch alike — nothing was written, so nothing is reported. The
+    // honeypot branch above returns before this and never counts either.
+    if (result.status === "quoted" || result.status === "received") {
+      trackConversion("quote_request_home_calculator");
+    }
     setSending(false);
   };
 
