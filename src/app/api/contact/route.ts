@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
+import { pushLeadToPortal, pageUrlOf } from "@/lib/portal-lead";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -57,8 +58,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Portal push is primary — always capture the lead first.
+    // Two different systems, both wanted. pushToPortal reaches the A4 *internal
+    // ops* Requests inbox; it has never created a WebsiteLead, so contact
+    // enquiries were invisible in the portal lead list the firm actually works.
     await pushToPortal({ name, email, phone, message, service: "Contact form", source: "contact", priority: "Med", meta: { subject, context } });
+
+    const leadWritten = await pushLeadToPortal({
+      name: name || email,
+      email,
+      phone,
+      message: [
+        "[a4.com.mt — contact form]",
+        context ? `Context: ${context}` : "",
+        subject ? `Subject: ${subject}` : "",
+        "",
+        message,
+      ].filter(Boolean).join("\n"),
+      sourceDetail: "contact",
+      pageUrl: pageUrlOf(req),
+    });
+
+    // Never answer 200 with "we'll reply" when nothing was recorded. A silent
+    // drop is worse than a visible failure: the prospect walks away believing
+    // they are in the queue, and nobody knows they were ever here.
+    if (!leadWritten) {
+      return NextResponse.json(
+        { error: "We couldn't record your message. Please email info@a4.com.mt and we'll pick it up straight away." },
+        { status: 502 },
+      );
+    }
 
     // Email is best-effort — a missing/broken SMTP config must never cause a 5xx.
     try {

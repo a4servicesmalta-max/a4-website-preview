@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
+import { pushLeadToPortal, pageUrlOf } from "@/lib/portal-lead";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -101,8 +102,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Portal push is primary — always capture the lead first.
+    // The internal ops Requests inbox. It has never created a WebsiteLead, so
+    // on its own a quote request never appeared in the portal lead list.
     await pushToPortal({ name, email, company: meta?.companyName, phone: meta?.phone, message, service: "Quote request" + (meta?.service ? ` — ${meta.service}` : ""), source: "quote", priority: "High", meta });
+
+    // The lead list the firm actually works. Carry the phone and the selected
+    // services through — the form collects both and they are the whole point of
+    // a quote request.
+    const selected = Array.isArray(meta?.services) ? meta.services.join(", ") : meta?.service;
+    const leadWritten = await pushLeadToPortal({
+      name,
+      email,
+      phone: meta?.phone,
+      message: [
+        "[a4.com.mt — quote request]",
+        meta?.companyName ? `Company: ${meta.companyName}` : "",
+        selected ? `Services: ${selected}` : "",
+        meta?.employees ? `Employees: ${meta.employees}` : "",
+        meta?.turnover ? `Turnover: ${meta.turnover}` : "",
+        "",
+        message || "(no message provided)",
+      ].filter(Boolean).join("\n"),
+      sourceDetail: "quote",
+      pageUrl: pageUrlOf(req),
+    });
+
+    // A 200 with "your quote is on its way" when nothing was recorded is the
+    // worst outcome available: the prospect stops chasing and we never know.
+    if (!leadWritten) {
+      return NextResponse.json(
+        { error: "We couldn't record your request. Please email info@a4.com.mt and we'll pick it up straight away." },
+        { status: 502 },
+      );
+    }
 
     const subjectLine = subject || `New quote request from ${name}`;
 

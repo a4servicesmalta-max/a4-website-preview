@@ -46,7 +46,18 @@ type LeadInput = {
   /** Which form this came from, e.g. "fs-review". Lowercase slug. */
   sourceDetail?: string;
   source?: "contact" | "callback";
+  /**
+   * The page the visitor actually submitted from. The lead schema has no field
+   * for it, so it rides in the message — without it every landing page reports
+   * the same origin and paid campaigns cannot be told apart.
+   */
+  pageUrl?: string;
 };
+
+/** The page a request came from, for attribution. Referer is what we have. */
+export function pageUrlOf(req: { headers: { get(name: string): string | null } }): string | undefined {
+  return req.headers.get("referer") || undefined;
+}
 
 export async function pushLeadToPortal(input: LeadInput): Promise<boolean> {
   const base = QUOTE_API_BASE;
@@ -64,7 +75,9 @@ export async function pushLeadToPortal(input: LeadInput): Promise<boolean> {
         name: input.name,
         email: input.email,
         ...(input.phone ? { phone: input.phone } : {}),
-        ...(input.message ? { message: input.message } : {}),
+        ...(input.message || input.pageUrl
+          ? { message: [input.message, input.pageUrl ? `Submitted from: ${input.pageUrl}` : ""].filter(Boolean).join("\n\n") }
+          : {}),
         source: input.source ?? "contact",
         ...(input.sourceDetail ? { sourceDetail: input.sourceDetail } : {}),
       }),
