@@ -11,7 +11,7 @@ import {
   SECTORS, TXN, SIZES, PAYROLL, VAT, BANKS, TAX_RETURN, YEARS, NYRS, CHANGES, STEPS,
   calcAuditFee, feeLines, euro, type AuditInput,
 } from "@/lib/audit-fee";
-import { AUDIT_PRE_TRADING, TAX_RETURN_FROM, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
+import { AUDIT_PRE_TRADING, TAX_RETURN_FROM, PRICING_VAT_NOTE, LAUNCH_PROMO } from "@/data/a4QuotePack";
 
 type Opt = { id: string; label: string; sub?: string };
 
@@ -175,16 +175,22 @@ export function AuditEstimator() {
   const input: AuditInput = { ...answers, uploaded: !!data };
   const q = calcAuditFee(input);
   const lines = feeLines(input, q);
-  const feeBig = q.refer ? "Let’s talk first" : euro(q.final);
-  const feeMini = q.refer ? "Let’s talk" : euro(q.final) + " /yr";
+  // `finalNet` carries the launch discount, so this page quotes the same fee
+  // the calculator on /pricing and /a4-services does. It used to show `final`,
+  // which is the pre-promo figure — the one page on the site where the
+  // advertised 25% silently did not apply.
+  const promoOn = !q.refer && q.promoPct > 0;
+  const feeBig = q.refer ? "Let’s talk first" : euro(q.finalNet);
+  const feeMini = q.refer ? "Let’s talk" : euro(q.finalNet) + " /yr";
   const ctaLabel = q.refer ? "Request a call" : "Request a proposal";
   const feeNote = q.refer
     ? "We price most sectors instantly. This one needs a short conversation with a director before we put a number to it — usually the same day."
     : (q.review ? "You likely qualify for a review instead of a full audit — we confirm it against your figures. " : "") +
+      (promoOn ? `${LAUNCH_PROMO.label} — already deducted. ` : "") +
       `The fee is fixed after a short scoping call and never below €${AUDIT_PRE_TRADING}. ${PRICING_VAT_NOTE}`;
   const summary = q.refer
     ? "We price most sectors instantly, but this one needs a short conversation with a director before we put a number to it — usually the same day."
-    : `So: a ${q.review ? "review engagement" : "full financial audit"} at ${euro(q.final)} a year${answers.taxret === "yes" ? ", tax return included" : ""}, fixed after one short scoping call. Documents are collected once, in the portal, and we file on time at the MBR.`;
+    : `So: a ${q.review ? "review engagement" : "full financial audit"} at ${euro(q.finalNet)} a year${answers.taxret === "yes" ? ", tax return included" : ""}, fixed after one short scoping call. Documents are collected once, in the portal, and we file on time at the MBR.`;
   // Only the engine returns a fee read from the actual file; never invent one.
   const engineFee = data?.quote?.fee ?? null;
 
@@ -196,7 +202,7 @@ export function AuditEstimator() {
     headline: engineFee !== null
       ? `${euro(engineFee)} / year (priced from uploaded statements)`
       : q.refer ? "Referral — needs a director call"
-      : `${euro(q.final)} / year${q.yearsN > 1 ? ` × ${q.yearsN} years = ${euro(q.total)}` : ""}`,
+      : `${euro(q.finalNet)} / year${q.yearsN > 1 ? ` × ${q.yearsN} years = ${euro(q.totalNet)}` : ""}`,
     lines: q.refer ? [{ k: "Sector", v: "Needs a director call" }] : lines,
     services: q.refer ? ["Statutory audit — referral"] : [
       q.review ? "Review engagement (lighter than a full audit)" : "Full statutory audit",

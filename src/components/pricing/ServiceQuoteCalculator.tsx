@@ -30,6 +30,8 @@ import {
   PRICING_VAT_NOTE,
   REGISTERED_OFFICE_YEARLY,
   REVIEW_ENGAGEMENT_FACTOR,
+  SECTOR_OPTIONS,
+  SECTOR_RISK,
   TXN_BANDS,
   VAT_RULES,
   payrollRate,
@@ -41,6 +43,7 @@ import {
   evaluateA4Items,
   submitWebsiteQuotation,
   type A4Item,
+  type A4Risk,
   type QuoteCadence,
   type WebsiteQuoteResult,
 } from "@/lib/websiteQuotation";
@@ -213,6 +216,13 @@ export type ServiceQuoteCalculatorProps = {
 
 export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorProps) {
   const [svc, setSvc] = useState<ServiceId>("accounting");
+  // Sector drives the risk multiplier. This calculator had no sector control at
+  // all and submitted with no risk value, so it always priced at 1.0× while
+  // /a4-services, /audit-services and /accounting-services all asked and
+  // applied it — a systematic underquote of exactly the clients the firm least
+  // wants to underquote. The server has always accepted `risk`; nothing here
+  // was ever sending it.
+  const [sectorIdx, setSectorIdx] = useState(0);
   const [accFull, setAccFull] = useState(false);
   const [tierIdx, setTierIdx] = useState(0);
   const [bookVol, setBookVol] = useState(PR_DEFAULT_BAND);
@@ -281,7 +291,14 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
     unit = "one-off";
   }
 
-  const totals = evaluateA4Items(items);
+  // 'refer' has no multiplier, so it can never be quoted instantly — same rule
+  // as every other surface: the visitor goes to a person, not to a number.
+  const sectorId = SECTOR_OPTIONS[sectorIdx].id;
+  const sectorTier = SECTOR_RISK[sectorId] ?? "standard";
+  const isReferSector = sectorTier === "refer";
+  const risk: A4Risk = isReferSector ? "standard" : sectorTier;
+
+  const totals = evaluateA4Items(items, risk);
   const promo = totals.promoApplied;
 
   /** Incorporation is priced client-side for display only (lead path). */
@@ -301,7 +318,7 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
       incLines.push({ label: "Company secretary", amount: INCORPORATION.companySecretaryYearly, cadence: "yearly" });
   }
 
-  const isLeadPath = svc === "incorporation";
+  const isLeadPath = svc === "incorporation" || isReferSector;
   const lines = isLeadPath ? incLines : totals.lines;
   const incOneOff = incLines.filter((l) => l.cadence === "oneoff").reduce((s, l) => s + l.amount, 0);
 
@@ -317,7 +334,10 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
   const send = async () => {
     if (!canSend || sending) return;
     setSending(true);
-    const result = await submitWebsiteQuotation({ name, email, items });
+    // `risk` must travel with the items: the server reprices from it, so
+    // omitting it here after pricing the screen WITH it would put the two out
+    // of tolerance and silently downgrade the quote to a bare lead.
+    const result = await submitWebsiteQuotation({ name, email, items, risk });
     // Report the conversion only on a submission the backend accepted — never
     // on a click. `error` means nothing was captured, so nothing is counted.
     if (result.status !== "error") {
@@ -335,7 +355,7 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
       const res = await fetch("/api/quotation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, company, items }),
+        body: JSON.stringify({ name, email, company, items, risk }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Something went wrong.");
@@ -388,6 +408,28 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
               padding: "clamp(24px,3vw,34px)",
             }}
           >
+            {/* Sector first, because it moves every fee below it. Asked once,
+                across all services — the other calculators on the site have
+                always asked it and this one never did. */}
+            <div className="mb-6">
+              <div className="a4-font-body text-[14px] font-semibold text-white">What does the company do?</div>
+              <PrChip
+                items={SECTOR_OPTIONS.map((s) => s.label)}
+                value={sectorIdx}
+                set={setSectorIdx}
+                cols={2}
+              />
+              <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
+                {isReferSector
+                  ? "We price most sectors on the spot, but yours needs a short call with a director before we put a number on it — usually the same day."
+                  : sectorTier === "standard"
+                    ? "Some sectors carry heavier checks on our side. That is what moves the price — not the bookkeeping."
+                    : sectorTier === "elevated"
+                      ? "Sectors like this need a few extra checks when we take you on. It is built into the price below rather than added later."
+                      : "Licensed and regulated sectors need full source-of-funds checks and closer monitoring. A director signs off before we take the work on."}
+              </p>
+            </div>
+            <div className="mb-6" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }} />
             {svc === "accounting" && (
               <div>
                 <div className="a4-font-body text-[14px] font-semibold text-white">Who keeps the books?</div>
@@ -556,23 +598,44 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
               <div className="a4-font-body text-[11px] uppercase tracking-[.12em] text-[var(--a4-mute)]">
                 Your fixed price
               </div>
-              <div className="flex flex-wrap items-baseline gap-2 mt-[10px]">
-                {unit !== "/ mo" && <span className="a4-font-body text-[17px] text-[var(--a4-mute)]">from</span>}
-                <span
-                  className="a4-font-display font-medium text-[52px] text-[var(--a4-ink)] leading-none"
-                  style={{ letterSpacing: "-2px" }}
-                >
-                  {prEuro(price)}
-                </span>
-                {discounted && (
-                  <span className="a4-font-body text-[17px] text-[var(--a4-mute)] line-through">{prEuro(gross)}</span>
-                )}
-                <span className="a4-font-body text-[14px] text-[var(--a4-mute)]">{unit}</span>
-              </div>
-              {discounted && (
-                <div className="a4-font-body text-[12px] font-semibold text-[var(--a4-primary)] mt-2">
-                  {LAUNCH_PROMO.label}
+              {isReferSector ? (
+                // A referral sector has no multiplier, so there is no honest
+                // number to show. Quoting it at the standard rate would be an
+                // underquote the firm then has to retract.
+                <div className="flex flex-wrap items-baseline gap-2 mt-[10px]">
+                  <span
+                    className="a4-font-display font-medium text-[38px] text-[var(--a4-ink)] leading-none"
+                    style={{ letterSpacing: "-1.5px" }}
+                  >
+                    Let&rsquo;s talk first
+                  </span>
                 </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-baseline gap-2 mt-[10px]">
+                    {unit !== "/ mo" && <span className="a4-font-body text-[17px] text-[var(--a4-mute)]">from</span>}
+                    <span
+                      className="a4-font-display font-medium text-[52px] text-[var(--a4-ink)] leading-none"
+                      style={{ letterSpacing: "-2px" }}
+                    >
+                      {prEuro(price)}
+                    </span>
+                    {discounted && (
+                      <span className="a4-font-body text-[17px] text-[var(--a4-mute)] line-through">{prEuro(gross)}</span>
+                    )}
+                    <span className="a4-font-body text-[14px] text-[var(--a4-mute)]">{unit}</span>
+                  </div>
+                  {discounted && (
+                    <div className="a4-font-body text-[12px] font-semibold text-[var(--a4-primary)] mt-2">
+                      {LAUNCH_PROMO.label}
+                    </div>
+                  )}
+                  {sectorTier !== "standard" && (
+                    <div className="a4-font-body text-[12px] text-[var(--a4-mute)] mt-1.5">
+                      Includes the {sectorTier === "high" ? "regulated" : "elevated"}-sector uplift for your industry.
+                    </div>
+                  )}
+                </>
               )}
               <div className="h-px bg-[var(--a4-hairline-light)] my-5" />
               <div className="flex flex-col gap-[9px]">
@@ -588,15 +651,19 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
               </div>
 
               {isLeadPath ? (
-                // Company formation is not on the instant-quote fee schedule —
-                // shareholder structure decides the real price, so a person
-                // scopes it. Same figures, different route.
+                // Two ways to land here. Company formation is not on the
+                // instant-quote fee schedule — shareholder structure decides
+                // the real price. A referral sector has no multiplier at all.
+                // Either way a person scopes it: same figures, different route.
                 <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)]">
                   <Button variant="dark" size="md" href="/contact" style={{ width: "100%" }}>
-                    Request this incorporation <Icon name="arrow-right" size={16} color="#fff" />
+                    {isReferSector ? "Book a scoping call" : "Request this incorporation"}{" "}
+                    <Icon name="arrow-right" size={16} color="#fff" />
                   </Button>
                   <p className="a4-font-body text-[11.5px] leading-[1.5] text-[var(--a4-mute)] text-center mt-2.5">
-                    Company formation is confirmed by a director before anything is filed.
+                    {isReferSector
+                      ? "A director prices your sector personally — usually the same day."
+                      : "Company formation is confirmed by a director before anything is filed."}
                   </p>
                 </div>
               ) : sent ? (

@@ -66,6 +66,56 @@ export const RISK_TIERS: Record<RiskTier, { label: string; multiplier: number | 
   refer: { label: "Referral", multiplier: null, onboarding: null },
 };
 
+/**
+ * Which risk tier a sector falls into. Transcribed from the canonical pack's
+ * `sectorRiskMap` — the backend already serves exactly this, so a surface that
+ * resolves risk through here agrees with the server's re-pricing by
+ * construction. `other` is deliberately 'refer': it has no multiplier, so it
+ * can never be quoted instantly and must go down the lead path.
+ */
+export const SECTOR_RISK: Record<string, RiskTier> = {
+  shop: "standard",
+  consulting: "standard",
+  property: "standard",
+  hospitality: "elevated",
+  online: "elevated",
+  holding: "elevated",
+  regulated: "high",
+  other: "refer",
+};
+
+/** The sector question, worded the same wherever it is asked. */
+export const SECTOR_OPTIONS: { id: string; label: string }[] = [
+  { id: "shop", label: "Shop, trade or services" },
+  { id: "consulting", label: "Consulting or freelancing" },
+  { id: "property", label: "Property or rentals" },
+  { id: "hospitality", label: "Restaurant, bar or hotel" },
+  { id: "online", label: "Online sales or cross-border" },
+  { id: "holding", label: "Holding or investment company" },
+  { id: "regulated", label: "Gaming, crypto or financial services" },
+  { id: "other", label: "Something else" },
+];
+
+/**
+ * Audit SCOPE surcharges — extra audit work driven by what the company has,
+ * not by transaction volume. Lifted out of `src/lib/audit-fee.ts` so the
+ * numbers live with every other fee rather than buried in one calculator.
+ *
+ * ⚠ NOT part of the instant-quotation contract. The portal backend's
+ * `evaluateA4ServicesQuote` has no concept of these, so a surface that ADDS
+ * them to a submitted total would put it out of the server's €1/1% tolerance
+ * and turn every quote into a silent 202. They are therefore used only by the
+ * /audit-services estimator, which is a lead-path surface. Applying them on
+ * /pricing or /a4-services requires the same entries to land in the backend
+ * pack and evaluator first, in a coordinated release that bumps
+ * A4_QUOTE_PACK_VERSION in all three copies at once.
+ */
+export const AUDIT_SCOPE_SURCHARGES = {
+  payrollByHeadcount: { none: 0, "1-5": 100, "6-20": 250, "21+": 450 } as Record<string, number>,
+  vatRegistered: 150,
+  banksByCount: { "1": 0, "2-3": 100, "4+": 250 } as Record<string, number>,
+};
+
 /* -------------------------------------------------------------------------- */
 /* Recurring service tables                                                    */
 /* -------------------------------------------------------------------------- */
