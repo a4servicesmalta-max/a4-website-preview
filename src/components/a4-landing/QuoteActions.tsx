@@ -6,6 +6,7 @@ import {
   quoteRef, quoteToText, booksSignupUrl,
   type QuotePayload, type QuoteContact,
 } from "@/lib/quote-handoff";
+import { trackConversion } from "@/lib/analytics";
 
 export type Intent = "proposal" | "consultation" | "account";
 
@@ -89,6 +90,8 @@ export function useQuoteActions(quote: () => QuotePayload) {
         }),
       });
       if (!res.ok) throw new Error("request failed");
+      // Both estimators funnel through here, so report which one it was.
+      trackConversion(q.page === "audit" ? "audit-estimator" : "accounting-estimator");
       setDone({ ref, next: intent === "account" ? booksSignupUrl(q, contact, ref) : undefined });
     } catch {
       setError("Something went wrong sending your request. Please try again, or email info@a4.com.mt.");

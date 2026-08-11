@@ -7,6 +7,7 @@ import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONES } from "@/lib/contact";
 import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
+import { trackConversion } from "@/lib/analytics";
 
 function ContactForm() {
   const [f, setF] = useState({ name: "", email: "", message: "" });
@@ -49,6 +50,7 @@ function ContactForm() {
         throw new Error((data as { error?: string }).error || "Something went wrong. Please try again.");
       }
 
+      trackConversion("contact");
       setF({ name: "", email: "", message: "" });
       setStatusType("success");
       setStatusMessage("Thanks — we'll reply within one business day.");

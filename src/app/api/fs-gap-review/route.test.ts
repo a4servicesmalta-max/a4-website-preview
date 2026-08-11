@@ -96,3 +96,45 @@ it("skips the AI step entirely when the engine call fails, and still pushes to t
   expect(pushToPortal).toHaveBeenCalledTimes(1);
   expect(res.status).toBe(502);
 });
+
+// The lead is the point of this route. By the time we get here the visitor has
+// confirmed their email by one-time code, ticked the consent box and uploaded
+// their own financial statements — losing that because a Render service is
+// asleep is the worst outcome the funnel has. Both cases below used to return
+// before pushToPortal was ever reached.
+
+it("still captures the lead when the engine is unreachable (throws)", async () => {
+  (engineFetch as any).mockRejectedValue(new Error("fetch failed: ECONNREFUSED"));
+
+  const res = await POST(form(baseFields()));
+
+  expect(pushToPortal).toHaveBeenCalledTimes(1);
+  const call = (pushToPortal as any).mock.calls[0][0];
+  expect(call.email).toBe("a@b.com");
+  expect(call.source).toBe("fs-review");
+  expect(call.meta.engineStatus).toBe("unreachable");
+  expect(res.status).toBe(503);
+  // The internal exception text must not reach the browser.
+  expect(JSON.stringify(await res.json())).not.toContain("ECONNREFUSED");
+});
+
+it("still captures the lead when A4_FSREVIEW_URL is not configured", async () => {
+  delete process.env.A4_FSREVIEW_URL;
+
+  const res = await POST(form(baseFields()));
+
+  expect(engineFetch).not.toHaveBeenCalled();
+  expect(pushToPortal).toHaveBeenCalledTimes(1);
+  expect((pushToPortal as any).mock.calls[0][0].email).toBe("a@b.com");
+  expect(res.status).toBe(503);
+});
+
+it("still refuses to run — and files nothing — when the email is not verified", async () => {
+  (isVerified as any).mockReturnValue(false);
+
+  const res = await POST(form(baseFields()));
+
+  expect(res.status).toBe(401);
+  expect(pushToPortal).not.toHaveBeenCalled();
+  expect(engineFetch).not.toHaveBeenCalled();
+});

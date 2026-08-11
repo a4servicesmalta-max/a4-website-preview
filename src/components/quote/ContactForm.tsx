@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import FormStatusModal from "@/components/common/FormStatusModal";
 import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
 import { usePagesTranslation } from "@/hooks/usePagesTranslation";
+import { trackConversion } from "@/lib/analytics";
 
 const ContactForm = () => {
   const { t } = usePagesTranslation("contact");
@@ -77,6 +78,7 @@ const ContactForm = () => {
         throw new Error((data as { error?: string }).error || t("form.error.generic"));
       }
 
+      trackConversion("contact");
       setFormData({ name: "", email: "", message: "" });
       setStatusType("success");
       setStatusMessage(t("form.success.message"));

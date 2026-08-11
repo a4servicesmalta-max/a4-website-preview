@@ -1,9 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   buildA4Selections,
   buildQuoteRecord,
   evaluateA4Items,
   submitWebsiteQuotation,
+  unpriceableItems,
   A4_LIMITS,
   SOURCE_SITE,
   type A4Item,
@@ -535,5 +536,37 @@ describe("the wizard path", () => {
     const { name, email, selections, lines, monthly, yearly, oneOff } = wizard;
     const withoutCatchup = { name, email, selections, lines, monthly, yearly, oneOff };
     expect(buildQuoteRecord(withoutCatchup, DURING).catchup).toBe(0);
+  });
+});
+
+describe("unpriceable items are refused rather than silently 202'd", () => {
+  it("flags an item the display would drop but the server would reject outright", () => {
+    // A review over a band that prices at zero: evaluateA4Items drops the line
+    // and still reports a total, while evaluateA4ServicesQuote nulls the whole
+    // basket. Submitting that produces a 202 the visitor reads as success.
+    expect(unpriceableItems([{ service: "review", txn: "0", cadence: "monthly" }])).toHaveLength(1);
+  });
+
+  it("passes a basket every side can price", () => {
+    expect(
+      unpriceableItems([
+        { service: "audit", txn: "151-400" },
+        { service: "taxret", txn: "151-400" },
+        { service: "mbr", capital: "1500" },
+      ]),
+    ).toHaveLength(0);
+  });
+
+  it("refuses to submit such a basket, instead of firing a request that can only 202", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const res = await submitWebsiteQuotation({
+      name: "Test",
+      email: "t@example.com",
+      items: [{ service: "review", txn: "0", cadence: "monthly" }],
+    });
+    expect(res.status).toBe("error");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });

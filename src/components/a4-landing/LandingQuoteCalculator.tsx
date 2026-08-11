@@ -25,6 +25,7 @@ import {
   type QuoteLineItem,
   type WebsiteQuoteResult,
 } from "@/lib/websiteQuotation";
+import { trackConversion } from "@/lib/analytics";
 
 // Homepage pricing calculator — the same wizard as the Vacei site's cost
 // calculator, and the same quote pipeline behind it.
@@ -350,6 +351,10 @@ export function LandingQuoteCalculator() {
       oneOff: r.oneTot,
       catchup: r.catchup,
     });
+    // Only a submission the backend actually captured counts as a conversion.
+    if (result.status !== "error") {
+      trackConversion("services-wizard", r.yrTot + r.moTot * 12);
+    }
     setSent(result);
     setSending(false);
   };
