@@ -4,34 +4,28 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import LocalizedLink from "@/components/common/LocalizedLink";
-
-const COOKIE_NAME = "A4_cookie_consent";
-
-function hasConsent() {
-  if (typeof document === "undefined") return true;
-  return document.cookie.split("; ").some((c) => c.startsWith(`${COOKIE_NAME}=`));
-}
+import { readConsent, setConsent } from "@/lib/consent";
 
 export default function CookieConsentBanner() {
   const { t } = useTranslation("common");
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!hasConsent()) {
+    if (readConsent() === null) {
       setVisible(true);
     }
   }, []);
 
+  // `setConsent` broadcasts the choice, so ConsentedAnalytics picks it up
+  // straight away rather than on the next navigation. That broadcast is the
+  // whole point of routing this through @/lib/consent: the banner's promise
+  // that nothing non-essential loads before "accepted" is now actually kept.
   const persistConsent = (value: "accepted" | "rejected") => {
-    if (typeof document !== "undefined") {
-      document.cookie = `${COOKIE_NAME}=${value}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""
-        }`;
-    }
+    setConsent(value);
     setVisible(false);
   };
 
-  // Accept: record consent. Non-essential scripts/cookies should only be
-  // loaded once this value is "accepted".
+  // Accept: record consent, which starts analytics.
   const accept = () => persistConsent("accepted");
 
   // Reject: persist the refusal and load nothing non-essential.

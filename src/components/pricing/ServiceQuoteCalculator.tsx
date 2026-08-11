@@ -36,6 +36,7 @@ import {
   type SoftwareTierId,
   type TxnBand,
 } from "@/data/a4QuotePack";
+import { trackConversion } from "@/lib/analytics";
 import {
   evaluateA4Items,
   submitWebsiteQuotation,
@@ -316,7 +317,13 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
   const send = async () => {
     if (!canSend || sending) return;
     setSending(true);
-    setSent(await submitWebsiteQuotation({ name, email, items }));
+    const result = await submitWebsiteQuotation({ name, email, items });
+    // Report the conversion only on a submission the backend accepted — never
+    // on a click. `error` means nothing was captured, so nothing is counted.
+    if (result.status !== "error") {
+      trackConversion("quote-calculator", unit === "/ mo" ? price * 12 : price);
+    }
+    setSent(result);
     setSending(false);
   };
 

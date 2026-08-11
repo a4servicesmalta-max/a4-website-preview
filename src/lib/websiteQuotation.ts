@@ -143,6 +143,23 @@ const isIntWithin = (n: unknown, min: number, max: number): boolean =>
 
 type PricedItem = QuoteLineItem & { registry?: number };
 
+/**
+ * Items this basket cannot price.
+ *
+ * `evaluateA4Items` DROPS an unpriceable line and still shows a total, but the
+ * server's `evaluateA4ServicesQuote` returns null for the WHOLE basket on the
+ * same input. So an unpriceable item means the visitor is shown a figure that
+ * can never be quoted — the submission returns 202 with no quotation and no
+ * explanation. A differential run over 25,148 baskets found exactly one
+ * reachable divergent shape, `{service:'review', txn:'0'}` (a review over a
+ * band that prices at zero), and no calculator emits it today. `submitWebsiteQuotation`
+ * uses this so that stays harmless: if a future calculator does emit one, the
+ * visitor is sent to a human instead of into a silent dead end.
+ */
+export function unpriceableItems(items: A4Item[], risk: A4Risk = "standard"): A4Item[] {
+  return items.filter((i) => priceItem(i, risk) == null);
+}
+
 /** Price one item. Returns null when the item cannot be priced (never throws). */
 function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
   const tier = RISK_TIERS[risk];
@@ -410,6 +427,14 @@ export async function submitWebsiteQuotation(
       // Over the server's cap the whole submission is refused, so say so here
       // rather than firing a request that can only come back as a 202.
       return { status: "error", message: "That's more services than we can quote online — let's scope it on a call." };
+    }
+    // Same reasoning, one step subtler: the display arithmetic drops an item it
+    // cannot price and carries on, while the server refuses the entire basket.
+    // Firing that request produces a 202 the visitor cannot distinguish from
+    // success, so refuse it here instead. See `unpriceableItems`.
+    const risk = input.risk ?? "standard";
+    if (unpriceableItems(input.items, risk).length) {
+      return { status: "error", message: "One of those options needs a person to price it — let's scope it on a short call." };
     }
   } else if (!input.lines.length) {
     return { status: "error", message: "Pick at least one service so we have something to quote." };
