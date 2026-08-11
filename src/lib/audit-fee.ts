@@ -11,6 +11,7 @@
 
 import {
   AUDIT_YEARLY, TAX_RETURN_YEARLY, TXN_BANDS, RISK_TIERS, REVIEW_ENGAGEMENT_FACTOR, AUDIT_PRE_TRADING,
+  AUDIT_SCOPE_SURCHARGES, LAUNCH_PROMO, isPromoActive, roundEur,
   type TxnBand,
 } from "@/data/a4QuotePack";
 
@@ -52,22 +53,23 @@ export const SIZES = [
   { id: "unsure", label: "Not sure", sub: "we’ll check" },
 ];
 
+// Scope surcharges come from the pack now, not from figures restated here.
 export const PAYROLL: { id: string; label: string; sub: string; add: number }[] = [
-  { id: "none", label: "No payroll", sub: "", add: 0 },
-  { id: "1-5", label: "1–5 people", sub: "", add: 100 },
-  { id: "6-20", label: "6–20 people", sub: "", add: 250 },
-  { id: "21+", label: "21 or more", sub: "", add: 450 },
+  { id: "none", label: "No payroll", sub: "", add: AUDIT_SCOPE_SURCHARGES.payrollByHeadcount.none },
+  { id: "1-5", label: "1–5 people", sub: "", add: AUDIT_SCOPE_SURCHARGES.payrollByHeadcount["1-5"] },
+  { id: "6-20", label: "6–20 people", sub: "", add: AUDIT_SCOPE_SURCHARGES.payrollByHeadcount["6-20"] },
+  { id: "21+", label: "21 or more", sub: "", add: AUDIT_SCOPE_SURCHARGES.payrollByHeadcount["21+"] },
 ];
 
 export const VAT: { id: string; label: string; sub: string; add: number }[] = [
-  { id: "yes", label: "Yes", sub: "registered and filing", add: 150 },
+  { id: "yes", label: "Yes", sub: "registered and filing", add: AUDIT_SCOPE_SURCHARGES.vatRegistered },
   { id: "no", label: "No", sub: "not registered", add: 0 },
 ];
 
 export const BANKS: { id: string; label: string; sub: string; add: number }[] = [
-  { id: "1", label: "One", sub: "", add: 0 },
-  { id: "2-3", label: "Two or three", sub: "", add: 100 },
-  { id: "4+", label: "Four or more", sub: "", add: 250 },
+  { id: "1", label: "One", sub: "", add: AUDIT_SCOPE_SURCHARGES.banksByCount["1"] },
+  { id: "2-3", label: "Two or three", sub: "", add: AUDIT_SCOPE_SURCHARGES.banksByCount["2-3"] },
+  { id: "4+", label: "Four or more", sub: "", add: AUDIT_SCOPE_SURCHARGES.banksByCount["4+"] },
 ];
 
 export const TAX_RETURN = [
@@ -127,9 +129,19 @@ export type AuditQuote =
       tier: { label: string; mult: number; refer?: boolean };
       /** Undiscounted fee. */
       fee: number;
-      /** Fee after any upload discount — what the client is shown. */
+      /** Fee after any upload discount, BEFORE the launch promo. */
       final: number;
       disc: number;
+      /**
+       * The launch promo, applied on top of any upload discount — the same
+       * 25% every other surface on the site already deducted. This page used
+       * to be the one place the advertised discount silently did not exist,
+       * which quoted the firm's headline product ~33% above /pricing and
+       * /a4-services for the same company.
+       */
+      promoPct: number;
+      /** Fee after BOTH discounts — what the client is actually quoted. */
+      finalNet: number;
       reasons: string[];
       review: boolean;
       bigVol: boolean;
@@ -138,7 +150,10 @@ export type AuditQuote =
       bankAdd: number;
       taxAdd: number;
       yearsN: number;
+      /** Undiscounted multi-year total. */
       total: number;
+      /** Multi-year total at the price actually quoted. */
+      totalNet: number;
     };
 
 export const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB");
@@ -203,7 +218,20 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
     }
   }
 
-  return { refer: false, tier, fee, final, disc, reasons, review, bigVol, payAdd, vatAdd, bankAdd, taxAdd, yearsN, total: final * yearsN };
+  // The launch promo, exactly as the pack specifies it and as every other
+  // surface applies it: a straight percentage off the fee, date-driven, no
+  // code change needed when it lapses. It sits ON TOP of the upload discount
+  // because that one is a scope reduction (a better-prepared file is less
+  // work), while this one is a launch offer on the whole quote.
+  const promoPct = isPromoActive() ? LAUNCH_PROMO.pct : 0;
+  const finalNet = promoPct > 0 ? roundEur(final * (1 - promoPct)) : final;
+
+  return {
+    refer: false, tier, fee, final, disc, promoPct, finalNet, reasons, review, bigVol,
+    payAdd, vatAdd, bankAdd, taxAdd, yearsN,
+    total: final * yearsN,
+    totalNet: finalNet * yearsN,
+  };
 }
 
 /** Itemised lines for the fee panel — every euro on the quote is on this list. */
@@ -219,6 +247,12 @@ export function feeLines(s: AuditInput, r: AuditQuote): { k: string; v: string }
   if (r.bankAdd > 0) lines.push({ k: "Bank accounts · " + find(BANKS, s.banks).label.toLowerCase(), v: "+ " + euro(r.bankAdd) });
   if (r.taxAdd > 0) lines.push({ k: "Annual tax return", v: "+ " + euro(r.taxAdd) });
   if (r.disc > 0) lines.push({ k: "Prior-year file · −" + Math.round(r.disc * 100) + "%", v: "− " + euro(r.fee - r.final) });
-  if (r.yearsN > 1) lines.push({ k: "Years to audit", v: r.yearsN + " × " + euro(r.final) + " = " + euro(r.total) });
+  if (r.promoPct > 0) {
+    lines.push({
+      k: `Launch discount · −${Math.round(r.promoPct * 100)}%`,
+      v: "− " + euro(r.final - r.finalNet),
+    });
+  }
+  if (r.yearsN > 1) lines.push({ k: "Years to audit", v: r.yearsN + " × " + euro(r.finalNet) + " = " + euro(r.totalNet) });
   return lines;
 }

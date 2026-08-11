@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { calcAuditFee, feeLines, TXN, type AuditInput } from "./audit-fee";
-import { AUDIT_YEARLY, AUDIT_FROM, AUDIT_PRE_TRADING } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, AUDIT_FROM, AUDIT_PRE_TRADING, LAUNCH_PROMO } from "@/data/a4QuotePack";
 
 const base: AuditInput = {
   sector: "shop", txn: "21-60", size: "small", pay: "none", vat: "no", banks: "1",
@@ -70,6 +70,39 @@ describe("audit fee engine", () => {
     expect(keys).toEqual([
       "Sector risk", "Transactions", "Engagement",
       "Payroll · 21 or more", "VAT registered", "Bank accounts · four or more", "Annual tax return",
+      // The launch discount is a line like any other — the visitor must be able
+      // to see where every euro of the difference came from.
+      "Launch discount · −25%",
     ]);
+  });
+
+  // This page was the ONE surface on the site that never applied the launch
+  // promo, so it quoted the firm's headline product ~33% above /pricing and
+  // /a4-services for the same company. See docs/a4-ad-launch-readiness.
+  describe("launch promo", () => {
+    it("deducts the launch discount from the quoted fee", () => {
+      const r = at({ txn: "151-400", size: "big" });
+      expect(r.refer).toBe(false);
+      if (r.refer) return;
+      expect(r.promoPct).toBe(LAUNCH_PROMO.pct);
+      expect(r.finalNet).toBe(Math.round(r.final * (1 - LAUNCH_PROMO.pct)));
+      expect(r.finalNet).toBeLessThan(r.final);
+    });
+
+    it("carries the discount through the multi-year total", () => {
+      const r = at({ year: "multi", nyrs: "3", txn: "151-400", size: "big" });
+      if (r.refer) return;
+      expect(r.totalNet).toBe(r.finalNet * 3);
+      expect(r.totalNet).toBeLessThan(r.total);
+    });
+
+    it("stacks on top of the prior-year upload discount, not instead of it", () => {
+      const plain = at({ txn: "151-400", size: "big" });
+      const uploaded = at({ txn: "151-400", size: "big", uploaded: true, doc: "fs" });
+      if (plain.refer || uploaded.refer) return;
+      expect(uploaded.disc).toBeGreaterThan(0);
+      expect(uploaded.final).toBeLessThan(plain.final); // upload discount moved the base
+      expect(uploaded.finalNet).toBeLessThan(uploaded.final); // promo then applied on top
+    });
   });
 });

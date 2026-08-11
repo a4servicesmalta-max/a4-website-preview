@@ -17,6 +17,7 @@ import {
   A4_LIMITS,
   evaluateA4Items,
   type A4Item,
+  type A4Risk,
 } from "@/lib/websiteQuotation";
 import {
   A4_QUOTE_PACK_VERSION,
@@ -67,6 +68,12 @@ export async function POST(req: NextRequest) {
     const company = String(b.company || "").slice(0, 160);
     const regNo = String(b.regNo || "").slice(0, 40);
     const items = readItems(b.items);
+    // The calculator now asks for a sector, so the PDF must be priced at the
+    // same risk tier the screen used — otherwise the downloaded quotation
+    // disagrees with the figure the visitor just read. Anything unrecognised
+    // falls back to standard rather than inventing an uplift.
+    const risk: A4Risk =
+      b.risk === "elevated" || b.risk === "high" ? b.risk : "standard";
 
     if (!company) return NextResponse.json({ error: "Company name is required." }, { status: 400 });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -74,7 +81,7 @@ export async function POST(req: NextRequest) {
     if (items.length === 0)
       return NextResponse.json({ error: "Select at least one service." }, { status: 400 });
 
-    const totals = evaluateA4Items(items);
+    const totals = evaluateA4Items(items, risk);
     if (totals.lines.length === 0)
       return NextResponse.json({ error: "We can't price that combination online." }, { status: 400 });
 
@@ -86,7 +93,7 @@ export async function POST(req: NextRequest) {
     const cadenceLabel = { monthly: "/ month", yearly: "/ year", oneoff: "one-off" } as const;
     const pdfLines = totals.lines.map((l) => ({
       name: l.label,
-      hint: `Fee schedule ${A4_QUOTE_PACK_VERSION} · standard scope`,
+      hint: `Fee schedule ${A4_QUOTE_PACK_VERSION} · ${risk} risk scope`,
       display: `${euro(l.amount)} ${cadenceLabel[l.cadence]}`,
     }));
 
