@@ -22,15 +22,29 @@ type PortalRequest = {
 async function pushToOpsPortal(req: PortalRequest): Promise<void> {
   const url = process.env.A4_PORTAL_URL;
   const key = process.env.A4_PORTAL_INGEST_KEY;
-  if (!url || !key) return;
+  if (!url || !key) {
+    // Not an error in local dev, but in production it means every enquiry is
+    // missing from the ops Requests inbox — and silently, which is worse.
+    console.warn("[portal] A4_PORTAL_URL / A4_PORTAL_INGEST_KEY unset — ops-portal push skipped");
+    return;
+  }
   try {
-    await fetch(`${url.replace(/\/$/, "")}/api/requests`, {
+    const res = await fetch(`${url.replace(/\/$/, "")}/api/requests`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-ingest-key": key },
       body: JSON.stringify(req),
     });
-  } catch {
-    /* swallow — portal push must never break the user-facing flow */
+    // A rejected push is a lost lead. It must not break the response, but it
+    // must not vanish either — an un-inspected 4xx looks exactly like success.
+    if (!res.ok) {
+      console.error(`[portal] ops-portal push rejected: ${res.status} ${res.statusText}`, {
+        email: req.email,
+        source: req.source,
+        body: await res.text().catch(() => "").then((t) => t.slice(0, 300)),
+      });
+    }
+  } catch (err) {
+    console.error("[portal] ops-portal push failed", { email: req.email, source: req.source, err });
   }
 }
 
@@ -66,7 +80,7 @@ async function pushToPartnerLeads(req: PortalRequest): Promise<void> {
     .slice(0, 4000);
 
   try {
-    await fetch(`${QUOTE_API_BASE}/public/website-leads`, {
+    const res = await fetch(`${QUOTE_API_BASE}/public/website-leads`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -82,8 +96,18 @@ async function pushToPartnerLeads(req: PortalRequest): Promise<void> {
         site: SOURCE_SITE,
       }),
     });
-  } catch {
-    /* swallow — lead mirroring must never break the user-facing flow */
+    // Validation failures, rate limiting and honeypot rejections all come back
+    // as a non-2xx that this call used to discard unread — the lead simply
+    // never appeared in the CRM and nothing said so.
+    if (!res.ok) {
+      console.error(`[portal] partner-Leads push rejected: ${res.status} ${res.statusText}`, {
+        email,
+        source: req.source,
+        body: await res.text().catch(() => "").then((t) => t.slice(0, 300)),
+      });
+    }
+  } catch (err) {
+    console.error("[portal] partner-Leads push failed", { email, source: req.source, err });
   }
 }
 

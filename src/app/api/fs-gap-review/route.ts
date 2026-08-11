@@ -52,14 +52,11 @@ export async function POST(req: NextRequest) {
     }
     if (file.size > 20 * 1024 * 1024) return NextResponse.json({ error: "File too large (max 20 MB)." }, { status: 400 });
 
-    if (!process.env.A4_FSREVIEW_URL) return NextResponse.json({ error: "Review service not configured." }, { status: 503 });
     const endpoint = kind === "tb" ? "/api/review-tb" : "/api/review";
 
     const out = new FormData();
     out.append("file", file, file.name);
     out.append("deep", "true");
-
-    const engine = await engineFetch(endpoint, out);
 
     // Only the engine's own /api/review returns a `quote`; read it here (once
     // the engine result is available) so the staff notification can include
@@ -69,16 +66,35 @@ export async function POST(req: NextRequest) {
     let clientPayload: Record<string, unknown> | null = null;
     let fullQuote: { fee: number; docKind: string; basis: string; detail?: unknown } | null = null;
     let engineErrorDetail = "";
+    let engineStatus: number | null = null;
 
-    if (engine.ok) {
-      const data = await engine.json();
-      fullQuote = data && typeof data === "object" && data.quote ? data.quote : null;
-      if (data && typeof data === "object") delete data.quote; // strip defensively before spreading
-      clientPayload = { ...data, quote: fullQuote ? { fee: fullQuote.fee, docKind: fullQuote.docKind } : null };
-      clientPayload = await augmentWithAiCommentary(clientPayload as unknown as ReviewResponse);
+    // The engine ENRICHES the lead; it does not gate it. An unset URL, a dead
+    // service or a timeout must never return before pushToPortal below has
+    // run: by this point the visitor has confirmed their email by one-time
+    // code, ticked the consent box and uploaded their own financial
+    // statements, which makes this the most qualified lead on the site. It
+    // used to be discarded outright whenever the engine was unavailable.
+    // /api/accounting-health has always captured first; this now matches it.
+    if (process.env.A4_FSREVIEW_URL) {
+      try {
+        const engine = await engineFetch(endpoint, out);
+        engineStatus = engine.status;
+        if (engine.ok) {
+          const data = await engine.json();
+          fullQuote = data && typeof data === "object" && data.quote ? data.quote : null;
+          if (data && typeof data === "object") delete data.quote; // strip defensively before spreading
+          clientPayload = { ...data, quote: fullQuote ? { fee: fullQuote.fee, docKind: fullQuote.docKind } : null };
+          clientPayload = await augmentWithAiCommentary(clientPayload as unknown as ReviewResponse);
+        } else {
+          const detail = await engine.json().catch(() => ({}));
+          engineErrorDetail = detail.detail || "";
+        }
+      } catch (engineErr) {
+        // Network error, DNS failure, timeout, or engineFetch's own throw.
+        console.error("fs-gap-review engine unreachable:", engineErr);
+      }
     } else {
-      const detail = await engine.json().catch(() => ({}));
-      engineErrorDetail = detail.detail || "";
+      console.error("fs-gap-review: A4_FSREVIEW_URL not configured — lead captured, review skipped");
     }
 
     const quoteText = fullQuote
@@ -88,7 +104,7 @@ export async function POST(req: NextRequest) {
     // Fire-and-forget — never delays the user response.
     emailLead(
       `FS/TB review request — ${name || email} (${kind.toUpperCase()})`,
-      `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nKind: ${kind}\nFile: ${file.name}\nEngine status: ${engine.status}` +
+      `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nKind: ${kind}\nFile: ${file.name}\nEngine status: ${engineStatus ?? "unreachable — review not run, follow up manually"}` +
         (revenueBand ? `\nShown to client: €${quotedFee}/yr (quotation figures, ${revenueBand} band)` : "") +
         (scoping ? `\n\nScoping notes from the estimator:\n${scoping}` : "") +
         quoteText,
@@ -106,17 +122,27 @@ export async function POST(req: NextRequest) {
       meta: {
         kind,
         fileName: file.name,
+        // So staff can see at a glance whether the AI review actually ran, or
+        // whether this lead needs the review doing by hand.
+        engineStatus: engineStatus ?? "unreachable",
         ...(scoping ? { scoping } : {}),
         ...(fullQuote ? { quote: fullQuote } : {}),
         ...(clientPayload ? { findings: (clientPayload as unknown as ReviewResponse).findings, aiCommentary: (clientPayload as unknown as ReviewResponse).aiCommentary } : {}),
       },
     });
 
-    if (!engine.ok) {
-      const msg = engine.status === 422
+    if (!clientPayload) {
+      // The lead is safe either way; only the on-screen result is lost.
+      if (engineStatus === null) {
+        return NextResponse.json(
+          { error: "Our review service isn't reachable right now. We've got your file and your details — we'll come back to you with the review." },
+          { status: 503 },
+        );
+      }
+      const msg = engineStatus === 422
         ? "We couldn't read that file. For statements, try a clearer PDF; for a trial balance, try CSV or Excel."
         : (engineErrorDetail || "The review service had a problem. We've logged your request and will follow up.");
-      return NextResponse.json({ error: msg }, { status: engine.status === 422 ? 422 : 502 });
+      return NextResponse.json({ error: msg }, { status: engineStatus === 422 ? 422 : 502 });
     }
 
     return NextResponse.json(clientPayload);
