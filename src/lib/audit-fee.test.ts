@@ -6,7 +6,12 @@ const base: AuditInput = {
   sector: "shop", txn: "21-60", size: "small", pay: "none", vat: "no", banks: "1",
   taxret: "no", year: "2025", nyrs: "2", chg: "no", uploaded: false, doc: "fs",
 };
-const at = (p: Partial<AuditInput>) => calcAuditFee({ ...base, ...p });
+// Pinned inside the promo window. The promo lapses by DATE, so a suite reading
+// the real clock would turn red on 1 September instead of proving the price
+// steps back up — see the expiry test at the bottom.
+const DURING_PROMO = new Date("2026-08-11T12:00:00.000Z");
+const AFTER_PROMO = new Date("2026-09-01T12:00:00.000Z");
+const at = (p: Partial<AuditInput>, now: Date = DURING_PROMO) => calcAuditFee({ ...base, ...p }, now);
 
 describe("audit fee engine", () => {
   it("takes every fee from the price pack, never a local copy", () => {
@@ -66,7 +71,7 @@ describe("audit fee engine", () => {
 
   it("itemises every euro of the quote", () => {
     const s = { ...base, sector: "regulated", txn: "1000+", size: "big", pay: "21+", vat: "yes", banks: "4+", taxret: "yes" };
-    const keys = feeLines(s, calcAuditFee(s)).map((l) => l.k);
+    const keys = feeLines(s, calcAuditFee(s, DURING_PROMO)).map((l) => l.k);
     expect(keys).toEqual([
       "Sector risk", "Transactions", "Engagement",
       "Payroll · 21 or more", "VAT registered", "Bank accounts · four or more", "Annual tax return",
@@ -103,6 +108,24 @@ describe("audit fee engine", () => {
       expect(uploaded.disc).toBeGreaterThan(0);
       expect(uploaded.final).toBeLessThan(plain.final); // upload discount moved the base
       expect(uploaded.finalNet).toBeLessThan(uploaded.final); // promo then applied on top
+    });
+
+    // The promo is date-driven, so this is what the audit page does on 1
+    // September with no code change and nobody remembering to act: the price
+    // steps back up to the schedule and the discount line disappears. Also
+    // proves the tests above are pinned rather than riding the real clock.
+    it("stops discounting the moment the promo lapses, with no code change", () => {
+      const s = { ...base, txn: "151-400", size: "big" };
+      const during = calcAuditFee(s, DURING_PROMO);
+      const after = calcAuditFee(s, AFTER_PROMO);
+      if (during.refer || after.refer) return;
+
+      expect(during.promoPct).toBe(LAUNCH_PROMO.pct);
+      expect(after.promoPct).toBe(0);
+      expect(after.finalNet).toBe(after.final);
+      expect(after.finalNet).toBeGreaterThan(during.finalNet);
+      // ...and the discount line stops being itemised.
+      expect(feeLines(s, after).map((l) => l.k)).not.toContain("Launch discount · −25%");
     });
   });
 });

@@ -160,7 +160,13 @@ export const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB")
 
 const find = <T extends { id: string }>(list: T[], id: string) => list.find((x) => x.id === id) ?? list[0];
 
-export function calcAuditFee(s: AuditInput): AuditQuote {
+/**
+ * `now` is injectable for the same reason it is on `evaluateA4Items` and
+ * `calcAccountingFee`: the launch promo lapses by date, so a suite that read
+ * the real clock would go red on 1 September rather than proving the price
+ * steps back up.
+ */
+export function calcAuditFee(s: AuditInput, now: Date = new Date()): AuditQuote {
   const tier = TIERS[find(SECTORS, s.sector).tier];
   if (tier.refer) return { refer: true, tier };
 
@@ -223,7 +229,7 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   // code change needed when it lapses. It sits ON TOP of the upload discount
   // because that one is a scope reduction (a better-prepared file is less
   // work), while this one is a launch offer on the whole quote.
-  const promoPct = isPromoActive() ? LAUNCH_PROMO.pct : 0;
+  const promoPct = isPromoActive(now) ? LAUNCH_PROMO.pct : 0;
   const finalNet = promoPct > 0 ? roundEur(final * (1 - promoPct)) : final;
 
   return {
