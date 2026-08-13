@@ -1,9 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { calcAccountingFee, accountingSummary, type AccountingInput } from "./accounting-fee";
-import { SOFTWARE_TIERS, BOOKKEEPING_MONTHLY, LAUNCH_PROMO } from "@/data/a4QuotePack";
+import { calcAccountingFee, accountingSummary, formatStartMonth, nextMonth, type AccountingInput } from "./accounting-fee";
+import { BOOKKEEPING_MANAGED_MONTHLY, LAUNCH_PROMO } from "@/data/a4QuotePack";
+
+const SOLE = BOOKKEEPING_MANAGED_MONTHLY.sole; // 24
+const CO = BOOKKEEPING_MANAGED_MONTHLY.company; // 49
 
 const base: AccountingInput = {
-  sector: "shop", txn: "21-60", banks: 1, route: "review", head: 0, vatreg: "none", behind: "0",
+  sector: "shop", txn: "21-60", entity: "company", head: 0, vatreg: "none", behind: "0",
+  startMonth: "2026-09",
 };
 // Inside the launch-promo window, so the discount branch is exercised.
 const DURING_PROMO = new Date("2026-08-02T00:00:00Z");
@@ -11,75 +15,94 @@ const AFTER_PROMO = new Date("2026-09-01T12:00:00Z");
 const at = (p: Partial<AccountingInput>, now = DURING_PROMO) => calcAccountingFee({ ...base, ...p }, now);
 
 describe("accounting fee engine", () => {
-  it("always bills the software plan, and picks it by volume", () => {
-    expect(at({ txn: "1-20", route: "self" })).toMatchObject({ softwareTier: "Bookkeeper", monthlyFull: SOFTWARE_TIERS.book });
-    expect(at({ txn: "61-150", route: "self" })).toMatchObject({ softwareTier: "Senior", monthlyFull: SOFTWARE_TIERS.senior });
-    expect(at({ txn: "1000+", route: "self" })).toMatchObject({ softwareTier: "CFO", monthlyFull: SOFTWARE_TIERS.cfo });
-  });
-
-  it("charges review at 35% of the band price and full service at 100%", () => {
-    const band = BOOKKEEPING_MONTHLY["21-60"]; // 99
-    expect(at({ route: "review" })).toMatchObject({ monthlyFull: SOFTWARE_TIERS.book + Math.round(band * 0.35) });
-    expect(at({ route: "full" })).toMatchObject({ monthlyFull: SOFTWARE_TIERS.book + band });
+  it("bills managed bookkeeping flat, by entity, whatever the volume", () => {
+    expect(at({ entity: "sole" })).toMatchObject({ entityLabel: "Self-employed", monthlyFull: SOLE });
+    expect(at({ entity: "company" })).toMatchObject({ entityLabel: "Company", monthlyFull: CO });
+    // Volume must not move it — that was the retired banded pricing.
+    expect(at({ entity: "company", txn: "1-20" })).toMatchObject({ monthlyFull: CO });
+    expect(at({ entity: "company", txn: "1000+" })).toMatchObject({ monthlyFull: CO });
   });
 
   it("refers the sectors we do not price instantly", () => {
     expect(at({ sector: "other" })).toEqual({ refer: true });
   });
 
-  it("applies the sector risk multiplier to our work but not to the software", () => {
-    const std = at({ route: "full" }) as { monthlyFull: number };
-    const high = at({ route: "full", sector: "regulated" }) as { monthlyFull: number };
-    // Software (€39) is flat; only the €99 bookkeeping line takes the ×1.45.
-    expect(high.monthlyFull - SOFTWARE_TIERS.book).toBe(Math.round((std.monthlyFull - SOFTWARE_TIERS.book) * 1.45));
-  });
-
-  it("bills extra bank accounts only when we are in the books", () => {
-    expect(at({ banks: 3, route: "self" })).toMatchObject({ monthlyFull: SOFTWARE_TIERS.book });
-    expect(at({ banks: 3, route: "full" })).toMatchObject({ monthlyFull: SOFTWARE_TIERS.book + 99 + 50 });
-    expect(at({ banks: 3, route: "review" })).toMatchObject({ monthlyFull: SOFTWARE_TIERS.book + 35 + 20 });
+  it("applies the sector risk multiplier to our compliance work but never to the books", () => {
+    const std = at({ head: 3 }) as { monthlyFull: number };
+    const high = at({ head: 3, sector: "regulated" }) as { monthlyFull: number };
+    // The €49 bookkeeping line is flat; only the payroll line takes the ×1.45.
+    expect(std.monthlyFull).toBe(CO + 3 * 32);
+    expect(high.monthlyFull).toBe(CO + Math.round(3 * 32 * 1.45));
   });
 
   it("prices payroll per head and gets cheaper as the team grows", () => {
-    expect(at({ head: 3 })).toMatchObject({ monthlyFull: SOFTWARE_TIERS.book + 35 + 3 * 32 });
-    expect(at({ head: 20 })).toMatchObject({ monthlyFull: SOFTWARE_TIERS.book + 35 + 20 * 25 });
+    expect(at({ head: 3 })).toMatchObject({ monthlyFull: CO + 3 * 32 });
+    expect(at({ head: 20 })).toMatchObject({ monthlyFull: CO + 20 * 25 });
   });
 
   it("distinguishes the three VAT articles instead of charging art. 10 for all", () => {
     const a10 = at({ vatreg: "art10" }) as { monthlyFull: number };
     const a12 = at({ vatreg: "art12" }) as { monthlyFull: number };
     const a11 = at({ vatreg: "art11" }) as { monthlyFull: number };
-    expect(a10.monthlyFull).toBe(SOFTWARE_TIERS.book + 35 + 45); // art. 10 band price
-    expect(a12.monthlyFull).toBe(SOFTWARE_TIERS.book + 35 + Math.round(45 * 0.6));
-    expect(a11.monthlyFull).toBe(SOFTWARE_TIERS.book + 35 + Math.round(145 / 12));
-    // Self-service files its own VAT — we do not charge for it.
-    expect(at({ vatreg: "art10", route: "self" })).toMatchObject({ monthlyFull: SOFTWARE_TIERS.book });
+    expect(a10.monthlyFull).toBe(CO + 45); // art. 10 band price
+    expect(a12.monthlyFull).toBe(CO + Math.round(45 * 0.6));
+    expect(a11.monthlyFull).toBe(CO + Math.round(145 / 12));
   });
 
-  it("caps full-service catch-up per year behind", () => {
-    // 24 months at €25/mo = €600 uncapped, but the cap is 2 × €240.
-    expect((at({ behind: "24", route: "full" }) as { oneOffFull: number }).oneOffFull).toBe(480);
-    // Self-service catch-up is a flat €10/mo and uncapped.
-    expect((at({ behind: "24", route: "self" }) as { oneOffFull: number }).oneOffFull).toBe(240);
+  it("charges catch-up at the monthly rate per month, with no cap", () => {
+    // 24 months at €49 = €1,176. The retired €240/yr cap would have said €480.
+    expect((at({ behind: "24" }) as { oneOffFull: number }).oneOffFull).toBe(24 * CO);
+    expect((at({ behind: "24" }) as { oneOffFull: number }).oneOffFull).not.toBe(480);
+    expect((at({ behind: "24", entity: "sole" }) as { oneOffFull: number }).oneOffFull).toBe(24 * SOLE);
     expect((at({ behind: "0" }) as { oneOffFull: number }).oneOffFull).toBe(0);
   });
 
-  it("applies the launch discount while it runs and drops it afterwards", () => {
-    const during = at({ route: "full" }) as { monthlyFull: number; monthlyNet: number; discountPct: number };
+  it("labels the catch-up line in the contracted form", () => {
+    const q = at({ behind: "12" }) as { oneOff: { k: string; v: number }[] };
+    expect(q.oneOff[0].k).toBe("Catch-up: 12 months x EUR 49 = EUR 588");
+    expect(q.oneOff[0].v).toBe(588);
+  });
+
+  it("never discounts the one-off catch-up, even inside the promo window", () => {
+    const during = at({ behind: "12" }) as { oneOffFull: number; oneOffNet: number; discountPct: number };
+    expect(during.discountPct).toBe(LAUNCH_PROMO.pct);
+    expect(during.oneOffNet).toBe(during.oneOffFull);
+  });
+
+  it("applies the launch discount to the monthly while it runs, and drops it afterwards", () => {
+    const during = at({}) as { monthlyFull: number; monthlyNet: number; discountPct: number };
     expect(during.discountPct).toBe(LAUNCH_PROMO.pct);
     expect(during.monthlyNet).toBe(Math.round(during.monthlyFull * 0.75));
 
-    const after = at({ route: "full" }, AFTER_PROMO) as { monthlyFull: number; monthlyNet: number; discountPct: number };
+    const after = at({}, AFTER_PROMO) as { monthlyFull: number; monthlyNet: number; discountPct: number };
     expect(after.discountPct).toBe(0);
     expect(after.monthlyNet).toBe(after.monthlyFull);
   });
 
-  it("recaps the configuration in plain language", () => {
-    const s = { ...base, route: "full" as const, head: 4, vatreg: "art10" as const, behind: "6" };
+  it("recaps the configuration in plain language, including the start month", () => {
+    const s: AccountingInput = { ...base, head: 4, vatreg: "art10", behind: "6", startMonth: "2026-10" };
     const text = accountingSummary(s, calcAccountingFee(s, DURING_PROMO));
-    expect(text).toContain("we do the bookkeeping");
+    expect(text).toContain("we keep the books");
     expect(text).toContain("payroll for 4");
     expect(text).toContain("file your VAT");
-    expect(text).toContain("catch up 6 months");
+    expect(text).toContain("6 earlier months");
+    expect(text).toContain("October 2026");
+  });
+});
+
+describe("start month", () => {
+  it("formats a YYYY-MM and refuses anything else", () => {
+    expect(formatStartMonth("2026-09")).toBe("September 2026");
+    expect(formatStartMonth("2027-01")).toBe("January 2027");
+    // Never invent a month from junk.
+    expect(formatStartMonth("2026-13")).toBe("");
+    expect(formatStartMonth("")).toBe("");
+    expect(formatStartMonth("next month")).toBe("");
+  });
+
+  it("suggests the following month, and rolls the year over", () => {
+    expect(nextMonth(new Date("2026-08-13T00:00:00Z"))).toBe("2026-09");
+    expect(nextMonth(new Date("2026-12-31T00:00:00Z"))).toBe("2027-01");
+    expect(nextMonth(new Date("2026-01-01T00:00:00Z"))).toBe("2026-02");
   });
 });

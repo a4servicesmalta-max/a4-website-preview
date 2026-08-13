@@ -83,7 +83,6 @@ export function useQuoteActions(quote: () => QuotePayload) {
               services: q.services,
               lines: q.lines,
               answers: q.answers,
-              plan: q.plan ?? null,
               clientNotes: q.clientNotes ?? "",
             },
           },

@@ -34,6 +34,7 @@
  */
 
 import { QUOTE_API_BASE } from "@/lib/websiteQuotation";
+import { independenceLeadNote, type IndependenceFlags } from "@/lib/independence";
 
 /** Origin the portal maps to the A4 property; it reads this header, never the body. */
 const A4_ORIGIN = "https://a4.com.mt";
@@ -52,6 +53,19 @@ type LeadInput = {
    * the same origin and paid campaigns cannot be told apart.
    */
   pageUrl?: string;
+  /**
+   * IESBA independence routing, decided at the point of enquiry.
+   *
+   * ⚠ The portal's `websiteLeadSchema` has NO such field today (verified
+   * against vacei-portal-backend `website-intake.domain.ts`, branch
+   * feat/managed-bookkeeping-quote, 2026-08-13), and zod strips unknown keys —
+   * so the two booleans below are currently DROPPED server-side. They are sent
+   * anyway because they are forward-compatible and cost nothing, and the same
+   * conclusion is additionally written into `message` so a human working the
+   * lead sees it regardless. Remove the message line only once the column
+   * exists and has been verified end to end.
+   */
+  independence?: IndependenceFlags;
 };
 
 /** The page a request came from, for attribution. Referer is what we have. */
@@ -71,16 +85,30 @@ export async function pushLeadToPortal(input: LeadInput): Promise<boolean> {
         // We are a4.com.mt's own server, so say so and the lead is filed to A4.
         Origin: A4_ORIGIN,
       },
-      body: JSON.stringify({
-        name: input.name,
-        email: input.email,
-        ...(input.phone ? { phone: input.phone } : {}),
-        ...(input.message || input.pageUrl
-          ? { message: [input.message, input.pageUrl ? `Submitted from: ${input.pageUrl}` : ""].filter(Boolean).join("\n\n") }
-          : {}),
-        source: input.source ?? "contact",
-        ...(input.sourceDetail ? { sourceDetail: input.sourceDetail } : {}),
-      }),
+      body: JSON.stringify((() => {
+        const note = input.independence ? independenceLeadNote(input.independence) : null;
+        const messageBody = [
+          input.message,
+          input.pageUrl ? `Submitted from: ${input.pageUrl}` : "",
+          note ?? "",
+        ].filter(Boolean).join("\n\n");
+        return {
+          name: input.name,
+          email: input.email,
+          ...(input.phone ? { phone: input.phone } : {}),
+          ...(messageBody ? { message: messageBody } : {}),
+          source: input.source ?? "contact",
+          ...(input.sourceDetail ? { sourceDetail: input.sourceDetail } : {}),
+          // Forward-compatible: stripped by today's intake schema, persisted
+          // once the backend lane lands the field on WebsiteLead.
+          ...(input.independence
+            ? {
+                auditEligible: input.independence.auditEligible,
+                bookkeepingEligible: input.independence.bookkeepingEligible,
+              }
+            : {}),
+        };
+      })()),
       // Never hold the visitor's request open on a slow portal.
       signal: AbortSignal.timeout(8000),
     });

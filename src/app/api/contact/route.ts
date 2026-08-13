@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
 import { pushLeadToPortal, pageUrlOf } from "@/lib/portal-lead";
+import { flagsForServiceSelection } from "@/lib/independence";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
       message,
       subject,
       context,
+      services,
       company_website: companyWebsite,
     }: {
       name?: string;
@@ -38,6 +40,8 @@ export async function POST(req: NextRequest) {
       message?: string;
       subject?: string;
       context?: string;
+      /** Service ids from src/data/serviceRequestForms.ts, when the caller knows them. */
+      services?: string[];
       company_website?: string;
     } = body;
 
@@ -63,6 +67,12 @@ export async function POST(req: NextRequest) {
     // enquiries were invisible in the portal lead list the firm actually works.
     await pushToPortal({ name, email, phone, message, service: "Contact form", source: "contact", priority: "Med", meta: { subject, context } });
 
+    // IESBA independence — set whenever the caller told us which service this
+    // is about. Derived server-side from the service list, never trusted from
+    // a client-supplied boolean. A contact form with no service selection
+    // stays neutral: nothing has been asked for yet, so nothing is ruled out.
+    const independence = flagsForServiceSelection(Array.isArray(services) ? services.map(String) : []);
+
     const leadWritten = await pushLeadToPortal({
       name: name || email,
       email,
@@ -71,11 +81,13 @@ export async function POST(req: NextRequest) {
         "[a4.com.mt — contact form]",
         context ? `Context: ${context}` : "",
         subject ? `Subject: ${subject}` : "",
+        Array.isArray(services) && services.length ? `Services: ${services.join(", ")}` : "",
         "",
         message,
       ].filter(Boolean).join("\n"),
       sourceDetail: "contact",
       pageUrl: pageUrlOf(req),
+      independence,
     });
 
     // Never answer 200 with "we'll reply" when nothing was recorded. A silent

@@ -2,16 +2,18 @@
 
 import { Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import LocalizedLink from "@/components/common/LocalizedLink";
+import { BOOKKEEPING_MANAGED_MONTHLY } from "@/data/a4QuotePack";
+import { INDEPENDENCE_BOOKKEEPING } from "@/lib/independence";
 
-// A4 Books — the firm's bookkeeping software product. Copy and pricing mirror
-// the Books landing (books.a4.com.mt): €39/mo, unlimited documents, SOFTWARE ONLY.
-// Prices live in src/data/a4Ladder.ts — change them there, not here.
+// Managed bookkeeping — the firm KEEPS the books. This block used to sell A4
+// Books at €39/mo SOFTWARE ONLY, which is exactly the SME tier the owner
+// removed on 2026-08-13. Prices live in src/data/a4QuotePack.ts.
 const PLAN_LINES = [
-  "Unlimited document uploads",
-  "Auto-post plus review queue",
+  "Unlimited documents — no per-document fees",
+  "We code and post every document",
+  "Bank reconciled monthly, not guessed",
   "Reports and Excel export",
-  "Business and firm accounts",
-  "Early access free, no card",
+  "A qualified accountant on the file",
 ];
 
 export function A4BooksPromo() {
@@ -30,7 +32,7 @@ export function A4BooksPromo() {
           }}
         >
           <Reveal>
-            <Eyebrow dark>A4 Books — bookkeeping software</Eyebrow>
+            <Eyebrow dark>Managed bookkeeping</Eyebrow>
             <h2
               className="a4-font-display"
               style={{
@@ -43,7 +45,7 @@ export function A4BooksPromo() {
                 textWrap: "balance",
               }}
             >
-              One price. Unlimited documents.
+              Two prices. We keep the books.
             </h2>
             <p
               className="a4-font-body"
@@ -56,15 +58,17 @@ export function A4BooksPromo() {
                 textWrap: "pretty",
               }}
             >
-              A4 Books is our bookkeeping software: upload documents, AI posts the
-              entries, anything uncertain waits for your review. €39 a month,
-              unlimited documents — no per-document fees, no hourly meters.
+              You send us the paperwork and we keep the books: every document
+              coded, the bank reconciled, and figures you can rely on each month.
+              €{BOOKKEEPING_MANAGED_MONTHLY.sole} a month if you are self-employed,
+              €{BOOKKEEPING_MANAGED_MONTHLY.company} for a company — no per-document
+              fees, no hourly meters.
             </p>
             <p
               className="a4-font-body"
               style={{ fontSize: 13.5, color: "var(--a4-stone)", margin: "14px 0 0" }}
             >
-              Software only — no accountant at this price. Add a qualified accountant from €99/month. All fees exclude VAT.
+              A qualified accountant is on the file at both prices — there is no software-only plan. All fees exclude VAT. {INDEPENDENCE_BOOKKEEPING}
             </p>
             <div style={{ display: "flex", gap: 12, marginTop: 28, flexWrap: "wrap" }}>
               <LocalizedLink
@@ -85,7 +89,7 @@ export function A4BooksPromo() {
                   whiteSpace: "nowrap",
                 }}
               >
-                Explore A4 Books <Icon name="arrow-right" size={17} color="#000" />
+                See how it works <Icon name="arrow-right" size={17} color="#000" />
               </LocalizedLink>
             </div>
           </Reveal>
@@ -105,7 +109,7 @@ export function A4BooksPromo() {
                   className="a4-font-display"
                   style={{ fontWeight: 500, fontSize: 54, color: "#fff", letterSpacing: "-2px", lineHeight: 1 }}
                 >
-                  €39
+                  €{BOOKKEEPING_MANAGED_MONTHLY.sole}
                 </span>
                 <span className="a4-font-body" style={{ fontSize: 15, color: "var(--a4-on-dark-mute)" }}>
                   / month
@@ -115,7 +119,7 @@ export function A4BooksPromo() {
                 className="a4-font-body"
                 style={{ fontSize: 14.5, fontWeight: 600, color: "var(--a4-primary-bright)", marginTop: 6 }}
               >
-                Unlimited documents
+                Self-employed · €{BOOKKEEPING_MANAGED_MONTHLY.company}/mo for a company
               </div>
               <ul style={{ listStyle: "none", padding: 0, margin: "22px 0 0", display: "flex", flexDirection: "column", gap: 11 }}>
                 {PLAN_LINES.map((line) => (

@@ -16,14 +16,16 @@ import {
   A4_QUOTE_PACK_VERSION,
   AUDIT_FROM,
   AUDIT_YEARLY,
-  BOOKKEEPING_FROM,
-  BOOKKEEPING_MONTHLY,
-  CATCH_UP,
+  BOOKKEEPING_MANAGED_MONTHLY,
   MBR_ANNUAL_RETURN,
   PAYROLL_BEST_RATE,
   PAYROLL_ENTRY_RATE,
   VAT_FROM,
   VAT_MONTHLY,
+  catchUpAmount,
+  catchUpLabel,
+  managedMonthly,
+  type ManagedEntity,
 } from "@/data/a4QuotePack";
 
 export const QUOTE_PACK_VERSION = A4_QUOTE_PACK_VERSION;
@@ -68,14 +70,15 @@ const BASELINES: Record<
     passThrough?: boolean;
   }
 > = {
-  // Full-service bookkeeping is banded by transaction volume in the pack; the
-  // builder collects revenue, not transactions, so it quotes the middle band
-  // and advertises the real floor in the hint.
+  // Managed bookkeeping is FLAT — €24 self-employed, €49 company — so it does
+  // not scale with the revenue band and there is no "from" to hedge. This
+  // builder is a company-facing form (it asks for a company name and an MBR
+  // number), so the company rate is the baseline; `entity` overrides it.
   accounts: {
-    name: "Monthly bookkeeping",
-    hint: `Categorisation, reconciliation & monthly reports — from €${BOOKKEEPING_FROM}/mo, set by transaction volume`,
+    name: "Managed bookkeeping",
+    hint: `We keep the books: documents coded, bank reconciled, monthly figures — €${BOOKKEEPING_MANAGED_MONTHLY.company}/mo for a company, €${BOOKKEEPING_MANAGED_MONTHLY.sole}/mo self-employed`,
     type: "monthly",
-    base: BOOKKEEPING_MONTHLY["21-60"],
+    base: BOOKKEEPING_MANAGED_MONTHLY.company,
   },
   // Floored at the pack's audit floor so the cheapest band can never quote
   // below the advertised "from €750/year".
@@ -114,8 +117,26 @@ export type QuoteInput = {
   industry: string;
   revenueBand: RevenueBandId;
   services: QuoteServiceId[];
-  /** Whole financial years of overdue accounts to catch up (0 = up to date). */
+  /**
+   * Whose books these are. Sets the flat managed bookkeeping rate and, with
+   * it, the per-month catch-up rate. Defaults to `company` — this builder asks
+   * for a company name and an MBR number.
+   */
+  entity?: ManagedEntity;
+  /**
+   * Earlier months that still need doing. THE catch-up input.
+   *
+   * This used to be `overdueYears` (whole financial years) because catch-up
+   * was capped per year. It is now priced per month at the monthly rate, so
+   * years were the wrong unit — a year is simply 12 here, and the builder
+   * converts its year picker before calling in. `overdueYears` is still
+   * accepted for one release so an in-flight POST does not silently price zero.
+   */
+  catchUpMonths?: number;
+  /** @deprecated pass `catchUpMonths`. Multiplied by 12 when present. */
   overdueYears?: number;
+  /** `YYYY-MM` — the first month in scope. Echoed into the assumptions. */
+  startMonth?: string;
 };
 
 export type QuoteLine = {
@@ -142,7 +163,13 @@ export const euro = (n: number) => "€" + n.toLocaleString("en-MT");
 
 export function buildQuote(input: QuoteInput): QuoteResult {
   const band = REVENUE_BANDS.find((b) => b.id === input.revenueBand) ?? REVENUE_BANDS[1];
-  const overdue = Math.max(0, Math.min(5, Math.floor(input.overdueYears ?? 0)));
+  const entity: ManagedEntity = input.entity === "sole" ? "sole" : "company";
+  // 20 years of backlog is already implausible; the ceiling is a guard against
+  // a fat-fingered or hostile number, not a commercial cap. There is no cap.
+  const catchUpMonths = Math.max(
+    0,
+    Math.min(240, Math.floor(input.catchUpMonths ?? (input.overdueYears ?? 0) * 12))
+  );
   const lines: QuoteLine[] = [];
   let monthly = 0;
   let annual = 0;
@@ -160,7 +187,11 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     // revenue, so they stay at their band price here rather than double-scaling.
     // Government fees are charged at cost. Everything else scales by band, with
     // the audit floored at the advertised "from" price.
-    const fee = b.passThrough || id === "accounts" || id === "vat"
+    const fee = id === "accounts"
+      // Managed bookkeeping is flat and set only by the entity — never by
+      // revenue and never by volume.
+      ? managedMonthly(entity)
+      : b.passThrough || id === "vat"
       ? b.base
       : id === "audit"
         ? Math.max(AUDIT_FROM, round5(b.base * band.mult))
@@ -174,15 +205,15 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     }
   }
 
-  if (overdue > 0 && input.services.includes("accounts")) {
-    // Pack catch-up, full service: min(months × €25, years × €240). Whole years
-    // in, so the yearly cap always wins.
-    const fee = Math.min(overdue * 12 * CATCH_UP.fullPerMonth, overdue * CATCH_UP.fullPerYearCap);
+  if (catchUpMonths > 0 && input.services.includes("accounts")) {
+    // Same monthly rate, per month, uncapped. The label is the exact form the
+    // wire contract fixes, so the figure reads identically everywhere.
+    const fee = catchUpAmount(catchUpMonths, entity);
     annual += fee;
     lines.push({
       id: "catchup",
-      name: `Catch-up bookkeeping (${overdue} ${overdue === 1 ? "year" : "years"})`,
-      hint: "One-off: bring overdue records current before the monthly cycle starts",
+      name: catchUpLabel(catchUpMonths, entity),
+      hint: "One-off: earlier months brought up to date before the monthly cycle starts. Charged at the same monthly rate — no catch-up premium, no cap.",
       display: `${euro(fee)} one-off`,
       annualEur: fee,
     });
@@ -196,6 +227,9 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     hasOnRequestLines: hasOnRequest,
     assumptions: [
       `Revenue band: ${band.label} · Industry: ${input.industry || "—"}`,
+      input.startMonth
+        ? `Bookkeeping starts ${input.startMonth}${catchUpMonths > 0 ? `; ${catchUpMonths} earlier month${catchUpMonths === 1 ? "" : "s"} quoted separately above` : ""}.`
+        : "Start month to be confirmed — it decides which months are catch-up.",
       "Single Malta company; standard transaction volumes for the size band.",
       "All fees exclude VAT. Figures are indicative and confirmed in writing within 24 hours.",
       "Government and registry fees (including the MBR registry fee, €100–€379 by share capital) are passed through at cost.",

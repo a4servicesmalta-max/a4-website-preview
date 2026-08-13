@@ -3,6 +3,11 @@
 import React, { useMemo, useState, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { SERVICE_TYPE_OPTIONS } from "@/data/serviceRequestForms"
+import {
+  INDEPENDENCE_HEADING,
+  flagsForServiceSelection,
+  independenceNotice,
+} from "@/lib/independence"
 import { cn } from "@/lib/utils"
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links"
 import { SectionTitleHero } from "@/components/HomePage/SectionTitleHero"
@@ -120,6 +125,11 @@ const ProcessStepsSectionDark = ({ isDark = false }: { isDark?: boolean }) => {
 
   const step = formSteps[currentStep]
 
+  // IESBA independence, resolved the moment a service is ticked. Same rule and
+  // same words as the light twin — see src/lib/independence.ts.
+  const independence = flagsForServiceSelection(formData.service)
+  const independenceText = independenceNotice(independence.route)
+
   const validateStep = () => {
     for (const field of step.fields) {
       if (field.key === "additionalDetails") continue
@@ -141,6 +151,12 @@ const ProcessStepsSectionDark = ({ isDark = false }: { isDark?: boolean }) => {
       !formData.phone.trim()
     ) {
       return t("processSteps.errors.phoneRequired")
+    }
+
+    // Bookkeeping AND audit together: A4 cannot provide both to the same
+    // client, so this cannot go through as written.
+    if (independence.route === "conflict") {
+      return independenceText ?? ""
     }
 
     return ""
@@ -186,6 +202,10 @@ const ProcessStepsSectionDark = ({ isDark = false }: { isDark?: boolean }) => {
         communicationChannel: formData.communicationChannel,
         updateCadence: formData.updateCadence,
         phone: formData.phone || undefined,
+        // IESBA routing, persisted with the lead via /api/quote.
+        auditEligible: independence.auditEligible,
+        bookkeepingEligible: independence.bookkeepingEligible,
+        independenceRoute: independence.route,
       }
 
       const form = new FormData()
@@ -402,6 +422,30 @@ const ProcessStepsSectionDark = ({ isDark = false }: { isDark?: boolean }) => {
                               )}
                             </div>
                           ))}
+
+                          {/* The independence consequence, in plain words, at
+                              the moment the service is chosen. */}
+                          {step.id === "onboarding" && independenceText && (
+                            <div
+                              role="note"
+                              className={cn(
+                                "rounded-2xl border p-4",
+                                independence.route === "conflict"
+                                  ? "bg-amber-500/10 border-amber-500/30"
+                                  : "bg-white/5 border-white/10"
+                              )}
+                            >
+                              <p className={cn(
+                                "text-xs font-black uppercase tracking-widest",
+                                independence.route === "conflict" ? "text-amber-300" : "text-slate-400"
+                              )}>
+                                {INDEPENDENCE_HEADING}
+                              </p>
+                              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-300">
+                                {independenceText}
+                              </p>
+                            </div>
+                          )}
 
                         </div>
                       </div>

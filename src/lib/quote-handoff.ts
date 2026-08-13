@@ -8,9 +8,14 @@
 /**
  * Where "Create my account" sends the client.
  *
- * books.vacei.com/signup — verified live 2026-08-02. Its own plan picker uses
- * exactly the tier ids this file emits (bookkeeper | senior | manager | cfo),
- * so `plan` preselects the right one.
+ * books.vacei.com/signup — verified live 2026-08-02.
+ *
+ * ⚠ The `plan` query parameter is GONE. It used to preselect one of the
+ * software tiers (bookkeeper | senior | manager | cfo) in the Books signup
+ * plan picker; that picker is being removed in the Books lane and those tiers
+ * no longer exist in pack mt-2026-08-14-managed. Sending a stale `plan` would
+ * either be ignored or, worse, land the client on a plan A4 does not sell.
+ * The service is settled on the quote, not at signup.
  *
  * Do NOT point this at books.a4.com.mt/register: that host 307s to
  * books.vacei.com and /register is a 404 there.
@@ -32,8 +37,6 @@ export type QuotePayload = {
   services: string[];
   /** Every question and the answer they gave, for the scoping call. */
   answers: { k: string; v: string }[];
-  /** Software plan to start them on, when the quote implies one. */
-  plan?: string;
   note?: string;
   clientNotes?: string;
 };
@@ -59,10 +62,6 @@ export function quoteToText(q: QuotePayload, c: QuoteContact, ref: string): stri
   out.push("ITEMISED QUOTE");
   q.lines.forEach((l) => out.push(`  ${l.k.padEnd(34, ".")} ${l.v}`));
   out.push(`  ${"TOTAL".padEnd(34, ".")} ${q.headline}`);
-  if (q.plan) {
-    out.push("");
-    out.push(`SOFTWARE PLAN   ${q.plan}`);
-  }
   out.push("");
   out.push("ANSWERS GIVEN");
   q.answers.forEach((a) => out.push(`  ${a.k}: ${a.v}`));
@@ -92,14 +91,12 @@ export function quoteToText(q: QuotePayload, c: QuoteContact, ref: string): stri
  * so nothing is lost if the Books app ignores them.
  *
  * Contract for the Books side: `ref` matches the portal record; `email`,
- * `name` and `company` prefill the form; `plan` is the software tier the
- * calculator landed on.
+ * `name` and `company` prefill the form. No `plan` — see BOOKS_SIGNUP_URL.
  */
 export function booksSignupUrl(q: QuotePayload, c: QuoteContact, ref: string): string {
   const p = new URLSearchParams({ ref, source: `a4-${q.page}` });
   if (c.email) p.set("email", c.email);
   if (c.name) p.set("name", c.name);
   if (c.company) p.set("company", c.company);
-  if (q.plan) p.set("plan", q.plan.toLowerCase());
   return `${BOOKS_SIGNUP_URL}?${p.toString()}`;
 }

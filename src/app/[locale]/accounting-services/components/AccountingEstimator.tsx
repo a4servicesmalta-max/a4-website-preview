@@ -5,12 +5,12 @@ import { Button, Icon, Container } from "@/components/a4-landing/Primitives";
 import { useQuoteActions } from "@/components/a4-landing/QuoteActions";
 import type { QuotePayload } from "@/lib/quote-handoff";
 import {
-  SECTORS, TXN, ROUTES, VAT_REG, BEHIND, STEPS,
-  calcAccountingFee, accountingSummary, euro,
-  type AccountingInput, type RouteId, type VatRegId,
+  SECTORS, TXN, ENTITIES, VAT_REG, BEHIND, STEPS,
+  calcAccountingFee, accountingSummary, euro, formatStartMonth, nextMonth,
+  type AccountingInput, type VatRegId,
 } from "@/lib/accounting-fee";
-import { LAUNCH_PROMO, PRICING_VAT_NOTE, type TxnBand } from "@/data/a4QuotePack";
-import { BOOKS_BRAND_NAME } from "@/lib/site-config";
+import { LAUNCH_PROMO, MANAGED_ENTITY_LABELS, PRICING_VAT_NOTE, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
+import { INDEPENDENCE_BOOKKEEPING, flagsForServiceSelection } from "@/lib/independence";
 
 type Opt = { id: string; label: string; sub?: string };
 const labelOf = (list: Opt[], id: string) => (list.find((o) => o.id === id) ?? list[0]).label;
@@ -52,11 +52,11 @@ const tagLabel: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontS
 
 const QUESTIONS: { title: string; help: string }[] = [
   { title: "What does the company do?", help: "Some sectors need extra checks when we take you on. It is built into the price rather than added later." },
-  { title: "About how many transactions a month?", help: "Count each invoice, receipt and bank line. A rough number is fine — we confirm it before anything is agreed." },
-  { title: "Who keeps the books?", help: "The software codes and reconciles either way. This is about how much of the judgement you want to hand over — review is cheaper because you do the bulk of the work." },
+  { title: "Are these a company's books, or your own?", help: "It is the only thing that changes the bookkeeping price. We keep the books either way — there is no software-only option." },
   { title: "Anyone on payroll?", help: "Payslips, monthly employer filing and annual returns, priced per person and cheaper as the team grows." },
-  { title: "Are you VAT registered?", help: "VAT returns are built only from entries already approved and reconciled. On the software-only route you file them yourself." },
-  { title: "Are the books up to date?", help: "If you are behind, we reconstruct the missed months as a one-off and your monthly plan takes over from there." },
+  { title: "Are you VAT registered?", help: "VAT returns are built only from entries we have already worked and reconciled." },
+  { title: "From which month should we start?", help: "The first month we keep the books. Anything before it is catch-up, and we need the month before we can price either." },
+  { title: "Do you have earlier months that still need doing?", help: "Each one costs the same as a month going forward — no catch-up premium and no cap." },
   { title: "Your price", help: "Everything on the right is itemised — nothing appears later that is not on that list." },
 ];
 const LAST = QUESTIONS.length - 1; // the price step
@@ -64,7 +64,8 @@ const LAST = QUESTIONS.length - 1; // the price step
 export function AccountingEstimator() {
   const [step, setStep] = useState(0);
   const [s, setS] = useState<AccountingInput>({
-    sector: "shop", txn: "21-60", banks: 1, route: "review", head: 2, vatreg: "art10", behind: "0",
+    sector: "shop", txn: "21-60", entity: "company", head: 2, vatreg: "art10", behind: "0",
+    startMonth: nextMonth(),
   });
   const set = (patch: Partial<AccountingInput>) => setS((a) => ({ ...a, ...patch }));
 
@@ -81,6 +82,10 @@ export function AccountingEstimator() {
       (q.tier.label === "Standard" ? "" : `${q.tier.label}-risk sector loading included. `) +
       PRICING_VAT_NOTE;
 
+  // Every quote from this page is a bookkeeping quote, so A4 can never audit
+  // this client. Stated on the page and carried on the record.
+  const independence = flagsForServiceSelection(["Bookkeeping"]);
+
   // The quote handed to sales — built fresh at submit time so it always
   // matches what is on screen.
   const payload = (): QuotePayload => ({
@@ -93,24 +98,24 @@ export function AccountingEstimator() {
       ...(q.discountPct > 0 ? [{ k: `Launch discount (${Math.round(q.discountPct * 100)}%)`, v: "− " + euro(q.monthlyFull - q.monthlyNet) + " /mo" }] : []),
     ],
     services: q.refer ? ["Accounting — referral"] : [
-      s.route === "self" ? `${BOOKS_BRAND_NAME} ${q.softwareTier} plan — software only` : s.route === "review" ? `${BOOKS_BRAND_NAME} ${q.softwareTier} plan + accountant review` : `${BOOKS_BRAND_NAME} ${q.softwareTier} plan + full bookkeeping by A4`,
+      `Managed bookkeeping — ${MANAGED_ENTITY_LABELS[s.entity]}`,
       ...(s.head > 0 ? [`Payroll for ${s.head} ${s.head === 1 ? "person" : "people"}`] : []),
-      ...(s.vatreg !== "none" && s.route !== "self" ? [`VAT returns (${labelOf(VAT_REG, s.vatreg)})`] : []),
-      ...(s.banks > 1 ? [`${s.banks} bank accounts`] : []),
-      ...(parseInt(s.behind, 10) > 0 ? [`Catch-up: ${s.behind} months behind`] : []),
+      ...(s.vatreg !== "none" ? [`VAT returns (${labelOf(VAT_REG, s.vatreg)})`] : []),
+      ...(parseInt(s.behind, 10) > 0 ? [`Catch-up: ${s.behind} earlier months`] : []),
     ],
     answers: [
       { k: "Sector", v: labelOf(SECTORS, s.sector) },
       { k: "Transactions / month", v: labelOf(TXN, s.txn) },
-      { k: "Who keeps the books", v: labelOf(ROUTES, s.route) },
+      { k: "Whose books", v: MANAGED_ENTITY_LABELS[s.entity] },
       { k: "Payroll headcount", v: String(s.head) },
       { k: "VAT registration", v: labelOf(VAT_REG, s.vatreg) },
-      { k: "Bank accounts", v: String(s.banks) },
-      { k: "Books up to date", v: labelOf(BEHIND, s.behind) },
+      { k: "Start month", v: formatStartMonth(s.startMonth) || "not given" },
+      { k: "Earlier months", v: labelOf(BEHIND, s.behind) },
       { k: "Risk tier", v: q.refer ? "Referral" : q.tier.label },
+      // IESBA — carried through to whoever picks this quote up.
+      { k: "Audit eligible", v: String(independence.auditEligible) },
     ],
-    plan: q.refer ? undefined : q.softwareTier,
-    note: q.refer ? undefined : feeNote,
+    note: q.refer ? undefined : `${feeNote} ${INDEPENDENCE_BOOKKEEPING}`,
   });
   const { start, modal } = useQuoteActions(payload);
 
@@ -177,23 +182,20 @@ export function AccountingEstimator() {
 
             {step === 1 && (
               <>
-                <Pills items={TXN} value={s.txn} set={(id) => set({ txn: id as TxnBand })} />
+                <Pills items={ENTITIES} value={s.entity} set={(id) => set({ entity: id as ManagedEntity })} />
                 <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
-                  <label htmlFor="ae-banks" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Bank accounts</label>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>About how many transactions a month?</div>
                   <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 }}>
-                    The first is included — each additional account adds €25 a month when we keep the books, €10 on review.
+                    It sets your VAT and tax-return fees. The bookkeeping price does not move with it.
                   </div>
-                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16 }}>
-                    <input id="ae-banks" type="range" min={1} max={8} step={1} value={s.banks} onChange={(e) => set({ banks: +e.target.value })} style={sliderStyle} />
-                    <span style={readoutStyle}>{s.banks} {s.banks === 1 ? "account" : "accounts"}</span>
+                  <div style={{ marginTop: 10 }}>
+                    <Pills items={TXN} value={s.txn} set={(id) => set({ txn: id as TxnBand })} />
                   </div>
                 </div>
               </>
             )}
 
-            {step === 2 && <Pills items={ROUTES} value={s.route} set={(id) => set({ route: id as RouteId })} />}
-
-            {step === 3 && (
+            {step === 2 && (
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 <label htmlFor="ae-head" className="sr-only" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>People on payroll</label>
                 <input id="ae-head" type="range" min={0} max={50} step={1} value={s.head} onChange={(e) => set({ head: +e.target.value })} style={sliderStyle} />
@@ -201,13 +203,35 @@ export function AccountingEstimator() {
               </div>
             )}
 
-            {step === 4 && <Pills items={VAT_REG} value={s.vatreg} set={(id) => set({ vatreg: id as VatRegId })} />}
+            {step === 3 && <Pills items={VAT_REG} value={s.vatreg} set={(id) => set({ vatreg: id as VatRegId })} />}
+
+            {step === 4 && (
+              <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                <label htmlFor="ae-start" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
+                  First month we keep the books
+                </label>
+                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 }}>
+                  Required — we do not guess a start month.
+                </div>
+                <input
+                  id="ae-start"
+                  type="month"
+                  value={s.startMonth}
+                  onChange={(e) => set({ startMonth: e.target.value })}
+                  style={{ marginTop: 10, height: 38, padding: "0 12px", borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", background: "#fff", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 13 }}
+                />
+              </div>
+            )}
 
             {step === 5 && <Pills items={BEHIND} value={s.behind} set={(id) => set({ behind: id })} />}
 
             {step === LAST && (
               <div>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.65, color: "var(--a4-body)", margin: 0, textWrap: "pretty" }}>{summary}</p>
+                {/* The independence consequence, before they ask for a proposal. */}
+                <p role="note" style={{ margin: "12px 0 0", padding: "11px 14px", borderRadius: 10, background: "rgba(73,79,223,.06)", border: "1px solid rgba(73,79,223,.25)", fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
+                  {INDEPENDENCE_BOOKKEEPING}
+                </p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
                   <Button variant="dark" size="md" onClick={() => start("proposal")}>Request a proposal <Icon name="arrow-right" size={16} color="#fff" /></Button>
                   {!q.refer && <Button variant="cobalt" size="md" onClick={() => start("account")}>Create my account</Button>}

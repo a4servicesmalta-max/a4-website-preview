@@ -4,6 +4,11 @@ import React, { useState, useRef } from "react"
 import { SERVICE_TYPE_OPTIONS } from "@/data/serviceRequestForms"
 import { cn } from "@/lib/utils"
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links"
+import {
+  INDEPENDENCE_HEADING,
+  flagsForServiceSelection,
+  independenceNotice,
+} from "@/lib/independence"
 
 type FormData = {
   name: string
@@ -111,6 +116,18 @@ const ProcessStepsSection = () => {
 
   const step = formSteps[currentStep]
 
+  /**
+   * IESBA independence, resolved the moment a service is ticked — not later.
+   *
+   * A firm that keeps a client's books cannot also audit them, so picking
+   * "Bookkeeping" rules A4 out as auditor and picking "Audit & Annual
+   * Accounts" rules us out of the books. Both together is the conflict case:
+   * it blocks the step rather than submitting silently, because there is no
+   * version of that request A4 can accept as written.
+   */
+  const independence = flagsForServiceSelection(formData.service)
+  const independenceText = independenceNotice(independence.route)
+
   const validateStep = () => {
     for (const field of step.fields) {
       if (field.key === "additionalDetails") continue
@@ -132,6 +149,13 @@ const ProcessStepsSection = () => {
       !formData.phone.trim()
     ) {
       return "Phone number is required for this communication method."
+    }
+
+    // Bookkeeping AND audit together. Independence rules mean A4 cannot
+    // provide both to the same client, so this cannot go through as written —
+    // the prospect picks one and we arrange the other with an independent firm.
+    if (independence.route === "conflict") {
+      return independenceText ?? ""
     }
 
     return ""
@@ -177,6 +201,11 @@ const ProcessStepsSection = () => {
         communicationChannel: formData.communicationChannel,
         updateCadence: formData.updateCadence,
         phone: formData.phone || undefined,
+        // IESBA routing, decided here and persisted with the lead. /api/quote
+        // reads these off `meta` and forwards them to the portal.
+        auditEligible: independence.auditEligible,
+        bookkeepingEligible: independence.bookkeepingEligible,
+        independenceRoute: independence.route,
       }
 
       const form = new FormData()
@@ -392,6 +421,31 @@ const ProcessStepsSection = () => {
                               )}
                             </div>
                           ))}
+
+                          {/* The independence consequence, in plain words, at
+                              the moment the service is chosen — so a prospect
+                              never discovers it after we have their file. */}
+                          {step.id === "onboarding" && independenceText && (
+                            <div
+                              role="note"
+                              className={cn(
+                                "rounded-2xl border p-4",
+                                independence.route === "conflict"
+                                  ? "bg-amber-50 border-amber-200"
+                                  : "bg-slate-50 border-slate-200"
+                              )}
+                            >
+                              <p className={cn(
+                                "text-xs font-black uppercase tracking-widest",
+                                independence.route === "conflict" ? "text-amber-700" : "text-slate-500"
+                              )}>
+                                {INDEPENDENCE_HEADING}
+                              </p>
+                              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-700">
+                                {independenceText}
+                              </p>
+                            </div>
+                          )}
 
                         </div>
                       </div>

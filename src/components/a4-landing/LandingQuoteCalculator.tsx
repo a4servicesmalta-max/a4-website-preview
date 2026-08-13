@@ -2,13 +2,19 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, BOOKKEEPING_MONTHLY, PAYROLL_PER_HEAD, SOFTWARE_TIERS, SOFTWARE_TIER_LABELS, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXTRA_BANK_MONTHLY, LAUNCH_PROMO, isPromoActive, type CapitalBand, type TxnBand, type SoftwareTierId } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, PAYROLL_PER_HEAD, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
+import { independenceFlags, independenceNotice } from "@/lib/independence";
+import { formatStartMonth, nextMonth } from "@/lib/accounting-fee";
 import { trackConversion } from "@/lib/analytics";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
 // The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
 // change it there first and mirror it here.
+//
+// Pack mt-2026-08-14-managed removed the software-only route this wizard used
+// to open with ("Only software" / "Software + accountants"). There is one
+// bookkeeping service: A4 keeps the books, flat, priced by entity.
 
 const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["shop", "Shop, trade or services", "standard"],
@@ -20,11 +26,13 @@ const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["regulated", "Gaming, crypto or financial services", "high"],
   ["other", "Something else", "refer"],
 ];
+// `onb` is gone: onboarding and opening balances carry no number in pack
+// mt-2026-08-14-managed. They are still done, still mentioned, never priced here.
 const QTIERS = {
-  standard: { l: "Standard", mult: 1, onb: 95, refer: false, note: null as [string, string] | null },
-  elevated: { l: "Elevated", mult: 1.2, onb: 250, refer: false, note: ["info", "Sectors like this need a few extra checks when we take you on. It is built into the price rather than added later."] as [string, string] },
-  high: { l: "High", mult: 1.45, onb: 550, refer: false, note: ["warn", "Licensed and regulated sectors need full source-of-funds checks and closer monitoring. A director signs off before we take the work on."] as [string, string] },
-  refer: { l: "Referral", mult: 1, onb: 0, refer: true, note: ["warn", "We price most companies on the spot, but yours needs a short call with a director before we put a number on it. Usually the same day."] as [string, string] },
+  standard: { l: "Standard", mult: 1, refer: false, note: null as [string, string] | null },
+  elevated: { l: "Elevated", mult: 1.2, refer: false, note: ["info", "Sectors like this need a few extra checks when we take you on. It is built into the price rather than added later."] as [string, string] },
+  high: { l: "High", mult: 1.45, refer: false, note: ["warn", "Licensed and regulated sectors need full source-of-funds checks and closer monitoring. A director signs off before we take the work on."] as [string, string] },
+  refer: { l: "Referral", mult: 1, refer: true, note: ["warn", "We price most companies on the spot, but yours needs a short call with a director before we put a number on it. Usually the same day."] as [string, string] },
 };
 const QTXN: [string, string, string][] = [
   ["0", "None yet", "not trading"],
@@ -35,12 +43,17 @@ const QTXN: [string, string, string][] = [
   ["401-1000", "400 to 1,000", "very high"],
   ["1000+", "1,000+", "enterprise"],
 ];
+/**
+ * Earlier months that still need doing. Months, not years: they are priced at
+ * the monthly rate, one by one, so a year is simply 12 of them.
+ */
 const QBEHIND: [string, string, string][] = [
-  ["0", "Up to date", ""],
+  ["0", "None", "up to date"],
   ["3", "3 months", "behind"],
   ["6", "6 months", "behind"],
-  ["12", "1 year", "behind"],
-  ["24", "2 years +", "behind"],
+  ["12", "12 months", "behind"],
+  ["24", "24 months", "behind"],
+  ["36", "36 months", "behind"],
 ];
 const QVATREG: [string, string, string][] = [
   ["none", "Not registered", "tax return only"],
@@ -58,33 +71,32 @@ const QSIZE: [string, string, string][] = [
 // figure from /accounting-services, /audit-services, /quote or the Vacei side.
 // Owner decision 2026-08-02: the local `book` table (69/119/199/329/549/899)
 // was retired in favour of the pack's BOOKKEEPING_MONTHLY.
+// Bookkeeping is no longer volume-banded, so `book` is gone from this table.
 const QT: Record<string, Record<string, number>> = {
-  book: BOOKKEEPING_MONTHLY,
   vat: VAT_MONTHLY,
   taxret: TAX_RETURN_YEARLY,
   assure: AUDIT_YEARLY,
 };
 const QPAY = PAYROLL_PER_HEAD.map((t) => ({ upTo: t.upTo ?? 1e9, rate: t.rate }));
-const QSTEPS = ["What you do", "Volume", "Payroll", "Up to date?", "VAT", "Company size", "Your services", "Your quote"];
-const QTIERP: Record<string, [number, string]> = Object.fromEntries(
-  (Object.keys(SOFTWARE_TIERS) as (keyof typeof SOFTWARE_TIERS)[]).map((k) => [k, [SOFTWARE_TIERS[k], SOFTWARE_TIER_LABELS[k]]]),
-) as Record<string, [number, string]>;
+const QSTEPS = ["What you do", "Whose books", "Volume", "Payroll", "When we start", "VAT", "Company size", "Your services", "Your quote"];
 
 export type QState = {
   step: number;
   sector: string;
   txn: string;
-  /** Bank accounts the company runs. The first is included in the book price. */
-  banks: number;
+  /** Whose books these are — the only thing that moves the bookkeeping price. */
+  entity: ManagedEntity;
   /** Authorised share capital band — sets the MBR registry fee on the annual return. */
   cap: CapitalBand;
   head: number;
+  /** Earlier months that still need doing, as a whole number in a string. */
   behind: string;
+  /** `YYYY-MM` — the first month in scope. REQUIRED before a quote can be sent. */
+  startMonth: string;
   vatreg: string;
   size: string;
+  /** "none" | "managed" — A4 keeps the books, or does not. No third option. */
   book: string;
-  tier: string;
-  review: string;
   pay: string;
   vat: string;
   taxret: string;
@@ -93,8 +105,10 @@ export type QState = {
 };
 
 export const Q_INIT: QState = {
-  step: 0, sector: "shop", txn: "21-60", banks: 1, cap: "1500", head: 2, behind: "0", vatreg: "art10", size: "small",
-  book: "none", tier: "book", review: "none", pay: "none", vat: "none", taxret: "none", assure: "none", regoff: "none",
+  step: 0, sector: "shop", txn: "21-60", entity: "company", cap: "1500", head: 2, behind: "0",
+  // Suggested, not assumed — the visitor confirms it on the "When we start" step.
+  startMonth: nextMonth(), vatreg: "art10", size: "small",
+  book: "managed", pay: "none", vat: "none", taxret: "none", assure: "none", regoff: "none",
 };
 
 type Line = { n: string; e: string; v: number };
@@ -120,29 +134,26 @@ export function qCalc(q: QState, now: Date = new Date()) {
   if (tier.note) notes.push(tier.note);
   if (tier.refer) return { refer: true as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0 };
   const rm = tier.mult;
+  const entity: ManagedEntity = q.entity === "sole" ? "sole" : "company";
   const mo: Line[] = [], yr: Line[] = [], one: Line[] = [];
-  if (q.book === "self") { const t = QTIERP[q.tier || "book"]; mo.push({ n: "Bookkeeping", e: t[1] + " plan — automation only, run by you", v: t[0] }); }
-  if (q.book === "full") mo.push({ n: "Bookkeeping", e: "you upload, we do it", v: QT.book[q.txn] * rm });
-  const revBase = QT.book[q.txn];
-  if (q.book === "self" && q.review === "quarter" && revBase > 0) mo.push({ n: "Accounting review", e: "before each VAT return — you do the bulk of the work, so it costs a fraction", v: Math.max(15, revBase * 0.15) * rm });
-  if (q.book === "self" && q.review === "month" && revBase > 0) mo.push({ n: "Accounting review", e: "every month — you do the bulk of the work, so it costs a fraction", v: Math.max(20, revBase * 0.3) * rm });
+  // Flat, and deliberately NOT × rm — the sector loading applies to the
+  // compliance work, not to keeping the books.
+  if (q.book === "managed") {
+    mo.push({
+      n: "Bookkeeping",
+      e: MANAGED_ENTITY_LABELS[entity] + " — you send the paperwork, we keep the books",
+      v: managedMonthly(entity),
+    });
+  }
   if (q.pay === "we" && q.head > 0) {
     const t = QPAY.find((t) => q.head <= t.upTo)!;
     mo.push({ n: "Payroll", e: q.head + " × €" + t.rate + " per person", v: q.head * t.rate * rm });
   }
-  // Each account beyond the first is reconciled separately. Same rule as
-  // src/lib/accounting-fee.ts: the full-service rate when we keep the books,
-  // the cheaper review rate when you keep them and we check them, and nothing
-  // at all on software-only — there is no reconciliation work on our side.
-  const extraBanks = Math.max(0, (q.banks || 1) - 1);
-  if (extraBanks > 0) {
-    if (q.book === "full") mo.push({ n: "Additional bank accounts", e: extraBanks + " × €" + EXTRA_BANK_MONTHLY.bookFull + " — each account reconciled monthly", v: extraBanks * EXTRA_BANK_MONTHLY.bookFull * rm });
-    else if (q.book === "self" && q.review !== "none") mo.push({ n: "Additional bank accounts", e: extraBanks + " × €" + EXTRA_BANK_MONTHLY.selfWithReview + " — covered in the review", v: extraBanks * EXTRA_BANK_MONTHLY.selfWithReview * rm });
-  }
-  const selfFile = q.book !== "full" && (q.book !== "self" || q.review === "none");
+  // We only put our name to a VAT return when we have worked the ledger.
+  const selfFile = q.book !== "managed";
   if (q.vat === "we" && q.vatreg !== "none") {
     if (selfFile) {
-      notes.push(["warn", 'You would be filing your own VAT returns. We only put our name to a return when we have worked the ledger or reviewed it — choose "You upload, we do it" or add an accounting review and we take the returns over.']);
+      notes.push(["warn", "You would be filing your own VAT returns. We only put our name to a return when we have worked the ledger — switch bookkeeping on above and we take the returns over."]);
     } else if (q.vatreg === "art11") {
       yr.push({ n: "VAT declaration", e: "small exempt — one declaration a year", v: 145 * rm });
     } else {
@@ -160,9 +171,8 @@ export function qCalc(q: QState, now: Date = new Date()) {
     if (bigVol && q.size !== "big") notes.push(["warn", "At that volume a company is unlikely to stay under the small-company thresholds, so we priced a full audit. If your figures come in under, the price drops."]);
   }
   if (q.regoff === "we") yr.push({ n: "Registered office", e: "statutory address, post passed to you", v: 1200 });
-  const softLine = q.book === "self" ? QTIERP[q.tier || "book"][0] : 0;
-  const labourVal = mo.reduce((s, l) => s + l.v, 0) - softLine + yr.reduce((s, l) => s + l.v, 0);
-  const labour = labourVal > 0;
+  // Every remaining line is A4 labour now that the software-only line is gone.
+  const labour = mo.reduce((s, l) => s + l.v, 0) + yr.reduce((s, l) => s + l.v, 0) > 0;
   /** Government money inside the yearly total — never discounted. */
   let registry = 0;
   if (labour) {
@@ -177,16 +187,21 @@ export function qCalc(q: QState, now: Date = new Date()) {
     // NOTE: the line NAME is the key `qItems` matches on to build the basket —
     // renaming it silently drops the MBR item from the submitted quote.
     yr.push({ n: "MBR annual return fee", e: "our €" + MBR_ANNUAL_RETURN.ourFee + " fee to prepare and file it, plus the government registry fee passed through at cost, set by your share capital (" + capRow.note + ")", v: MBR_ANNUAL_RETURN.ourFee + registry });
-    if (tier.onb) one.push({ n: "Onboarding and due diligence", e: tier.l + " risk — charged once, at acceptance", v: tier.onb });
+    // Onboarding and opening balances are done but NOT priced here — no €0
+    // line either, which would read as "included, free".
+    notes.push(["info", ONBOARDING_UNPRICED_NOTE]);
   }
   if (!labour && tier.note && notes.indexOf(tier.note) !== -1) notes.splice(notes.indexOf(tier.note), 1);
+  // Earlier months, at the same monthly rate, uncapped. `n` is the exact
+  // wire-contract label — `qItems` keys the basket off it, so it must not be
+  // reworded here without changing catchUpLabel in the pack.
   const months = +q.behind;
-  if (months > 0 && q.book === "self") {
-    one.push({ n: "Catch-up processing", e: months + " months of extra uploads through the automation — " + months + " × €10", v: months * 10 });
-  } else if (months > 0 && q.book === "full") {
-    const byMonth = months * 25, byYear = Math.ceil(months / 12) * 240;
-    const v = Math.min(byMonth, byYear);
-    one.push({ n: "Bringing the books up to date", e: "charged once, on its own — whichever basis is cheaper", v });
+  if (months > 0 && q.book === "managed") {
+    one.push({
+      n: catchUpLabel(months, entity),
+      e: "the same monthly rate for each earlier month — no catch-up premium, no cap",
+      v: catchUpAmount(months, entity),
+    });
   }
   [mo, yr, one].forEach((a) => a.forEach((l) => { l.v = Math.round(l.v); }));
   const sum = (a: Line[]) => a.reduce((s, l) => s + l.v, 0);
@@ -221,23 +236,18 @@ export function qRisk(q: QState): A4Risk {
   return k === "refer" ? "standard" : k;
 }
 
-/** The one line this wizard prices that the backend has no item for. */
-export const Q_UNPRICEABLE_LINE = "Additional bank accounts";
-
 /**
  * The visitor's answers → the priceable basket we submit.
  *
  * Every entry is gated on a line `qCalc` ACTUALLY produced rather than on the
  * raw answers, so the two can never disagree about what was quoted: the VAT
- * block, the "no labour, no MBR/onboarding" rule and the catch-up mode are all
- * decided once, in `qCalc`, and read back here.
+ * block and the "no labour, no MBR" rule are decided once, in `qCalc`, and
+ * read back here.
  *
- * ⚠ Two known divergences, deliberately left alone (see FIXES-2 task 4):
- *   - `Q_UNPRICEABLE_LINE` has no A4Item, so extra bank accounts are NOT
- *     submitted. The visitor is told so on the form.
- *   - `qCalc` applies no launch discount and omits MBR_ANNUAL_RETURN.ourFee,
- *     so `evaluateA4Items` on this basket does not equal the figures on
- *     screen. Closing that gap is an open pricing decision, not a code fix.
+ * The two old divergences are closed by pack mt-2026-08-14-managed: the
+ * "Additional bank accounts" line no longer exists (flat price), and
+ * `qCalc` now applies the launch discount and bills the full MBR fee, so
+ * `evaluateA4Items(qItems(q))` matches what is on screen.
  */
 export function qItems(q: QState): A4Item[] {
   const r = qCalc(q);
@@ -245,13 +255,10 @@ export function qItems(q: QState): A4Item[] {
   const all = [...r.mo, ...r.yr, ...r.one];
   const has = (n: string) => all.some((l) => l.n === n);
   const txn = q.txn as TxnBand;
+  const entity: ManagedEntity = q.entity === "sole" ? "sole" : "company";
   const items: A4Item[] = [];
 
-  if (has("Bookkeeping")) {
-    if (q.book === "self") items.push({ service: "software", tier: (q.tier || "book") as SoftwareTierId });
-    else items.push({ service: "bookkeeping-full", txn });
-  }
-  if (has("Accounting review")) items.push({ service: "review", txn, cadence: q.review === "month" ? "monthly" : "quarterly" });
+  if (has("Bookkeeping")) items.push({ service: "bookkeeping-managed", entity });
   if (has("Payroll")) items.push({ service: "payroll", heads: q.head });
   if (has("VAT returns")) items.push({ service: "vat", txn, vatreg: q.vatreg === "art12" ? "art12" : "art10" });
   if (has("VAT declaration")) items.push({ service: "vat", txn, vatreg: "art11" });
@@ -259,28 +266,34 @@ export function qItems(q: QState): A4Item[] {
   if (has("Financial audit")) items.push({ service: "audit", txn, ...(qAuditIsReview(q) ? { review: true as const } : {}) });
   if (has("Registered office")) items.push({ service: "registered-office" });
   if (has("MBR annual return fee")) items.push({ service: "mbr", capital: q.cap || "1500" });
-  if (has("Onboarding and due diligence")) items.push({ service: "onboarding" });
-  if (has("Catch-up processing")) items.push({ service: "catchup", months: +q.behind, mode: "self" });
-  if (has("Bringing the books up to date")) items.push({ service: "catchup", months: +q.behind, mode: "full" });
+  // Catch-up is keyed on the answer, not on the (now dynamic) line label.
+  if (q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity });
 
   return items;
 }
 
+/** IESBA routing for what this wizard has been asked for. */
+export function qIndependence(q: QState) {
+  return independenceFlags({
+    wantsBookkeeping: q.book === "managed",
+    wantsAudit: q.assure === "we" && !qAuditIsReview(q),
+  });
+}
+
 function qSummarise(q: QState) {
   const bits: string[] = [];
-  if (q.book === "self") bits.push("you'll run the " + QTIERP[q.tier || "book"][1] + " plan yourself");
-  if (q.book === "full") bits.push("you upload and we do the bookkeeping");
-  if (q.book === "self" && q.review !== "none") bits.push("we review your accounting " + (q.review === "month" ? "every month" : "before each VAT return"));
+  if (q.book === "managed") bits.push("you send us the paperwork and we keep the books");
   if (q.pay === "we" && q.head > 0) bits.push("we run your payroll");
-  const sf = q.book !== "full" && (q.book !== "self" || q.review === "none");
-  if (q.vat === "we" && q.vatreg !== "none" && !sf) bits.push("we file your VAT");
+  if (q.vat === "we" && q.vatreg !== "none" && q.book === "managed") bits.push("we file your VAT");
   if (q.taxret === "we") bits.push("we prepare your annual tax return");
   if (q.assure === "we") bits.push("we handle your audit or review");
   if (q.regoff === "we") bits.push("we provide your registered office");
   if (!bits.length) return "Nothing picked yet — choose what you need in the services step.";
   const j = bits.length === 1 ? bits[0] : bits.slice(0, -1).join(", ") + ", and " + bits[bits.length - 1];
-  let out = "So: " + j + ".";
-  if (+q.behind > 0 && q.book !== "none") out += " We bring the older months up to date first, charged once.";
+  let out = "So: " + j;
+  const start = formatStartMonth(q.startMonth);
+  out += start ? `, starting ${start}.` : ".";
+  if (+q.behind > 0 && q.book === "managed") out += ` The ${q.behind} months before that are quoted separately, at the same monthly rate.`;
   return out;
 }
 
@@ -349,22 +362,25 @@ export function LandingQuoteCalculator() {
 
   const STEP_META: [string, string, (() => Opt[]) | null][] = [
     ["What does the company do?", "Some sectors carry heavier checks on our side. That is what moves the price — not the bookkeeping.", () => opts(QSECT.map((s) => [s[0], s[1], ""] as [string, string, string]), "sector")],
-    ["About how many transactions a month?", "Count each invoice, receipt and bank line. A rough number is fine — we confirm it before anything is agreed. Then tell us how many bank accounts the company runs and its authorised share capital.", () => opts(QTXN, "txn")],
+    ["Are these a company's books, or your own?", "It is the only thing that changes the bookkeeping price: €" + managedMonthly("sole") + " a month if you are self-employed, €" + managedMonthly("company") + " for a company. Then tell us the company's authorised share capital.", () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
+    ["About how many transactions a month?", "Count each invoice, receipt and bank line. A rough number is fine — we confirm it before anything is agreed. It sets your VAT, tax-return and audit fees; the bookkeeping price does not move.", () => opts(QTXN, "txn")],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person.", null],
-    ["Are the books up to date?", "If you are behind, we bring you current first and quote that separately.", () => opts(QBEHIND, "behind")],
+    ["From which month should we start?", "Pick the first month we keep the books. Anything before it is catch-up, charged at the same monthly rate — no premium, no cap.", null],
     ["Are you registered for VAT?", "Different registrations carry very different filing loads. Not sure? Pick the last option and we check the register for you.", () => QVATREG.map(([k, label, sub]) => ({ key: k, label, sub: sub || "", pick: () => setQ({ vatreg: k, vat: k === "none" ? "none" : "we" }), on: q.vatreg === k }))],
     ["How big is the company?", "Only matters if you need an audit. Small companies usually qualify for a lighter review instead.", () => opts(QSIZE, "size")],
     ["What do you need from us?", "Switch anything off that you handle yourself. The total updates as you click.", null],
     ["Your quote", "Everything below is itemised — nothing appears later that is not on this list.", null],
   ];
 
-  const stepTag = step === 7 ? "Your quote" : "Question " + Math.min(step + 1, 7) + " of 7";
+  const LAST_STEP = STEP_META.length - 1; // 8 — the quote step
+  const stepTag = step === LAST_STEP ? "Your quote" : "Question " + Math.min(step + 1, LAST_STEP) + " of " + LAST_STEP;
   const isOpts = !!STEP_META[step][2];
   const stepOpts = isOpts ? STEP_META[step][2]!() : [];
-  const isVol = step === 1;
-  const isNum = step === 2;
-  const isSvc = step === 6;
-  const isQuote = step === 7;
+  const isEntity = step === 1;
+  const isNum = step === 3;
+  const isStart = step === 4;
+  const isSvc = step === 7;
+  const isQuote = step === LAST_STEP;
 
   // Bands and labels come straight from the pack — the same five rows the
   // registry fee table is keyed on, so a label can never describe a band we
@@ -389,21 +405,13 @@ export function LandingQuoteCalculator() {
   let svcRows: SvcRow[] = [];
   if (isSvc) {
     svcRows = [
-      svc("book", "Bookkeeping", "Use the software yourself, or send us the paperwork and we do the lot.", [["none", "Not needed"], ["self", "Just the software"], ["full", "You upload, we do it"]]),
+      svc("book", "Bookkeeping", "You send us the paperwork and we keep the books. There is no software-only option — a qualified accountant is on the file.", [["none", "Not needed"], ["managed", "Yes — you keep our books"]]),
     ];
-    if (q.book === "self") svcRows.push(
-      {
-        name: "Software tier", desc: "All automation, no accountants. Prices are from-prices by volume.",
-        amt: "€" + QTIERP[q.tier || "book"][0] + " /mo",
-        options: ([["book", "Bookkeeper"], ["senior", "Senior"], ["manager", "Manager"], ["cfo", "CFO"]] as [string, string][]).map(([k, label]) => ({ key: k, label, on: (q.tier || "book") === k, pick: () => setQ({ tier: k }) })),
-      },
-      svc("review", "Accounting review", "We check your coding, VAT treatment and reconciliation, and send you the fix list.", [["none", "No — I'll self-file"], ["quarter", "Before each VAT return"], ["month", "Every month"]]),
-    );
-    const sf = q.book !== "full" && (q.book !== "self" || q.review === "none");
+    const sf = q.book !== "managed";
     svcRows.push(
       svc("pay", "Payroll", "Payslips, monthly employer filing, annual returns. Priced per person.", [["none", "No"], ["we", "Yes"]]),
       sf
-        ? { name: "VAT returns — blocked", desc: "We only put our name to a return when we have worked the ledger or reviewed it. Choose “You upload, we do it” above, or add an accounting review, and this unlocks.", amt: "—", options: [] }
+        ? { name: "VAT returns — blocked", desc: "We only put our name to a return when we have worked the ledger. Switch bookkeeping on above and this unlocks.", amt: "—", options: [] }
         : svc("vat", "VAT returns", "Filed quarterly, billed monthly so you pay the same each time.", [["none", "No"], ["we", "Yes"]], q.vatreg === "art11" ? "VAT declaration" : "VAT returns"),
       svc("taxret", "Annual tax return", "Prepared once a year from the closed ledger.", [["none", "No"], ["we", "Yes"]]),
       svc("assure", "Financial audit", "Most small companies qualify for a lighter review — we work out which applies.", [["none", "No"], ["we", "Yes"]]),
@@ -420,8 +428,18 @@ export function LandingQuoteCalculator() {
   // Capture. The basket is what the backend reprices, so the visitor gets a
   // real quotation record rather than an empty contact form.
   const items = isQuote && !r.refer ? qItems(q) : [];
-  const hasUnpriceable = r.mo.some((l) => l.n === Q_UNPRICEABLE_LINE);
-  const canSend = items.length > 0 && name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const independence = qIndependence(q);
+  const independenceText = independenceNotice(independence.route);
+  const startOk = /^\d{4}-(0[1-9]|1[0-2])$/.test(q.startMonth);
+  // No start month, or both sides of the independence rule at once → the quote
+  // is not sendable. Both are stated on the form rather than silently disabling
+  // the button, so the visitor knows what to fix.
+  const canSend =
+    items.length > 0 &&
+    startOk &&
+    independence.route !== "conflict" &&
+    name.trim().length > 0 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const send = async () => {
     if (!canSend || sending) return;
     // Honeypot: only a bot fills a field it cannot see. Rejected before submit,
@@ -431,7 +449,11 @@ export function LandingQuoteCalculator() {
       return;
     }
     setSending(true);
-    const result = await submitWebsiteQuotation({ name, email, items, risk: qRisk(q), sourceDetail: "a4-homepage" });
+    const result = await submitWebsiteQuotation({
+      name, email, items, risk: qRisk(q),
+      serviceStartDate: q.startMonth,
+      sourceDetail: "a4-homepage",
+    });
     setSent(result);
     // Conversion on a CONFIRMED backend result only. `error` covers a 502 and a
     // rejected fetch alike — nothing was written, so nothing is reported. The
@@ -442,26 +464,13 @@ export function LandingQuoteCalculator() {
     setSending(false);
   };
 
-  const soft = q.book === "self";
-  const modeSoftOn = soft;
-  const modeFullOn = !soft && q.book !== "none";
-
   const next = () => {
-    const patch: Partial<QState> = { step: Math.min(7, step + 1) };
-    if (step === 1 && q.book === "none") { patch.book = "full"; patch.taxret = "we"; }
-    if (step === 2) patch.pay = q.head > 0 ? "we" : "none";
-    if (step === 5 && q.assure === "none") patch.assure = "we";
+    const patch: Partial<QState> = { step: Math.min(LAST_STEP, step + 1) };
+    if (step === 2 && q.book === "none") { patch.book = "managed"; patch.taxret = "we"; }
+    if (step === 3) patch.pay = q.head > 0 ? "we" : "none";
+    if (step === 6 && q.assure === "none") patch.assure = "we";
     setQ(patch);
   };
-
-  const modeBtn = (on: boolean): React.CSSProperties => ({
-    height: 40, padding: "0 22px", borderRadius: "var(--a4-r-full)", cursor: "pointer",
-    border: "1px solid " + (on ? "#fff" : "rgba(255,255,255,.32)"),
-    background: on ? "#fff" : "rgba(255,255,255,.12)",
-    color: on ? "var(--a4-primary)" : "#fff",
-    fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600,
-    transition: "background .15s ease, color .15s ease",
-  });
 
   const railBtn = (i: number): { bg: string; fg: string; dotBg: string; dotFg: string } => {
     const done = i < step, active = i === step;
@@ -494,12 +503,8 @@ export function LandingQuoteCalculator() {
           maxWidth={620}
         /></Reveal>
 
-        <Reveal delay={60}>
-          <div style={{ margin: "36px auto 0", display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-            <button type="button" onClick={() => setQ({ book: "self", vat: "none", pay: "none", taxret: "none", assure: "none", step: 6 })} aria-pressed={modeSoftOn} style={modeBtn(modeSoftOn)}>Only software</button>
-            <button type="button" onClick={() => setQ({ book: "full", step: 0 })} aria-pressed={modeFullOn} style={modeBtn(modeFullOn)}>Software + accountants</button>
-          </div>
-        </Reveal>
+        {/* The "Only software" / "Software + accountants" mode switch is gone
+            with pack mt-2026-08-14-managed. There is one bookkeeping service. */}
 
         <Reveal delay={100}>
           <div className="lqc-grid" style={{ margin: "32px auto 0", display: "grid", gridTemplateColumns: "250px 1fr", gap: 32, alignItems: "start", maxWidth: 980, width: "100%" }}>
@@ -534,24 +539,48 @@ export function LandingQuoteCalculator() {
 
               {isOpts && <OptPills opts={stepOpts} />}
 
-              {isVol && (
+              {isEntity && (
+                <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Authorised share capital</div>
+                  <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                    Sets the MBR registry fee on your annual return (electronic rates) — passed through at cost.
+                  </div>
+                  <div style={{ marginTop: 10 }}><OptPills opts={capOpts} /></div>
+                </div>
+              )}
+
+              {isStart && (
                 <>
                   <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
-                    <label htmlFor="lqc-banks" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Bank accounts</label>
+                    <label htmlFor="lqc-start" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
+                      First month we keep the books
+                    </label>
                     <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                      The first is included — each additional account adds €{EXTRA_BANK_MONTHLY.bookFull} a month when we keep the books (€{EXTRA_BANK_MONTHLY.selfWithReview} on review).
+                      Required — the price depends on it, so we do not guess.
                     </div>
-                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16 }}>
-                      <input id="lqc-banks" type="range" min={1} max={8} step={1} value={q.banks} onChange={(e) => setQ({ banks: +e.target.value })} style={{ flex: 1, accentColor: "var(--a4-primary)", cursor: "pointer" }} />
-                      <span style={{ minWidth: 92, textAlign: "right", fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" }}>{q.banks + (q.banks === 1 ? " account" : " accounts")}</span>
-                    </div>
+                    <input
+                      id="lqc-start"
+                      type="month"
+                      value={q.startMonth}
+                      onChange={(e) => setQ({ startMonth: e.target.value })}
+                      style={{ ...Q_INPUT, marginTop: 10, flex: "0 1 220px" }}
+                    />
+                    {!/^\d{4}-(0[1-9]|1[0-2])$/.test(q.startMonth) && (
+                      <div style={{ marginTop: 8, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
+                        Pick a month before we can price this.
+                      </div>
+                    )}
                   </div>
                   <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
-                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Authorised share capital</div>
-                    <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                      Sets the MBR registry fee on your annual return (electronic rates) — passed through at cost.
+                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
+                      Do you have earlier months that still need doing?
                     </div>
-                    <div style={{ marginTop: 10 }}><OptPills opts={capOpts} /></div>
+                    <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                      Each one costs the same as a month going forward — €{managedMonthly(q.entity === "sole" ? "sole" : "company")}. No premium, no cap.
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      <OptPills opts={QBEHIND.map(([k, label, sub]) => ({ key: k, label, sub, on: q.behind === k, pick: () => setQ({ behind: k }) }))} />
+                    </div>
                   </div>
                 </>
               )}
@@ -599,6 +628,23 @@ export function LandingQuoteCalculator() {
                     const s = NOTE_STYLE[tone] || NOTE_STYLE.info;
                     return <p key={i} style={{ margin: "10px 0 0", padding: "11px 14px", borderRadius: 10, fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55, background: s.bg, color: s.fg, border: "1px solid " + s.bc }}>{text}</p>;
                   })}
+                  {/* The independence consequence, said before they send —
+                      not discovered later. Same words as every other surface. */}
+                  {independenceText && (
+                    <p
+                      role="note"
+                      style={{
+                        margin: "10px 0 0", padding: "11px 14px", borderRadius: 10,
+                        fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55,
+                        ...(independence.route === "conflict" ? NOTE_STYLE.warn : NOTE_STYLE.info),
+                        background: (independence.route === "conflict" ? NOTE_STYLE.warn : NOTE_STYLE.info).bg,
+                        color: (independence.route === "conflict" ? NOTE_STYLE.warn : NOTE_STYLE.info).fg,
+                        border: "1px solid " + (independence.route === "conflict" ? NOTE_STYLE.warn : NOTE_STYLE.info).bc,
+                      }}
+                    >
+                      {independenceText}
+                    </p>
+                  )}
                   {r.refer ? (
                     <div style={{ marginTop: 16, alignSelf: "flex-start" }}>
                       <Button variant="dark" size="sm" href="/contact">Request a call <Icon name="arrow-right" size={14} color="#fff" /></Button>
@@ -626,9 +672,9 @@ export function LandingQuoteCalculator() {
                         </Button>
                         <Button variant="soft" size="sm" href="/contact">Prefer to talk?</Button>
                       </div>
-                      {hasUnpriceable && (
-                        <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11, lineHeight: 1.5, color: "var(--a4-mute)" }}>
-                          Your extra bank accounts are not on the emailed quote — we confirm those with you before anything is agreed.
+                      {!startOk && (
+                        <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.5, color: "#8A6100" }}>
+                          Go back to “When we start” and pick a month — we will not price a quote without it.
                         </p>
                       )}
                     </div>
@@ -649,7 +695,7 @@ export function LandingQuoteCalculator() {
                     <button type="button" onClick={next} style={{
                       height: 36, padding: "0 18px", borderRadius: "var(--a4-r-full)", border: "1px solid var(--a4-ink)",
                       background: "var(--a4-ink)", color: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-                    }}>{step === 6 ? "See my quote" : "Next"}</button>
+                    }}>{step === LAST_STEP - 1 ? "See my quote" : "Next"}</button>
                   </>
                 )}
                 <span style={{ marginLeft: "auto", display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>

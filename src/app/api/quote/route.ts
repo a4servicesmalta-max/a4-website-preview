@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
 import { pushLeadToPortal, pageUrlOf } from "@/lib/portal-lead";
+import { flagsForServiceSelection } from "@/lib/independence";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -110,6 +111,18 @@ export async function POST(req: NextRequest) {
     // services through — the form collects both and they are the whole point of
     // a quote request.
     const selected = Array.isArray(meta?.services) ? meta.services.join(", ") : meta?.service;
+
+    // IESBA independence. Derived server-side from the services actually
+    // submitted rather than trusted from the client's `meta.auditEligible`:
+    // a POST that skips the browser UI must still be routed correctly, and
+    // this flag decides whether A4 may ever audit this prospect.
+    const selectedServices: string[] = Array.isArray(meta?.services)
+      ? meta.services.map(String)
+      : meta?.service
+        ? [String(meta.service)]
+        : [];
+    const independence = flagsForServiceSelection(selectedServices);
+
     const leadWritten = await pushLeadToPortal({
       name,
       email,
@@ -125,6 +138,7 @@ export async function POST(req: NextRequest) {
       ].filter(Boolean).join("\n"),
       sourceDetail: "quote",
       pageUrl: pageUrlOf(req),
+      independence,
     });
 
     // A 200 with "your quote is on its way" when nothing was recorded is the

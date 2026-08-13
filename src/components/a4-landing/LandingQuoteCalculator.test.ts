@@ -1,23 +1,23 @@
 /**
  * The canonical homepage-calculator path, pinned.
  *
- * Shop/trade · 20–60 transactions · 2 on payroll · records up to date ·
+ * Shop/trade · company books · 20–60 transactions · 2 on payroll · up to date ·
  * VAT registered · default services. Every question added to this wizard must
  * default so that THIS quote does not move — a new question that changes the
  * price for a visitor who never touched it is a silent repricing.
  *
- * The two questions added for audit task 3 (bank accounts, authorised share
- * capital) are covered both at their defaults and off them, so the pack's
- * registry-fee table and extra-bank rate can never be replaced by a literal.
+ * Pack mt-2026-08-14-managed retired the software-only route, the volume-banded
+ * bookkeeping table, the per-bank-account charge and the priced onboarding fee.
+ * The assertions below are the managed offer's numbers, hand-computed.
  */
 
 import { describe, it, expect } from "vitest";
-import { qCalc, qItems, qRisk, Q_INIT, type QState } from "./LandingQuoteCalculator";
-import { CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXTRA_BANK_MONTHLY, LAUNCH_PROMO } from "@/data/a4QuotePack";
+import { qCalc, qItems, qRisk, qIndependence, Q_INIT, type QState } from "./LandingQuoteCalculator";
+import { CAPITAL_BANDS, MBR_ANNUAL_RETURN, LAUNCH_PROMO, catchUpLabel } from "@/data/a4QuotePack";
 import { evaluateA4Items } from "@/lib/websiteQuotation";
 
-/** Where the wizard lands after "Software + accountants" and six Next clicks. */
-const CANONICAL: QState = { ...Q_INIT, step: 7, book: "full", pay: "we", assure: "we" };
+/** Where the wizard lands after eight Next clicks. */
+const CANONICAL: QState = { ...Q_INIT, step: 8, book: "managed", pay: "we", assure: "we", startMonth: "2026-09" };
 
 /** Fixed clocks — the launch promo expires by data, so tests must pin the day
  *  or every total below silently changes on 1 September 2026. */
@@ -34,31 +34,61 @@ describe("the canonical quote", () => {
     const after = qCalc(CANONICAL, PROMO_OFF);
     if (after.refer) throw new Error("unpriceable");
     expect(after.promoApplied).toBe(false);
-    expect([after.moTot, after.yrTot]).toEqual([163, 697]);
+    expect([after.moTot, after.yrTot]).toEqual([113, 697]);
   });
 
-  it("defaults to one bank account and the €1,500 capital band", () => {
-    expect(Q_INIT.banks).toBe(1);
+  it("defaults to a company's books and the €1,500 capital band", () => {
+    expect(Q_INIT.entity).toBe("company");
     expect(Q_INIT.cap).toBe("1500");
+    expect(Q_INIT.book).toBe("managed");
   });
 
   it("holds the pinned totals", () => {
     if (r.refer) throw new Error("the canonical path must be priceable");
-    // List: bookkeeping 99 + payroll 2 × 32 = 163/mo; review engagement 547 +
-    // MBR (our 50 + registry 100) = 697/yr; standard-risk onboarding 95.
-    expect(r.grossMo).toBe(163);
+    // List: bookkeeping 49 (flat) + payroll 2 × 32 = 113/mo; review engagement
+    // 547 + MBR (our 50 + registry 100) = 697/yr. Onboarding is UNPRICED.
+    expect(r.grossMo).toBe(113);
     expect(r.grossYr).toBe(697);
     // As quoted, with the 25% launch discount and the registry fee exempt.
-    expect(r.moTot).toBe(122);
-    expect(r.yrTot).toBe(548);
-    expect(r.oneTot).toBe(95);
+    expect(r.moTot).toBe(85); // 113 × 0.75 = 84.75 → 85
+    expect(r.yrTot).toBe(548); // (697 − 100) × 0.75 = 447.75 → 448, + 100
+    expect(r.oneTot).toBe(0); // nothing one-off: onboarding carries no number
   });
 
-  it("adds nothing for the new questions at their defaults", () => {
+  it("does not put a number on onboarding, but does say it exists", () => {
+    if (r.refer) throw new Error("unpriceable");
+    expect(line(r, "Onboarding and due diligence")).toBeUndefined();
+    expect(r.notes.some(([, t]) => t.includes("Onboarding and opening balances"))).toBe(true);
+  });
+
+  it("no longer charges for extra bank accounts at all", () => {
+    if (r.refer) throw new Error("unpriceable");
     expect(line(r, "Additional bank accounts")).toBeUndefined();
     // Our fee plus the registry fee — the line bills both, as the engine does.
     expect(line(r, "MBR annual return fee")?.v)
       .toBe(MBR_ANNUAL_RETURN.ourFee + MBR_ANNUAL_RETURN.registryFeeByCapital["1500"]);
+  });
+
+  it("does not move the bookkeeping price with transaction volume", () => {
+    for (const txn of ["1-20", "21-60", "61-150", "1000+"]) {
+      const q = qCalc({ ...CANONICAL, txn }, PROMO_OFF);
+      if (q.refer) throw new Error("unpriceable");
+      expect(line(q, "Bookkeeping")?.v).toBe(49);
+    }
+  });
+
+  it("charges the self-employed rate when the books are not a company's", () => {
+    const q = qCalc({ ...CANONICAL, entity: "sole" }, PROMO_OFF);
+    if (q.refer) throw new Error("unpriceable");
+    expect(line(q, "Bookkeeping")?.v).toBe(24);
+  });
+
+  it("keeps the bookkeeping price flat across every risk sector", () => {
+    for (const sector of ["shop", "hospitality", "regulated"]) {
+      const q = qCalc({ ...CANONICAL, sector }, PROMO_OFF);
+      if (q.refer) throw new Error("unpriceable");
+      expect(line(q, "Bookkeeping")?.v).toBe(49);
+    }
   });
 });
 
@@ -80,47 +110,60 @@ describe("authorised share capital", () => {
   });
 });
 
-describe("bank accounts", () => {
-  it("charges the full-service rate for each account beyond the first", () => {
-    const r = qCalc({ ...CANONICAL, banks: 3 }, PROMO_ON);
+describe("catch-up", () => {
+  it("charges the same monthly rate per earlier month, uncapped", () => {
+    const r = qCalc({ ...CANONICAL, behind: "24" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(line(r, "Additional bank accounts")?.v).toBe(2 * EXTRA_BANK_MONTHLY.bookFull);
-    // The line is a list price; the total carries the launch discount.
-    expect(r.grossMo).toBe(163 + 2 * EXTRA_BANK_MONTHLY.bookFull);
+    expect(r.oneTot).toBe(24 * 49); // 1,176 — the retired cap would have said 480
+    expect(r.oneTot).not.toBe(480);
   });
 
-  it("charges the cheaper review rate when the client keeps the books", () => {
-    const r = qCalc({ ...CANONICAL, book: "self", review: "month", banks: 3 }, PROMO_ON);
+  it("uses the exact contracted label", () => {
+    const r = qCalc({ ...CANONICAL, behind: "12" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(line(r, "Additional bank accounts")?.v).toBe(2 * EXTRA_BANK_MONTHLY.selfWithReview);
+    expect(line(r, "Catch-up: 12 months x EUR 49 = EUR 588")?.v).toBe(588);
+    expect(line(r, catchUpLabel(12, "company"))?.v).toBe(588);
   });
 
-  it("charges nothing on software-only — there is no reconciliation on our side", () => {
-    const r = qCalc({ ...CANONICAL, book: "self", review: "none", banks: 8 }, PROMO_ON);
+  it("follows the entity, like the monthly price does", () => {
+    const r = qCalc({ ...CANONICAL, entity: "sole", behind: "12" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(line(r, "Additional bank accounts")).toBeUndefined();
+    expect(r.oneTot).toBe(12 * 24);
   });
 
-  it("takes the sector risk uplift, like every other labour line", () => {
-    const r = qCalc({ ...CANONICAL, sector: "hospitality", banks: 2 }, PROMO_ON);
+  it("is never discounted by the launch promo", () => {
+    const on = qCalc({ ...CANONICAL, behind: "12" }, PROMO_ON);
+    const off = qCalc({ ...CANONICAL, behind: "12" }, PROMO_OFF);
+    if (on.refer || off.refer) throw new Error("unpriceable");
+    expect(on.oneTot).toBe(off.oneTot);
+  });
+
+  it("charges nothing when bookkeeping is switched off", () => {
+    const r = qCalc({ ...CANONICAL, book: "none", behind: "12" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(line(r, "Additional bank accounts")?.v).toBe(Math.round(EXTRA_BANK_MONTHLY.bookFull * 1.2));
+    expect(r.oneTot).toBe(0);
   });
 });
 
 /* -------------------------------------------------------------------------- */
-/* The submitted basket (FIXES-2 task 4)                                       */
+/* The submitted basket                                                        */
 /* -------------------------------------------------------------------------- */
 
 describe("the basket we submit", () => {
   it("carries the canonical quote as priceable items", () => {
     expect(qItems(CANONICAL)).toEqual([
-      { service: "bookkeeping-full", txn: "21-60" },
+      { service: "bookkeeping-managed", entity: "company" },
       { service: "payroll", heads: 2 },
       { service: "audit", txn: "21-60", review: true },
       { service: "mbr", capital: "1500" },
-      { service: "onboarding" },
     ]);
+  });
+
+  it("never submits a retired software or banded-bookkeeping item", () => {
+    const services = qItems({ ...CANONICAL, behind: "6" }).map((i) => i.service);
+    expect(services).not.toContain("software");
+    expect(services).not.toContain("bookkeeping-full");
+    expect(services).not.toContain("review");
   });
 
   it("never submits a sector we refuse to price on the spot", () => {
@@ -135,38 +178,66 @@ describe("the basket we submit", () => {
     expect(qRisk({ ...CANONICAL, sector: "other" })).toBe("standard");
   });
 
-  it("submits software only — no MBR or onboarding without labour", () => {
-    const q: QState = { ...CANONICAL, book: "self", tier: "senior", review: "none", pay: "none", assure: "none" };
-    expect(qItems(q)).toEqual([{ service: "software", tier: "senior" }]);
-  });
-
-  it("submits the review cadence the visitor picked", () => {
-    const q: QState = { ...CANONICAL, book: "self", review: "month" };
-    expect(qItems(q)).toContainEqual({ service: "review", txn: "21-60", cadence: "monthly" });
+  it("submits bookkeeping alone when nothing else is switched on", () => {
+    const q: QState = { ...CANONICAL, pay: "none", assure: "none", vat: "none", taxret: "none", regoff: "none" };
+    expect(qItems(q)).toEqual([
+      { service: "bookkeeping-managed", entity: "company" },
+      { service: "mbr", capital: "1500" },
+    ]);
   });
 
   it("submits VAT only when the wizard actually quoted it", () => {
     expect(qItems({ ...CANONICAL, vat: "we" })).toContainEqual({ service: "vat", txn: "21-60", vatreg: "art10" });
     expect(qItems({ ...CANONICAL, vat: "we", vatreg: "art11" })).toContainEqual({ service: "vat", txn: "21-60", vatreg: "art11" });
     expect(qItems({ ...CANONICAL, vat: "we", vatreg: "unsure" })).toContainEqual({ service: "vat", txn: "21-60", vatreg: "art10" });
-    // Blocked on screen → blocked in the basket.
-    const blocked = qItems({ ...CANONICAL, book: "self", review: "none", vat: "we" });
+    // Blocked on screen (nobody worked the ledger) → blocked in the basket.
+    const blocked = qItems({ ...CANONICAL, book: "none", vat: "we" });
     expect(blocked.some((i) => i.service === "vat")).toBe(false);
   });
 
-  it("submits the catch-up on the same basis the wizard charged it", () => {
-    expect(qItems({ ...CANONICAL, behind: "6" })).toContainEqual({ service: "catchup", months: 6, mode: "full" });
-    expect(qItems({ ...CANONICAL, book: "self", review: "month", behind: "6" })).toContainEqual({ service: "catchup", months: 6, mode: "self" });
+  it("submits the catch-up with the entity that priced it", () => {
+    expect(qItems({ ...CANONICAL, behind: "6" }))
+      .toContainEqual({ service: "catchup", months: 6, entity: "company" });
+    expect(qItems({ ...CANONICAL, entity: "sole", behind: "6" }))
+      .toContainEqual({ service: "catchup", months: 6, entity: "sole" });
   });
 
-  it("drops nothing but the one line the backend cannot price", () => {
-    const everything: QState = { ...CANONICAL, banks: 3, behind: "6", vat: "we", taxret: "we", regoff: "we" };
+  it("drops nothing at all — every displayed line has an item behind it", () => {
+    const everything: QState = { ...CANONICAL, behind: "6", vat: "we", taxret: "we", regoff: "we" };
     const shown = qCalc(everything);
     if (shown.refer) throw new Error("unpriceable");
     const shownNames = [...shown.mo, ...shown.yr, ...shown.one].map((l) => l.n);
-    expect(shownNames).toContain("Additional bank accounts");
-    // Every other displayed line has an item behind it.
-    expect(evaluateA4Items(qItems(everything), qRisk(everything), PROMO_OFF).lines).toHaveLength(shownNames.length - 1);
+    expect(shownNames).not.toContain("Additional bank accounts");
+    expect(evaluateA4Items(qItems(everything), qRisk(everything), PROMO_OFF).lines)
+      .toHaveLength(shownNames.length);
+  });
+});
+
+describe("IESBA independence", () => {
+  it("rules A4 out as auditor once bookkeeping is switched on", () => {
+    const f = qIndependence({ ...CANONICAL, assure: "none" });
+    expect(f.auditEligible).toBe(false);
+    expect(f.route).toBe("bookkeeping");
+  });
+
+  it("does not treat the review engagement as an audit", () => {
+    // The canonical path is a small company, so `assure: "we"` is a REVIEW.
+    expect(qIndependence(CANONICAL).route).toBe("bookkeeping");
+  });
+
+  it("flags the conflict when a full audit is asked for alongside the books", () => {
+    // size "big" + heavy volume makes it a full audit, not a review.
+    const f = qIndependence({ ...CANONICAL, size: "big", txn: "401-1000", assure: "we" });
+    expect(f.route).toBe("conflict");
+    expect(f.auditEligible).toBe(false);
+    expect(f.bookkeepingEligible).toBe(false);
+  });
+
+  it("rules A4 out of the books for an audit-only enquiry", () => {
+    const f = qIndependence({ ...CANONICAL, book: "none", size: "big", txn: "401-1000", assure: "we" });
+    expect(f.route).toBe("audit");
+    expect(f.bookkeepingEligible).toBe(false);
+    expect(f.auditEligible).toBe(true);
   });
 });
 
@@ -174,10 +245,6 @@ describe("the basket we submit", () => {
  * The wizard prices with its own tables; the backend reprices the basket with
  * the shared engine. What is on screen and what we email MUST agree — the
  * visitor is quoted the number they were shown. These pin that.
- *
- * They used to diverge by €591 over year one (the wizard applied no launch
- * discount and its MBR line omitted MBR_ANNUAL_RETURN.ourFee). Both are fixed
- * in qCalc; if either regresses, these fail.
  */
 describe("what we show equals what we quote", () => {
   const shown = qCalc(CANONICAL);
@@ -186,9 +253,9 @@ describe("what we show equals what we quote", () => {
   it("agrees with the engine line-for-line before any discount", () => {
     const engine = evaluateA4Items(items, qRisk(CANONICAL), PROMO_OFF);
     if (shown.refer) throw new Error("unpriceable");
-    expect(engine.grossMonthly).toBe(shown.grossMo); // 163
+    expect(engine.grossMonthly).toBe(shown.grossMo); // 113
     expect(engine.grossYearly).toBe(shown.grossYr);  // 697 — includes our €50 MBR fee
-    expect(engine.grossOneOff).toBe(shown.oneTot);   // 95
+    expect(engine.grossOneOff).toBe(shown.oneTot);   // 0
   });
 
   it("applies the launch discount on the engine's own terms", () => {
@@ -196,21 +263,20 @@ describe("what we show equals what we quote", () => {
     if (shown.refer) throw new Error("unpriceable");
     expect(engine.promoApplied).toBe(true);
     expect(LAUNCH_PROMO.pct).toBe(0.25);
-    // The documented baseline: €163 list → €122/mo, €548/yr, €95 once.
-    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([122, 548, 95]);
-    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([122, 548, 95]);
+    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([85, 548, 0]);
+    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([85, 548, 0]);
     const yearOne = (m: number, y: number, o: number) => m * 12 + y + o;
     expect(yearOne(shown.moTot, shown.yrTot, shown.oneTot))
       .toBe(yearOne(engine.monthly, engine.yearly, engine.oneOff));
   });
 
-  it("still agrees once the basket grows — canonical path plus VAT filing", () => {
-    const withVat: QState = { ...CANONICAL, vat: "we" };
-    const s = qCalc(withVat);
-    const engine = evaluateA4Items(qItems(withVat), qRisk(withVat), PROMO_ON);
+  it("still agrees once the basket grows — canonical path plus VAT and catch-up", () => {
+    const bigger: QState = { ...CANONICAL, vat: "we", behind: "12" };
+    const s = qCalc(bigger);
+    const engine = evaluateA4Items(qItems(bigger), qRisk(bigger), PROMO_ON);
     if (s.refer) throw new Error("unpriceable");
-    expect([s.moTot, s.yrTot, s.oneTot]).toEqual([156, 548, 95]);
-    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([156, 548, 95]);
+    expect([s.moTot, s.yrTot, s.oneTot]).toEqual([engine.monthly, engine.yearly, engine.oneOff]);
+    expect(s.oneTot).toBe(588);
   });
 
   it("never discounts the government registry fee", () => {
@@ -224,22 +290,16 @@ describe("what we show equals what we quote", () => {
   });
 });
 
-describe("VAT gating (task 7e — Vacei parity)", () => {
-  it("blocks VAT returns when nobody has worked or reviewed the ledger", () => {
-    const r = qCalc({ ...CANONICAL, book: "self", review: "none", vat: "we" }, PROMO_ON);
+describe("VAT gating (Vacei parity)", () => {
+  it("blocks VAT returns when we have not worked the ledger", () => {
+    const r = qCalc({ ...CANONICAL, book: "none", vat: "we" }, PROMO_ON);
     if (r.refer) throw new Error("unpriceable");
     expect(line(r, "VAT returns")).toBeUndefined();
     expect(r.notes.some(([tone, t]) => tone === "warn" && t.includes("We only put our name to a return"))).toBe(true);
   });
 
   it("unlocks VAT returns once we keep the books", () => {
-    const r = qCalc({ ...CANONICAL, book: "full", vat: "we" }, PROMO_ON);
-    if (r.refer) throw new Error("unpriceable");
-    expect(line(r, "VAT returns")?.v).toBe(45);
-  });
-
-  it("unlocks VAT returns once an accounting review is added", () => {
-    const r = qCalc({ ...CANONICAL, book: "self", review: "quarter", vat: "we" }, PROMO_ON);
+    const r = qCalc({ ...CANONICAL, book: "managed", vat: "we" }, PROMO_ON);
     if (r.refer) throw new Error("unpriceable");
     expect(line(r, "VAT returns")?.v).toBe(45);
   });

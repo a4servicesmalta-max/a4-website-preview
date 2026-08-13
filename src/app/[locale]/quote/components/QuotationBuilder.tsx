@@ -11,13 +11,13 @@ import {
   type QuoteServiceId,
   type RevenueBandId,
 } from "@/lib/quotation";
+import { nextMonth } from "@/lib/accounting-fee";
+import { flagsForServiceSelection, independenceNotice } from "@/lib/independence";
 import {
-  submitWebsiteQuotation,
-  type QuoteCadence,
-  type QuoteLineItem,
-  type WebsiteQuoteResult,
-} from "@/lib/websiteQuotation";
-import { PRICING_GOV_NOTE } from "@/data/a4QuotePack";
+  MANAGED_ENTITY_OPTIONS,
+  PRICING_GOV_NOTE,
+  type ManagedEntity,
+} from "@/data/a4QuotePack";
 
 const panel: React.CSSProperties = {
   background: "var(--a4-surface-card)",
@@ -60,14 +60,20 @@ export function QuotationBuilder() {
   const [regNo, setRegNo] = useState("");
   const [industry, setIndustry] = useState<string>(QUOTE_INDUSTRIES[5]);
   const [revenueBand, setRevenueBand] = useState<RevenueBandId>("100k-500k");
-  const [overdueYears, setOverdueYears] = useState(0);
+  const [entity, setEntity] = useState<ManagedEntity>("company");
+  // Earlier months that still need doing. This used to be `overdueYears`
+  // because catch-up was capped per year; it is now priced per month at the
+  // monthly rate, so months are the honest unit and the picker offers them.
+  const [catchUpMonths, setCatchUpMonths] = useState(0);
+  // Required. Suggested as next month, never assumed — a wrong start month
+  // silently changes which months are catch-up.
+  const [startMonth, setStartMonth] = useState<string>(() => nextMonth());
   const [services, setServices] = useState<Set<QuoteServiceId>>(() => new Set(["accounts", "vat"] as QuoteServiceId[]));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ pdfBase64: string; pdfName: string } | null>(null);
-  const [quoteSent, setQuoteSent] = useState<WebsiteQuoteResult | null>(null);
 
   const quote = useMemo(
     () =>
@@ -77,10 +83,28 @@ export function QuotationBuilder() {
         industry,
         revenueBand,
         services: [...services],
-        overdueYears,
+        entity,
+        catchUpMonths,
+        startMonth,
       }),
-    [company, regNo, industry, revenueBand, services, overdueYears]
+    [company, regNo, industry, revenueBand, services, entity, catchUpMonths, startMonth]
   );
+
+  /**
+   * IESBA routing. `accounts` here IS managed bookkeeping, so choosing it
+   * rules A4 out as auditor and choosing `audit` rules us out of the books.
+   * Mapped onto the same service ids the request form uses, so both surfaces
+   * set the flag by the same rule.
+   */
+  const independence = useMemo(
+    () =>
+      flagsForServiceSelection([
+        ...(services.has("accounts") ? ["Bookkeeping"] : []),
+        ...(services.has("audit") ? ["Audit & Annual Accounts"] : []),
+      ]),
+    [services]
+  );
+  const independenceText = independenceNotice(independence.route);
 
   const toggle = (id: QuoteServiceId) =>
     setServices((prev) => {
@@ -96,50 +120,35 @@ export function QuotationBuilder() {
     if (!company.trim()) return setError("Enter your company name.");
     if (!name.trim()) return setError("Enter your name.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError("Enter a valid email address.");
+    if (!startMonth) return setError("Choose the month we should start from.");
+    // Both sides of the independence rule at once. A person settles which one
+    // A4 takes before any figure is put in writing.
+    if (independence.route === "conflict") return setError(independenceText ?? "");
     setBusy(true);
     try {
       const res = await fetch("/api/quotation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, company, regNo, industry, revenueBand, services: [...services], overdueYears }),
+        body: JSON.stringify({
+          name, email, company, regNo, industry, revenueBand,
+          services: [...services], entity, catchUpMonths, startMonth,
+          auditEligible: independence.auditEligible,
+          bookkeepingEligible: independence.bookkeepingEligible,
+        }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Something went wrong.");
       setDone({ pdfBase64: data.pdfBase64, pdfName: data.pdfName });
       download(data.pdfBase64, data.pdfName);
 
-      // Also raise a real quotation in the portal, so the prospect gets the
-      // emailed, acceptable quote and can see it once they have an account.
-      // Separate pipeline from /api/quotation, which feeds the leads inbox.
-      const monthly = quote.lines
-        .filter((l) => l.display.includes("/ month"))
-        .reduce((s, l) => s + (l.annualEur ?? 0) / 12, 0);
-      const yearly = quote.lines
-        .filter((l) => l.display.includes("/ year"))
-        .reduce((s, l) => s + (l.annualEur ?? 0), 0);
-      const oneOff = quote.lines
-        .filter((l) => l.display.includes("one-off"))
-        .reduce((s, l) => s + (l.annualEur ?? 0), 0);
-      const cadenceOf = (display: string): QuoteCadence =>
-        display.includes("/ month") ? "monthly" : display.includes("/ year") ? "yearly" : "oneoff";
-      const lines: QuoteLineItem[] = quote.lines
-        .filter((l) => l.annualEur != null)
-        .map((l) => ({
-          label: l.name,
-          amount: cadenceOf(l.display) === "monthly" ? Math.round((l.annualEur as number) / 12) : (l.annualEur as number),
-          cadence: cadenceOf(l.display),
-        }));
-      setQuoteSent(
-        await submitWebsiteQuotation({
-          name,
-          email,
-          selections: { kind: "quote-builder", company, regNo, industry, revenueBand, services: [...services], overdueYears },
-          lines,
-          monthly: Math.round(monthly),
-          yearly: Math.round(yearly),
-          oneOff: Math.round(oneOff),
-        })
-      );
+      // NOTE: this builder deliberately does NOT raise an instant portal
+      // quotation. It prices off a REVENUE band and its own baselines, which
+      // is not the `A4ServiceItem` basket the backend reprices — submitting it
+      // would fail the €1 / 1% tolerance check every time, producing a
+      // permanent 202 and a lead with a quote attached that nobody sent. The
+      // PDF plus the ops-portal record IS the deliverable here; the instant
+      // quotation lives on /pricing and the homepage calculator, which build
+      // real baskets.
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not generate the quotation.");
     } finally {
@@ -191,14 +200,40 @@ export function QuotationBuilder() {
                 </select>
               </div>
               <div>
-                <span style={label}>Years of overdue accounts</span>
-                <select value={overdueYears} onChange={(e) => setOverdueYears(Number(e.target.value))} style={{ ...field, cursor: "pointer" }}>
-                  {[0, 1, 2, 3, 4, 5].map((n) => (
-                    <option key={n} value={n}>
-                      {n === 0 ? "Up to date" : `${n} ${n === 1 ? "year" : "years"}`}
+                <span style={label}>Whose books *</span>
+                <select value={entity} onChange={(e) => setEntity(e.target.value as ManagedEntity)} style={{ ...field, cursor: "pointer" }}>
+                  {MANAGED_ENTITY_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label} — {o.sub}
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <span style={label}>Start from *</span>
+                <input
+                  type="month"
+                  value={startMonth}
+                  onChange={(e) => setStartMonth(e.target.value)}
+                  style={{ ...field, cursor: "pointer" }}
+                  aria-label="From which month should we start?"
+                />
+                <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                  The first month we keep the books. Anything before it is catch-up.
+                </span>
+              </div>
+              <div>
+                <span style={label}>Earlier months that still need doing</span>
+                <select value={catchUpMonths} onChange={(e) => setCatchUpMonths(Number(e.target.value))} style={{ ...field, cursor: "pointer" }}>
+                  {[0, 1, 2, 3, 6, 9, 12, 18, 24, 36].map((n) => (
+                    <option key={n} value={n}>
+                      {n === 0 ? "None — up to date" : `${n} ${n === 1 ? "month" : "months"}`}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                  Charged at the same monthly rate — no catch-up premium, no cap.
+                </span>
               </div>
             </div>
 
@@ -242,6 +277,25 @@ export function QuotationBuilder() {
                   );
                 })}
               </div>
+              {independenceText ? (
+                <div
+                  role="note"
+                  style={{
+                    marginTop: 12,
+                    padding: "12px 14px",
+                    borderRadius: "var(--a4-r-md)",
+                    background: independence.route === "conflict" ? "#FFF7E9" : "rgba(73,79,223,.06)",
+                    border: `1px solid ${independence.route === "conflict" ? "#E8D2A4" : "rgba(73,79,223,.25)"}`,
+                  }}
+                >
+                  <span style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: independence.route === "conflict" ? "#8A6100" : "var(--a4-primary-deep)" }}>
+                    Independence
+                  </span>
+                  <span style={{ display: "block", marginTop: 4, fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
+                    {independenceText}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </Reveal>
 
@@ -275,19 +329,12 @@ export function QuotationBuilder() {
                   <Icon name="check" size={22} color="var(--a4-accent-teal)" stroke={2.4} />
                 </span>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 14.5, color: "var(--a4-ink)", margin: "12px 0 0", fontWeight: 600 }}>
-                  {quoteSent && quoteSent.status !== "error"
-                    ? quoteSent.message
-                    : "Your quotation has downloaded — and our team has it too."}
+                  Your quotation has downloaded — and our team has it too.
                 </p>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)", margin: "6px 0 0" }}>
                   Prefer to talk it through? Request information and our team will follow up with next steps.
                 </p>
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 14 }}>
-                  {quoteSent && quoteSent.status === "quoted" ? (
-                    <Button variant="dark" size="md" href={quoteSent.portalHref} target="_blank">
-                      Create your account <Icon name="arrow-right" size={15} color="#fff" />
-                    </Button>
-                  ) : null}
                   <Button variant="dark" size="md" href="/contact">
                     Request information <Icon name="arrow-right" size={15} color="#fff" />
                   </Button>

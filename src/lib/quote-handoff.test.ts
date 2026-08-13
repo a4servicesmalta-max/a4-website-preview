@@ -8,18 +8,17 @@ const quote: QuotePayload = {
   service: "Accounting & bookkeeping",
   headline: "€184 / month + €180 one-off",
   lines: [
-    { k: "Bookkeeper plan", v: "€39 /mo" },
+    { k: "Managed bookkeeping · Company", v: "€49 /mo" },
     { k: "Bookkeeping by us", v: "€99 /mo" },
     { k: "Payroll · 2 × €32", v: "€64 /mo" },
     { k: "Catch-up · 6 months", v: "€150 one-off" },
   ],
-  services: ["A4 Books Bookkeeper plan + full bookkeeping by A4", "Payroll for 2 people", "VAT returns (Yes — Article 10)"],
+  services: ["Managed bookkeeping — Company", "Payroll for 2 people", "VAT returns (Yes — Article 10)"],
   answers: [
     { k: "Sector", v: "Shop, trade or services" },
     { k: "Transactions / month", v: "20 to 60" },
     { k: "Risk tier", v: "Standard" },
   ],
-  plan: "Bookkeeper",
   note: "25% launch discount already applied. All fees exclude VAT.",
   clientNotes: "We also have a Dutch subsidiary.",
 };
@@ -54,19 +53,19 @@ describe("quote handoff", () => {
     expect(quoteToText({ ...quote, clientNotes: "   " }, contact, ref)).not.toContain("CLIENT NOTES");
   });
 
-  it("hands the signup the reference, the contact and the plan", () => {
+  it("hands the signup the reference and the contact, and no plan", () => {
     const url = new URL(booksSignupUrl(quote, contact, ref));
     expect(url.origin + url.pathname).toBe("https://books.vacei.com/signup");
     expect(url.searchParams.get("ref")).toBe(ref);
     expect(url.searchParams.get("email")).toBe(contact.email);
     expect(url.searchParams.get("company")).toBe(contact.company);
-    expect(url.searchParams.get("plan")).toBe("bookkeeper");
     expect(url.searchParams.get("source")).toBe("a4-accounting");
   });
 
   it("never emits an empty prefill parameter", () => {
     const bare = { name: "", company: "", email: "", phone: "" };
-    const url = new URL(booksSignupUrl({ ...quote, plan: undefined }, bare, ref));
+    // `plan` is retired with the software ladder — it must never come back.
+    const url = new URL(booksSignupUrl(quote, bare, ref));
     ["email", "name", "company", "plan"].forEach((k) => expect(url.searchParams.has(k)).toBe(false));
   });
 

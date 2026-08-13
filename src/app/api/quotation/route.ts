@@ -20,13 +20,20 @@ export async function POST(req: NextRequest) {
     const services = (Array.isArray(b.services) ? b.services : []).filter((s: string) =>
       VALID_SERVICES.includes(s as QuoteServiceId)
     ) as QuoteServiceId[];
-    const overdueYears = Number(b.overdueYears) || 0;
+    // Months, not years — see QuoteInput.catchUpMonths. `overdueYears` is
+    // still read so an in-flight POST from a cached page prices something
+    // rather than silently pricing zero catch-up.
+    const catchUpMonths = Number(b.catchUpMonths) || (Number(b.overdueYears) || 0) * 12;
+    const entity = b.entity === "sole" ? "sole" : "company";
+    const startMonth = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(b.startMonth || "")) ? String(b.startMonth) : "";
 
     if (!company) return NextResponse.json({ error: "Company name is required." }, { status: 400 });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
     if (services.length === 0) return NextResponse.json({ error: "Select at least one service." }, { status: 400 });
+    // A quote whose start month is unknown cannot say which months are catch-up.
+    if (!startMonth) return NextResponse.json({ error: "Tell us which month we should start from." }, { status: 400 });
 
-    const input: QuoteInput = { company, regNo, industry, revenueBand, services, overdueYears };
+    const input: QuoteInput = { company, regNo, industry, revenueBand, services, entity, catchUpMonths, startMonth };
     const quote = buildQuote(input);
 
     // Lead is captured regardless of what the visitor does with the PDF.

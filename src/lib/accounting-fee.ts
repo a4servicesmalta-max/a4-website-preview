@@ -1,21 +1,23 @@
 /**
- * Bookkeeping / accounting monthly price engine — the calculator on
- * /accounting, ported from the "A4 Accounting" design (A4 New pages.zip →
- * A4 Accounting.dc.html).
+ * Managed bookkeeping monthly price engine — the calculator on
+ * /accounting-services.
  *
- * Every figure comes from `src/data/a4QuotePack.ts`. Two rules deliberately
- * follow the pack rather than the design mock, because the pack is the firm's
- * dated price list and the mock is a visual:
- *   - catch-up is €25/mo capped at €240/yr (pack), not `max(35, base×0.55)`;
- *   - VAT art. 11 is a flat yearly declaration and art. 12 is 60% of the
- *     art. 10 band price (pack), where the mock charged art. 10 for all three.
+ * Every figure comes from `src/data/a4QuotePack.ts`. Pack
+ * mt-2026-08-14-managed removed the three-route choice this engine used to
+ * offer (software only / software + our review / we do it): there is one
+ * service now, A4 keeps the books, and the only thing that moves the
+ * bookkeeping price is whether the books belong to a company or to a
+ * self-employed person. Catch-up months cost the same as current months.
+ *
+ * VAT still follows the pack rather than the old design mock: art. 11 is a
+ * flat yearly declaration and art. 12 is 60% of the art. 10 band price.
  */
 
 import {
-  TXN_BANDS, RISK_TIERS, BOOKKEEPING_MONTHLY, VAT_MONTHLY, VAT_RULES, ACCOUNTING_REVIEW,
-  PAYROLL_PER_HEAD, payrollRate, EXTRA_BANK_MONTHLY, CATCH_UP, SOFTWARE_TIERS,
-  SOFTWARE_TIER_BY_BAND, SOFTWARE_TIER_LABELS, LAUNCH_PROMO, isPromoActive, roundEur, sectorTier,
-  type TxnBand, type RiskTier,
+  TXN_BANDS, RISK_TIERS, VAT_MONTHLY, VAT_RULES,
+  PAYROLL_PER_HEAD, payrollRate, LAUNCH_PROMO, isPromoActive, roundEur, sectorTier,
+  MANAGED_ENTITY_LABELS, MANAGED_ENTITY_OPTIONS, catchUpAmount, catchUpLabel, managedMonthly,
+  type TxnBand, type RiskTier, type ManagedEntity,
 } from "@/data/a4QuotePack";
 
 // The sector list is pack data — one definition for every calculator.
@@ -23,12 +25,8 @@ export { SECTORS } from "@/data/a4QuotePack";
 
 export const TXN = TXN_BANDS.map((b) => ({ id: b.id, label: b.label, sub: b.hint }));
 
-export type RouteId = "self" | "review" | "full";
-export const ROUTES: { id: RouteId; label: string; sub: string }[] = [
-  { id: "self", label: "Just the software", sub: "you approve, we stay out" },
-  { id: "review", label: "Software + our review", sub: "you keep them, we check" },
-  { id: "full", label: "You upload, we do it", sub: "hands off entirely" },
-];
+/** Whose books these are. Replaces the retired `RouteId` self/review/full. */
+export const ENTITIES = MANAGED_ENTITY_OPTIONS;
 
 export type VatRegId = "none" | "art10" | "art11" | "art12";
 export const VAT_REG: { id: VatRegId; label: string; sub: string }[] = [
@@ -38,24 +36,33 @@ export const VAT_REG: { id: VatRegId; label: string; sub: string }[] = [
   { id: "art12", label: "Article 12", sub: "EU acquisitions" },
 ];
 
+/**
+ * Earlier months that still need doing. THE one "how far behind are you"
+ * vocabulary on this site: a count of MONTHS, priced at the monthly rate.
+ * `/quote`'s builder converts its whole-year answer into this, and the
+ * homepage wizard's `behind` uses the same ids.
+ */
 export const BEHIND: { id: string; label: string; sub: string }[] = [
-  { id: "0", label: "Up to date", sub: "" },
+  { id: "0", label: "Up to date", sub: "nothing to catch up" },
   { id: "3", label: "3 months", sub: "behind" },
   { id: "6", label: "6 months", sub: "behind" },
   { id: "12", label: "1 year", sub: "behind" },
-  { id: "24", label: "2 years +", sub: "behind" },
+  { id: "24", label: "2 years", sub: "behind" },
+  { id: "36", label: "3 years +", sub: "behind" },
 ];
 
-export const STEPS = ["What you do", "Volume", "Who keeps them", "Payroll", "VAT", "Up to date?", "Your price"];
+export const STEPS = ["What you do", "Whose books", "Payroll", "VAT", "Start month", "Earlier months", "Your price"];
 
 export type AccountingInput = {
   sector: string;
   txn: TxnBand;
-  banks: number;
-  route: RouteId;
+  entity: ManagedEntity;
   head: number;
   vatreg: VatRegId;
+  /** Whole months of backlog, as a string id from BEHIND. */
   behind: string;
+  /** `YYYY-MM` — the first month in scope. Required before any figure is final. */
+  startMonth: string;
 };
 
 export type Line = { k: string; v: number };
@@ -75,7 +82,8 @@ export type AccountingQuote =
       monthlyNet: number;
       oneOffNet: number;
       discountPct: number;
-      softwareTier: string;
+      /** Client-facing name for the entity the price was set by. */
+      entityLabel: string;
     };
 
 export const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB");
@@ -91,32 +99,19 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   const monthly: Line[] = [];
   const oneOff: Line[] = [];
 
-  // The software plan itself is risk-independent — same product either way.
-  const tierKey = SOFTWARE_TIER_BY_BAND[s.txn];
-  const softwareTier = SOFTWARE_TIER_LABELS[tierKey];
-  monthly.push({ k: `${softwareTier} plan`, v: SOFTWARE_TIERS[tierKey] });
-
-  const base = BOOKKEEPING_MONTHLY[s.txn];
-  if (s.route === "review" && base > 0) {
-    monthly.push({ k: "Accounting review", v: Math.max(ACCOUNTING_REVIEW.month.minEur, base * ACCOUNTING_REVIEW.month.shareOfBook) * rm });
-  }
-  if (s.route === "full" && base > 0) {
-    monthly.push({ k: "Bookkeeping by us", v: base * rm });
-  }
-
-  const extraBanks = Math.max(0, s.banks - 1);
-  if (extraBanks > 0 && s.route !== "self") {
-    const rate = s.route === "full" ? EXTRA_BANK_MONTHLY.bookFull : EXTRA_BANK_MONTHLY.selfWithReview;
-    monthly.push({ k: `Bank accounts · ${extraBanks} extra`, v: extraBanks * rate * rm });
-  }
+  // Managed bookkeeping — flat, and deliberately NOT × rm. The sector loading
+  // applies to the compliance work below it, not to keeping the books.
+  const entity: ManagedEntity = s.entity === "sole" ? "sole" : "company";
+  const entityLabel = MANAGED_ENTITY_LABELS[entity];
+  monthly.push({ k: `Managed bookkeeping · ${entityLabel}`, v: managedMonthly(entity) });
 
   if (s.head > 0) {
     const rate = payrollRate(s.head);
     monthly.push({ k: `Payroll · ${s.head} × ${euro(rate)}`, v: s.head * rate * rm });
   }
 
-  // VAT: we only file it when we are in the books at all.
-  if (s.vatreg !== "none" && s.route !== "self") {
+  // VAT is built from a ledger we have worked, which is now always the case.
+  if (s.vatreg !== "none") {
     if (s.vatreg === "art11") {
       // One flat yearly declaration — shown as its monthly share so the
       // "your monthly price" figure stays honest.
@@ -128,13 +123,11 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
     }
   }
 
+  // Earlier months, at the same monthly rate. No cap, no premium, and no
+  // launch discount — it is a one-off. The label is the wire-contract form.
   const months = parseInt(s.behind, 10) || 0;
   if (months > 0) {
-    const perMonth = s.route === "self" ? CATCH_UP.selfPerMonth : CATCH_UP.fullPerMonth * rm;
-    const uncapped = months * perMonth;
-    // Full service caps per year behind, so a long backlog never runs away.
-    const cap = s.route === "self" ? Infinity : Math.ceil(months / 12) * CATCH_UP.fullPerYearCap * rm;
-    oneOff.push({ k: `Catch-up · ${months} months`, v: Math.min(uncapped, cap) });
+    oneOff.push({ k: catchUpLabel(months, entity), v: catchUpAmount(months, entity) });
   }
 
   const sum = (a: Line[]) => a.reduce((t, l) => t + l.v, 0);
@@ -150,24 +143,45 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
     monthlyFull,
     oneOffFull,
     monthlyNet: roundEur(monthlyFull * (1 - discountPct)),
-    oneOffNet: roundEur(oneOffFull * (1 - discountPct)),
+    // One-offs are NOT discounted (pack rule). Catch-up is a one-off, so the
+    // net and full figures are the same — kept as a field so callers that
+    // render "one-off net" do not have to know the rule.
+    oneOffNet: oneOffFull,
     discountPct,
-    softwareTier,
+    entityLabel,
   };
 }
 
 /** Plain-language recap of what the client just configured. */
 export function accountingSummary(s: AccountingInput, q: AccountingQuote): string {
   if (q.refer) return "Your sector needs a short call with a director before we put a number on it — usually the same day.";
-  const bits: string[] = [];
-  bits.push(
-    s.route === "self" ? `you run the ${q.softwareTier} plan yourself`
-      : s.route === "review" ? "you keep the books and we review them"
-      : "you upload and we do the bookkeeping",
-  );
+  const bits: string[] = ["you send us the paperwork and we keep the books"];
   if (s.head > 0) bits.push(`we run payroll for ${s.head}`);
-  if (s.vatreg !== "none" && s.route !== "self") bits.push("we file your VAT");
+  if (s.vatreg !== "none") bits.push("we file your VAT");
   const months = parseInt(s.behind, 10) || 0;
-  if (months > 0) bits.push(`we catch up ${months} months first`);
-  return `So: ${bits.join(", ")} — ${euro(q.monthlyNet)} a month${q.oneOffFull > 0 ? `, plus ${euro(q.oneOffNet)} one-off to get current` : ""}${q.discountPct > 0 ? ", with the launch discount applied" : ""}.`;
+  if (months > 0) bits.push(`we do the ${months} earlier months first`);
+  const start = s.startMonth ? `, starting ${formatStartMonth(s.startMonth)}` : "";
+  return `So: ${bits.join(", ")}${start} — ${euro(q.monthlyNet)} a month${q.oneOffFull > 0 ? `, plus ${euro(q.oneOffNet)} once for the earlier months` : ""}${q.discountPct > 0 ? ", with the launch discount applied" : ""}.`;
+}
+
+/** `2026-09` → `September 2026`. Empty in, empty out — never invent a month. */
+export function formatStartMonth(v: string): string {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(v)) return "";
+  const [y, m] = v.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-MT", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * The month after this one, as `YYYY-MM` — the sensible DEFAULT SUGGESTION for
+ * a start-month picker. It is only a suggestion: the field is still required
+ * and the visitor must confirm it, because a wrong start month silently
+ * changes what is and is not a catch-up month.
+ */
+export function nextMonth(now: Date = new Date()): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
