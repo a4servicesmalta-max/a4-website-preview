@@ -3,7 +3,11 @@
 import React, { useState } from "react";
 import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { AuditEstimator } from "./AuditEstimator";
-import { FSReview } from "./FSReview";
+// NOTE: `./FSReview` was imported here but has never existed — no file on disk,
+// no history in any branch, not gitignored. The import has been present since
+// the "pages added" commit, so this module has never typechecked and
+// /audit-services has never built from this repo. Removed 2026-08-13 so the
+// build passes; nothing is lost, because the section could never have rendered.
 // services, process, overdue check, FAQ, final CTA, footer. Reuses Primitives
 // and HeroFX from the main app.
 
@@ -235,7 +239,6 @@ export function AuditApp() {
       {/* <AuditNav /> */}
       <main>
         <AuditHero />
-        <FSReview />
         <WhyMalta />
         <AuditEstimator />
         <AuditServices />
