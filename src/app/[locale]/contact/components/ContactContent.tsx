@@ -8,6 +8,7 @@ import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePor
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONES } from "@/lib/contact";
 import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
 import { trackConversion } from "@/lib/analytics";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 function ContactForm() {
   const [f, setF] = useState({ name: "", email: "", message: "" });
@@ -33,10 +34,12 @@ function ContactForm() {
 
     setIsSubmitting(true);
     try {
+      const captchaToken = await getCaptchaToken("contact");
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          captchaToken,
           name: f.name,
           email: f.email,
           message: f.message,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { issueChallenge } from "@/lib/email-verify";
+import { captchaGate } from "@/lib/turnstileServer";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,11 @@ function getTransport() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = (await req.json()) as { email?: string };
+    const payload = (await req.json()) as { email?: string };
+    // The prime abuse target on this site: it mails a code to any address given.
+    const blocked = await captchaGate(payload, "verify-request", req);
+    if (blocked) return blocked;
+    const { email } = payload;
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }

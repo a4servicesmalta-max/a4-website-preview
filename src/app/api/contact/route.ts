@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
+import { captchaGate } from "@/lib/turnstileServer";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -22,6 +23,8 @@ function getTransport() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const blocked = await captchaGate(body, "contact", req);
+    if (blocked) return blocked;
     const {
       name,
       email,

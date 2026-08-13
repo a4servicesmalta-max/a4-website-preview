@@ -7,6 +7,7 @@ import {
   VAT_MONTHLY, VAT_RULES, AUDIT_FROM, TAX_RETURN_FROM,
   PAYROLL_ENTRY_RATE, PAYROLL_BEST_RATE, payrollRate, PRICING_VAT_NOTE,
 } from "@/data/a4QuotePack";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 // Pick a bookkeeping tier + add-ons → live monthly price → two exits:
 // (1) Create account & request services, (2) Book a 15-min call.
 
@@ -116,10 +117,12 @@ export function LandingPlan() {
     setSubmitting(true); setSubmitError("");
     const ref = "A4-" + crypto.randomUUID().slice(0, 6).toUpperCase();
     try {
+      const captchaToken = await getCaptchaToken("contact");
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          captchaToken,
           name: form.name,
           email: form.email,
           subject: `Bookkeeping call booking — ${form.name}`,

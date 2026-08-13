@@ -3,6 +3,7 @@ import { useState } from "react";
 import { FindingsList } from "./FindingsList";
 import { Field, primaryBtn, outlineBtn, type Contact } from "./Field";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 type AccountingResponse = {
   company?: string;
@@ -62,7 +63,8 @@ export function DeepReview({
   async function sendCode() {
     setVBusy(true); setVErr(""); setDevCode("");
     try {
-      const r = await fetch("/api/verify/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: contact.email }) });
+      const captchaToken = await getCaptchaToken("verify-request");
+      const r = await fetch("/api/verify/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ captchaToken, email: contact.email }) });
       const b = await r.json();
       if (!r.ok) { setVErr(b.error || "Could not send a code."); return; }
       // Server tells us whether the email actually went out — never claim "sent" when it didn't.
@@ -97,6 +99,8 @@ export function DeepReview({
     } else {
       fd.append("file", file); fd.append("kind", "fs");
     }
+    const captchaToken = await getCaptchaToken(path === "accounting" ? "accounting-health" : "fs-gap-review");
+    if (captchaToken) fd.append("captchaToken", captchaToken);
     try {
       const res = await fetch(url, { method: "POST", body: fd });
       const body = await res.json();

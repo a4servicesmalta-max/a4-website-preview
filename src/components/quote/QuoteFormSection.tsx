@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import GradientContainer from "@/components/common/GradientContainer";
 import BoxShadow from "@/components/common/BoxShadow";
 import FormStatusModal from "@/components/common/FormStatusModal";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 const QuoteFormSection = () => {
   const [formData, setFormData] = useState({
@@ -62,10 +63,12 @@ const QuoteFormSection = () => {
     setSubmitError(null);
 
     try {
+      const captchaToken = await getCaptchaToken("quote");
       const res = await fetch("/api/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          captchaToken,
           ...formData,
         }),
       });

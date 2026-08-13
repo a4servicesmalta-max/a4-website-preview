@@ -47,6 +47,7 @@ import {
   type QuoteCadence,
   type WebsiteQuoteResult,
 } from "@/lib/websiteQuotation";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 const prEuro = (n: number) => "€" + Math.round(n).toLocaleString();
 
@@ -352,10 +353,11 @@ export function ServiceQuoteCalculator({ pdf = false }: ServiceQuoteCalculatorPr
     setPdfBusy(true);
     setPdfError("");
     try {
+      const captchaToken = await getCaptchaToken("quotation");
       const res = await fetch("/api/quotation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, company, items, risk }),
+        body: JSON.stringify({ captchaToken, name, email, company, items, risk }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Something went wrong.");

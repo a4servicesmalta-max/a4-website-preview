@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Icon, Reveal } from "@/components/a4-landing/Primitives";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 export function CalendarDownloadForm() {
   const [email, setEmail] = useState("");
@@ -18,10 +19,11 @@ export function CalendarDownloadForm() {
     setStatus("loading");
     setError("");
     try {
+      const captchaToken = await getCaptchaToken("lead-magnet");
       const res = await fetch("/api/lead-magnet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, magnet: "compliance-calendar-2026" }),
+        body: JSON.stringify({ captchaToken, email, magnet: "compliance-calendar-2026" }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

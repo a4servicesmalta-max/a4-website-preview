@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
+import { captchaGate } from "@/lib/turnstileServer";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -29,10 +30,14 @@ export async function POST(req: NextRequest) {
     let message: string | undefined;
     let meta: any;
     let attachments: { filename: string; content: Buffer }[] = [];
+    // Whichever shape the request arrived in, this holds the thing the CAPTCHA
+    // token has to be read out of — see the single gate after the branches.
+    let captchaSource: unknown;
 
     if (contentType.includes("multipart/form-data")) {
       // Handle multipart requests (homepage ProcessStepsSection with file uploads)
       const form = await req.formData();
+      captchaSource = form;
       name = form.get("name")?.toString();
       email = form.get("email")?.toString();
       subject =
@@ -65,6 +70,7 @@ export async function POST(req: NextRequest) {
     } else {
       // Handle existing JSON-based quote forms (e.g. /quote page)
       const body = await req.json();
+      captchaSource = body;
       ({
         name,
         email,
@@ -79,6 +85,9 @@ export async function POST(req: NextRequest) {
         meta?: any;
       });
     }
+
+    const blocked = await captchaGate(captchaSource, "quote", req);
+    if (blocked) return blocked;
 
     if (!email || !name) {
       return NextResponse.json(

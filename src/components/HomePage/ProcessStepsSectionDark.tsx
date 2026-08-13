@@ -6,6 +6,7 @@ import { SERVICE_TYPE_OPTIONS } from "@/data/serviceRequestForms"
 import { cn } from "@/lib/utils"
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links"
 import { SectionTitleHero } from "@/components/HomePage/SectionTitleHero"
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 type FormData = {
   name: string
@@ -196,6 +197,9 @@ const ProcessStepsSectionDark = ({ isDark = false }: { isDark?: boolean }) => {
       form.append("metaJson", JSON.stringify(payloadMeta))
 
       setIsSubmitting(true)
+
+      const captchaToken = await getCaptchaToken("quote")
+      if (captchaToken) form.append("captchaToken", captchaToken)
 
       const res = await fetch("/api/quote", {
         method: "POST",

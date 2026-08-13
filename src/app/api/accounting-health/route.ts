@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { isVerified } from "@/lib/email-verify";
 import { pushToPortal } from "@/lib/portal";
 import { engineFetch } from "@/lib/fs-review-engine";
+import { captchaGate } from "@/lib/turnstileServer";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -26,6 +27,8 @@ function okType(file: File, allowed: string[]) {
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
+    const blocked = await captchaGate(form, "accounting-health", req);
+    if (blocked) return blocked;
     const tb = form.get("tb");
     const gl = form.get("gl");
     const email = String(form.get("email") || "");

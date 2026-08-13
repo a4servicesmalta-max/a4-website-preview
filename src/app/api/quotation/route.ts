@@ -26,6 +26,7 @@ import {
   PRICING_VAT_NOTE,
 } from "@/data/a4QuotePack";
 import { euro, renderQuotationPdf } from "@/lib/quotation-pdf";
+import { captchaGate } from "@/lib/turnstileServer";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -63,6 +64,8 @@ function readItems(raw: unknown): A4Item[] {
 export async function POST(req: NextRequest) {
   try {
     const b = await req.json().catch(() => ({}));
+    const blocked = await captchaGate(b, "quotation", req);
+    if (blocked) return blocked;
     const name = String(b.name || "").slice(0, 120);
     const email = String(b.email || "").slice(0, 200);
     const company = String(b.company || "").slice(0, 160);
