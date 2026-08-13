@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { pushToPortal } from "@/lib/portal";
 import { buildQuote, REVENUE_BANDS, type QuoteInput, type QuoteServiceId } from "@/lib/quotation";
 import { renderQuotationPdf } from "@/lib/quotation-pdf";
+import { INDEPENDENCE_CONFLICT, independenceRoute } from "@/lib/independence";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -32,6 +33,19 @@ export async function POST(req: NextRequest) {
     if (services.length === 0) return NextResponse.json({ error: "Select at least one service." }, { status: 400 });
     // A quote whose start month is unknown cannot say which months are catch-up.
     if (!startMonth) return NextResponse.json({ error: "Tell us which month we should start from." }, { status: 400 });
+    // IESBA independence, enforced HERE and not only in the builder UI: this
+    // route can be called directly, and what it returns is a PDF. A downloaded
+    // quotation carrying a price for a combination A4 is barred from providing
+    // outlives anything on screen, so the basket is refused before it is
+    // priced, before the portal hears about it, and before a document exists.
+    // `accounts` IS managed bookkeeping and `audit` is the assurance side — the
+    // same two ids the builder maps onto the shared independence rule.
+    if (independenceRoute({
+      wantsBookkeeping: services.includes("accounts"),
+      wantsAudit: services.includes("audit"),
+    }) === "conflict") {
+      return NextResponse.json({ error: INDEPENDENCE_CONFLICT }, { status: 422 });
+    }
 
     const input: QuoteInput = { company, regNo, industry, revenueBand, services, entity, catchUpMonths, startMonth };
     const quote = buildQuote(input);
