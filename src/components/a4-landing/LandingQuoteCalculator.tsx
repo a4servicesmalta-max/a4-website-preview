@@ -145,7 +145,18 @@ export function qCalc(q: QState, now: Date = new Date()) {
   const tier = QTIERS[(QSECT.find((s) => s[0] === q.sector) || QSECT[0])[2]];
   const notes: Note[] = [];
   if (tier.note) notes.push(tier.note);
-  if (tier.refer) return { refer: true as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0 };
+  if (tier.refer) return { refer: true as const, conflict: false as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false };
+  // IESBA independence, settled BEFORE anything is priced — the same shape
+  // vacei.com uses, and for the same reason. A4 is not permitted to keep the
+  // books AND give assurance on them, so there is no such engagement to put a
+  // figure on: producing the figures and then hiding the send button would put
+  // a price on screen for something we cannot sell, and a number is what a
+  // visitor anchors on. `qAdvance` turns the assurance question on by default,
+  // so this is the path most homepage visitors take, not an edge case. The
+  // wizard asks which of the two is ours; either answer prices instantly.
+  if (q.book === "managed" && q.assure === "we") {
+    return { refer: false as const, conflict: true as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false };
+  }
   const rm = tier.mult;
   const entity: ManagedEntity = q.entity === "sole" ? "sole" : "company";
   const mo: Line[] = [], yr: Line[] = [], one: Line[] = [];
@@ -232,7 +243,7 @@ export function qCalc(q: QState, now: Date = new Date()) {
   if (promo && (grossMo > 0 || grossYr > 0)) notes.push(["ok", LAUNCH_PROMO.note]);
 
   return {
-    refer: false as const, mo, yr, one, notes,
+    refer: false as const, conflict: false as const, mo, yr, one, notes,
     moTot, yrTot, oneTot: sum(one),
     /** List prices, for the struck-through originals. */
     grossMo, grossYr, promoApplied: promo && (grossMo > 0 || grossYr > 0),
@@ -264,7 +275,10 @@ export function qRisk(q: QState): A4Risk {
  */
 export function qItems(q: QState): A4Item[] {
   const r = qCalc(q);
-  if (r.refer) return [];
+  // Nothing was priced, so there is nothing to submit. The conflict case is the
+  // load-bearing one: an empty basket is what keeps `canSend` false and what
+  // stops a quotation the server would refuse from ever leaving the page.
+  if (r.refer || r.conflict) return [];
   const all = [...r.mo, ...r.yr, ...r.one];
   const has = (n: string) => all.some((l) => l.n === n);
   const txn = q.txn as TxnBand;
@@ -654,6 +668,15 @@ export function LandingQuoteCalculator() {
                       <span style={{ minWidth: 78, textAlign: "right", fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, fontWeight: 600, color: "var(--a4-ink)" }}>{row.amt}</span>
                     </div>
                   ))}
+                  {/* Said here as well as on the quote step: switching the
+                      assurance row on next to the bookkeeping blanks every
+                      amount in the list above, and a column of dashes with no
+                      reason given reads as a bug. */}
+                  {r.conflict && (
+                    <p role="note" style={{ margin: "2px 0 0", padding: "11px 14px", borderRadius: 10, fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55, background: NOTE_STYLE.warn.bg, color: NOTE_STYLE.warn.fg, border: "1px solid " + NOTE_STYLE.warn.bc }}>
+                      The bookkeeping and the audit or review cannot both be ours — we cannot give assurance on books we keep ourselves. That is why the amounts have gone blank. Switch one of the two off, or carry on and the quote step gives you the choice.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -668,7 +691,9 @@ export function LandingQuoteCalculator() {
                   <p style={{ margin: "14px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.6, color: "var(--a4-body)" }}>
                     {r.refer
                       ? "We price most sectors instantly. This one needs a short conversation with a director before we put a number to it — usually the same day."
-                      : qSummarise(q)}
+                      : r.conflict
+                        ? "Nothing is priced yet. Tell us which of the two is ours and the itemised quote appears here, in full, straight away."
+                        : qSummarise(q)}
                   </p>
                   {(r.notes || []).map(([tone, text], i) => {
                     const s = NOTE_STYLE[tone] || NOTE_STYLE.info;
@@ -762,10 +787,13 @@ export function LandingQuoteCalculator() {
                   </>
                 )}
                 <span style={{ marginLeft: "auto", display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-mute)" }}>{r.refer ? "" : "Every month"}</span>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 18, fontWeight: 600, color: "var(--a4-ink)" }}>{r.refer ? "Let's talk first" : euro(r.moTot)}</span>
-                  {!r.refer && r.yrTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.yrTot) + " /yr"}</span>}
-                  {!r.refer && r.oneTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.oneTot) + " once"}</span>}
+                  {/* The running total is a figure too — it must go dark on a
+                      conflict as well, or the quote step shows nothing while
+                      the footer still quotes a monthly price. */}
+                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-mute)" }}>{r.refer || r.conflict ? "" : "Every month"}</span>
+                  <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 18, fontWeight: 600, color: "var(--a4-ink)" }}>{r.refer ? "Let's talk first" : r.conflict ? "One or the other" : euro(r.moTot)}</span>
+                  {!r.refer && !r.conflict && r.yrTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.yrTot) + " /yr"}</span>}
+                  {!r.refer && !r.conflict && r.oneTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.oneTot) + " once"}</span>}
                 </span>
               </div>
             </div>

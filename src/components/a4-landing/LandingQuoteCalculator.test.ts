@@ -16,8 +16,19 @@ import { qCalc, qItems, qRisk, qIndependence, qAdvance, Q_INIT, type QState } fr
 import { CAPITAL_BANDS, MBR_ANNUAL_RETURN, LAUNCH_PROMO, catchUpLabel } from "@/data/a4QuotePack";
 import { evaluateA4Items } from "@/lib/websiteQuotation";
 
-/** Where the wizard lands after eight Next clicks. */
-const CANONICAL: QState = { ...Q_INIT, step: 8, book: "managed", pay: "we", assure: "we", startMonth: "2026-09" };
+/**
+ * Where the wizard lands after eight Next clicks — and it is UNPRICEABLE: the
+ * defaults ask A4 both to keep the books and to give assurance on them, which
+ * independence forbids, so `qCalc` produces no figures at all. The visitor is
+ * asked which of the two is ours; the two fixtures below are the two answers.
+ */
+const DEFAULT_PATH: QState = { ...Q_INIT, step: 8, book: "managed", pay: "we", assure: "we", startMonth: "2026-09" };
+
+/** "Keep the bookkeeping with us" — the canonical priced basket. */
+const CANONICAL: QState = { ...DEFAULT_PATH, assure: "none" };
+
+/** "Take the audit or review with us" — pins the assurance side of the pack. */
+const ASSURED: QState = { ...DEFAULT_PATH, book: "none", vat: "none" };
 
 /** Fixed clocks — the launch promo expires by data, so tests must pin the day
  *  or every total below silently changes on 1 September 2026. */
@@ -34,7 +45,12 @@ describe("the canonical quote", () => {
     const after = qCalc(CANONICAL, PROMO_OFF);
     if (after.refer) throw new Error("unpriceable");
     expect(after.promoApplied).toBe(false);
-    expect([after.moTot, after.yrTot]).toEqual([113, 697]);
+    // Bookkeeping 49 + payroll 2 × 32 = 113/mo; MBR (our 50 + registry 100)/yr.
+    expect([after.moTot, after.yrTot]).toEqual([113, 150]);
+    // The assurance side, priced on its own: payroll 64/mo, review 547 + MBR 150.
+    const assured = qCalc(ASSURED, PROMO_OFF);
+    if (assured.refer) throw new Error("unpriceable");
+    expect([assured.moTot, assured.yrTot]).toEqual([64, 697]);
   });
 
   it("defaults to a company's books and the €1,500 capital band", () => {
@@ -45,14 +61,24 @@ describe("the canonical quote", () => {
 
   it("holds the pinned totals", () => {
     if (r.refer) throw new Error("the canonical path must be priceable");
-    // List: bookkeeping 49 (flat) + payroll 2 × 32 = 113/mo; review engagement
-    // 547 + MBR (our 50 + registry 100) = 697/yr. Onboarding is UNPRICED.
+    // List: bookkeeping 49 (flat) + payroll 2 × 32 = 113/mo; MBR (our 50 +
+    // registry 100) = 150/yr. Onboarding is UNPRICED.
     expect(r.grossMo).toBe(113);
-    expect(r.grossYr).toBe(697);
+    expect(r.grossYr).toBe(150);
     // As quoted, with the 25% launch discount and the registry fee exempt.
     expect(r.moTot).toBe(85); // 113 × 0.75 = 84.75 → 85
-    expect(r.yrTot).toBe(548); // (697 − 100) × 0.75 = 447.75 → 448, + 100
+    expect(r.yrTot).toBe(138); // (150 − 100) × 0.75 = 37.5 → 38, + 100
     expect(r.oneTot).toBe(0); // nothing one-off: onboarding carries no number
+  });
+
+  it("holds the pinned totals on the assurance side too", () => {
+    const a = qCalc(ASSURED, PROMO_ON);
+    if (a.refer) throw new Error("the assurance path must be priceable");
+    expect(a.grossMo).toBe(64);
+    expect(a.grossYr).toBe(697); // review 547 + MBR 150
+    expect(a.moTot).toBe(48); // 64 × 0.75
+    expect(a.yrTot).toBe(548); // (697 − 100) × 0.75 = 447.75 → 448, + 100
+    expect(line(a, "Review engagement (if applicable)")?.v).toBe(547);
   });
 
   it("does not put a number on onboarding, but does say it exists", () => {
@@ -154,12 +180,23 @@ describe("the basket we submit", () => {
     expect(qItems(CANONICAL)).toEqual([
       { service: "bookkeeping-managed", entity: "company" },
       { service: "payroll", heads: 2 },
-      { service: "audit", txn: "21-60", review: true },
       { service: "mbr", capital: "1500" },
       // Unpriced, but IN the basket — it is what makes the backend name
       // onboarding in `unpricedItems` and say so in the quotation.
       { service: "onboarding" },
     ]);
+  });
+
+  it("carries the review engagement when the assurance side is the one we keep", () => {
+    expect(qItems(ASSURED)).toEqual([
+      { service: "payroll", heads: 2 },
+      { service: "audit", txn: "21-60", review: true },
+      { service: "mbr", capital: "1500" },
+      { service: "onboarding" },
+    ]);
+    // Big company at heavy volume is a FULL audit, and says so.
+    expect(qItems({ ...ASSURED, size: "big", txn: "401-1000" }))
+      .toContainEqual({ service: "audit", txn: "401-1000" });
   });
 
   it("names onboarding on the wire whenever it names it on screen", () => {
@@ -235,12 +272,21 @@ describe("IESBA independence", () => {
   });
 
   it("treats the review engagement as assurance, exactly as the server does", () => {
-    // The canonical path is a small company, so `assure: "we"` is a REVIEW —
-    // and a review is still an assurance engagement, so the books cannot also
-    // be ours. This assertion used to expect "bookkeeping", which is how the
+    // The default path is a small company, so `assure: "we"` is a REVIEW — and
+    // a review is still an assurance engagement, so the books cannot also be
+    // ours. This assertion used to expect "bookkeeping", which is how the
     // default homepage basket reached a server that refuses it.
-    expect(qIndependence(CANONICAL).route).toBe("conflict");
-    expect(evaluateA4Items(qItems(CANONICAL), qRisk(CANONICAL)).independenceConflict).toBe(true);
+    expect(qIndependence(DEFAULT_PATH).route).toBe("conflict");
+  });
+
+  it("puts NO figure on a conflict basket — not a line, not a total", () => {
+    const r = qCalc(DEFAULT_PATH, PROMO_ON);
+    expect(r.conflict).toBe(true);
+    expect([...r.mo, ...r.yr, ...r.one]).toEqual([]);
+    expect([r.moTot, r.yrTot, r.oneTot, r.grossMo, r.grossYr]).toEqual([0, 0, 0, 0, 0]);
+    expect(r.promoApplied).toBe(false);
+    // Nothing to submit either, so `canSend` (which needs items) stays false.
+    expect(qItems(DEFAULT_PATH)).toEqual([]);
   });
 
   /**
@@ -260,24 +306,45 @@ describe("IESBA independence", () => {
     // Nobody chose this: `next()` switches the assurance question on at step 6.
     expect(atQuote.assure).toBe("we");
     expect(atQuote.book).toBe("managed");
-    // …and at that size and volume it prices as a REVIEW, not a full audit.
-    expect(qCalc(atQuote, PROMO_OFF).yr?.some((l) => l.n === "Review engagement (if applicable)")).toBe(true);
     expect(qIndependence(atQuote).route).toBe("conflict");
     expect(qIndependence(atQuote).auditEligible).toBe(false);
     expect(qIndependence(atQuote).bookkeepingEligible).toBe(false);
-    // And the basket the send gate reads agrees.
-    expect(evaluateA4Items(qItems(atQuote), qRisk(atQuote)).independenceConflict).toBe(true);
-    // Dropping either side clears it, which is what the two buttons do.
-    expect(qIndependence({ ...atQuote, assure: "none" }).route).toBe("bookkeeping");
-    expect(qIndependence({ ...atQuote, book: "none", vat: "none" }).route).toBe("audit");
+    // Nothing is priced and nothing is submittable on that path.
+    const shown = qCalc(atQuote, PROMO_ON);
+    expect(shown.conflict).toBe(true);
+    expect([...shown.mo, ...shown.yr, ...shown.one]).toEqual([]);
+    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([0, 0, 0]);
+    expect(qItems(atQuote)).toEqual([]);
+
+    // Either button clears it AND prices immediately — the visitor is never
+    // denied a price, only asked one question first.
+    const keptBooks = { ...atQuote, assure: "none" };
+    expect(qIndependence(keptBooks).route).toBe("bookkeeping");
+    const kb = qCalc(keptBooks, PROMO_ON);
+    expect(kb.conflict).toBe(false);
+    expect(kb.moTot).toBeGreaterThan(0);
+    expect(qItems(keptBooks).length).toBeGreaterThan(0);
+    expect(evaluateA4Items(qItems(keptBooks), qRisk(keptBooks)).independenceConflict).toBe(false);
+
+    const tookAssurance = { ...atQuote, book: "none", vat: "none" };
+    expect(qIndependence(tookAssurance).route).toBe("audit");
+    const ta = qCalc(tookAssurance, PROMO_ON);
+    expect(ta.conflict).toBe(false);
+    // …and at that size and volume it prices as a REVIEW, not a full audit.
+    expect(ta.yr.some((l) => l.n === "Review engagement (if applicable)")).toBe(true);
+    expect(evaluateA4Items(qItems(tookAssurance), qRisk(tookAssurance)).independenceConflict).toBe(false);
   });
 
   it("flags the conflict when a full audit is asked for alongside the books", () => {
     // size "big" + heavy volume makes it a full audit, not a review.
-    const f = qIndependence({ ...CANONICAL, size: "big", txn: "401-1000", assure: "we" });
+    const q: QState = { ...CANONICAL, size: "big", txn: "401-1000", assure: "we" };
+    const f = qIndependence(q);
     expect(f.route).toBe("conflict");
     expect(f.auditEligible).toBe(false);
     expect(f.bookkeepingEligible).toBe(false);
+    // Full audit or review, the same silence: no figures either way.
+    expect(qCalc(q, PROMO_ON).conflict).toBe(true);
+    expect(qItems(q)).toEqual([]);
   });
 
   it("rules A4 out of the books for an audit-only enquiry", () => {
@@ -301,7 +368,7 @@ describe("what we show equals what we quote", () => {
     const engine = evaluateA4Items(items, qRisk(CANONICAL), PROMO_OFF);
     if (shown.refer) throw new Error("unpriceable");
     expect(engine.grossMonthly).toBe(shown.grossMo); // 113
-    expect(engine.grossYearly).toBe(shown.grossYr);  // 697 — includes our €50 MBR fee
+    expect(engine.grossYearly).toBe(shown.grossYr);  // 150 — includes our €50 MBR fee
     expect(engine.grossOneOff).toBe(shown.oneTot);   // 0
   });
 
@@ -310,11 +377,19 @@ describe("what we show equals what we quote", () => {
     if (shown.refer) throw new Error("unpriceable");
     expect(engine.promoApplied).toBe(true);
     expect(LAUNCH_PROMO.pct).toBe(0.25);
-    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([85, 548, 0]);
-    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([85, 548, 0]);
+    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([85, 138, 0]);
+    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([85, 138, 0]);
     const yearOne = (m: number, y: number, o: number) => m * 12 + y + o;
     expect(yearOne(shown.moTot, shown.yrTot, shown.oneTot))
       .toBe(yearOne(engine.monthly, engine.yearly, engine.oneOff));
+  });
+
+  it("agrees with the engine on the assurance side as well", () => {
+    const s = qCalc(ASSURED, PROMO_ON);
+    const engine = evaluateA4Items(qItems(ASSURED), qRisk(ASSURED), PROMO_ON);
+    if (s.refer) throw new Error("unpriceable");
+    expect([s.moTot, s.yrTot, s.oneTot]).toEqual([engine.monthly, engine.yearly, engine.oneOff]);
+    expect([engine.monthly, engine.yearly]).toEqual([48, 548]);
   });
 
   it("still agrees once the basket grows — canonical path plus VAT and catch-up", () => {
