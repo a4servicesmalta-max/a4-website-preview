@@ -283,7 +283,14 @@ export function evaluateA4Items(
 
   const has = (s: A4Item["service"]) => items.some((i) => i.service === s);
   const wantsBookkeeping = has("bookkeeping-managed") || has("catchup");
-  const wantsAudit = items.some((i) => i.service === "audit" && !i.review);
+  // A review engagement is an ASSURANCE engagement and carries the same
+  // independence requirement as a full audit — a firm cannot keep the books and
+  // then give assurance on them. So `review: true` is audit-side here, exactly
+  // as the portal's malta-pack treats it (`if (service === 'audit') wantsAudit
+  // = true`, no review check). This line used to exclude reviews, which meant
+  // the DEFAULT homepage basket — small company, review engagement, managed
+  // books — was passed as clean by the site and refused by the server.
+  const wantsAudit = has("audit");
 
   return {
     lines: priced.map(({ label, amount, cadence }) => ({ label, amount, cadence })),

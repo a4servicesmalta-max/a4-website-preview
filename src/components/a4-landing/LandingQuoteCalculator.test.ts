@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { qCalc, qItems, qRisk, qIndependence, Q_INIT, type QState } from "./LandingQuoteCalculator";
+import { qCalc, qItems, qRisk, qIndependence, qAdvance, Q_INIT, type QState } from "./LandingQuoteCalculator";
 import { CAPITAL_BANDS, MBR_ANNUAL_RETURN, LAUNCH_PROMO, catchUpLabel } from "@/data/a4QuotePack";
 import { evaluateA4Items } from "@/lib/websiteQuotation";
 
@@ -156,7 +156,20 @@ describe("the basket we submit", () => {
       { service: "payroll", heads: 2 },
       { service: "audit", txn: "21-60", review: true },
       { service: "mbr", capital: "1500" },
+      // Unpriced, but IN the basket — it is what makes the backend name
+      // onboarding in `unpricedItems` and say so in the quotation.
+      { service: "onboarding" },
     ]);
+  });
+
+  it("names onboarding on the wire whenever it names it on screen", () => {
+    const r = qCalc(CANONICAL, PROMO_OFF);
+    if (r.refer) throw new Error("unpriceable");
+    expect(r.notes.some(([, t]) => t.includes("Onboarding and opening balances"))).toBe(true);
+    expect(evaluateA4Items(qItems(CANONICAL), qRisk(CANONICAL), PROMO_OFF).hasUnpricedOnboarding).toBe(true);
+    // …and never when there is no labour to onboard for.
+    const nothing: QState = { ...CANONICAL, book: "none", pay: "none", assure: "none", vat: "none", taxret: "none", regoff: "none" };
+    expect(qItems(nothing).some((i) => i.service === "onboarding")).toBe(false);
   });
 
   it("never submits a retired software or banded-bookkeeping item", () => {
@@ -183,6 +196,7 @@ describe("the basket we submit", () => {
     expect(qItems(q)).toEqual([
       { service: "bookkeeping-managed", entity: "company" },
       { service: "mbr", capital: "1500" },
+      { service: "onboarding" },
     ]);
   });
 
@@ -220,9 +234,42 @@ describe("IESBA independence", () => {
     expect(f.route).toBe("bookkeeping");
   });
 
-  it("does not treat the review engagement as an audit", () => {
-    // The canonical path is a small company, so `assure: "we"` is a REVIEW.
-    expect(qIndependence(CANONICAL).route).toBe("bookkeeping");
+  it("treats the review engagement as assurance, exactly as the server does", () => {
+    // The canonical path is a small company, so `assure: "we"` is a REVIEW —
+    // and a review is still an assurance engagement, so the books cannot also
+    // be ours. This assertion used to expect "bookkeeping", which is how the
+    // default homepage basket reached a server that refuses it.
+    expect(qIndependence(CANONICAL).route).toBe("conflict");
+    expect(evaluateA4Items(qItems(CANONICAL), qRisk(CANONICAL)).independenceConflict).toBe(true);
+  });
+
+  /**
+   * The DEFAULT homepage journey, driven exactly as a visitor who answers
+   * nothing does: `Q_INIT` ships small/21-60/managed, and `next()` turns the
+   * assurance question on at step 6 when it is left alone. That path must be
+   * caught client-side, or the visitor is priced a basket the server refuses.
+   */
+  it("catches the conflict on the untouched default path", () => {
+    // Eight Next clicks from Q_INIT, touching nothing — the wizard's own
+    // transition function, not a restatement of it.
+    let atQuote: QState = { ...Q_INIT };
+    expect(atQuote.book).toBe("managed");
+    expect(atQuote.assure).toBe("none");
+    for (let i = 0; i < 8; i++) atQuote = { ...atQuote, ...qAdvance(atQuote, 8) };
+    expect(atQuote.step).toBe(8);
+    // Nobody chose this: `next()` switches the assurance question on at step 6.
+    expect(atQuote.assure).toBe("we");
+    expect(atQuote.book).toBe("managed");
+    // …and at that size and volume it prices as a REVIEW, not a full audit.
+    expect(qCalc(atQuote, PROMO_OFF).yr?.some((l) => l.n === "Review engagement (if applicable)")).toBe(true);
+    expect(qIndependence(atQuote).route).toBe("conflict");
+    expect(qIndependence(atQuote).auditEligible).toBe(false);
+    expect(qIndependence(atQuote).bookkeepingEligible).toBe(false);
+    // And the basket the send gate reads agrees.
+    expect(evaluateA4Items(qItems(atQuote), qRisk(atQuote)).independenceConflict).toBe(true);
+    // Dropping either side clears it, which is what the two buttons do.
+    expect(qIndependence({ ...atQuote, assure: "none" }).route).toBe("bookkeeping");
+    expect(qIndependence({ ...atQuote, book: "none", vat: "none" }).route).toBe("audit");
   });
 
   it("flags the conflict when a full audit is asked for alongside the books", () => {

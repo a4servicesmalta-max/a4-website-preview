@@ -71,13 +71,13 @@ export function independenceFlags(opts: {
  * relevant professional wording signs them off.
  */
 export const INDEPENDENCE_BOOKKEEPING =
-  "If we keep your books, we cannot also be your auditor. Independence rules do not allow the same firm to do both, so we would introduce you to an independent audit firm for the statutory audit.";
+  "If we keep your books, we cannot also give assurance on them — neither a statutory audit nor the lighter review engagement. Independence rules do not allow the same firm to do both, so we would introduce you to an independent firm for the audit or review.";
 
 export const INDEPENDENCE_AUDIT =
-  "If we act as your auditor, we cannot also keep your books. Independence rules do not allow the same firm to do both, so the bookkeeping would stay with you or with another firm.";
+  "If we give assurance on your figures — a statutory audit or a review engagement — we cannot also keep your books. Independence rules do not allow the same firm to do both, so the bookkeeping would stay with you or with another firm.";
 
 export const INDEPENDENCE_CONFLICT =
-  "You have asked for both bookkeeping and audit. We cannot provide both to the same client — independence rules do not allow it. Tell us which one you want from A4 and we will arrange the other with an independent firm. Nothing is priced until that is settled.";
+  "You have asked us both to keep the books and to give assurance on them. We cannot do both for the same client — independence rules do not allow it, and a review engagement carries the same requirement as a full audit. Tell us which one you want from A4 and we will arrange the other with an independent firm. Nothing is priced until that is settled.";
 
 export const INDEPENDENCE_HEADING = "One thing to know before you send this";
 

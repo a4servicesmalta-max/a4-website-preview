@@ -126,6 +126,19 @@ function qAuditIsReview(q: QState) {
   return (q.size === "small" || q.size === "unsure") && QT_BIG_VOL.indexOf(q.txn) === -1;
 }
 
+/**
+ * The assurance line NAMES what was priced. A small company is quoted a REVIEW
+ * ENGAGEMENT at 0.55× the audit fee, so a line reading "Financial audit" over
+ * that figure sold the wrong assurance level — vacei.com and the portal pack
+ * both use the pair below, verbatim, and now so does this wizard.
+ *
+ * These are wire-contract labels: `qItems` keys the basket off them and
+ * `lineAmt` looks the amount up by them. Reword either and the audit item is
+ * silently dropped from the submitted quote.
+ */
+const ASSURE_AUDIT_LABEL = "Financial audit (if applicable)";
+const ASSURE_REVIEW_LABEL = "Review engagement (if applicable)";
+
 /** `now` is injectable so the promo window can be pinned in tests, exactly as
  *  `evaluateA4Items` does — otherwise every assertion here flips on 1 Sep. */
 export function qCalc(q: QState, now: Date = new Date()) {
@@ -166,7 +179,7 @@ export function qCalc(q: QState, now: Date = new Date()) {
   if (q.assure === "we") {
     const bigVol = QT_BIG_VOL.indexOf(q.txn) !== -1;
     const review = qAuditIsReview(q);
-    yr.push({ n: "Financial audit", e: review ? "review engagement — the lighter option" : "full financial audit", v: QT.assure[q.txn] * (review ? 0.55 : 1) * rm });
+    yr.push({ n: review ? ASSURE_REVIEW_LABEL : ASSURE_AUDIT_LABEL, e: review ? "review engagement — the lighter option" : "full financial audit", v: QT.assure[q.txn] * (review ? 0.55 : 1) * rm });
     if (review) notes.push(["ok", "You likely qualify for a review instead of a full audit — about half the cost. We confirm it against your figures before anything is agreed."]);
     if (bigVol && q.size !== "big") notes.push(["warn", "At that volume a company is unlikely to stay under the small-company thresholds, so we priced a full audit. If your figures come in under, the price drops."]);
   }
@@ -263,20 +276,54 @@ export function qItems(q: QState): A4Item[] {
   if (has("VAT returns")) items.push({ service: "vat", txn, vatreg: q.vatreg === "art12" ? "art12" : "art10" });
   if (has("VAT declaration")) items.push({ service: "vat", txn, vatreg: "art11" });
   if (has("Annual tax return")) items.push({ service: "taxret", txn });
-  if (has("Financial audit")) items.push({ service: "audit", txn, ...(qAuditIsReview(q) ? { review: true as const } : {}) });
+  if (has(ASSURE_AUDIT_LABEL) || has(ASSURE_REVIEW_LABEL)) items.push({ service: "audit", txn, ...(qAuditIsReview(q) ? { review: true as const } : {}) });
   if (has("Registered office")) items.push({ service: "registered-office" });
   if (has("MBR annual return fee")) items.push({ service: "mbr", capital: q.cap || "1500" });
   // Catch-up is keyed on the answer, not on the (now dynamic) line label.
   if (q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity });
+  // Onboarding carries NO figure, but it IS part of the basket — the backend
+  // reads `hasUnpricedOnboarding` off the items to add "onboarding is not
+  // included in the figures below" to the quotation description. Omitting it
+  // here meant a4.com.mt said that on screen and never in the emailed quote,
+  // while vacei.com (which does emit it) said it in both. Gated on the note
+  // `qCalc` actually produced, so screen and wire cannot disagree.
+  if (r.notes.some(([, t]) => t === ONBOARDING_UNPRICED_NOTE)) items.push({ service: "onboarding" });
 
   return items;
 }
 
-/** IESBA routing for what this wizard has been asked for. */
+/**
+ * IESBA routing for what this wizard has been asked for.
+ *
+ * `assure: "we"` is audit-side whether it prices as a full audit or as a review
+ * engagement. A review IS an assurance engagement: the firm reports on figures
+ * it would otherwise have prepared, which is the self-review threat the rule
+ * exists to stop. The exclusion that used to sit here (`&& !qAuditIsReview(q)`)
+ * disagreed with the portal's pack, which flags any `audit` item regardless of
+ * `review` — and because the wizard's own defaults land on a small company with
+ * a review, the DEFAULT homepage basket was the one that diverged.
+ */
+/**
+ * One "Next" click, as a pure function — the wizard's ONLY step transition.
+ *
+ * Exported so a test can walk the default journey the way a visitor does rather
+ * than restate the rules and then prove its own restatement. Two of the three
+ * lines below are answer defaults applied on the visitor's behalf, and the
+ * third (`assure`) is what puts the default homepage basket on the audit side
+ * of the independence rule without the visitor ever choosing it.
+ */
+export function qAdvance(q: QState, lastStep: number): Partial<QState> {
+  const patch: Partial<QState> = { step: Math.min(lastStep, q.step + 1) };
+  if (q.step === 2 && q.book === "none") { patch.book = "managed"; patch.taxret = "we"; }
+  if (q.step === 3) patch.pay = q.head > 0 ? "we" : "none";
+  if (q.step === 6 && q.assure === "none") patch.assure = "we";
+  return patch;
+}
+
 export function qIndependence(q: QState) {
   return independenceFlags({
     wantsBookkeeping: q.book === "managed",
-    wantsAudit: q.assure === "we" && !qAuditIsReview(q),
+    wantsAudit: q.assure === "we",
   });
 }
 
@@ -414,7 +461,12 @@ export function LandingQuoteCalculator() {
         ? { name: "VAT returns — blocked", desc: "We only put our name to a return when we have worked the ledger. Switch bookkeeping on above and this unlocks.", amt: "—", options: [] }
         : svc("vat", "VAT returns", "Filed quarterly, billed monthly so you pay the same each time.", [["none", "No"], ["we", "Yes"]], q.vatreg === "art11" ? "VAT declaration" : "VAT returns"),
       svc("taxret", "Annual tax return", "Prepared once a year from the closed ledger.", [["none", "No"], ["we", "Yes"]]),
-      svc("assure", "Financial audit", "Most small companies qualify for a lighter review — we work out which applies.", [["none", "No"], ["we", "Yes"]]),
+      // The assurance line is named conditionally (audit vs review engagement),
+      // so its amount is looked up by either label rather than by one of them.
+      {
+        ...svc("assure", "Audit or review", "Most small companies qualify for a lighter review — we work out which applies. We cannot give assurance on books we keep ourselves; ask for both and the quote says so.", [["none", "No"], ["we", "Yes"]]),
+        amt: lineAmt(qAuditIsReview(q) ? ASSURE_REVIEW_LABEL : ASSURE_AUDIT_LABEL),
+      },
       svc("regoff", "Registered office", "Your company's official address, statutory post passed to you.", [["none", "No"], ["we", "Yes"]]),
     );
   }
@@ -464,13 +516,7 @@ export function LandingQuoteCalculator() {
     setSending(false);
   };
 
-  const next = () => {
-    const patch: Partial<QState> = { step: Math.min(LAST_STEP, step + 1) };
-    if (step === 2 && q.book === "none") { patch.book = "managed"; patch.taxret = "we"; }
-    if (step === 3) patch.pay = q.head > 0 ? "we" : "none";
-    if (step === 6 && q.assure === "none") patch.assure = "we";
-    setQ(patch);
-  };
+  const next = () => setQ(qAdvance(q, LAST_STEP));
 
   const railBtn = (i: number): { bg: string; fg: string; dotBg: string; dotFg: string } => {
     const done = i < step, active = i === step;
@@ -644,6 +690,23 @@ export function LandingQuoteCalculator() {
                     >
                       {independenceText}
                     </p>
+                  )}
+                  {/* The way out, on the spot. The default wizard path lands on
+                      the conflict (managed books + a review engagement), so a
+                      greyed-out button with nothing next to it would be where
+                      most visitors stop. One tap drops either side of the rule
+                      and the quote becomes sendable immediately. */}
+                  {independence.route === "conflict" && (
+                    <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: NOTE_STYLE.info.bg, border: "1px solid " + NOTE_STYLE.info.bc }}>
+                      <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 600, color: NOTE_STYLE.info.fg }}>Which one is ours?</div>
+                      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button type="button" onClick={() => setQ({ assure: "none" })} style={svcPill(true)}>Keep the bookkeeping with us</button>
+                        <button type="button" onClick={() => setQ({ book: "none", vat: "none" })} style={svcPill(true)}>Take the audit or review with us</button>
+                      </div>
+                      <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.55, color: NOTE_STYLE.info.fg }}>
+                        Pick one and this quote can be sent straight away. Not sure which? Ask for a call instead and we work it out with you.
+                      </p>
+                    </div>
                   )}
                   {r.refer ? (
                     <div style={{ marginTop: 16, alignSelf: "flex-start" }}>

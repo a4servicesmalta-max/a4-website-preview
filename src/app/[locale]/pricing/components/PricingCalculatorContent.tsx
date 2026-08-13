@@ -25,6 +25,7 @@ import {
   managedMonthly,
   PRICING_VAT_NOTE,
   PRICING_GOV_NOTE,
+  ONBOARDING_UNPRICED_NOTE,
   type ManagedEntity,
 } from "@/data/a4QuotePack";
 import {
@@ -565,6 +566,13 @@ function PricingCalc() {
     // be submitted as an instant quote — it goes down the lead path instead.
     unit = "one-off";
   }
+  // Onboarding and opening balances are part of taking anyone on, and they
+  // carry NO figure in pack mt-2026-08-14-managed. The item emits no priced
+  // line; it is what makes the backend name onboarding in `unpricedItems` and
+  // add "onboarding is not included in the figures below" to the quotation.
+  // Without it a4.com.mt sent quotations that never said so, while vacei.com —
+  // which does emit it — always did.
+  if (items.length) items = [...items, { service: "onboarding" }];
 
   const totals = evaluateA4Items(items);
   const promo = totals.promoApplied;
@@ -844,6 +852,15 @@ function PricingCalc() {
                     </div>
                   ))}
                 </div>
+
+                {/* Onboarding rides in the basket with no figure on it, so it
+                    is named here too — an unpriced item nobody mentioned reads
+                    as "included, free". Same sentence the quotation carries. */}
+                {totals.hasUnpricedOnboarding && (
+                  <p className="a4-font-body text-[11.5px] leading-[1.5] text-[var(--a4-mute)] mt-3 mb-0">
+                    {ONBOARDING_UNPRICED_NOTE}
+                  </p>
+                )}
 
                 {/* The independence consequence of the tab they are on, said
                     before they send it — not discovered later. */}

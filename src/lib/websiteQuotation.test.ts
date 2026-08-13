@@ -181,14 +181,28 @@ describe("IESBA independence routing", () => {
     expect(t.wantsBookkeeping).toBe(false);
   });
 
-  it("does not treat a review engagement as an audit", () => {
+  it("treats a review engagement as an audit — it is assurance either way", () => {
+    // A review is an assurance engagement and carries the same independence
+    // requirement, which is why the portal's malta-pack flags every `audit`
+    // item regardless of `review`. This used to assert the opposite, and that
+    // disagreement is what let the DEFAULT homepage basket through the site
+    // and straight into a server refusal.
     const t = evaluateA4Items([{ service: "audit", txn: "21-60", review: true }], "standard", AFTER);
-    expect(t.wantsAudit).toBe(false);
+    expect(t.wantsAudit).toBe(true);
   });
 
   it("flags the conflict when both are asked for at once", () => {
     const t = evaluateA4Items(
       [{ service: "bookkeeping-managed", entity: "company" }, { service: "audit", txn: "21-60" }],
+      "standard",
+      AFTER
+    );
+    expect(t.independenceConflict).toBe(true);
+  });
+
+  it("flags the conflict for a review engagement alongside the books", () => {
+    const t = evaluateA4Items(
+      [{ service: "bookkeeping-managed", entity: "company" }, { service: "audit", txn: "21-60", review: true }],
       "standard",
       AFTER
     );
