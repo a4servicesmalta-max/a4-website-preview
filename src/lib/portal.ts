@@ -6,6 +6,11 @@
 // and a failure of one never suppresses the other.
 import { QUOTE_API_BASE, SOURCE_SITE } from "@/lib/websiteQuotation";
 
+/** Shared secret proving a server-to-server intake call — see its use below. */
+function portalServerKey(): string {
+  return (process.env.WEBSITE_INTAKE_SERVER_KEY || "").trim();
+}
+
 type PortalRequest = {
   requester?: string;
   name?: string;
@@ -82,7 +87,17 @@ async function pushToPartnerLeads(req: PortalRequest): Promise<void> {
   try {
     const res = await fetch(`${QUOTE_API_BASE}/public/website-leads`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // This call has no browser behind it and therefore no Turnstile token
+        // to carry — the token was already verified and spent by the /api/*
+        // route that is calling us. The backend's CAPTCHA middleware admits a
+        // server-to-server caller on this shared secret instead. Without it,
+        // turning enforcement on at the backend would silently discard every
+        // lead a4.com.mt forwards. Unset here = header omitted = the backend
+        // sees an ordinary tokenless caller (fine while it is not enforcing).
+        ...(portalServerKey() ? { "x-website-intake-key": portalServerKey() } : {}),
+      },
       body: JSON.stringify({
         name,
         email,

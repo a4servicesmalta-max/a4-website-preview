@@ -4,6 +4,7 @@ import React, { useState, useRef } from "react"
 import { SERVICE_TYPE_OPTIONS } from "@/data/serviceRequestForms"
 import { cn } from "@/lib/utils"
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links"
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 type FormData = {
   name: string
@@ -187,6 +188,9 @@ const ProcessStepsSection = () => {
       form.append("metaJson", JSON.stringify(payloadMeta))
 
       setIsSubmitting(true)
+
+      const captchaToken = await getCaptchaToken("quote")
+      if (captchaToken) form.append("captchaToken", captchaToken)
 
       const res = await fetch("/api/quote", {
         method: "POST",

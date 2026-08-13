@@ -12,6 +12,7 @@ import {
   calcAuditFee, feeLines, euro, type AuditInput,
 } from "@/lib/audit-fee";
 import { AUDIT_PRE_TRADING, TAX_RETURN_FROM, PRICING_VAT_NOTE, LAUNCH_PROMO } from "@/data/a4QuotePack";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 type Opt = { id: string; label: string; sub?: string };
 
@@ -114,7 +115,8 @@ export function AuditEstimator() {
   async function sendCode() {
     setVBusy(true); setVErr(""); setDevCode("");
     try {
-      const r = await fetch("/api/verify/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: contact.email }) });
+      const captchaToken = await getCaptchaToken("verify-request");
+      const r = await fetch("/api/verify/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ captchaToken, email: contact.email }) });
       const b = await r.json();
       if (!r.ok) { setVErr(b.error || "Could not send a code."); return; }
       // Server tells us whether the email actually went out — never claim "sent" when it didn't.
@@ -158,6 +160,8 @@ export function AuditEstimator() {
     fd.append("file", file);
     fd.append("kind", "fs");
     fd.append("scoping", scoping);
+    const captchaToken = await getCaptchaToken("fs-gap-review");
+    if (captchaToken) fd.append("captchaToken", captchaToken);
     try {
       const res = await fetch("/api/fs-gap-review", { method: "POST", body: fd });
       const body = await res.json();

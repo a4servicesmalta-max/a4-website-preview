@@ -5,6 +5,7 @@ import { FadeInUp } from "../common/Animations";
 import { motion } from "framer-motion";
 import GradientContainer from "../common/GradientContainer";
 import FormStatusModal from "../common/FormStatusModal";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 interface ContactHRFormProps {
   title?: string;
@@ -73,10 +74,12 @@ const ContactHRForm = ({
     setSubmitError(null);
 
     try {
+      const captchaToken = await getCaptchaToken("contact");
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          captchaToken,
           name: formData.name,
           email: formData.email,
           message: `${formData.message}\n\nRole / Area of interest: ${formData.role || "Not specified"}`,

@@ -21,6 +21,7 @@ import {
   writeStoredSession,
   type ChatServerMessage,
 } from "@/lib/chatSession";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 /**
  * `bot` is scripted local copy (the opening three questions and status lines);
@@ -221,10 +222,12 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
   const submitLegacyFallback = useCallback(
     async (visitorName: string, visitorEmail: string, visitorIssue: string, conversation: Message[]) => {
       try {
+        const captchaToken = await getCaptchaToken("support");
         const res = await fetch("/api/support", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            captchaToken,
             name: visitorName,
             email: visitorEmail,
             issue: visitorIssue,

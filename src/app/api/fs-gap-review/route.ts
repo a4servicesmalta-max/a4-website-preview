@@ -5,6 +5,7 @@ import { pushToPortal } from "@/lib/portal";
 import { engineFetch } from "@/lib/fs-review-engine";
 import { augmentWithAiCommentary } from "@/lib/ai-review";
 import type { ReviewResponse } from "./types";
+import { captchaGate } from "@/lib/turnstileServer";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -23,6 +24,8 @@ function emailLead(subject: string, text: string, replyTo?: string) {
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
+    const blocked = await captchaGate(form, "fs-gap-review", req);
+    if (blocked) return blocked;
     const file = form.get("file");
     const kind = String(form.get("kind") || "fs");
     const email = String(form.get("email") || "");

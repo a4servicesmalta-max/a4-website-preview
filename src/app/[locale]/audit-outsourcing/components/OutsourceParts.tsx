@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 // OutsourceParts — Audit outsourcing landing (from New website OutsourceParts.jsx)
 
@@ -197,10 +198,12 @@ function OSApply() {
     setSubmitting(true);
     setError("");
     try {
+      const captchaToken = await getCaptchaToken("contact");
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          captchaToken,
           name: form.name,
           email: form.email,
           subject: `Audit outsourcing pilot request — ${form.firm}`,

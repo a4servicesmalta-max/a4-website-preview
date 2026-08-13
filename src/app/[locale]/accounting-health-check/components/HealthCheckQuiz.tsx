@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { QUESTIONS, scoreHealthCheck, type HealthResult } from "@/data/accounting-health-check";
 import { Field, primaryBtn, type Contact } from "./Field";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 export function HealthCheckQuiz({
   contact,
@@ -32,10 +33,11 @@ export function HealthCheckQuiz({
     if (!result) return;
     setStatus("loading");
     try {
+      const captchaToken = await getCaptchaToken("health-check");
       const res = await fetch("/api/health-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...contact, score: result.score, band: result.band, breakdown: result.results }),
+        body: JSON.stringify({ captchaToken, ...contact, score: result.score, band: result.band, breakdown: result.results }),
       });
       if (!res.ok) throw new Error();
       setUnlocked(true);

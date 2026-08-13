@@ -7,6 +7,7 @@ import {
   type QuotePayload, type QuoteContact,
 } from "@/lib/quote-handoff";
 import { trackConversion } from "@/lib/analytics";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 export type Intent = "proposal" | "consultation" | "account";
 
@@ -62,10 +63,12 @@ export function useQuoteActions(quote: () => QuotePayload) {
     const q = quote();
     const ref = quoteRef();
     try {
+      const captchaToken = await getCaptchaToken("quote");
       const res = await fetch("/api/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          captchaToken,
           name: contact.name,
           email: contact.email,
           subject: `A4 ${q.service} — ${INTENT_COPY[intent].subject} — ${contact.company || contact.name}`,

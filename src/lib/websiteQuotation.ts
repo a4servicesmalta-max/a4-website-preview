@@ -410,6 +410,13 @@ export function buildQuoteRecord(
  * POST the quote. Never throws — the caller renders whatever comes back.
  * Requires a name and a plausible email; without them there is nobody to send
  * the quote to, so the caller should not offer submission at all.
+ *
+ * CAPTCHA note: this is the one A4 lead path that leaves the BROWSER for the
+ * portal backend directly, so it is the one that must carry a Turnstile token
+ * in its body — the site's own `/api/*` routes verify their tokens themselves
+ * and then authenticate to the backend with a server key instead. The token is
+ * minted here rather than in the two calculator components so that neither of
+ * them has to grow captcha state; they call this exactly as before.
  */
 export async function submitWebsiteQuotation(
   input: WebsiteQuoteInput
@@ -440,6 +447,14 @@ export async function submitWebsiteQuotation(
     return { status: "error", message: "Pick at least one service so we have something to quote." };
   }
 
+  // Dynamically imported so the browser-only Turnstile module never enters a
+  // server bundle — this file's evaluator is also used by /api routes.
+  // A null token (unconfigured, blocked, or timed out) is sent as nothing at
+  // all, and the backend decides; the browser is not where that call belongs.
+  const captchaToken = await import("@/lib/turnstileClient")
+    .then((m) => m.getCaptchaToken("website-quotation"))
+    .catch(() => null);
+
   try {
     const res = await fetch(`${QUOTE_API_BASE}/public/website-quotations`, {
       method: "POST",
@@ -448,6 +463,7 @@ export async function submitWebsiteQuotation(
         name,
         email,
         phone: input.phone?.trim() || "",
+        ...(captchaToken ? { captchaToken } : {}),
         record: buildQuoteRecord(input),
         // Which marketing site this came from. a4.com.mt and vacei.com post to
         // the same endpoint, and the backend stores this as `sourceSite` so an

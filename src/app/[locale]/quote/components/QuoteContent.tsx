@@ -13,6 +13,7 @@ import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePor
 // QuotationBuilder.tsx for the arithmetic that was retired.
 import { ServiceQuoteCalculator } from "@/components/pricing/ServiceQuoteCalculator";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 function QuoteForm() {
   const href = useLocalizedHref();
@@ -45,10 +46,12 @@ function QuoteForm() {
 
     setIsSubmitting(true);
     try {
+      const captchaToken = await getCaptchaToken("quote");
       const res = await fetch("/api/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          captchaToken,
           name,
           email,
           subject: "Website quote request",

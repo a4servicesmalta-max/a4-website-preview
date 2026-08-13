@@ -6,6 +6,7 @@ import FormStatusModal from "@/components/common/FormStatusModal";
 import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
 import { usePagesTranslation } from "@/hooks/usePagesTranslation";
 import { trackConversion } from "@/lib/analytics";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 
 const ContactForm = () => {
   const { t } = usePagesTranslation("contact");
@@ -63,10 +64,12 @@ const ContactForm = () => {
     setSubmitError(null);
 
     try {
+      const captchaToken = await getCaptchaToken("contact");
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          captchaToken,
           ...formData,
           subject: "Website contact form",
           context: "Contact page form",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
+import { captchaGate } from "@/lib/turnstileServer";
 
 function getTransport() {
   const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
@@ -13,7 +14,10 @@ function getTransport() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, name, company, score, band, breakdown } = await req.json();
+    const payload = await req.json();
+    const blocked = await captchaGate(payload, "health-check", req);
+    if (blocked) return blocked;
+    const { email, name, company, score, band, breakdown } = payload;
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
     }

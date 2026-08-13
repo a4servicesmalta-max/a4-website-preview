@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { getCaptchaToken } from "@/lib/turnstileClient";
 // Company search → mock MBR lookup → live fixed-price quote → booking capture.
 
 const MBR_DATA = {
@@ -128,10 +129,12 @@ export function QuoteTool() {
     if (!form.name || !form.email) return;
     setBooking(true); setBookErr(false);
     try {
+      const captchaToken = await getCaptchaToken("quote");
       const res = await fetch("/api/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          captchaToken,
           name: form.name,
           email: form.email,
           subject: `Quote tool booking — ${company ? company.name : form.company}`,
