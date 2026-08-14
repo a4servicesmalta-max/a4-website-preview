@@ -5,6 +5,7 @@ import "@fontsource/mona-sans";
 import "./globals.css";
 import "@/components/bookkeeping/bookkeeping.css";
 import { headers } from "next/headers";
+import GoogleTags from "@/components/common/GoogleTags";
 import { LOCALE_HEADER } from "@/lib/i18n-config";
 import { getSiteUrl } from "@/lib/site-url";
 import { DEFAULT_DESCRIPTION, pageMetadata } from "@/lib/page-metadata";
@@ -75,6 +76,9 @@ export default async function RootLayout({
             __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","${CLARITY_TAG_ID}");`,
           }}
         />
+        {/* GA4 + Google Ads, Consent Mode v2 denied by default. Renders nothing
+            until NEXT_PUBLIC_GA4_ID / NEXT_PUBLIC_GADS_ID are set. */}
+        <GoogleTags />
         {children}
       </body>
     </html>

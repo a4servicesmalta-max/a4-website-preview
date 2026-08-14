@@ -16,27 +16,33 @@
 import {
   A4_QUOTE_PACK_VERSION,
   PRICING_CURRENCY,
-  ACCOUNTING_REVIEW,
   AUDIT_YEARLY,
-  BOOKKEEPING_MONTHLY,
-  CATCH_UP,
   LAUNCH_PROMO,
+  MANAGED_ENTITY_LABELS,
   MBR_ANNUAL_RETURN,
   REGISTERED_OFFICE_YEARLY,
   REVIEW_ENGAGEMENT_FACTOR,
   RISK_TIERS,
-  SOFTWARE_TIERS,
   TAX_RETURN_YEARLY,
   VAT_MONTHLY,
   VAT_RULES,
+  catchUpAmount,
+  catchUpLabel,
   isPromoActive,
+  managedMonthly,
   payrollRate,
   roundEur,
   type CapitalBand,
-  type SoftwareTierId,
+  type ExpenseBand,
+  type ManagedEntity,
   type TxnBand,
 } from "@/data/a4QuotePack";
 import { resolveClientUrl } from "@/lib/external-links";
+import {
+  INDEPENDENCE_CONFLICT,
+  independenceFlags,
+  type IndependenceFlags,
+} from "@/lib/independence";
 
 export const QUOTE_API_BASE =
   process.env.NEXT_PUBLIC_QUOTE_API_BASE?.trim().replace(/\/+$/, "") ||
@@ -67,9 +73,16 @@ export type QuoteLineItem = {
 export type A4Risk = "standard" | "elevated" | "high";
 
 export type A4Item =
-  | { service: "software"; tier: SoftwareTierId }
-  | { service: "bookkeeping-full"; txn: TxnBand }
-  | { service: "review"; txn: TxnBand; cadence: "quarterly" | "monthly" }
+  /**
+   * The ONLY bookkeeping item. Replaces both the retired `software` tier and
+   * the retired volume-banded `bookkeeping-full`. Priced by entity × monthly
+   * expenses (pack mt-2026-08-14-volume), and NOT risk-uplifted.
+   *
+   * `expenses` is a string band id, never a number — a numeric band invites
+   * silent coercion. A missing or unrecognised band drops the item, which
+   * sends the basket down the lead path.
+   */
+  | { service: "bookkeeping-managed"; entity: ManagedEntity; expenses: ExpenseBand }
   | { service: "vat"; txn: TxnBand; vatreg: "art10" | "art11" | "art12" }
   | { service: "taxret"; txn: TxnBand }
   | { service: "audit"; txn: TxnBand; review?: true }
@@ -77,18 +90,59 @@ export type A4Item =
   | { service: "mbr"; capital: CapitalBand }
   | { service: "registered-office" }
   | { service: "onboarding" }
-  | { service: "catchup"; months: number; mode: "self" | "full" };
+  /**
+   * Backdated months, at the client's OWN monthly rate — so it carries the
+   * same `expenses` band as the bookkeeping item beside it. A backdated month
+   * must cost what a live month costs for that client.
+   */
+  | { service: "catchup"; months: number; entity: ManagedEntity; expenses: ExpenseBand };
+
+/**
+ * `YYYY-MM` — the first month in scope. REQUIRED on every submitted quote.
+ *
+ * Without it we would be guessing which month the engagement starts, which is
+ * the one thing a catch-up quote cannot be wrong about. A basket with no start
+ * month must degrade to the lead path rather than price instantly.
+ */
+export type ServiceStartMonth = string;
+
+export const SERVICE_START_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export function isServiceStartMonth(v: unknown): v is ServiceStartMonth {
+  return typeof v === "string" && SERVICE_START_RE.test(v);
+}
 
 export type A4Selections = {
   kind: "a4-services";
   version: 1;
   risk: A4Risk;
+  /** `YYYY-MM`. Required — see ServiceStartMonth. */
+  serviceStartDate: ServiceStartMonth;
   items: A4Item[];
+  /**
+   * The IESBA conclusion for this basket. Not priced and not repriced — it
+   * rides here because the backend stores `selections` verbatim in
+   * `payloadJson`, so the consequence reaches whoever works the quotation even
+   * before `WebsiteLead` grows a column for it.
+   */
+  independence: IndependenceFlags;
 };
 
 /** Wrap priced items in the versioned envelope the backend evaluator expects. */
-export function buildA4Selections(items: A4Item[], risk: A4Risk = "standard"): A4Selections {
-  return { kind: "a4-services", version: 1, risk, items };
+export function buildA4Selections(
+  items: A4Item[],
+  risk: A4Risk = "standard",
+  serviceStartDate: ServiceStartMonth = ""
+): A4Selections {
+  const t = evaluateA4Items(items, risk);
+  return {
+    kind: "a4-services",
+    version: 1,
+    risk,
+    serviceStartDate,
+    items,
+    independence: independenceFlags(t),
+  };
 }
 
 export type A4Totals = {
@@ -107,25 +161,37 @@ export type A4Totals = {
   /** MBR registry fee — government money, exempt from the promo. */
   registryPassThrough: number;
   promoApplied: boolean;
+  /** Onboarding was asked for but carries no number — say so, never imply free. */
+  hasUnpricedOnboarding: boolean;
+  /** IESBA routing: this basket asks A4 to keep the books. */
+  wantsBookkeeping: boolean;
+  /** IESBA routing: this basket asks A4 to audit (a review engagement is not an audit). */
+  wantsAudit: boolean;
+  /** Both at once — the conflict case. Must never price silently. */
+  independenceConflict: boolean;
 };
 
 /**
- * Services that carry the sector risk multiplier.
+ * Services that carry the sector risk multiplier (mirrors the pack).
  *
- * `software` is deliberately absent: a Books plan is a fixed product price, not
- * labour, so risk never moves it. The server agrees — adding it here would put
- * every elevated/high-risk software quote out of tolerance.
+ * `bookkeeping-managed` is deliberately absent: €24 / €49 are flat prices, and
+ * so is the catch-up derived from them.
  */
 const RISK_UPLIFTED: ReadonlySet<A4Item["service"]> = new Set([
-  "bookkeeping-full",
-  "review",
   "vat",
   "taxret",
   "audit",
   "payroll",
 ]);
 
-/** Server-side input bounds. Anything outside these is rejected, not clamped. */
+/**
+ * Server-side input bounds. Anything outside these is REJECTED, not clamped —
+ * clamping would quietly price something the prospect did not ask for, and the
+ * backend would then disagree on the reprice.
+ *
+ * `months` tops out at 240 (20 years), which is also the ceiling the wire
+ * contract puts on a `catchup` item.
+ */
 export const A4_LIMITS = {
   maxItems: 50,
   heads: { min: 1, max: 500 },
@@ -151,19 +217,13 @@ function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
   const one = (label: string, amount: number): PricedItem => ({ label, amount: roundEur(amount), cadence: "oneoff" });
 
   switch (item.service) {
-    case "software": {
-      const price = SOFTWARE_TIERS[item.tier];
-      return price == null ? null : mo(`A4 Books — ${item.tier} plan`, price);
-    }
-    case "bookkeeping-full": {
-      const price = BOOKKEEPING_MONTHLY[item.txn];
-      return price == null ? null : mo("Bookkeeping", price * rm);
-    }
-    case "review": {
-      const book = BOOKKEEPING_MONTHLY[item.txn];
-      if (book == null || book <= 0) return null; // no ledger to review
-      const cfg = item.cadence === "monthly" ? ACCOUNTING_REVIEW.month : ACCOUNTING_REVIEW.quarter;
-      return mo("Accounting review", Math.max(cfg.minEur, book * cfg.shareOfBook) * rm);
+    case "bookkeeping-managed": {
+      // null on a missing or unrecognised expenses band. Dropping the item
+      // nulls the quote to the lead path, which is the contracted behaviour —
+      // it must NEVER fall back to the cheapest band.
+      const price = managedMonthly(item.entity, item.expenses);
+      if (price == null) return null;
+      return mo(`Managed bookkeeping — ${MANAGED_ENTITY_LABELS[item.entity]}`, price);
     }
     case "vat": {
       if (item.vatreg === "art11") {
@@ -201,20 +261,29 @@ function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
     }
     case "registered-office":
       return yr("Registered office", REGISTERED_OFFICE_YEARLY);
-    case "onboarding": {
-      const fee = tier.onboarding;
-      return fee == null ? null : one("Onboarding and due diligence", fee);
-    }
+    case "onboarding":
+      // UNPRICED by design (pack mt-2026-08-14-managed). It emits no line at
+      // all rather than a €0 line, so it can never be read as "included, free".
+      // `evaluateA4Items` reports it separately via `hasUnpricedOnboarding`.
+      return null;
     case "catchup": {
+      // Whole months only, and within the range the server will accept.
       if (!isIntWithin(item.months, A4_LIMITS.months.min, A4_LIMITS.months.max)) return null;
       const m = item.months;
-      if (item.mode === "self") return one("Catch-up processing", m * CATCH_UP.selfPerMonth);
-      return one(
-        "Bringing the books up to date",
-        Math.min(m * CATCH_UP.fullPerMonth, Math.ceil(m / 12) * CATCH_UP.fullPerYearCap)
-      );
+      // Same monthly rate as a live month for this client, per month, uncapped,
+      // never discounted. The label is fixed by the wire contract and compared
+      // literally downstream. Both go null on an unknown band — same lead-path
+      // rule as the bookkeeping item.
+      const label = catchUpLabel(m, item.entity, item.expenses);
+      const amount = catchUpAmount(m, item.entity, item.expenses);
+      if (label == null || amount == null) return null;
+      return one(label, amount);
     }
     default:
+      // A stale cached page sending a retired item (`software`,
+      // `bookkeeping-full`, `review`) lands here. Returning null drops it, and
+      // the missing money makes the backend's reprice disagree — which is the
+      // correct fail-loud outcome, not something to paper over.
       return null;
   }
 }
@@ -229,19 +298,36 @@ export function evaluateA4Items(
   risk: A4Risk = "standard",
   now: Date = new Date()
 ): A4Totals {
-  const priced = items.map((i) => priceItem(i, risk)).filter((l): l is PricedItem => l != null);
+  // Keep each priced line paired with the item that produced it. The catch-up
+  // slice used to be recovered by matching the label with a regex, which made
+  // a copy edit able to silently change a submitted total.
+  const pairs = items
+    .map((item) => ({ item, line: priceItem(item, risk) }))
+    .filter((p): p is { item: A4Item; line: PricedItem } => p.line != null);
+  const priced = pairs.map((p) => p.line);
 
   const sum = (c: QuoteCadence) => priced.filter((l) => l.cadence === c).reduce((s, l) => s + l.amount, 0);
   const grossMonthly = sum("monthly");
   const grossYearly = sum("yearly");
   const grossOneOff = sum("oneoff");
   const registryPassThrough = priced.reduce((s, l) => s + (l.registry ?? 0), 0);
-  const catchup = priced
-    .filter((l) => l.cadence === "oneoff" && /catch-up|up to date/i.test(l.label))
-    .reduce((s, l) => s + l.amount, 0);
+  const catchup = pairs
+    .filter((p) => p.item.service === "catchup")
+    .reduce((s, p) => s + p.line.amount, 0);
 
   const promoApplied = isPromoActive(now) && grossMonthly + grossYearly > 0;
   const keep = 1 - LAUNCH_PROMO.pct;
+
+  const has = (s: A4Item["service"]) => items.some((i) => i.service === s);
+  const wantsBookkeeping = has("bookkeeping-managed") || has("catchup");
+  // A review engagement is an ASSURANCE engagement and carries the same
+  // independence requirement as a full audit — a firm cannot keep the books and
+  // then give assurance on them. So `review: true` is audit-side here, exactly
+  // as the portal's malta-pack treats it (`if (service === 'audit') wantsAudit
+  // = true`, no review check). This line used to exclude reviews, which meant
+  // the DEFAULT homepage basket — small company, review engagement, managed
+  // books — was passed as clean by the site and refused by the server.
+  const wantsAudit = has("audit");
 
   return {
     lines: priced.map(({ label, amount, cadence }) => ({ label, amount, cadence })),
@@ -255,6 +341,10 @@ export function evaluateA4Items(
     grossOneOff,
     registryPassThrough,
     promoApplied,
+    hasUnpricedOnboarding: has("onboarding"),
+    wantsBookkeeping,
+    wantsAudit,
+    independenceConflict: wantsBookkeeping && wantsAudit,
   };
 }
 
@@ -279,6 +369,14 @@ export type WebsiteQuoteInput = {
   /** Priceable items only — anything else belongs on the lead path. */
   items: A4Item[];
   risk?: A4Risk;
+  /** `YYYY-MM`, REQUIRED. Without it we do not price — see ServiceStartMonth. */
+  serviceStartDate?: string;
+  /**
+   * Which surface captured this quote, e.g. `a4-homepage`. Attribution only —
+   * it never touches pricing. The backend's schema is strict about the shape:
+   * lowercase alphanumeric, then `. _ -`.
+   */
+  sourceDetail?: string;
 };
 
 export type WebsiteQuoteResult =
@@ -291,6 +389,8 @@ const QUOTED_MESSAGE =
 const RECEIVED_MESSAGE = "We've got your details — your quote follows by email.";
 const ERROR_MESSAGE =
   "We couldn't send that just now. Please try again, or email info@a4.com.mt and we'll pick it up.";
+export const START_MONTH_REQUIRED_MESSAGE =
+  "Tell us which month we should start from — the price depends on it.";
 
 /**
  * Signup deep-link that carries the quote through account creation — the
@@ -316,7 +416,7 @@ export function buildQuoteRecord(
   return {
     pack: A4_QUOTE_PACK_VERSION,
     currency: PRICING_CURRENCY,
-    selections: buildA4Selections(input.items, risk),
+    selections: buildA4Selections(input.items, risk, input.serviceStartDate ?? ""),
     monthly: totals.monthly,
     yearly: totals.yearly,
     oneOff: totals.oneOff,
@@ -347,6 +447,20 @@ export async function submitWebsiteQuotation(
     // rather than firing a request that can only come back as a 202.
     return { status: "error", message: "That's more services than we can quote online — let's scope it on a call." };
   }
+  // A quote with no start month is a quote about an unknown period. Refuse it
+  // here rather than guessing "this month" — the caller must collect it, and
+  // if it cannot, it belongs on the lead path.
+  if (!isServiceStartMonth(input.serviceStartDate)) {
+    return { status: "error", message: START_MONTH_REQUIRED_MESSAGE };
+  }
+  // Both sides of the independence rule in one basket. Pricing it would imply
+  // A4 can do both, which it cannot — a person settles it first.
+  const totals = evaluateA4Items(input.items, input.risk ?? "standard");
+  if (totals.independenceConflict) {
+    return { status: "error", message: INDEPENDENCE_CONFLICT };
+  }
+
+  const sourceDetail = input.sourceDetail?.trim();
 
   try {
     const res = await fetch(`${QUOTE_API_BASE}/public/website-quotations`, {
@@ -357,6 +471,13 @@ export async function submitWebsiteQuotation(
         email,
         phone: input.phone?.trim() || "",
         record: buildQuoteRecord(input),
+        // IESBA routing at the top level, for when the backend adds the field.
+        // It ALSO rides inside `record.selections.independence` (see
+        // buildQuoteRecord), which the backend already stores verbatim in
+        // payloadJson — so the conclusion persists today even though the
+        // top-level fields are currently stripped by the intake schema.
+        ...independenceFlags(totals),
+        ...(sourceDetail && /^[a-z0-9][a-z0-9._-]*$/.test(sourceDetail) ? { sourceDetail } : {}),
       }),
     });
     if (!res.ok) return { status: "error", message: ERROR_MESSAGE };

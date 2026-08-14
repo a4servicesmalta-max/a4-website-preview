@@ -7,14 +7,20 @@ import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONES } from "@/lib/contact";
 import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
+import { trackConversion } from "@/lib/analytics";
 
 function ContactForm() {
-  const [f, setF] = useState({ name: "", email: "", message: "" });
+  const [f, setF] = useState({ name: "", email: "", phone: "", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [statusType, setStatusType] = useState<"success" | "error">("success");
   const [statusMessage, setStatusMessage] = useState("");
+  // Spam honeypot — mirrors vacei.com's `company_website` field: an
+  // off-screen, unlabeled input a human never sees or fills in. Left in
+  // state (not a ref) purely so it round-trips through the same controlled-
+  // input pattern as every other field here.
+  const [companyWebsite, setCompanyWebsite] = useState("");
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -30,6 +36,17 @@ function ContactForm() {
     e.preventDefault();
     if (!validate()) return;
 
+    // Honeypot tripped — a real visitor never sees or fills this field.
+    // Pretend success without ever hitting the network; the API route also
+    // rejects it server-side in case a bot posts to /api/contact directly.
+    if (companyWebsite.trim()) {
+      setF({ name: "", email: "", phone: "", message: "" });
+      setStatusType("success");
+      setStatusMessage("Thanks — we'll reply within one business day.");
+      setStatusOpen(true);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const res = await fetch("/api/contact", {
@@ -38,9 +55,11 @@ function ContactForm() {
         body: JSON.stringify({
           name: f.name,
           email: f.email,
+          phone: f.phone.trim() || undefined,
           message: f.message,
           subject: "Website contact form",
           context: "Contact page form",
+          company_website: companyWebsite,
         }),
       });
 
@@ -49,7 +68,11 @@ function ContactForm() {
         throw new Error((data as { error?: string }).error || "Something went wrong. Please try again.");
       }
 
-      setF({ name: "", email: "", message: "" });
+      // Past the !res.ok gate: the lead is written. Only now is it a conversion
+      // — the route answers 502 when the write fails, and that path throws above.
+      trackConversion("contact_form_submit");
+
+      setF({ name: "", email: "", phone: "", message: "" });
       setStatusType("success");
       setStatusMessage("Thanks — we'll reply within one business day.");
       setStatusOpen(true);
@@ -124,6 +147,34 @@ function ContactForm() {
           placeholder="jane@company.com"
         />
         {errors.email && <p className="a4-font-body text-[13px] text-red-500 mb-2">{errors.email}</p>}
+
+        <label style={lbl}>
+          Phone <span style={{ textTransform: "none", fontWeight: 400, letterSpacing: 0 }}>(optional)</span>
+        </label>
+        <input
+          type="tel"
+          name="phone"
+          autoComplete="tel"
+          value={f.phone}
+          onChange={(e) => setF({ ...f, phone: e.target.value })}
+          style={{ ...inpBase, border: `1px solid ${fieldBorder("phone")}` }}
+          placeholder="+356 …"
+        />
+
+        {/* Honeypot — real visitors never see this field. Bots that
+            auto-fill every input on the form trip it; a filled value is
+            rejected both here (no network call) and server-side in
+            /api/contact. Matches vacei.com's `company_website` field exactly. */}
+        <input
+          type="text"
+          name="company_website"
+          value={companyWebsite}
+          onChange={(e) => setCompanyWebsite(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+        />
 
         <label style={{ ...lbl, marginTop: 8 }}>Message</label>
         <textarea

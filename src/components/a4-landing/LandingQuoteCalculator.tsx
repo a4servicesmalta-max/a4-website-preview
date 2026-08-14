@@ -2,15 +2,19 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, BOOKKEEPING_MONTHLY, TAX_RETURN_YEARLY, VAT_MONTHLY } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, PAYROLL_PER_HEAD, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, EXPENSE_BANDS, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
+import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
+import { independenceFlags, independenceNotice } from "@/lib/independence";
+import { formatStartMonth, nextMonth } from "@/lib/accounting-fee";
+import { trackConversion } from "@/lib/analytics";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
+// The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
+// change it there first and mirror it here.
 //
-// The rate tables read `@/data/a4QuotePack`, which transcribes the portal
-// backend's pack. They used to be copied literals here and had drifted a whole
-// pack version behind it (bookkeeping 69/119/199… against 59/99/169…, and the
-// pre-02b tax-return and audit curves), so the homepage quoted a different
-// price from /pricing and /accounting-services on the same visit.
+// Pack mt-2026-08-14-managed removed the software-only route this wizard used
+// to open with ("Only software" / "Software + accountants"). There is one
+// bookkeeping service: A4 keeps the books, flat, priced by entity.
 
 const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["shop", "Shop, trade or services", "standard"],
@@ -22,11 +26,13 @@ const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["regulated", "Gaming, crypto or financial services", "high"],
   ["other", "Something else", "refer"],
 ];
+// `onb` is gone: onboarding and opening balances carry no number in pack
+// mt-2026-08-14-managed. They are still done, still mentioned, never priced here.
 const QTIERS = {
-  standard: { l: "Standard", mult: 1, onb: 95, refer: false, note: null as [string, string] | null },
-  elevated: { l: "Elevated", mult: 1.2, onb: 250, refer: false, note: ["info", "Sectors like this need a few extra checks when we take you on. It is built into the price rather than added later."] as [string, string] },
-  high: { l: "High", mult: 1.45, onb: 550, refer: false, note: ["warn", "Licensed and regulated sectors need full source-of-funds checks and closer monitoring. A director signs off before we take the work on."] as [string, string] },
-  refer: { l: "Referral", mult: 1, onb: 0, refer: true, note: ["warn", "We price most companies on the spot, but yours needs a short call with a director before we put a number on it. Usually the same day."] as [string, string] },
+  standard: { l: "Standard", mult: 1, refer: false, note: null as [string, string] | null },
+  elevated: { l: "Elevated", mult: 1.2, refer: false, note: ["info", "Sectors like this need a few extra checks when we take you on. It is built into the price rather than added later."] as [string, string] },
+  high: { l: "High", mult: 1.45, refer: false, note: ["warn", "Licensed and regulated sectors need full source-of-funds checks and closer monitoring. A director signs off before we take the work on."] as [string, string] },
+  refer: { l: "Referral", mult: 1, refer: true, note: ["warn", "We price most companies on the spot, but yours needs a short call with a director before we put a number on it. Usually the same day."] as [string, string] },
 };
 const QTXN: [string, string, string][] = [
   ["0", "None yet", "not trading"],
@@ -37,12 +43,17 @@ const QTXN: [string, string, string][] = [
   ["401-1000", "400 to 1,000", "very high"],
   ["1000+", "1,000+", "enterprise"],
 ];
+/**
+ * Earlier months that still need doing. Months, not years: they are priced at
+ * the monthly rate, one by one, so a year is simply 12 of them.
+ */
 const QBEHIND: [string, string, string][] = [
-  ["0", "Up to date", ""],
+  ["0", "None", "up to date"],
   ["3", "3 months", "behind"],
   ["6", "6 months", "behind"],
-  ["12", "1 year", "behind"],
-  ["24", "2 years +", "behind"],
+  ["12", "12 months", "behind"],
+  ["24", "24 months", "behind"],
+  ["36", "36 months", "behind"],
 ];
 const QVATREG: [string, string, string][] = [
   ["none", "Not registered", "tax return only"],
@@ -56,31 +67,45 @@ const QSIZE: [string, string, string][] = [
   ["big", "Bigger", "above that"],
   ["unsure", "Not sure", "we'll check"],
 ];
+// Every table reads the pack, so this calculator can never quote a different
+// figure from /accounting-services, /audit-services, /quote or the Vacei side.
+// Owner decision 2026-08-02: the local `book` table (69/119/199/329/549/899)
+// was retired in favour of the pack's BOOKKEEPING_MONTHLY.
+// Bookkeeping is no longer volume-banded, so `book` is gone from this table.
 const QT: Record<string, Record<string, number>> = {
-  book: BOOKKEEPING_MONTHLY,
   vat: VAT_MONTHLY,
   taxret: TAX_RETURN_YEARLY,
   assure: AUDIT_YEARLY,
 };
-const QPAY = [
-  { upTo: 5, rate: 32 },
-  { upTo: 10, rate: 29 },
-  { upTo: 1e9, rate: 25 },
-];
-const QSTEPS = ["What you do", "Volume", "Payroll", "Up to date?", "VAT", "Company size", "Your services", "Your quote"];
-const QTIERP: Record<string, [number, string]> = { book: [39, "Junior"], senior: [99, "Senior"], manager: [198, "Manager"], cfo: [357, "CFO"] };
+const QPAY = PAYROLL_PER_HEAD.map((t) => ({ upTo: t.upTo ?? 1e9, rate: t.rate }));
+// Two separate volume questions, deliberately. "Monthly spend" (expenses) sets
+// the BOOKKEEPING price; "Volume" (transactions) sets VAT, the tax return and
+// the audit. They sit apart in the flow and are worded differently so neither
+// reads as a repeat of the other.
+const QSTEPS = ["What you do", "Whose books", "Monthly spend", "Volume", "Payroll", "When we start", "VAT", "Company size", "Your services", "Your quote"];
 
-type QState = {
+export type QState = {
   step: number;
   sector: string;
   txn: string;
+  /** Whose books these are — with `expenses`, what sets the bookkeeping price. */
+  entity: ManagedEntity;
+  /**
+   * Monthly expenses band — the bookkeeping price driver. Distinct from `txn`:
+   * this one prices the books, `txn` prices VAT, the tax return and the audit.
+   */
+  expenses: ExpenseBand;
+  /** Authorised share capital band — sets the MBR registry fee on the annual return. */
+  cap: CapitalBand;
   head: number;
+  /** Earlier months that still need doing, as a whole number in a string. */
   behind: string;
+  /** `YYYY-MM` — the first month in scope. REQUIRED before a quote can be sent. */
+  startMonth: string;
   vatreg: string;
   size: string;
+  /** "none" | "managed" — A4 keeps the books, or does not. No third option. */
   book: string;
-  tier: string;
-  review: string;
   pay: string;
   vat: string;
   taxret: string;
@@ -88,34 +113,87 @@ type QState = {
   regoff: string;
 };
 
-const Q_INIT: QState = {
-  step: 0, sector: "shop", txn: "21-60", head: 2, behind: "0", vatreg: "art10", size: "small",
-  book: "none", tier: "book", review: "none", pay: "none", vat: "none", taxret: "none", assure: "none", regoff: "none",
+export const Q_INIT: QState = {
+  step: 0, sector: "shop", txn: "21-60", entity: "company", expenses: "10-25k", cap: "1500", head: 2, behind: "0",
+  // Suggested, not assumed — the visitor confirms it on the "When we start" step.
+  startMonth: nextMonth(), vatreg: "art10", size: "small",
+  book: "managed", pay: "none", vat: "none", taxret: "none", assure: "none", regoff: "none",
 };
 
 type Line = { n: string; e: string; v: number };
 type Note = [string, string];
 
-function qCalc(q: QState) {
+/** Volumes at which a company is unlikely to stay under the small-company thresholds. */
+const QT_BIG_VOL = ["151-400", "401-1000", "1000+"];
+
+/** The human label for an expenses band, for use inside prose. */
+const prettyBand = (id: ExpenseBand) =>
+  (EXPENSE_BANDS.find((b) => b.id === id) ?? EXPENSE_BANDS[0]).label;
+
+/**
+ * Whether the assurance line is a review engagement rather than a full audit.
+ * Named so `qCalc` (what we show) and `qItems` (what we submit) can never
+ * disagree about which of the two the visitor was quoted.
+ */
+function qAuditIsReview(q: QState) {
+  return (q.size === "small" || q.size === "unsure") && QT_BIG_VOL.indexOf(q.txn) === -1;
+}
+
+/**
+ * The assurance line NAMES what was priced. A small company is quoted a REVIEW
+ * ENGAGEMENT at 0.55× the audit fee, so a line reading "Financial audit" over
+ * that figure sold the wrong assurance level — vacei.com and the portal pack
+ * both use the pair below, verbatim, and now so does this wizard.
+ *
+ * These are wire-contract labels: `qItems` keys the basket off them and
+ * `lineAmt` looks the amount up by them. Reword either and the audit item is
+ * silently dropped from the submitted quote.
+ */
+const ASSURE_AUDIT_LABEL = "Financial audit (if applicable)";
+const ASSURE_REVIEW_LABEL = "Review engagement (if applicable)";
+
+/** `now` is injectable so the promo window can be pinned in tests, exactly as
+ *  `evaluateA4Items` does — otherwise every assertion here flips on 1 Sep. */
+export function qCalc(q: QState, now: Date = new Date()) {
   const tier = QTIERS[(QSECT.find((s) => s[0] === q.sector) || QSECT[0])[2]];
   const notes: Note[] = [];
   if (tier.note) notes.push(tier.note);
-  if (tier.refer) return { refer: true as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0 };
+  if (tier.refer) return { refer: true as const, conflict: false as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false };
+  // IESBA independence, settled BEFORE anything is priced — the same shape
+  // vacei.com uses, and for the same reason. A4 is not permitted to keep the
+  // books AND give assurance on them, so there is no such engagement to put a
+  // figure on: producing the figures and then hiding the send button would put
+  // a price on screen for something we cannot sell, and a number is what a
+  // visitor anchors on. `qAdvance` turns the assurance question on by default,
+  // so this is the path most homepage visitors take, not an edge case. The
+  // wizard asks which of the two is ours; either answer prices instantly.
+  if (q.book === "managed" && q.assure === "we") {
+    return { refer: false as const, conflict: true as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false };
+  }
   const rm = tier.mult;
+  const entity: ManagedEntity = q.entity === "sole" ? "sole" : "company";
   const mo: Line[] = [], yr: Line[] = [], one: Line[] = [];
-  if (q.book === "self") { const t = QTIERP[q.tier || "book"]; mo.push({ n: "Bookkeeping", e: t[1] + " plan — automation only, run by you", v: t[0] }); }
-  if (q.book === "full") mo.push({ n: "Bookkeeping", e: "you upload, we do it", v: QT.book[q.txn] * rm });
-  const revBase = QT.book[q.txn];
-  if (q.book === "self" && q.review === "quarter" && revBase > 0) mo.push({ n: "Accounting review", e: "before each VAT return — you do the bulk of the work, so it costs a fraction", v: Math.max(15, revBase * 0.15) * rm });
-  if (q.book === "self" && q.review === "month" && revBase > 0) mo.push({ n: "Accounting review", e: "every month — you do the bulk of the work, so it costs a fraction", v: Math.max(20, revBase * 0.3) * rm });
+  // Flat, and deliberately NOT × rm — the sector loading applies to the
+  // compliance work, not to keeping the books.
+  // null on an unrecognised expenses band — the line is dropped rather than
+  // priced at the cheapest band, which nulls the quote to the lead path.
+  const bookRate = managedMonthly(entity, q.expenses);
+  if (q.book === "managed" && bookRate != null) {
+    mo.push({
+      n: "Bookkeeping",
+      e: MANAGED_ENTITY_LABELS[entity] + " — you send the paperwork, we keep the books",
+      v: bookRate,
+    });
+  }
   if (q.pay === "we" && q.head > 0) {
     const t = QPAY.find((t) => q.head <= t.upTo)!;
     mo.push({ n: "Payroll", e: q.head + " × €" + t.rate + " per person", v: q.head * t.rate * rm });
   }
-  const selfFile = q.book !== "full" && (q.book !== "self" || q.review === "none");
+  // We only put our name to a VAT return when we have worked the ledger.
+  const selfFile = q.book !== "managed";
   if (q.vat === "we" && q.vatreg !== "none") {
     if (selfFile) {
-      notes.push(["warn", 'You would be filing your own VAT returns. We only put our name to a return when we have worked the ledger or reviewed it — choose "You upload, we do it" or add an accounting review and we take the returns over.']);
+      notes.push(["warn", "You would be filing your own VAT returns. We only put our name to a return when we have worked the ledger — switch bookkeeping on above and we take the returns over."]);
     } else if (q.vatreg === "art11") {
       yr.push({ n: "VAT declaration", e: "small exempt — one declaration a year", v: 145 * rm });
     } else {
@@ -126,49 +204,187 @@ function qCalc(q: QState) {
   }
   if (q.taxret === "we") yr.push({ n: "Annual tax return", e: "from the closed ledger, with schedules", v: QT.taxret[q.txn] * rm });
   if (q.assure === "we") {
-    const bigVol = ["151-400", "401-1000", "1000+"].indexOf(q.txn) !== -1;
-    const review = (q.size === "small" || q.size === "unsure") && !bigVol;
-    yr.push({ n: "Financial audit", e: review ? "review engagement — the lighter option" : "full financial audit", v: QT.assure[q.txn] * (review ? 0.55 : 1) * rm });
+    const bigVol = QT_BIG_VOL.indexOf(q.txn) !== -1;
+    const review = qAuditIsReview(q);
+    yr.push({ n: review ? ASSURE_REVIEW_LABEL : ASSURE_AUDIT_LABEL, e: review ? "review engagement — the lighter option" : "full financial audit", v: QT.assure[q.txn] * (review ? 0.55 : 1) * rm });
     if (review) notes.push(["ok", "You likely qualify for a review instead of a full audit — about half the cost. We confirm it against your figures before anything is agreed."]);
     if (bigVol && q.size !== "big") notes.push(["warn", "At that volume a company is unlikely to stay under the small-company thresholds, so we priced a full audit. If your figures come in under, the price drops."]);
   }
   if (q.regoff === "we") yr.push({ n: "Registered office", e: "statutory address, post passed to you", v: 1200 });
-  const softLine = q.book === "self" ? QTIERP[q.tier || "book"][0] : 0;
-  const labourVal = mo.reduce((s, l) => s + l.v, 0) - softLine + yr.reduce((s, l) => s + l.v, 0);
-  const labour = labourVal > 0;
+  // Every remaining line is A4 labour now that the software-only line is gone.
+  const labour = mo.reduce((s, l) => s + l.v, 0) + yr.reduce((s, l) => s + l.v, 0) > 0;
+  /** Government money inside the yearly total — never discounted. */
+  let registry = 0;
+  // The annual return is a COMPANY filing. A Malta sole trader is not on the
+  // Business Registry, files no annual return, and has no authorised share
+  // capital for the registry fee to be keyed on — so quoting it to one bills
+  // for a filing we could not make on their behalf even if they paid. This was
+  // live: `labour` alone gated it, so every self-employed prospect who bought
+  // any service at all was quoted €150/yr for it. Found by walking a real
+  // sole-trader journey end to end, not by any test. vacei.com carries the
+  // same predicate as `mbrApplies` — keep the two in step.
+  if (labour && entity === "company") {
+    // The registry fee is set by authorised share capital (electronic rates) and
+    // passed through at cost. Read from the pack — never a literal, or every
+    // prospect above €1,500 capital is silently under-quoted.
+    const capRow = CAPITAL_BANDS.find((c) => c.id === (q.cap || "1500")) || CAPITAL_BANDS[0];
+    registry = MBR_ANNUAL_RETURN.registryFeeByCapital[capRow.id];
+    // Our fee AND the registry fee, exactly as the shared engine bills it. The
+    // registry slice alone was quoted here, so the annual return came out €50
+    // light against /pricing, vacei.com and the quotation we actually email.
+    // NOTE: the line NAME is the key `qItems` matches on to build the basket —
+    // renaming it silently drops the MBR item from the submitted quote.
+    yr.push({ n: "MBR annual return fee", e: "our €" + MBR_ANNUAL_RETURN.ourFee + " fee to prepare and file it, plus the government registry fee passed through at cost, set by your share capital (" + capRow.note + ")", v: MBR_ANNUAL_RETURN.ourFee + registry });
+  }
   if (labour) {
-    yr.push({ n: "MBR annual return fee", e: "government fee — passed through at cost", v: 100 });
-    if (tier.onb) one.push({ n: "Onboarding and due diligence", e: tier.l + " risk — charged once, at acceptance", v: tier.onb });
+    // Onboarding and opening balances are done but NOT priced here — no €0
+    // line either, which would read as "included, free". This applies to every
+    // entity, which is why it is not inside the company-only block above.
+    notes.push(["info", ONBOARDING_UNPRICED_NOTE]);
   }
   if (!labour && tier.note && notes.indexOf(tier.note) !== -1) notes.splice(notes.indexOf(tier.note), 1);
+  // Earlier months, at the same monthly rate, uncapped. `n` is the exact
+  // wire-contract label — `qItems` keys the basket off it, so it must not be
+  // reworded here without changing catchUpLabel in the pack.
   const months = +q.behind;
-  if (months > 0 && q.book === "self") {
-    one.push({ n: "Catch-up processing", e: months + " months of extra uploads through the automation — " + months + " × €10", v: months * 10 });
-  } else if (months > 0 && q.book === "full") {
-    const byMonth = months * 25, byYear = Math.ceil(months / 12) * 240;
-    const v = Math.min(byMonth, byYear);
-    one.push({ n: "Bringing the books up to date", e: "charged once, on its own — whichever basis is cheaper", v });
+  const catchUpName = catchUpLabel(months, entity, q.expenses);
+  const catchUpFee = catchUpAmount(months, entity, q.expenses);
+  if (months > 0 && q.book === "managed" && catchUpName != null && catchUpFee != null) {
+    one.push({
+      n: catchUpName,
+      e: "the same monthly rate for each earlier month — no catch-up premium, no cap",
+      v: catchUpFee,
+    });
   }
   [mo, yr, one].forEach((a) => a.forEach((l) => { l.v = Math.round(l.v); }));
   const sum = (a: Line[]) => a.reduce((s, l) => s + l.v, 0);
-  return { refer: false as const, mo, yr, one, notes, moTot: sum(mo), yrTot: sum(yr), oneTot: sum(one) };
+
+  // The launch discount, on the same terms the shared engine applies it: the
+  // government registry fee is never discounted (it is not ours to discount),
+  // and one-off charges are billed in full. This wizard previously applied no
+  // discount at all, so it showed the list price while /pricing and the emailed
+  // quotation both showed 25% less — the same journey, two different prices.
+  const grossMo = sum(mo), grossYr = sum(yr);
+  const promo = isPromoActive(now);
+  const keep = 1 - LAUNCH_PROMO.pct;
+  const moTot = promo ? Math.round(grossMo * keep) : grossMo;
+  const yrTot = promo ? Math.round((grossYr - registry) * keep) + registry : grossYr;
+  if (promo && (grossMo > 0 || grossYr > 0)) notes.push(["ok", LAUNCH_PROMO.note]);
+
+  return {
+    refer: false as const, conflict: false as const, mo, yr, one, notes,
+    moTot, yrTot, oneTot: sum(one),
+    /** List prices, for the struck-through originals. */
+    grossMo, grossYr, promoApplied: promo && (grossMo > 0 || grossYr > 0),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Submitting the quote                                                        */
+/* -------------------------------------------------------------------------- */
+
+/** The wizard's sector answer → the risk tier the backend prices on. */
+export function qRisk(q: QState): A4Risk {
+  const k = (QSECT.find((s) => s[0] === q.sector) || QSECT[0])[2];
+  return k === "refer" ? "standard" : k;
+}
+
+/**
+ * The visitor's answers → the priceable basket we submit.
+ *
+ * Every entry is gated on a line `qCalc` ACTUALLY produced rather than on the
+ * raw answers, so the two can never disagree about what was quoted: the VAT
+ * block and the "no labour, no MBR" rule are decided once, in `qCalc`, and
+ * read back here.
+ *
+ * The two old divergences are closed by pack mt-2026-08-14-managed: the
+ * "Additional bank accounts" line no longer exists (flat price), and
+ * `qCalc` now applies the launch discount and bills the full MBR fee, so
+ * `evaluateA4Items(qItems(q))` matches what is on screen.
+ */
+export function qItems(q: QState): A4Item[] {
+  const r = qCalc(q);
+  // Nothing was priced, so there is nothing to submit. The conflict case is the
+  // load-bearing one: an empty basket is what keeps `canSend` false and what
+  // stops a quotation the server would refuse from ever leaving the page.
+  if (r.refer || r.conflict) return [];
+  const all = [...r.mo, ...r.yr, ...r.one];
+  const has = (n: string) => all.some((l) => l.n === n);
+  const txn = q.txn as TxnBand;
+  const entity: ManagedEntity = q.entity === "sole" ? "sole" : "company";
+  const items: A4Item[] = [];
+
+  if (has("Bookkeeping")) items.push({ service: "bookkeeping-managed", entity, expenses: q.expenses });
+  if (has("Payroll")) items.push({ service: "payroll", heads: q.head });
+  if (has("VAT returns")) items.push({ service: "vat", txn, vatreg: q.vatreg === "art12" ? "art12" : "art10" });
+  if (has("VAT declaration")) items.push({ service: "vat", txn, vatreg: "art11" });
+  if (has("Annual tax return")) items.push({ service: "taxret", txn });
+  if (has(ASSURE_AUDIT_LABEL) || has(ASSURE_REVIEW_LABEL)) items.push({ service: "audit", txn, ...(qAuditIsReview(q) ? { review: true as const } : {}) });
+  if (has("Registered office")) items.push({ service: "registered-office" });
+  if (has("MBR annual return fee")) items.push({ service: "mbr", capital: q.cap || "1500" });
+  // Catch-up is keyed on the answer, not on the (now dynamic) line label.
+  if (q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity, expenses: q.expenses });
+  // Onboarding carries NO figure, but it IS part of the basket — the backend
+  // reads `hasUnpricedOnboarding` off the items to add "onboarding is not
+  // included in the figures below" to the quotation description. Omitting it
+  // here meant a4.com.mt said that on screen and never in the emailed quote,
+  // while vacei.com (which does emit it) said it in both. Gated on the note
+  // `qCalc` actually produced, so screen and wire cannot disagree.
+  if (r.notes.some(([, t]) => t === ONBOARDING_UNPRICED_NOTE)) items.push({ service: "onboarding" });
+
+  return items;
+}
+
+/**
+ * IESBA routing for what this wizard has been asked for.
+ *
+ * `assure: "we"` is audit-side whether it prices as a full audit or as a review
+ * engagement. A review IS an assurance engagement: the firm reports on figures
+ * it would otherwise have prepared, which is the self-review threat the rule
+ * exists to stop. The exclusion that used to sit here (`&& !qAuditIsReview(q)`)
+ * disagreed with the portal's pack, which flags any `audit` item regardless of
+ * `review` — and because the wizard's own defaults land on a small company with
+ * a review, the DEFAULT homepage basket was the one that diverged.
+ */
+/**
+ * One "Next" click, as a pure function — the wizard's ONLY step transition.
+ *
+ * Exported so a test can walk the default journey the way a visitor does rather
+ * than restate the rules and then prove its own restatement. Two of the three
+ * lines below are answer defaults applied on the visitor's behalf, and the
+ * third (`assure`) is what puts the default homepage basket on the audit side
+ * of the independence rule without the visitor ever choosing it.
+ */
+export function qAdvance(q: QState, lastStep: number): Partial<QState> {
+  const patch: Partial<QState> = { step: Math.min(lastStep, q.step + 1) };
+  // Step indices shifted by one when "Monthly spend" was inserted at 2.
+  if (q.step === 3 && q.book === "none") { patch.book = "managed"; patch.taxret = "we"; }
+  if (q.step === 4) patch.pay = q.head > 0 ? "we" : "none";
+  if (q.step === 7 && q.assure === "none") patch.assure = "we";
+  return patch;
+}
+
+export function qIndependence(q: QState) {
+  return independenceFlags({
+    wantsBookkeeping: q.book === "managed",
+    wantsAudit: q.assure === "we",
+  });
 }
 
 function qSummarise(q: QState) {
   const bits: string[] = [];
-  if (q.book === "self") bits.push("you'll run the " + QTIERP[q.tier || "book"][1] + " plan yourself");
-  if (q.book === "full") bits.push("you upload and we do the bookkeeping");
-  if (q.book === "self" && q.review !== "none") bits.push("we review your accounting " + (q.review === "month" ? "every month" : "before each VAT return"));
+  if (q.book === "managed") bits.push("you send us the paperwork and we keep the books");
   if (q.pay === "we" && q.head > 0) bits.push("we run your payroll");
-  const sf = q.book !== "full" && (q.book !== "self" || q.review === "none");
-  if (q.vat === "we" && q.vatreg !== "none" && !sf) bits.push("we file your VAT");
+  if (q.vat === "we" && q.vatreg !== "none" && q.book === "managed") bits.push("we file your VAT");
   if (q.taxret === "we") bits.push("we prepare your annual tax return");
   if (q.assure === "we") bits.push("we handle your audit or review");
   if (q.regoff === "we") bits.push("we provide your registered office");
   if (!bits.length) return "Nothing picked yet — choose what you need in the services step.";
   const j = bits.length === 1 ? bits[0] : bits.slice(0, -1).join(", ") + ", and " + bits[bits.length - 1];
-  let out = "So: " + j + ".";
-  if (+q.behind > 0 && q.book !== "none") out += " We bring the older months up to date first, charged once.";
+  let out = "So: " + j;
+  const start = formatStartMonth(q.startMonth);
+  out += start ? `, starting ${start}.` : ".";
+  if (+q.behind > 0 && q.book === "managed") out += ` The ${q.behind} months before that are quoted separately, at the same monthly rate.`;
   return out;
 }
 
@@ -178,6 +394,17 @@ const NOTE_STYLE: Record<string, { bg: string; fg: string; bc: string }> = {
   ok: { bg: "rgba(0,168,126,.10)", fg: "#0b7a5d", bc: "rgba(0,168,126,.30)" },
   warn: { bg: "#FFF7E9", fg: "#8A6100", bc: "#E8D2A4" },
   info: { bg: "rgba(73,79,223,.08)", fg: "var(--a4-primary-deep)", bc: "rgba(73,79,223,.25)" },
+};
+
+const Q_INPUT: React.CSSProperties = {
+  flex: "1 1 170px", minWidth: 0, height: 38, padding: "0 12px", borderRadius: "var(--a4-r-md)",
+  border: "1px solid var(--a4-hairline-light)", background: "#fff", color: "var(--a4-ink)",
+  fontFamily: "var(--a4-font-body)", fontSize: 13,
+};
+
+/** Off-screen honeypot — a real visitor never sees it, a bot fills it in. */
+const Q_HONEYPOT: React.CSSProperties = {
+  position: "absolute", left: -9999, top: "auto", width: 1, height: 1, opacity: 0, pointerEvents: "none",
 };
 
 type Opt = { key: string; label: string; sub: string; on: boolean; pick: () => void };
@@ -205,7 +432,17 @@ function OptPills({ opts }: { opts: Opt[] }) {
 
 export function LandingQuoteCalculator() {
   const [q, setQState] = useState<QState>(Q_INIT);
-  const setQ = (patch: Partial<QState>) => setQState((prev) => ({ ...prev, ...patch }));
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [hp, setHp] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState<WebsiteQuoteResult | null>(null);
+  // Any answer changed after sending re-opens the form: the quote on screen is
+  // no longer the quote we emailed, so the visitor must be able to send again.
+  const setQ = (patch: Partial<QState>) => {
+    setQState((prev) => ({ ...prev, ...patch }));
+    if (Object.keys(patch).some((k) => k !== "step")) setSent(null);
+  };
 
   const step = q.step;
   const r = qCalc(q);
@@ -216,21 +453,35 @@ export function LandingQuoteCalculator() {
 
   const STEP_META: [string, string, (() => Opt[]) | null][] = [
     ["What does the company do?", "Some sectors carry heavier checks on our side. That is what moves the price — not the bookkeeping.", () => opts(QSECT.map((s) => [s[0], s[1], ""] as [string, string, string]), "sector")],
-    ["About how many transactions a month?", "Count each invoice, receipt and bank line. A rough number is fine — we confirm it before anything is agreed.", () => opts(QTXN, "txn")],
+    ["Are these a company's books, or your own?", "It sets the bookkeeping price together with your monthly spend, which we ask next: from €" + BOOKKEEPING_FROM + " a month if you are self-employed, from €" + BOOKKEEPING_COMPANY + " for a company." + (q.entity === "company" ? " Then tell us the company's authorised share capital." : ""), () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
+    ["About how much do you spend a month?", "Total money out — suppliers, wages, rent, everything. You already know this number; you do not have to count anything. It is what sets your bookkeeping price: " + prettyBand(q.expenses) + " works out at €" + (managedMonthly(q.entity === "sole" ? "sole" : "company", q.expenses) ?? "—") + " a month for " + (q.entity === "sole" ? "a self-employed person" : "a company") + ".", () => EXPENSE_BANDS.map((b) => ({ key: b.id, label: b.label, sub: b.hint, pick: () => setQ({ expenses: b.id }), on: q.expenses === b.id }))],
+    ["About how many transactions a month?", "A different question from your spend above: this one counts DOCUMENTS AND LINES — each invoice, receipt and bank line. A rough number is fine. It sets your VAT, tax-return and audit fees; it does not move the bookkeeping price.", () => opts(QTXN, "txn")],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person.", null],
-    ["Are the books up to date?", "If you are behind, we bring you current first and quote that separately.", () => opts(QBEHIND, "behind")],
+    ["From which month should we start?", "Pick the first month we keep the books. Anything before it is catch-up, charged at the same monthly rate — no premium, no cap.", null],
     ["Are you registered for VAT?", "Different registrations carry very different filing loads. Not sure? Pick the last option and we check the register for you.", () => QVATREG.map(([k, label, sub]) => ({ key: k, label, sub: sub || "", pick: () => setQ({ vatreg: k, vat: k === "none" ? "none" : "we" }), on: q.vatreg === k }))],
     ["How big is the company?", "Only matters if you need an audit. Small companies usually qualify for a lighter review instead.", () => opts(QSIZE, "size")],
     ["What do you need from us?", "Switch anything off that you handle yourself. The total updates as you click.", null],
     ["Your quote", "Everything below is itemised — nothing appears later that is not on this list.", null],
   ];
 
-  const stepTag = step === 7 ? "Your quote" : "Question " + Math.min(step + 1, 7) + " of 7";
+  const LAST_STEP = STEP_META.length - 1; // 8 — the quote step
+  const stepTag = step === LAST_STEP ? "Your quote" : "Question " + Math.min(step + 1, LAST_STEP) + " of " + LAST_STEP;
   const isOpts = !!STEP_META[step][2];
   const stepOpts = isOpts ? STEP_META[step][2]!() : [];
-  const isNum = step === 2;
-  const isSvc = step === 6;
-  const isQuote = step === 7;
+  // Indices track STEP_META above; "Monthly spend" was inserted at 2 and
+  // pushed everything after it down by one.
+  const isEntity = step === 1;
+  const isNum = step === 4;
+  const isStart = step === 5;
+  const isSvc = step === 8;
+  const isQuote = step === LAST_STEP;
+
+  // Bands and labels come straight from the pack — the same five rows the
+  // registry fee table is keyed on, so a label can never describe a band we
+  // do not price.
+  const capOpts: Opt[] = CAPITAL_BANDS.map((c) => ({
+    key: c.id, label: c.label, sub: c.note, on: (q.cap || "1500") === c.id, pick: () => setQ({ cap: c.id }),
+  }));
 
   // Service rows for step 6 — amount labels read from the live calc.
   const lineAmt = (name: string) => {
@@ -248,24 +499,21 @@ export function LandingQuoteCalculator() {
   let svcRows: SvcRow[] = [];
   if (isSvc) {
     svcRows = [
-      svc("book", "Bookkeeping", "Use the software yourself, or send us the paperwork and we do the lot.", [["none", "Not needed"], ["self", "Just the software"], ["full", "You upload, we do it"]]),
+      svc("book", "Bookkeeping", "You send us the paperwork and we keep the books. There is no software-only option — a qualified accountant is on the file.", [["none", "Not needed"], ["managed", "Yes — you keep our books"]]),
     ];
-    if (q.book === "self") svcRows.push(
-      {
-        name: "Software tier", desc: "All automation, no accountants. Prices are from-prices by volume.",
-        amt: "€" + QTIERP[q.tier || "book"][0] + " /mo",
-        options: ([["book", "Junior"], ["senior", "Senior"], ["manager", "Manager"], ["cfo", "CFO"]] as [string, string][]).map(([k, label]) => ({ key: k, label, on: (q.tier || "book") === k, pick: () => setQ({ tier: k }) })),
-      },
-      svc("review", "Accounting review", "We check your coding, VAT treatment and reconciliation, and send you the fix list.", [["none", "No — I'll self-file"], ["quarter", "Before each VAT return"], ["month", "Every month"]]),
-    );
-    const sf = q.book !== "full" && (q.book !== "self" || q.review === "none");
+    const sf = q.book !== "managed";
     svcRows.push(
       svc("pay", "Payroll", "Payslips, monthly employer filing, annual returns. Priced per person.", [["none", "No"], ["we", "Yes"]]),
       sf
-        ? { name: "VAT returns — blocked", desc: "We only put our name to a return when we have worked the ledger or reviewed it. Choose “You upload, we do it” above, or add an accounting review, and this unlocks.", amt: "—", options: [] }
+        ? { name: "VAT returns — blocked", desc: "We only put our name to a return when we have worked the ledger. Switch bookkeeping on above and this unlocks.", amt: "—", options: [] }
         : svc("vat", "VAT returns", "Filed quarterly, billed monthly so you pay the same each time.", [["none", "No"], ["we", "Yes"]], q.vatreg === "art11" ? "VAT declaration" : "VAT returns"),
       svc("taxret", "Annual tax return", "Prepared once a year from the closed ledger.", [["none", "No"], ["we", "Yes"]]),
-      svc("assure", "Financial audit", "Most small companies qualify for a lighter review — we work out which applies.", [["none", "No"], ["we", "Yes"]]),
+      // The assurance line is named conditionally (audit vs review engagement),
+      // so its amount is looked up by either label rather than by one of them.
+      {
+        ...svc("assure", "Audit or review", "Most small companies qualify for a lighter review — we work out which applies. We cannot give assurance on books we keep ourselves; ask for both and the quote says so.", [["none", "No"], ["we", "Yes"]]),
+        amt: lineAmt(qAuditIsReview(q) ? ASSURE_REVIEW_LABEL : ASSURE_AUDIT_LABEL),
+      },
       svc("regoff", "Registered office", "Your company's official address, statutory post passed to you.", [["none", "No"], ["we", "Yes"]]),
     );
   }
@@ -276,26 +524,46 @@ export function LandingQuoteCalculator() {
     ...r.one.filter((l) => l.v > 0).map((l) => ({ n: l.n, e: l.e, v: euro(l.v) + " once" })),
   ];
 
-  const soft = q.book === "self";
-  const modeSoftOn = soft;
-  const modeFullOn = !soft && q.book !== "none";
-
-  const next = () => {
-    const patch: Partial<QState> = { step: Math.min(7, step + 1) };
-    if (step === 1 && q.book === "none") { patch.book = "full"; patch.taxret = "we"; }
-    if (step === 2) patch.pay = q.head > 0 ? "we" : "none";
-    if (step === 5 && q.assure === "none") patch.assure = "we";
-    setQ(patch);
+  // Capture. The basket is what the backend reprices, so the visitor gets a
+  // real quotation record rather than an empty contact form.
+  const items = isQuote && !r.refer ? qItems(q) : [];
+  const independence = qIndependence(q);
+  const independenceText = independenceNotice(independence.route);
+  const startOk = /^\d{4}-(0[1-9]|1[0-2])$/.test(q.startMonth);
+  // No start month, or both sides of the independence rule at once → the quote
+  // is not sendable. Both are stated on the form rather than silently disabling
+  // the button, so the visitor knows what to fix.
+  const canSend =
+    items.length > 0 &&
+    startOk &&
+    independence.route !== "conflict" &&
+    name.trim().length > 0 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const send = async () => {
+    if (!canSend || sending) return;
+    // Honeypot: only a bot fills a field it cannot see. Rejected before submit,
+    // with the same acknowledgement a person gets so it learns nothing.
+    if (hp.trim()) {
+      setSent({ status: "received", message: "We've got your details — your quote follows by email." });
+      return;
+    }
+    setSending(true);
+    const result = await submitWebsiteQuotation({
+      name, email, items, risk: qRisk(q),
+      serviceStartDate: q.startMonth,
+      sourceDetail: "a4-homepage",
+    });
+    setSent(result);
+    // Conversion on a CONFIRMED backend result only. `error` covers a 502 and a
+    // rejected fetch alike — nothing was written, so nothing is reported. The
+    // honeypot branch above returns before this and never counts either.
+    if (result.status === "quoted" || result.status === "received") {
+      trackConversion("quote_request_home_calculator");
+    }
+    setSending(false);
   };
 
-  const modeBtn = (on: boolean): React.CSSProperties => ({
-    height: 40, padding: "0 22px", borderRadius: "var(--a4-r-full)", cursor: "pointer",
-    border: "1px solid " + (on ? "#fff" : "rgba(255,255,255,.32)"),
-    background: on ? "#fff" : "rgba(255,255,255,.12)",
-    color: on ? "var(--a4-primary)" : "#fff",
-    fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600,
-    transition: "background .15s ease, color .15s ease",
-  });
+  const next = () => setQ(qAdvance(q, LAST_STEP));
 
   const railBtn = (i: number): { bg: string; fg: string; dotBg: string; dotFg: string } => {
     const done = i < step, active = i === step;
@@ -328,12 +596,8 @@ export function LandingQuoteCalculator() {
           maxWidth={620}
         /></Reveal>
 
-        <Reveal delay={60}>
-          <div style={{ margin: "36px auto 0", display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-            <button type="button" onClick={() => setQ({ book: "self", vat: "none", pay: "none", taxret: "none", assure: "none", step: 6 })} aria-pressed={modeSoftOn} style={modeBtn(modeSoftOn)}>Only software</button>
-            <button type="button" onClick={() => setQ({ book: "full", step: 0 })} aria-pressed={modeFullOn} style={modeBtn(modeFullOn)}>Software + accountants</button>
-          </div>
-        </Reveal>
+        {/* The "Only software" / "Software + accountants" mode switch is gone
+            with pack mt-2026-08-14-managed. There is one bookkeeping service. */}
 
         <Reveal delay={100}>
           <div className="lqc-grid" style={{ margin: "32px auto 0", display: "grid", gridTemplateColumns: "250px 1fr", gap: 32, alignItems: "start", maxWidth: 980, width: "100%" }}>
@@ -368,6 +632,56 @@ export function LandingQuoteCalculator() {
 
               {isOpts && <OptPills opts={stepOpts} />}
 
+              {/* Share capital exists only to price the MBR annual return, which is a
+                  company filing. Asking a sole trader for it is asking a question with
+                  no answer, about a fee they will not be charged — so it follows the
+                  same predicate as the line itself. */}
+              {isEntity && q.entity === "company" && (
+                <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Authorised share capital</div>
+                  <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                    Sets the MBR registry fee on your annual return (electronic rates) — passed through at cost.
+                  </div>
+                  <div style={{ marginTop: 10 }}><OptPills opts={capOpts} /></div>
+                </div>
+              )}
+
+              {isStart && (
+                <>
+                  <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                    <label htmlFor="lqc-start" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
+                      First month we keep the books
+                    </label>
+                    <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                      Required — the price depends on it, so we do not guess.
+                    </div>
+                    <input
+                      id="lqc-start"
+                      type="month"
+                      value={q.startMonth}
+                      onChange={(e) => setQ({ startMonth: e.target.value })}
+                      style={{ ...Q_INPUT, marginTop: 10, flex: "0 1 220px" }}
+                    />
+                    {!/^\d{4}-(0[1-9]|1[0-2])$/.test(q.startMonth) && (
+                      <div style={{ marginTop: 8, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
+                        Pick a month before we can price this.
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
+                      Do you have earlier months that still need doing?
+                    </div>
+                    <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                      Each one costs the same as a month going forward — €{managedMonthly(q.entity === "sole" ? "sole" : "company", q.expenses) ?? "—"}. No premium, no cap.
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      <OptPills opts={QBEHIND.map(([k, label, sub]) => ({ key: k, label, sub, on: q.behind === k, pick: () => setQ({ behind: k }) }))} />
+                    </div>
+                  </div>
+                </>
+              )}
+
               {isNum && (
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                   <input type="range" min={0} max={50} step={1} value={q.head} onChange={(e) => setQ({ head: +e.target.value })} aria-label="People on payroll" style={{ flex: 1, accentColor: "var(--a4-primary)", cursor: "pointer" }} />
@@ -391,6 +705,15 @@ export function LandingQuoteCalculator() {
                       <span style={{ minWidth: 78, textAlign: "right", fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, fontWeight: 600, color: "var(--a4-ink)" }}>{row.amt}</span>
                     </div>
                   ))}
+                  {/* Said here as well as on the quote step: switching the
+                      assurance row on next to the bookkeeping blanks every
+                      amount in the list above, and a column of dashes with no
+                      reason given reads as a bug. */}
+                  {r.conflict && (
+                    <p role="note" style={{ margin: "2px 0 0", padding: "11px 14px", borderRadius: 10, fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55, background: NOTE_STYLE.warn.bg, color: NOTE_STYLE.warn.fg, border: "1px solid " + NOTE_STYLE.warn.bc }}>
+                      The bookkeeping and the audit or review cannot both be ours — we cannot give assurance on books we keep ourselves. That is why the amounts have gone blank. Switch one of the two off, or carry on and the quote step gives you the choice.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -405,15 +728,82 @@ export function LandingQuoteCalculator() {
                   <p style={{ margin: "14px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.6, color: "var(--a4-body)" }}>
                     {r.refer
                       ? "We price most sectors instantly. This one needs a short conversation with a director before we put a number to it — usually the same day."
-                      : qSummarise(q)}
+                      : r.conflict
+                        ? "Nothing is priced yet. Tell us which of the two is ours and the itemised quote appears here, in full, straight away."
+                        : qSummarise(q)}
                   </p>
                   {(r.notes || []).map(([tone, text], i) => {
                     const s = NOTE_STYLE[tone] || NOTE_STYLE.info;
                     return <p key={i} style={{ margin: "10px 0 0", padding: "11px 14px", borderRadius: 10, fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55, background: s.bg, color: s.fg, border: "1px solid " + s.bc }}>{text}</p>;
                   })}
-                  <div style={{ marginTop: 16, alignSelf: "flex-start" }}>
-                    <Button variant="dark" size="sm" href="/contact">{r.refer ? "Request a call" : "Send me this quote"} <Icon name="arrow-right" size={14} color="#fff" /></Button>
-                  </div>
+                  {/* The independence consequence, said before they send —
+                      not discovered later. Same words as every other surface. */}
+                  {independenceText && (
+                    <p
+                      role="note"
+                      style={{
+                        margin: "10px 0 0", padding: "11px 14px", borderRadius: 10,
+                        fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55,
+                        ...(independence.route === "conflict" ? NOTE_STYLE.warn : NOTE_STYLE.info),
+                        background: (independence.route === "conflict" ? NOTE_STYLE.warn : NOTE_STYLE.info).bg,
+                        color: (independence.route === "conflict" ? NOTE_STYLE.warn : NOTE_STYLE.info).fg,
+                        border: "1px solid " + (independence.route === "conflict" ? NOTE_STYLE.warn : NOTE_STYLE.info).bc,
+                      }}
+                    >
+                      {independenceText}
+                    </p>
+                  )}
+                  {/* The way out, on the spot. The default wizard path lands on
+                      the conflict (managed books + a review engagement), so a
+                      greyed-out button with nothing next to it would be where
+                      most visitors stop. One tap drops either side of the rule
+                      and the quote becomes sendable immediately. */}
+                  {independence.route === "conflict" && (
+                    <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: NOTE_STYLE.info.bg, border: "1px solid " + NOTE_STYLE.info.bc }}>
+                      <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 600, color: NOTE_STYLE.info.fg }}>Which one is ours?</div>
+                      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button type="button" onClick={() => setQ({ assure: "none" })} style={svcPill(true)}>Keep the bookkeeping with us</button>
+                        <button type="button" onClick={() => setQ({ book: "none", vat: "none" })} style={svcPill(true)}>Take the audit or review with us</button>
+                      </div>
+                      <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.55, color: NOTE_STYLE.info.fg }}>
+                        Pick one and this quote can be sent straight away. Not sure which? Ask for a call instead and we work it out with you.
+                      </p>
+                    </div>
+                  )}
+                  {r.refer ? (
+                    <div style={{ marginTop: 16, alignSelf: "flex-start" }}>
+                      <Button variant="dark" size="sm" href="/contact">Request a call <Icon name="arrow-right" size={14} color="#fff" /></Button>
+                    </div>
+                  ) : sent ? (
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-light)" }}>
+                      <p style={{ margin: 0, fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, lineHeight: 1.55, color: "var(--a4-ink)" }}>{sent.message}</p>
+                      {sent.status === "quoted" && (
+                        <div style={{ marginTop: 12 }}>
+                          <Button variant="dark" size="sm" href={sent.portalHref} target="_blank">Create your account <Icon name="arrow-right" size={14} color="#fff" /></Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-light)" }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <input value={name} onChange={(e) => setName(e.target.value)} aria-label="Your name" placeholder="Your name" autoComplete="name" style={Q_INPUT} />
+                        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" aria-label="Work email" placeholder="Work email" autoComplete="email" style={Q_INPUT} />
+                      </div>
+                      <input value={hp} onChange={(e) => setHp(e.target.value)} name="company_website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={Q_HONEYPOT} />
+                      <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        <Button variant="dark" size="sm" onClick={send} style={{ opacity: canSend && !sending ? 1 : 0.55, pointerEvents: canSend && !sending ? "auto" : "none" }}>
+                          {sending ? "Sending your quote…" : "Send me this quote"}
+                          {!sending && <Icon name="arrow-right" size={14} color="#fff" />}
+                        </Button>
+                        <Button variant="soft" size="sm" href="/contact">Prefer to talk?</Button>
+                      </div>
+                      {!startOk && (
+                        <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.5, color: "#8A6100" }}>
+                          Go back to “When we start” and pick a month — we will not price a quote without it.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-mute)" }}>KYC required before work starts. All fees exclude VAT.</p>
                 </div>
               )}
@@ -430,14 +820,17 @@ export function LandingQuoteCalculator() {
                     <button type="button" onClick={next} style={{
                       height: 36, padding: "0 18px", borderRadius: "var(--a4-r-full)", border: "1px solid var(--a4-ink)",
                       background: "var(--a4-ink)", color: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-                    }}>{step === 6 ? "See my quote" : "Next"}</button>
+                    }}>{step === LAST_STEP - 1 ? "See my quote" : "Next"}</button>
                   </>
                 )}
                 <span style={{ marginLeft: "auto", display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-mute)" }}>{r.refer ? "" : "Every month"}</span>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 18, fontWeight: 600, color: "var(--a4-ink)" }}>{r.refer ? "Let's talk first" : euro(r.moTot)}</span>
-                  {!r.refer && r.yrTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.yrTot) + " /yr"}</span>}
-                  {!r.refer && r.oneTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.oneTot) + " once"}</span>}
+                  {/* The running total is a figure too — it must go dark on a
+                      conflict as well, or the quote step shows nothing while
+                      the footer still quotes a monthly price. */}
+                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-mute)" }}>{r.refer || r.conflict ? "" : "Every month"}</span>
+                  <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 18, fontWeight: 600, color: "var(--a4-ink)" }}>{r.refer ? "Let's talk first" : r.conflict ? "One or the other" : euro(r.moTot)}</span>
+                  {!r.refer && !r.conflict && r.yrTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.yrTot) + " /yr"}</span>}
+                  {!r.refer && !r.conflict && r.oneTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.oneTot) + " once"}</span>}
                 </span>
               </div>
             </div>

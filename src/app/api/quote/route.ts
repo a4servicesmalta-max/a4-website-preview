@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
+import { pushLeadToPortal, pageUrlOf } from "@/lib/portal-lead";
+import { flagsForServiceSelection } from "@/lib/independence";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -28,6 +30,7 @@ export async function POST(req: NextRequest) {
     let subject: string | undefined;
     let message: string | undefined;
     let meta: any;
+    let companyWebsite: string | undefined;
     let attachments: { filename: string; content: Buffer }[] = [];
 
     if (contentType.includes("multipart/form-data")) {
@@ -39,6 +42,7 @@ export async function POST(req: NextRequest) {
         form.get("subject")?.toString() ||
         "Homepage quote / project request";
       message = form.get("message")?.toString() || "";
+      companyWebsite = form.get("company_website")?.toString();
 
       const metaJson = form.get("metaJson")?.toString();
       if (metaJson) {
@@ -71,13 +75,25 @@ export async function POST(req: NextRequest) {
         subject,
         message,
         meta,
+        company_website: companyWebsite,
       } = body as {
         name?: string;
         email?: string;
         subject?: string;
         message?: string;
         meta?: any;
+        company_website?: string;
       });
+    }
+
+    // Spam honeypot — mirrors vacei.com's `company_website` field: a hidden
+    // input no human ever fills in (off-screen, tabindex -1, aria-hidden).
+    // Bots that auto-fill every field trip it. Checked server-side (not just
+    // client-side) so a direct POST that skips the browser UI is still
+    // caught. Respond as if the submission succeeded — never tip off the
+    // bot that it was filtered.
+    if (companyWebsite && companyWebsite.trim().length > 0) {
+      return NextResponse.json({ ok: true });
     }
 
     if (!email || !name) {
@@ -87,8 +103,52 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Portal push is primary — always capture the lead first.
+    // The internal ops Requests inbox. It has never created a WebsiteLead, so
+    // on its own a quote request never appeared in the portal lead list.
     await pushToPortal({ name, email, company: meta?.companyName, phone: meta?.phone, message, service: "Quote request" + (meta?.service ? ` — ${meta.service}` : ""), source: "quote", priority: "High", meta });
+
+    // The lead list the firm actually works. Carry the phone and the selected
+    // services through — the form collects both and they are the whole point of
+    // a quote request.
+    const selected = Array.isArray(meta?.services) ? meta.services.join(", ") : meta?.service;
+
+    // IESBA independence. Derived server-side from the services actually
+    // submitted rather than trusted from the client's `meta.auditEligible`:
+    // a POST that skips the browser UI must still be routed correctly, and
+    // this flag decides whether A4 may ever audit this prospect.
+    const selectedServices: string[] = Array.isArray(meta?.services)
+      ? meta.services.map(String)
+      : meta?.service
+        ? [String(meta.service)]
+        : [];
+    const independence = flagsForServiceSelection(selectedServices);
+
+    const leadWritten = await pushLeadToPortal({
+      name,
+      email,
+      phone: meta?.phone,
+      message: [
+        "[a4.com.mt — quote request]",
+        meta?.companyName ? `Company: ${meta.companyName}` : "",
+        selected ? `Services: ${selected}` : "",
+        meta?.employees ? `Employees: ${meta.employees}` : "",
+        meta?.turnover ? `Turnover: ${meta.turnover}` : "",
+        "",
+        message || "(no message provided)",
+      ].filter(Boolean).join("\n"),
+      sourceDetail: "quote",
+      pageUrl: pageUrlOf(req),
+      independence,
+    });
+
+    // A 200 with "your quote is on its way" when nothing was recorded is the
+    // worst outcome available: the prospect stops chasing and we never know.
+    if (!leadWritten) {
+      return NextResponse.json(
+        { error: "We couldn't record your request. Please email info@a4.com.mt and we'll pick it up straight away." },
+        { status: 502 },
+      );
+    }
 
     const subjectLine = subject || `New quote request from ${name}`;
 

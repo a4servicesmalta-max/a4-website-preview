@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { isVerified } from "@/lib/email-verify";
 import { pushToPortal } from "@/lib/portal";
+import { pushLeadToPortal } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
 
 export const runtime = "nodejs";
@@ -47,6 +48,19 @@ export async function POST(req: NextRequest) {
 
     await pushToPortal({ name, email, company, message: `Uploaded ${tbFile?.name || "TB"}${glFile ? " + " + glFile.name : ""} for accounting/TB review`, service: "Accounting / trial-balance review", source: "accounting-health", priority: "High", meta: { tb: tbFile?.name || null, gl: glFile?.name || null } });
 
+    // pushToPortal above reaches the internal ops portal, which creates no
+    // WebsiteLead. This does — and it runs before any engine call, so a review
+    // failure can never cost us the prospect.
+    const leadWritten = await pushLeadToPortal({
+      name: name || email,
+      email,
+      message:
+        `[a4.com.mt — accounting/TB review] Uploaded ${tbFile?.name || "TB"}` +
+        `${glFile ? ` + ${glFile.name}` : ""} for accounting / trial-balance review` +
+        (company ? `\nCompany: ${company}` : ""),
+      sourceDetail: "accounting-health",
+    });
+
     const base = process.env.A4_ACCOUNTING_URL;
 
     // Primary path: the dedicated accounting-health engine (TB + GL), when hosted.
@@ -68,7 +82,9 @@ export async function POST(req: NextRequest) {
         ).catch(() => {});
         if (engine.status === 422) {
           const detail = await engine.json().catch(() => ({}));
-          return NextResponse.json({ error: detail.detail || detail.error || "We couldn't read those files. Try a clean CSV or Excel export." }, { status: 422 });
+          // Past the pushToPortal above, so the lead is with us either way —
+          // tell the browser so it can say that instead of failing silently.
+          return NextResponse.json({ error: detail.detail || detail.error || "We couldn't read those files. Try a clean CSV or Excel export.", leadCaptured: leadWritten }, { status: 422 });
         }
         if (engine.ok) return NextResponse.json(await engine.json());
         console.error(`accounting-health primary engine ${engine.status}; falling back to TB reviewer`);
@@ -79,8 +95,8 @@ export async function POST(req: NextRequest) {
 
     // Fallback (no dedicated engine hosted): run the trial balance through the FS engine's
     // TB reviewer, which is deployed and has the Anthropic key. GL is not used in this mode.
-    if (!process.env.A4_FSREVIEW_URL) return NextResponse.json({ error: "Review service not configured." }, { status: 503 });
-    if (!tbFile) return NextResponse.json({ error: "Please upload a trial balance (CSV, Excel or PDF)." }, { status: 400 });
+    if (!process.env.A4_FSREVIEW_URL) return NextResponse.json({ error: "Review service not configured.", leadCaptured: leadWritten }, { status: 503 });
+    if (!tbFile) return NextResponse.json({ error: "Please upload a trial balance (CSV, Excel or PDF).", leadCaptured: leadWritten }, { status: 400 });
     const out = new FormData();
     out.append("file", tbFile, tbFile.name);
     out.append("deep", "true");
@@ -95,8 +111,8 @@ export async function POST(req: NextRequest) {
       const detail = await engine.json().catch(() => ({}));
       const msg = engine.status === 422
         ? "We couldn't read that file. Try a clean CSV or Excel export."
-        : (detail.detail || detail.error || "The review service had a problem. We've logged your request and will follow up.");
-      return NextResponse.json({ error: msg }, { status: engine.status === 422 ? 422 : 502 });
+        : (detail.detail || detail.error || "The review service had a problem.");
+      return NextResponse.json({ error: msg, leadCaptured: leadWritten }, { status: engine.status === 422 ? 422 : 502 });
     }
     return NextResponse.json(await engine.json());
   } catch (e) {

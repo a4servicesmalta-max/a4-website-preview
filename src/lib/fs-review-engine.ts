@@ -64,6 +64,16 @@ export async function engineFetch(path: string, body: FormData): Promise<Respons
   }
 
   // Legacy open-mode deployments: basic auth.
+  // Reaching here on an accounts-mode engine means the service-account login did
+  // not yield a vsession cookie, and basic auth will be rejected — the route then
+  // answers 502. Say so in the logs: without this the downgrade is silent and the
+  // 502 is indistinguishable from an engine-side fault. Names only, never values.
+  console.warn(
+    "fs-review-engine: no session cookie — falling back to basic auth" +
+      ` (A4_FSREVIEW_SVC_EMAIL set: ${!!process.env.A4_FSREVIEW_SVC_EMAIL},` +
+      ` A4_FSREVIEW_SVC_PASSWORD set: ${!!process.env.A4_FSREVIEW_SVC_PASSWORD},` +
+      ` A4_FSREVIEW_PASS set: ${!!process.env.A4_FSREVIEW_PASS})`,
+  );
   const auth = Buffer.from(`${process.env.A4_FSREVIEW_USER || "a4"}:${process.env.A4_FSREVIEW_PASS || ""}`).toString("base64");
   return fetch(`${base}${path}`, { method: "POST", headers: { Authorization: `Basic ${auth}` }, body });
 }

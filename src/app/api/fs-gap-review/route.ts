@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { isVerified } from "@/lib/email-verify";
 import { pushToPortal } from "@/lib/portal";
+import { pushLeadToPortal } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
+import { augmentWithAiCommentary } from "@/lib/ai-review";
+import type { ReviewResponse } from "./types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -57,7 +60,33 @@ export async function POST(req: NextRequest) {
     out.append("file", file, file.name);
     out.append("deep", "true");
 
-    const engine = await engineFetch(endpoint, out);
+    // The lead is written BEFORE the engine runs, and independently of it.
+    // The review is the part that fails; the prospect is the part that matters.
+    // Previously this sat after the engine call, so every 502 cost us the lead.
+    const leadWritten = await pushLeadToPortal({
+      name: name || email,
+      email,
+      message:
+        `[a4.com.mt — FS/TB review (${kind})] Uploaded ${file.name} for ` +
+        `${kind === "tb" ? "trial balance" : "financial statements"} review` +
+        (company ? `\nCompany: ${company}` : "") +
+        (revenueBand ? `\nShown to client: €${quotedFee}/yr (${revenueBand} band)` : "") +
+        (scoping ? `\n\nScoping notes:\n${scoping}` : ""),
+      sourceDetail: "fs-review",
+    });
+
+    // A thrown engine call must not skip the error path and lose the response
+    // shape — the outer catch returns a 500 with no `leadCaptured` signal.
+    let engine: Response;
+    try {
+      engine = await engineFetch(endpoint, out);
+    } catch (err) {
+      console.error("fs-gap-review engine unreachable:", err);
+      return NextResponse.json(
+        { error: "The review service is unreachable.", leadCaptured: leadWritten },
+        { status: 502 }
+      );
+    }
 
     // Only the engine's own /api/review returns a `quote`; read it here (once
     // the engine result is available) so the staff notification can include
@@ -73,6 +102,7 @@ export async function POST(req: NextRequest) {
       fullQuote = data && typeof data === "object" && data.quote ? data.quote : null;
       if (data && typeof data === "object") delete data.quote; // strip defensively before spreading
       clientPayload = { ...data, quote: fullQuote ? { fee: fullQuote.fee, docKind: fullQuote.docKind } : null };
+      clientPayload = await augmentWithAiCommentary(clientPayload as unknown as ReviewResponse);
     } else {
       const detail = await engine.json().catch(() => ({}));
       engineErrorDetail = detail.detail || "";
@@ -92,13 +122,32 @@ export async function POST(req: NextRequest) {
       email,
     ).catch(() => {});
 
-    await pushToPortal({ name, email, company, message: `Uploaded ${file.name} for ${kind === "tb" ? "trial balance" : "financial statements"} review`, service: `FS/TB review (${kind})`, source: "fs-review", priority: "High", meta: { kind, fileName: file.name, ...(scoping ? { scoping } : {}), ...(fullQuote ? { quote: fullQuote } : {}) } });
+    await pushToPortal({
+      name,
+      email,
+      company,
+      message: `Uploaded ${file.name} for ${kind === "tb" ? "trial balance" : "financial statements"} review`,
+      service: `FS/TB review (${kind})`,
+      source: "fs-review",
+      priority: "High",
+      meta: {
+        kind,
+        fileName: file.name,
+        ...(scoping ? { scoping } : {}),
+        ...(fullQuote ? { quote: fullQuote } : {}),
+        ...(clientPayload ? { findings: (clientPayload as unknown as ReviewResponse).findings, aiCommentary: (clientPayload as unknown as ReviewResponse).aiCommentary } : {}),
+      },
+    });
 
     if (!engine.ok) {
       const msg = engine.status === 422
         ? "We couldn't read that file. For statements, try a clearer PDF; for a trial balance, try CSV or Excel."
-        : (engineErrorDetail || "The review service had a problem. We've logged your request and will follow up.");
-      return NextResponse.json({ error: msg }, { status: engine.status === 422 ? 422 : 502 });
+        : (engineErrorDetail || "The review service had a problem.");
+      // Report what actually happened rather than assuming: the lead write is a
+      // network call to the portal and can fail on its own. Claiming capture we
+      // did not achieve is worse than admitting it — a broken button still earns
+      // an email from a motivated prospect; a false promise earns silence.
+      return NextResponse.json({ error: msg, leadCaptured: leadWritten }, { status: engine.status === 422 ? 422 : 502 });
     }
 
     return NextResponse.json(clientPayload);

@@ -11,7 +11,15 @@ import {
   type QuoteServiceId,
   type RevenueBandId,
 } from "@/lib/quotation";
-import { PRICING_GOV_NOTE } from "@/data/a4QuotePack";
+import { nextMonth } from "@/lib/accounting-fee";
+import { flagsForServiceSelection, independenceNotice } from "@/lib/independence";
+import {
+  EXPENSE_BANDS,
+  MANAGED_ENTITY_OPTIONS,
+  PRICING_GOV_NOTE,
+  type ExpenseBand,
+  type ManagedEntity,
+} from "@/data/a4QuotePack";
 
 const panel: React.CSSProperties = {
   background: "var(--a4-surface-card)",
@@ -26,6 +34,19 @@ const label: React.CSSProperties = {
   letterSpacing: ".1em",
   color: "var(--a4-mute)",
   marginBottom: 8,
+};
+/** The two "which one is ours?" pills — the same affordance the homepage uses. */
+const choicePill: React.CSSProperties = {
+  height: 30,
+  padding: "0 13px",
+  borderRadius: "var(--a4-r-full)",
+  cursor: "pointer",
+  border: "1px solid var(--a4-primary)",
+  background: "var(--a4-primary)",
+  color: "#fff",
+  fontFamily: "var(--a4-font-body)",
+  fontSize: 11.5,
+  fontWeight: 600,
 };
 const field: React.CSSProperties = {
   width: "100%",
@@ -54,7 +75,20 @@ export function QuotationBuilder() {
   const [regNo, setRegNo] = useState("");
   const [industry, setIndustry] = useState<string>(QUOTE_INDUSTRIES[5]);
   const [revenueBand, setRevenueBand] = useState<RevenueBandId>("100k-500k");
-  const [overdueYears, setOverdueYears] = useState(0);
+  const [entity, setEntity] = useState<ManagedEntity>("company");
+  /**
+   * Monthly expenses — the bookkeeping price driver. Without it `buildQuote`
+   * quotes bookkeeping "On request" rather than guessing the entry band, so
+   * this field is what keeps the PDF priced.
+   */
+  const [expenses, setExpenses] = useState<ExpenseBand>("10-25k");
+  // Earlier months that still need doing. This used to be `overdueYears`
+  // because catch-up was capped per year; it is now priced per month at the
+  // monthly rate, so months are the honest unit and the picker offers them.
+  const [catchUpMonths, setCatchUpMonths] = useState(0);
+  // Required. Suggested as next month, never assumed — a wrong start month
+  // silently changes which months are catch-up.
+  const [startMonth, setStartMonth] = useState<string>(() => nextMonth());
   const [services, setServices] = useState<Set<QuoteServiceId>>(() => new Set(["accounts", "vat"] as QuoteServiceId[]));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -62,20 +96,69 @@ export function QuotationBuilder() {
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ pdfBase64: string; pdfName: string } | null>(null);
 
+  /**
+   * IESBA routing. `accounts` here IS managed bookkeeping, so choosing it
+   * rules A4 out as auditor and choosing `audit` rules us out of the books.
+   * Mapped onto the same service ids the request form uses, so both surfaces
+   * set the flag by the same rule.
+   *
+   * Decided BEFORE the quote is built, because the answer decides whether
+   * there is anything to price at all.
+   */
+  const independence = useMemo(
+    () =>
+      flagsForServiceSelection([
+        ...(services.has("accounts") ? ["Bookkeeping"] : []),
+        ...(services.has("audit") ? ["Audit & Annual Accounts"] : []),
+      ]),
+    [services]
+  );
+  const independenceText = independenceNotice(independence.route);
+  const conflict = independence.route === "conflict";
+
+  /**
+   * `null` on a conflict — no figures are produced at all, the same shape the
+   * homepage calculator and vacei.com use. This builder used to price the
+   * basket in full, show "first-year total", and refuse only at submit; by
+   * then the visitor has anchored on a number for an engagement A4 is not
+   * permitted to provide. Nothing is priced until they say which side is ours.
+   */
   const quote = useMemo(
     () =>
-      buildQuote({
-        company: company || "Your company",
-        regNo,
-        industry,
-        revenueBand,
-        services: [...services],
-        overdueYears,
-      }),
-    [company, regNo, industry, revenueBand, services, overdueYears]
+      conflict
+        ? null
+        : buildQuote({
+            company: company || "Your company",
+            regNo,
+            industry,
+            revenueBand,
+            services: [...services],
+            entity,
+            expenses,
+            catchUpMonths,
+            startMonth,
+          }),
+    [conflict, company, regNo, industry, revenueBand, services, entity, expenses, catchUpMonths, startMonth]
   );
 
-  const toggle = (id: QuoteServiceId) =>
+  /**
+   * Any change to what is being priced retires the quotation already produced.
+   *
+   * Without this a visitor could download a valid PDF, then tick the audit and
+   * sit on a conflict screen with "Download PDF again" still live beside it —
+   * a document for a basket that is no longer the one on screen. The homepage
+   * calculator clears its sent state on the same principle; a PDF outlives a
+   * page, so it matters more here. Called from each input rather than from an
+   * effect, so there is no cascading render.
+   */
+  const retireQuotation = () => {
+    setDone(null);
+    setError("");
+  };
+  /** Wraps a pricing input's setter so no call site can forget the line above. */
+  const priced = <T,>(set: (v: T) => void) => (v: T) => { set(v); retireQuotation(); };
+
+  const toggle = (id: QuoteServiceId) => {
     setServices((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -83,35 +166,57 @@ export function QuotationBuilder() {
       } else next.add(id);
       return next;
     });
+    retireQuotation();
+  };
+
+  /** The way out of the conflict: drop one side of the rule, price the rest. */
+  const dropService = (id: QuoteServiceId) => {
+    setServices((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    retireQuotation();
+  };
 
   const submit = async () => {
     setError("");
+    // Both sides of the independence rule at once. Checked FIRST and before any
+    // other complaint, and there is nothing priced behind it to download. The
+    // button is inert in this state, and /api/quotation refuses it as well —
+    // this is the innermost of the three, not the only one.
+    if (conflict || !quote) return setError(independenceText ?? "");
     if (!company.trim()) return setError("Enter your company name.");
     if (!name.trim()) return setError("Enter your name.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError("Enter a valid email address.");
+    if (!startMonth) return setError("Choose the month we should start from.");
     setBusy(true);
     try {
       const res = await fetch("/api/quotation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, company, regNo, industry, revenueBand, services: [...services], overdueYears }),
+        body: JSON.stringify({
+          name, email, company, regNo, industry, revenueBand,
+          services: [...services], entity, expenses, catchUpMonths, startMonth,
+          auditEligible: independence.auditEligible,
+          bookkeepingEligible: independence.bookkeepingEligible,
+        }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Something went wrong.");
       setDone({ pdfBase64: data.pdfBase64, pdfName: data.pdfName });
       download(data.pdfBase64, data.pdfName);
 
-      // NOTE — deliberately NOT submitted as an instant portal quotation.
+      // NOTE: this builder deliberately does NOT raise an instant portal
+      // quotation. It prices off a REVENUE band and its own baselines, which
+      // is not the `A4ServiceItem` basket the backend reprices — submitting it
+      // would fail the €1 / 1% tolerance check every time, producing a
+      // permanent 202 and a lead with a quote attached that nobody sent. The
+      // PDF plus the ops-portal record IS the deliverable here; the instant
+      // quotation lives on /pricing and the homepage calculator, which build
+      // real baskets.
       //
-      // This builder prices off a REVENUE band (and offers payroll "on
-      // request"), while the backend reprices off TRANSACTION bands from the
-      // fee schedule. The two disagree for the same company, so a submission
-      // here would always fail the server's ±€1/1% totals check and land as
-      // 202 RECEIVED — a quote that is never emailed, which is worse than not
-      // promising one. /api/quotation above already captures the lead and
-      // sends the team the PDF; a person follows up within 24 hours.
-      //
-      // To make this instant, the builder has to collect a transaction band and
+      // To make this builder instant, it has to collect a TRANSACTION band and
       // drop the on-request lines, so its displayed total is the sum of
       // priceable A4Items — see /pricing, which does exactly that.
     } catch (e: unknown) {
@@ -140,15 +245,15 @@ export function QuotationBuilder() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }} className="max-[640px]:!grid-cols-1">
               <div>
                 <span style={label}>Company name *</span>
-                <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Your company Ltd" style={field} />
+                <input value={company} onChange={(e) => priced(setCompany)(e.target.value)} placeholder="Your company Ltd" style={field} />
               </div>
               <div>
                 <span style={label}>MBR registration (optional)</span>
-                <input value={regNo} onChange={(e) => setRegNo(e.target.value)} placeholder="C 12345" style={field} />
+                <input value={regNo} onChange={(e) => priced(setRegNo)(e.target.value)} placeholder="C 12345" style={field} />
               </div>
               <div>
                 <span style={label}>Industry</span>
-                <select value={industry} onChange={(e) => setIndustry(e.target.value)} style={{ ...field, cursor: "pointer" }}>
+                <select value={industry} onChange={(e) => priced(setIndustry)(e.target.value)} style={{ ...field, cursor: "pointer" }}>
                   {QUOTE_INDUSTRIES.map((i) => (
                     <option key={i}>{i}</option>
                   ))}
@@ -156,7 +261,7 @@ export function QuotationBuilder() {
               </div>
               <div>
                 <span style={label}>Annual revenue</span>
-                <select value={revenueBand} onChange={(e) => setRevenueBand(e.target.value as RevenueBandId)} style={{ ...field, cursor: "pointer" }}>
+                <select value={revenueBand} onChange={(e) => priced(setRevenueBand)(e.target.value as RevenueBandId)} style={{ ...field, cursor: "pointer" }}>
                   {REVENUE_BANDS.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.label}
@@ -165,14 +270,56 @@ export function QuotationBuilder() {
                 </select>
               </div>
               <div>
-                <span style={label}>Years of overdue accounts</span>
-                <select value={overdueYears} onChange={(e) => setOverdueYears(Number(e.target.value))} style={{ ...field, cursor: "pointer" }}>
-                  {[0, 1, 2, 3, 4, 5].map((n) => (
-                    <option key={n} value={n}>
-                      {n === 0 ? "Up to date" : `${n} ${n === 1 ? "year" : "years"}`}
+                <span style={label}>Whose books *</span>
+                <select value={entity} onChange={(e) => priced(setEntity)(e.target.value as ManagedEntity)} style={{ ...field, cursor: "pointer" }}>
+                  {MANAGED_ENTITY_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label} — {o.sub}
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                {/* Distinct from the revenue band above: revenue scales audit,
+                    tax and payroll; monthly SPEND is what prices the books. */}
+                <span style={label}>Monthly expenses *</span>
+                <select
+                  value={expenses}
+                  onChange={(e) => priced(setExpenses)(e.target.value as ExpenseBand)}
+                  style={{ ...field, cursor: "pointer" }}
+                >
+                  {EXPENSE_BANDS.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.label} — {b.hint}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <span style={label}>Start from *</span>
+                <input
+                  type="month"
+                  value={startMonth}
+                  onChange={(e) => priced(setStartMonth)(e.target.value)}
+                  style={{ ...field, cursor: "pointer" }}
+                  aria-label="From which month should we start?"
+                />
+                <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                  The first month we keep the books. Anything before it is catch-up.
+                </span>
+              </div>
+              <div>
+                <span style={label}>Earlier months that still need doing</span>
+                <select value={catchUpMonths} onChange={(e) => priced(setCatchUpMonths)(Number(e.target.value))} style={{ ...field, cursor: "pointer" }}>
+                  {[0, 1, 2, 3, 6, 9, 12, 18, 24, 36].map((n) => (
+                    <option key={n} value={n}>
+                      {n === 0 ? "None — up to date" : `${n} ${n === 1 ? "month" : "months"}`}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                  Charged at the same monthly rate — no catch-up premium, no cap.
+                </span>
               </div>
             </div>
 
@@ -216,6 +363,25 @@ export function QuotationBuilder() {
                   );
                 })}
               </div>
+              {independenceText ? (
+                <div
+                  role="note"
+                  style={{
+                    marginTop: 12,
+                    padding: "12px 14px",
+                    borderRadius: "var(--a4-r-md)",
+                    background: independence.route === "conflict" ? "#FFF7E9" : "rgba(73,79,223,.06)",
+                    border: `1px solid ${independence.route === "conflict" ? "#E8D2A4" : "rgba(73,79,223,.25)"}`,
+                  }}
+                >
+                  <span style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: independence.route === "conflict" ? "#8A6100" : "var(--a4-primary-deep)" }}>
+                    Independence
+                  </span>
+                  <span style={{ display: "block", marginTop: 4, fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
+                    {independenceText}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </Reveal>
 
@@ -223,24 +389,47 @@ export function QuotationBuilder() {
           <Reveal delay={120} style={{ ...panel, padding: "26px 24px", display: "flex", flexDirection: "column" }}>
             <span style={label}>Your indicative estimate</span>
             <div style={{ flex: 1 }}>
-              {quote.lines.map((l) => (
-                <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderBottom: "1px solid var(--a4-hairline-light)" }}>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-ink)" }}>{l.name}</span>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 700, color: "var(--a4-ink)", whiteSpace: "nowrap" }}>{l.display}</span>
-                </div>
-              ))}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 16 }}>
-                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--a4-mute)" }}>
-                  First-year total
-                </span>
-                <span style={{ fontFamily: "var(--a4-font-display)", fontSize: 30, fontWeight: 600, color: "var(--a4-primary)", letterSpacing: "-.5px" }}>
-                  {euro(quote.indicativeAnnualEur)}
-                  {quote.hasOnRequestLines ? <span style={{ fontSize: 13, color: "var(--a4-mute)" }}> + on request</span> : null}
-                </span>
-              </div>
-              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)", marginTop: 8, lineHeight: 1.5 }}>
-                Indicative. All fees exclude VAT. {PRICING_GOV_NOTE} Confirmed in writing within 24 hours — no obligation.
-              </p>
+              {quote ? (
+                <>
+                  {quote.lines.map((l) => (
+                    <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderBottom: "1px solid var(--a4-hairline-light)" }}>
+                      <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-ink)" }}>{l.name}</span>
+                      <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 700, color: "var(--a4-ink)", whiteSpace: "nowrap" }}>{l.display}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 16 }}>
+                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--a4-mute)" }}>
+                      First-year total
+                    </span>
+                    <span style={{ fontFamily: "var(--a4-font-display)", fontSize: 30, fontWeight: 600, color: "var(--a4-primary)", letterSpacing: "-.5px" }}>
+                      {euro(quote.indicativeAnnualEur)}
+                      {quote.hasOnRequestLines ? <span style={{ fontSize: 13, color: "var(--a4-mute)" }}> + on request</span> : null}
+                    </span>
+                  </div>
+                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)", marginTop: 8, lineHeight: 1.5 }}>
+                    Indicative. All fees exclude VAT. {PRICING_GOV_NOTE} Confirmed in writing within 24 hours — no obligation.
+                  </p>
+                </>
+              ) : (
+                /* Nothing priced, and nothing to download. The way out sits
+                   where the figures would have been, so the visitor is never
+                   simply refused — they pick, and the quotation appears. */
+                <>
+                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.6, color: "var(--a4-body)", margin: 0 }}>
+                    Nothing is priced yet. Tell us which of the two is ours and the itemised quotation appears here, in full, straight away.
+                  </p>
+                  <div style={{ marginTop: 14, padding: "13px 14px", borderRadius: "var(--a4-r-md)", background: "rgba(73,79,223,.06)", border: "1px solid rgba(73,79,223,.25)" }}>
+                    <span style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 700, color: "var(--a4-primary-deep)" }}>Which one is ours?</span>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                      <button type="button" onClick={() => dropService("audit")} style={choicePill}>Keep the bookkeeping with us</button>
+                      <button type="button" onClick={() => dropService("accounts")} style={choicePill}>Take the audit or review with us</button>
+                    </div>
+                    <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.55, color: "var(--a4-primary-deep)" }}>
+                      Pick one and the quotation prices itself. Not sure which? Request information instead and we work it out with you.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
             {done ? (
@@ -272,12 +461,16 @@ export function QuotationBuilder() {
                 {error ? (
                   <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--accent-danger, #d33)", margin: "10px 0 0" }}>{error}</p>
                 ) : null}
-                <Button variant="dark" size="lg" onClick={() => { if (!busy) submit(); }} style={{ width: "100%", marginTop: 12, justifyContent: "center", opacity: busy ? 0.7 : 1, pointerEvents: busy ? "none" : "auto" }}>
+                {/* Inert on a conflict: there is no priced quotation behind
+                    it, and a PDF is the one artefact that outlives the page. */}
+                <Button variant="dark" size="lg" onClick={() => { if (!busy && !conflict) submit(); }} style={{ width: "100%", marginTop: 12, justifyContent: "center", opacity: busy || conflict ? 0.55 : 1, pointerEvents: busy || conflict ? "none" : "auto" }}>
                   {busy ? "Preparing your quotation…" : "Download my quotation (PDF)"}
                   {!busy && <Icon name="arrow-right" size={16} color="#fff" />}
                 </Button>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-mute)", marginTop: 10, textAlign: "center" }}>
-                  We'll also send it to our team so a person confirms it within 24h.
+                  {conflict
+                    ? "Pick which of the two is ours above and this unlocks."
+                    : "We'll also send it to our team so a person confirms it within 24h."}
                 </p>
               </div>
             )}

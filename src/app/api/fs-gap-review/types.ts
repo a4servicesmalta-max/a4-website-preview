@@ -25,4 +25,8 @@ export type ReviewResponse = {
   // Client-safe quote only — never expose basis/detail here (could reveal the
   // client's previous auditor's fee). Full quote goes to staff channels only.
   quote?: { fee: number; docKind: "audited_fs" | "management_accounts" } | null;
+  /** Claude's plain-English commentary on the review, or undefined if the AI
+   * step was skipped/unavailable/failed. Additive to engine findings only —
+   * never replaces them. */
+  aiCommentary?: string;
 };

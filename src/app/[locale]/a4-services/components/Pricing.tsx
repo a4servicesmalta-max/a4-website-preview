@@ -4,7 +4,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import {
-  SOFTWARE_TIERS,
+  BOOKKEEPING_COMPANY,
+  BOOKKEEPING_FROM,
   VAT_FROM,
   TAX_RETURN_FROM,
   PAYROLL_ENTRY_RATE,
@@ -12,9 +13,10 @@ import {
   payrollRate,
   PRICING_VAT_NOTE,
 } from "@/data/a4QuotePack";
-// A4 Books software €39/mo flat (unlimited documents), + bank reconciliations,
-// accounting, and optional VAT / payroll / annual accounts. Every figure comes
-// from quote pack mt-2026-08-01 (src/data/a4QuotePack.ts).
+// Managed bookkeeping — A4 keeps the books, priced by monthly expenses (from EUR 24
+// self-employed / EUR 49 company), plus optional VAT / payroll / annual
+// accounts. Every figure comes from quote pack mt-2026-08-14-managed
+// (src/data/a4QuotePack.ts). There is no software-only tier.
 // Drives toward "create account".
 
 const PR_BANDS = [
@@ -58,8 +60,9 @@ export function Pricing() {
   const [emps, setEmps] = useState(2);
   const [annual, setAnnual] = useState(false);
 
-  const book = SOFTWARE_TIERS.book;
-  const recon = banks * 15;
+  const book = BOOKKEEPING_COMPANY;
+  // Reconciling every account IS managed bookkeeping — the monthly price covers it.
+  const recon = 0;
   const acct = PR_BANDS[rev].acct;
   const vatFee = vat ? VAT_FROM : 0;
   const payFee = payroll ? emps * payrollRate(emps) : 0;
@@ -67,8 +70,8 @@ export function Pricing() {
   const total = book + recon + acct + vatFee + payFee + annualFee;
 
   const lines = [
-    { k: "A4 Books — unlimited documents", v: book },
-    { k: `Bank reconciliations · ${banks} account${banks > 1 ? "s" : ""}`, v: recon },
+    { k: "Managed bookkeeping — company", v: book },
+    { k: `Bank reconciliations · ${banks} account${banks > 1 ? "s" : ""}`, v: recon, included: true },
     { k: "Accounting & management reports", v: acct, included: acct === 0 },
     vat && { k: "VAT returns", v: vatFee },
     payroll && { k: `Payroll · ${emps} employee${emps > 1 ? "s" : ""}`, v: payFee },
@@ -84,7 +87,7 @@ export function Pricing() {
         <Reveal><SectionHead
           dark align="center"
           eyebrow="Pricing calculator"
-          title={<>Build your plan — from €{SOFTWARE_TIERS.book}/month</>}
+          title={<>Build your plan — from €{BOOKKEEPING_FROM}/month</>}
           sub="Transparent, fixed monthly pricing that scales with your business. Adjust the inputs to see your estimate, then create your account to confirm."
           maxWidth={640}
         /></Reveal>
@@ -110,8 +113,8 @@ export function Pricing() {
 
               {/* bookkeeping — flat */}
               <div>
-                <div style={fieldLabel}>A4 Books — €{SOFTWARE_TIERS.book}/mo flat</div>
-                <div style={fieldSub}>Unlimited documents, no per-document fees — invoices, expenses and bank lines included. Software only; add a Senior from €{SOFTWARE_TIERS.senior}/mo.</div>
+                <div style={fieldLabel}>Managed bookkeeping — from €{BOOKKEEPING_COMPANY}/mo for a company</div>
+                <div style={fieldSub}>We keep the books: unlimited documents, no per-document fees — invoices, expenses and bank lines included, every account reconciled. A qualified accountant is on the file. Self-employed starts at €{BOOKKEEPING_FROM}/mo. The price is set by what you spend each month.</div>
               </div>
 
               {/* bank accounts */}

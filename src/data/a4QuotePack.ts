@@ -17,21 +17,41 @@
  */
 
 /**
- * mt-2026-08-02b flattens the audit volume curve and mirrors the cut onto the
- * tax-return table (owner decision 2026-08-02): entry bands held, reductions
- * deepening from −13% to −37% as volume rises. Top audit band 5,800 → 3,650.
+ * mt-2026-08-14-managed is the MANAGED BOOKKEEPING pack (owner decision
+ * 2026-08-13). It retires the software-only SME offer entirely:
  *
- * mt-2026-08-02 adds the pre-trading band only: AUDIT_YEARLY["0"] 0 → 600 and
- * TAX_RETURN_YEARLY["0"] 0 → 175 (owner decision 2026-08-02, so that the
- * "audit from €600/yr" headline on /audit-services is a price the calculator
- * will actually quote). Every other fee is unchanged from mt-2026-08-01.
+ *   RETIRED  SOFTWARE_TIERS {book 39, senior 99, manager 198, cfo 357}
+ *   RETIRED  BOOKKEEPING_MONTHLY transaction bands {59,99,169,279,469,769}
+ *   RETIRED  CATCH_UP {selfPerMonth 10, fullPerMonth 25, fullPerYearCap 240}
+ *   RETIRED  RISK_TIERS[…].onboarding {95, 250, 550}
  *
- * ⚠ The two sibling copies still carry mt-2026-08-01 and must be updated to
- * match before they quote a dormant company:
+ *   NEW      BOOKKEEPING_MANAGED_MONTHLY — flat, by entity, NOT risk-uplifted:
+ *            self-employed €24/mo · company €49/mo
+ *   NEW      catch-up is the SAME monthly rate per backdated month, uncapped
+ *   NEW      onboarding / opening balances carries NO number at all
+ *
+ * Inherited pack history, still live in the tables below:
+ *   mt-2026-08-02b flattened the audit volume curve and mirrored the cut onto
+ *   the tax-return table (owner 2026-08-02): entry bands held, reductions
+ *   deepening from −13% to −37% as volume rises. Top audit band 5,800 → 3,650.
+ *   mt-2026-08-02 added the pre-trading band: AUDIT_YEARLY["0"] 0 → 600 and
+ *   TAX_RETURN_YEARLY["0"] 0 → 175, so the "audit from €600/yr" headline on
+ *   /audit-services is a price the calculator will actually quote.
+ * Both are carried forward here unchanged.
+ *
+ * mt-2026-08-14-volume SUPERSEDES that: bookkeeping is priced by MONTHLY
+ * EXPENSES across nine bands (owner direction 2026-08-14), replacing the flat
+ * two-price table above. BOOKKEEPING ONLY — VAT, tax, audit, payroll, MBR and
+ * the registered office keep their current prices and stay driven by the
+ * TRANSACTION band. See BOOKKEEPING_MANAGED_MONTHLY below.
+ *
+ * ⚠ Three copies of this pack must carry the SAME version string, or the
+ * backend hard-rejects the record before it even reprices (which is the
+ * intent while the three lanes land at different times):
  *   - vacei-marketing-site/index.html
  *   - portal-backend/src/modules/quote-pack/malta-pack.ts
  */
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-02b";
+export const A4_QUOTE_PACK_VERSION = "mt-2026-08-14-volume";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -53,28 +73,215 @@ export const TXN_BANDS: { id: TxnBand; label: string; hint: string }[] = [
 
 export type RiskTier = "standard" | "elevated" | "high" | "refer";
 
-/** Risk multiplier + the one-off onboarding & due-diligence fee it carries. */
-export const RISK_TIERS: Record<RiskTier, { label: string; multiplier: number | null; onboarding: number | null }> = {
-  standard: { label: "Standard", multiplier: 1.0, onboarding: 95 },
-  elevated: { label: "Elevated", multiplier: 1.2, onboarding: 250 },
-  high: { label: "High", multiplier: 1.45, onboarding: 550 },
-  refer: { label: "Referral", multiplier: null, onboarding: null },
+/**
+ * Risk multiplier by sector.
+ *
+ * The one-off onboarding fee that used to hang off each tier (95 / 250 / 550)
+ * is RETIRED in mt-2026-08-14-managed: onboarding and opening balances now
+ * carry no published number at all, on any surface. Do not reintroduce a
+ * fallback here — an unpriced line is the intended output.
+ *
+ * The managed bookkeeping price is deliberately NOT uplifted by this
+ * multiplier: €24 / €49 are flat. The multiplier still applies to VAT, tax
+ * returns, audit, review and payroll.
+ */
+export const RISK_TIERS: Record<RiskTier, { label: string; multiplier: number | null }> = {
+  standard: { label: "Standard", multiplier: 1.0 },
+  elevated: { label: "Elevated", multiplier: 1.2 },
+  high: { label: "High", multiplier: 1.45 },
+  refer: { label: "Referral", multiplier: null },
 };
+
+/**
+ * What the company does → which risk tier it carries.
+ *
+ * THE canonical sector list. Every calculator asks this same question with
+ * these same options, so two surfaces can never put the same company in
+ * different tiers. `refer` is never auto-priced — it goes to a director.
+ */
+export const SECTORS: { id: string; label: string; tier: RiskTier }[] = [
+  { id: "shop", label: "Shop, trade or services", tier: "standard" },
+  { id: "consulting", label: "Consulting or freelancing", tier: "standard" },
+  { id: "property", label: "Property or rentals", tier: "standard" },
+  { id: "hospitality", label: "Restaurant, bar or hotel", tier: "elevated" },
+  { id: "online", label: "Online sales or cross-border", tier: "elevated" },
+  { id: "holding", label: "Holding or investment company", tier: "elevated" },
+  { id: "regulated", label: "Gaming, crypto or financial services", tier: "high" },
+  { id: "other", label: "Something else", tier: "refer" },
+];
+
+export const sectorTier = (id: string): RiskTier =>
+  (SECTORS.find((s) => s.id === id) ?? SECTORS[0]).tier;
 
 /* -------------------------------------------------------------------------- */
 /* Recurring service tables                                                    */
 /* -------------------------------------------------------------------------- */
 
-/** Full-service bookkeeping — €/mo by transaction band, × risk multiplier. */
-export const BOOKKEEPING_MONTHLY: Record<TxnBand, number> = {
-  "0": 0,
-  "1-20": 59,
-  "21-60": 99,
-  "61-150": 169,
-  "151-400": 279,
-  "401-1000": 469,
-  "1000+": 769,
+/* -------------------------------------------------------------------------- */
+/* Managed bookkeeping — the only bookkeeping offer                            */
+/* -------------------------------------------------------------------------- */
+
+/** Who the books belong to. The one thing that moves the bookkeeping price. */
+export type ManagedEntity = "sole" | "company";
+
+/**
+ * How much the business spends in a month. THE bookkeeping price driver.
+ *
+ * Deliberately NOT the transaction band. A client knows their monthly spend
+ * without counting anything, and it tracks document volume — which is what
+ * actually consumes reviewer minutes. The transaction band still drives VAT,
+ * tax returns and audit, so both questions are asked; they are not duplicates
+ * of each other and must never be presented as one.
+ */
+export type ExpenseBand =
+  | "0-10k"
+  | "10-25k"
+  | "25-50k"
+  | "50-100k"
+  | "100-200k"
+  | "200-300k"
+  | "300-400k"
+  | "400-500k"
+  | "500k+";
+
+export const EXPENSE_BANDS: { id: ExpenseBand; label: string; hint: string }[] = [
+  { id: "0-10k", label: "Up to €10,000", hint: "just starting" },
+  { id: "10-25k", label: "€10,000 – 25,000", hint: "small and steady" },
+  { id: "25-50k", label: "€25,000 – 50,000", hint: "growing" },
+  { id: "50-100k", label: "€50,000 – 100,000", hint: "established" },
+  { id: "100-200k", label: "€100,000 – 200,000", hint: "busy" },
+  { id: "200-300k", label: "€200,000 – 300,000", hint: "high volume" },
+  { id: "300-400k", label: "€300,000 – 400,000", hint: "very high" },
+  { id: "400-500k", label: "€400,000 – 500,000", hint: "large" },
+  { id: "500k+", label: "Over €500,000", hint: "enterprise" },
+];
+
+/**
+ * Managed bookkeeping — €/mo by ENTITY × MONTHLY EXPENSES. NOT uplifted by the
+ * sector risk multiplier, and NOT a software licence: A4 keeps the books.
+ *
+ * These eighteen numbers ARE the pack as far as bookkeeping is concerned. The
+ * backend reprices from its own copy and refuses to issue a quotation if we
+ * disagree by more than €1 / 1%, so they are not decorative — all three copies
+ * (this file, vacei-marketing-site/index.html and the portal's malta-pack)
+ * must carry identical figures under pack mt-2026-08-14-volume.
+ *
+ * The steps TAPER on purpose — each is a smaller multiple than the one below
+ * it (company: 1.41× 1.43× 1.51× 1.47× 1.36× 1.27× 1.18× 1.22×). Fixed
+ * onboarding and month-end overhead amortises as a client grows, so a flat
+ * multiple would over-charge the top and read as a penalty for scaling.
+ *
+ * `500k+` is a REAL priced band with a real number, not a "talk to us". Every
+ * band prices instantly; there is no unpriceable arm left in bookkeeping.
+ *
+ * The entry price is unchanged at €24 / €49, so the launch promise still holds
+ * and no existing quote is invalidated.
+ */
+export const BOOKKEEPING_MANAGED_MONTHLY: Record<ManagedEntity, Record<ExpenseBand, number>> = {
+  sole: {
+    "0-10k": 24,
+    "10-25k": 39,
+    "25-50k": 59,
+    "50-100k": 89,
+    "100-200k": 129,
+    "200-300k": 179,
+    "300-400k": 229,
+    "400-500k": 279,
+    "500k+": 339,
+  },
+  company: {
+    "0-10k": 49,
+    "10-25k": 69,
+    "25-50k": 99,
+    "50-100k": 149,
+    "100-200k": 219,
+    "200-300k": 299,
+    "300-400k": 379,
+    "400-500k": 449,
+    "500k+": 549,
+  },
 };
+
+export const MANAGED_ENTITY_LABELS: Record<ManagedEntity, string> = {
+  sole: "Self-employed",
+  company: "Company",
+};
+
+export const MANAGED_ENTITY_OPTIONS: { id: ManagedEntity; label: string; sub: string }[] = [
+  { id: "sole", label: "Self-employed", sub: "sole trader or freelancer" },
+  { id: "company", label: "Company", sub: "a Malta limited company" },
+];
+
+/**
+ * The monthly rate for an entity at an expenses band — the single reader for
+ * both the price and the catch-up.
+ *
+ * Returns `null` for a MISSING or UNRECOGNISED band, and callers must degrade
+ * to the lead path on null. It must NEVER fall back to the cheapest band:
+ * defaulting down is the direction that loses money and is invisible;
+ * defaulting up is the direction that loses the customer. A stale cached page
+ * sending a retired band id has to fail loudly, exactly like a retired service.
+ */
+export function managedMonthly(entity: ManagedEntity, expenses: ExpenseBand): number | null {
+  const row = BOOKKEEPING_MANAGED_MONTHLY[entity];
+  if (!row) return null;
+  // Own-property + typeof guard: an arbitrary runtime string (including
+  // "constructor" and friends) must miss, not inherit something off the
+  // prototype chain.
+  const rate = Object.prototype.hasOwnProperty.call(row, expenses) ? row[expenses] : undefined;
+  return typeof rate === "number" ? rate : null;
+}
+
+/**
+ * Catch-up / backdated months. Charged at the SAME monthly rate as a live
+ * month for that client, per month, uncapped and never discounted (it is a
+ * one-off).
+ *
+ *   12 months of a company's books at €25–50k/mo = 12 × €99 = €1,188.
+ *
+ * A backdated month costing exactly what a live month costs is deliberate: it
+ * keeps the quote-stage price identical to the held-period billing price, so
+ * declaring a backlog honestly costs the same as under-declaring it.
+ *
+ * Returns `null` when the band is unknown — see managedMonthly.
+ */
+export function catchUpAmount(
+  months: number,
+  entity: ManagedEntity,
+  expenses: ExpenseBand
+): number | null {
+  const rate = managedMonthly(entity, expenses);
+  if (rate == null) return null;
+  const m = Math.max(0, Math.floor(Number(months) || 0));
+  return m * rate;
+}
+
+/**
+ * The catch-up line label, in the EXACT form all three repos must emit — the
+ * backend matches on it and the client reads it on the quotation.
+ *
+ *   "Catch-up: 12 months x EUR 99 = EUR 1188"
+ *
+ * Plain ASCII "x" and "EUR" on purpose: this string travels over the wire and
+ * is compared literally, so it must not depend on a locale or a × glyph.
+ *
+ * Returns `null` when the band is unknown — there is no honest label for a
+ * price we cannot compute.
+ */
+export function catchUpLabel(
+  months: number,
+  entity: ManagedEntity,
+  expenses: ExpenseBand
+): string | null {
+  const rate = managedMonthly(entity, expenses);
+  if (rate == null) return null;
+  const m = Math.max(0, Math.floor(Number(months) || 0));
+  return `Catch-up: ${m} months x EUR ${rate} = EUR ${m * rate}`;
+}
+
+/** Onboarding / opening balances is quoted by a person, never by the calculator. */
+export const ONBOARDING_UNPRICED_NOTE =
+  "Onboarding and opening balances are scoped with you before we start — they are not priced here.";
 
 /** VAT returns at art. 10 — €/mo by transaction band, × art factor × risk. */
 export const VAT_MONTHLY: Record<TxnBand, number> = {
@@ -137,11 +344,17 @@ export const VAT_RULES = {
   art11FlatYearly: 145,
 };
 
-/** Accountant review over self-service books — a fraction of the band price, floored. */
-export const ACCOUNTING_REVIEW = {
-  quarter: { minEur: 18, shareOfBook: 0.18 },
-  month: { minEur: 24, shareOfBook: 0.35 },
-};
+/*
+ * ACCOUNTING_REVIEW is GONE with mt-2026-08-14-managed. It priced an
+ * accountant's review OVER self-service books as a fraction of the volume
+ * band — both of which the managed offer retires. There is no "you keep the
+ * books, we check them" product any more: A4 keeps the books.
+ *
+ * EXTRA_BANK_MONTHLY is gone for the same reason. The managed price is FLAT;
+ * charging per bank account on top contradicts the word "flat", and that line
+ * had no wire item so it silently pushed the on-screen total away from the
+ * total the backend reprices.
+ */
 
 /** Payroll — €/head/mo; the whole book bills at its headcount tier. */
 export const PAYROLL_PER_HEAD: { upTo: number | null; rate: number }[] = [
@@ -149,9 +362,6 @@ export const PAYROLL_PER_HEAD: { upTo: number | null; rate: number }[] = [
   { upTo: 10, rate: 29 },
   { upTo: null, rate: 25 },
 ];
-
-/** Each bank account beyond the first, €/mo. */
-export const EXTRA_BANK_MONTHLY = { bookFull: 25, selfWithReview: 10 };
 
 /** Registered office — flat €/yr, no risk multiplier. */
 export const REGISTERED_OFFICE_YEARLY = 1200;
@@ -189,35 +399,15 @@ export const CAPITAL_BANDS: { id: CapitalBand; label: string; note: string }[] =
 /* One-offs                                                                    */
 /* -------------------------------------------------------------------------- */
 
-/** Catch-up: self-service is per month behind; full service is capped per year. */
-export const CATCH_UP = { selfPerMonth: 10, fullPerMonth: 25, fullPerYearCap: 240 };
-
-/** A4 Books software plans — €/mo, risk-independent. Mirrors src/data/a4Ladder.ts. */
-export const SOFTWARE_TIERS = { book: 39, senior: 99, manager: 198, cfo: 357 };
-
-export type SoftwareTierId = keyof typeof SOFTWARE_TIERS;
-
-/** Client-facing names for the software plans. */
-export const SOFTWARE_TIER_LABELS: Record<SoftwareTierId, string> = {
-  book: "Bookkeeper",
-  senior: "Senior",
-  manager: "Manager",
-  cfo: "CFO",
-};
-
-/**
- * Which software plan a company needs, by transaction volume. Volume is what
- * drives the plan — a busier ledger needs the heavier review tooling.
+/*
+ * There is NO software-only SME tier. `SOFTWARE_TIERS`, `SOFTWARE_TIER_LABELS`
+ * and `SOFTWARE_TIER_BY_BAND` are retired — the owner removed the ladder
+ * (Junior/Senior/Manager/CFO at 39/99/198/357) on 2026-08-13. Anything that
+ * needs a bookkeeping price reads BOOKKEEPING_MANAGED_MONTHLY above.
+ *
+ * `CATCH_UP` (selfPerMonth 10 / fullPerMonth 25 / fullPerYearCap 240) is
+ * retired with it — see catchUpAmount / catchUpLabel above.
  */
-export const SOFTWARE_TIER_BY_BAND: Record<TxnBand, SoftwareTierId> = {
-  "0": "book",
-  "1-20": "book",
-  "21-60": "book",
-  "61-150": "senior",
-  "151-400": "manager",
-  "401-1000": "cfo",
-  "1000+": "cfo",
-};
 
 /** Company formation. MGA licence → priced on a director call, never instantly. */
 export const INCORPORATION = {
@@ -245,7 +435,9 @@ export const INCORPORATION = {
 export const LAUNCH_PROMO = {
   pct: 0.25,
   until: "2026-08-31",
-  label: "25% off until 31 Aug",
+  // Always carry the year. An undated "until 31 Aug" reads as evergreen and
+  // will outlive the campaign pointing at it.
+  label: "25% off until 31 August 2026",
   note: "25% launch discount — a quarter off your whole quote, already deducted. Valid until 31 August 2026. Government fees stay at cost.",
 };
 
@@ -284,8 +476,20 @@ export const PAYROLL_ENTRY_RATE = PAYROLL_PER_HEAD[0].rate; // €32/head, up to
 /** Best payroll rate at scale. */
 export const PAYROLL_BEST_RATE = PAYROLL_PER_HEAD[PAYROLL_PER_HEAD.length - 1].rate; // €25/head
 
-/** Full-service bookkeeping floor — the "from €59/mo" headline. */
-export const BOOKKEEPING_FROM = fromPrice(BOOKKEEPING_MONTHLY);
+/**
+ * Managed bookkeeping ENTRY-BAND floors — the honest "from €X/mo" headline.
+ *
+ * Under mt-2026-08-14-volume these are genuine "from" prices: the entry
+ * expenses band (up to €10,000/mo), the cheapest rung of nine. Copy reading
+ * them MUST say "from", never "flat" and never "the price does not move with
+ * your volume" — it does now, it moves with monthly expenses.
+ */
+export const BOOKKEEPING_FROM = BOOKKEEPING_MANAGED_MONTHLY.sole["0-10k"];
+/** Managed bookkeeping for a limited company, entry band. Also a "from". */
+export const BOOKKEEPING_COMPANY = BOOKKEEPING_MANAGED_MONTHLY.company["0-10k"];
+/** Top of the published bookkeeping range — the ceiling both entities top out at. */
+export const BOOKKEEPING_SOLE_TOP = BOOKKEEPING_MANAGED_MONTHLY.sole["500k+"];
+export const BOOKKEEPING_COMPANY_TOP = BOOKKEEPING_MANAGED_MONTHLY.company["500k+"];
 /**
  * Statutory audit floor for a company that actually TRADES — the "from €750/yr"
  * headline. Deliberately the "1-20" band, not the table minimum: the "0" band

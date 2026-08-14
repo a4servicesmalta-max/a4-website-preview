@@ -5,7 +5,7 @@ import LocalizedLink from "@/components/common/LocalizedLink";
 import { Button, Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import { useLocalizedHref } from "./useLocalizedHref";
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
-import { A4_LADDER, LADDER_FIRST_HUMAN, LADDER_BASE, LADDER_CAVEAT } from "@/data/a4Ladder";
+import { A4_MANAGED_OFFER, MANAGED_CAVEAT, MANAGED_CATCHUP_NOTE, MANAGED_SOLE, MANAGED_COMPANY } from "@/data/a4ManagedOffer";
 import {
   VAT_MONTHLY,
   VAT_RULES,
@@ -13,15 +13,23 @@ import {
   AUDIT_YEARLY,
   AUDIT_FROM,
   BOOKKEEPING_FROM,
+  BOOKKEEPING_COMPANY,
+  BOOKKEEPING_COMPANY_TOP,
+  EXPENSE_BANDS,
+  MANAGED_ENTITY_OPTIONS,
   INCORPORATION,
   INCORPORATION_FROM,
   INCORPORATION_ADDONS,
   INCORPORATION_MGA_NOTE,
   LAUNCH_PROMO,
+  catchUpLabel,
   isPromoActive,
+  managedMonthly,
   PRICING_VAT_NOTE,
   PRICING_GOV_NOTE,
-  type SoftwareTierId,
+  ONBOARDING_UNPRICED_NOTE,
+  type ExpenseBand,
+  type ManagedEntity,
 } from "@/data/a4QuotePack";
 import {
   evaluateA4Items,
@@ -30,11 +38,14 @@ import {
   type QuoteCadence,
   type WebsiteQuoteResult,
 } from "@/lib/websiteQuotation";
+import { independenceFlags, independenceNotice } from "@/lib/independence";
+import { nextMonth } from "@/lib/accounting-fee";
+import { trackConversion } from "@/lib/analytics";
 
-const prEuro = (n: number) => "€" + Math.round(n).toLocaleString();
+const prEuro =(n: number) => "€" + Math.round(n).toLocaleString();
 
 const PR_SERVICES = [
-  { id: "accounting", label: "Accounting", icon: "book-open-check" },
+  { id: "accounting", label: "Bookkeeping", icon: "book-open-check" },
   { id: "vat", label: "VAT", icon: "receipt-text" },
   { id: "audit", label: "Audit", icon: "clipboard-check" },
   { id: "incorporation", label: "Incorporation", icon: "building-2" },
@@ -48,17 +59,24 @@ const PR_VOLUME_BANDS = ["1-20", "21-60", "61-150", "151-400"] as const;
 const PR_VOLUME_LABELS = ["Up to 20", "20 to 60", "60 to 150", "150 to 400"];
 
 /**
- * Ladder position → pack software tier. NOT a cast: the ladder calls its base
- * level "books" while the pack tier key is "book", so the mapping is explicit
- * and a missing entry is a type error rather than an unpriceable submission.
+ * The bookkeeping choice. `PR_TIER_IDS` used to map a four-rung software
+ * ladder onto pack tier keys; there is no ladder now, so the calculator's
+ * bookkeeping tab picks an entity and nothing else.
  */
-const PR_TIER_BY_LADDER_ID: Record<string, SoftwareTierId> = {
-  books: "book",
-  senior: "senior",
-  manager: "manager",
-  cfo: "cfo",
-};
-const PR_TIER_IDS: SoftwareTierId[] = A4_LADDER.map((l) => PR_TIER_BY_LADDER_ID[l.id]);
+const PR_ENTITY_IDS: ManagedEntity[] = MANAGED_ENTITY_OPTIONS.map((o) => o.id);
+
+/**
+ * Monthly-expenses bands — the BOOKKEEPING price driver under pack
+ * mt-2026-08-14-volume. Separate from PR_VOLUME_BANDS above, which is the
+ * TRANSACTION band and drives VAT and audit. The accounting tab asks for
+ * expenses; the VAT and audit tabs ask for transactions. Same calculator, two
+ * different questions, never shown as one.
+ */
+const PR_EXPENSE_IDS: ExpenseBand[] = EXPENSE_BANDS.map((b) => b.id);
+const PR_EXPENSE_LABELS = EXPENSE_BANDS.map((b) => b.label);
+
+/** Earlier months the calculator offers. Priced at the monthly rate, uncapped. */
+const PR_CATCHUP_MONTHS = [0, 3, 6, 12, 24, 36];
 
 type ServiceId = (typeof PR_SERVICES)[number]["id"];
 
@@ -199,30 +217,23 @@ function PricingHero() {
   );
 }
 
-// The ladder, straight from src/data/a4Ladder.ts so this page can never drift
-// from the A4 Books landing page. Level 1 is software only; every level above
-// it includes A4 accountants.
-const PR_LADDER_ICONS: Record<string, string> = {
-  books: "layers",
-  senior: "user-check",
-  manager: "users",
-  cfo: "briefcase",
+// The managed offer, straight from src/data/a4ManagedOffer.ts so this page can
+// never drift. Two prices, both published, an accountant on the file in both.
+const PR_MANAGED_ICONS: Record<string, string> = {
+  sole: "user-check",
+  company: "building-2",
 };
 
 const PR_STARTING_TIERS = [
-  ...A4_LADDER.map((l) => ({
-    id: l.id,
+  ...A4_MANAGED_OFFER.map((l) => ({
+    id: l.id as string,
     name: l.name,
-    icon: PR_LADDER_ICONS[l.id] ?? "layers",
-    tag: l.human ? "With accountants" : "Software only",
-    price: l.total,
+    icon: PR_MANAGED_ICONS[l.id] ?? "book-open-check",
+    tag: "We keep the books",
+    price: l.price,
     unit: "/ mo",
-    blurb:
-      l.id === "books"
-        ? `${l.detail} Add accountants from €${LADDER_FIRST_HUMAN.total}/mo.`
-        : `${l.tagline} ${l.detail}`,
-    popular: l.id === LADDER_FIRST_HUMAN.id,
-    stack: l.id === "books" ? null : `+€${l.add}/mo on the level below`,
+    blurb: `${l.tagline} ${l.detail}`,
+    popular: l.id === "company",
     ladder: true,
   })),
   {
@@ -268,6 +279,22 @@ const PR_STARTING_TIERS = [
 ] as const;
 
 type StartingTier = (typeof PR_STARTING_TIERS)[number];
+
+/**
+ * The launch discount applies to the monthly ladder plans — the ones the
+ * calculator on this page discounts and the ones the banner is talking about.
+ * Government-fee and quoted lines are left alone: the registry fee is not ours
+ * to discount, and "Quoted" has no number to strike through.
+ */
+function tierIsDiscounted(tier: StartingTier): boolean {
+  return "ladder" in tier && !!tier.ladder && !!tier.price && isPromoActive();
+}
+
+function tierPromoPrice(tier: StartingTier): number {
+  return tierIsDiscounted(tier)
+    ? Math.round(tier.price! * (1 - LAUNCH_PROMO.pct))
+    : tier.price!;
+}
 
 function PricingTierCard({ tier }: { tier: StartingTier }) {
   const isPopular = "popular" in tier && tier.popular;
@@ -350,9 +377,20 @@ function PricingTierCard({ tier }: { tier: StartingTier }) {
             {"from" in tier && tier.from && (
               <span className="a4-font-body text-[13px] text-[var(--a4-stone)]">from</span>
             )}
+            {/* The banner on this page says the launch discount is "already
+                deducted". It was not: these cards showed the list price while
+                the calculator beside them showed 25% less, so the page argued
+                with itself about what a customer pays. Show the discounted
+                figure with the list price struck through, exactly as the
+                calculator does. The pack is untouched — this is presentation. */}
             <span className="a4-font-display font-medium text-white leading-none text-[clamp(32px,8vw,44px)] tracking-[-2px] tabular-nums">
-              {prEuro(tier.price!)}
+              {prEuro(tierPromoPrice(tier))}
             </span>
+            {tierIsDiscounted(tier) && (
+              <span className="a4-font-body text-[15px] text-[var(--a4-stone)] line-through tabular-nums">
+                {prEuro(tier.price!)}
+              </span>
+            )}
             <span className="a4-font-body text-[13px] text-[var(--a4-stone)]">{tier.unit}</span>
           </div>
         )}
@@ -405,7 +443,7 @@ function PricingStartingTiers() {
             className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4"
             style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}
           >
-            The same ladder as the A4 Books landing page: start with the software on its own, then add a Senior, a Manager, or the full CFO finance function. VAT, audit, tax and company formation are priced separately below. Prefer us to keep the books for you? Full-service bookkeeping starts at {prEuro(BOOKKEEPING_FROM)}/mo, set by your transaction volume.
+            We keep your books, priced on what you spend each month: from {prEuro(BOOKKEEPING_FROM)}/mo if you are self-employed, from {prEuro(BOOKKEEPING_COMPANY)}/mo for a company, up to {prEuro(BOOKKEEPING_COMPANY_TOP)}/mo at the top band. Nine bands, every one priced instantly — and there is no software-only plan, a qualified accountant is on the file either way. VAT, audit, tax and company formation are priced separately below, on your transaction volume. {MANAGED_CATCHUP_NOTE}
           </p>
           {isPromoActive() && (
             <p className="a4-font-body text-[13px] font-semibold text-[var(--a4-primary-bright)] mt-3">
@@ -491,7 +529,12 @@ function PricingInfoBanner() {
 
 function PricingCalc() {
   const [svc, setSvc] = useState<ServiceId>("accounting");
-  const [tierIdx, setTierIdx] = useState(0);
+  const [entityIdx, setEntityIdx] = useState(1); // company by default
+  const [expensesIdx, setExpensesIdx] = useState(1); // €10–25k/mo by default
+  // REQUIRED before the quote is priceable. Suggested as next month, never
+  // assumed — it decides which months are catch-up and which are not.
+  const [startMonth, setStartMonth] = useState<string>(() => nextMonth());
+  const [catchUpIdx, setCatchUpIdx] = useState(0);
   const [vatVol, setVatVol] = useState(1);
   const [turn, setTurn] = useState(1);
   const [incShareholders, setIncShareholders] = useState(1);
@@ -518,8 +561,17 @@ function PricingCalc() {
    */
   let items: A4Item[] = [];
 
+  const entity = PR_ENTITY_IDS[entityIdx] ?? "company";
+  const expenses = PR_EXPENSE_IDS[expensesIdx] ?? "0-10k";
+  const catchUpMonths = PR_CATCHUP_MONTHS[catchUpIdx] ?? 0;
+  /** null when the band is unknown — the quote then nulls to the lead path. */
+  const bookRate = managedMonthly(entity, expenses);
+
   if (svc === "accounting") {
-    items = [{ service: "software", tier: PR_TIER_IDS[tierIdx] }];
+    items = [
+      { service: "bookkeeping-managed", entity, expenses },
+      ...(catchUpMonths > 0 ? [{ service: "catchup" as const, months: catchUpMonths, entity, expenses }] : []),
+    ];
   } else if (svc === "vat") {
     items = [{ service: "vat", txn: PR_VOLUME_BANDS[vatVol], vatreg: "art10" }];
   } else if (svc === "audit") {
@@ -531,6 +583,13 @@ function PricingCalc() {
     // be submitted as an instant quote — it goes down the lead path instead.
     unit = "one-off";
   }
+  // Onboarding and opening balances are part of taking anyone on, and they
+  // carry NO figure in pack mt-2026-08-14-managed. The item emits no priced
+  // line; it is what makes the backend name onboarding in `unpricedItems` and
+  // add "onboarding is not included in the figures below" to the quotation.
+  // Without it a4.com.mt sent quotations that never said so, while vacei.com —
+  // which does emit it — always did.
+  if (items.length) items = [...items, { service: "onboarding" }];
 
   const totals = evaluateA4Items(items);
   const promo = totals.promoApplied;
@@ -566,12 +625,29 @@ function PricingCalc() {
   const price = isLeadPath ? incOneOff : unit === "/ mo" ? totals.monthly : totals.yearly;
   const discounted = promo && price < gross;
 
-  const canSend = !isLeadPath && name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  // IESBA routing. This calculator's tabs are one service at a time, so the
+  // conflict case cannot arise here — but the consequence of the tab they are
+  // on is still shown before they send.
+  const independence = independenceFlags({
+    wantsBookkeeping: svc === "accounting",
+    wantsAudit: svc === "audit",
+  });
+  const independenceText = independenceNotice(independence.route);
+
+  const startOk = /^\d{4}-(0[1-9]|1[0-2])$/.test(startMonth);
+  const canSend =
+    !isLeadPath && startOk && name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const send = async () => {
     if (!canSend || sending) return;
     setSending(true);
-    setSent(await submitWebsiteQuotation({ name, email, items }));
+    const result = await submitWebsiteQuotation({ name, email, items, serviceStartDate: startMonth });
+    setSent(result);
+    // Conversion on a CONFIRMED backend result only — `error` means the record
+    // never landed, and reporting it would bid on leads we do not have.
+    if (result.status === "quoted" || result.status === "received") {
+      trackConversion("quote_request_pricing");
+    }
     setSending(false);
   };
 
@@ -617,13 +693,77 @@ function PricingCalc() {
           >
             {svc === "accounting" && (
               <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">How much of the finance function do you want?</div>
-                <PrChip items={A4_LADDER.map((l) => l.name)} value={tierIdx} set={setTierIdx} cols={2} />
+                <div className="a4-font-body text-[14px] font-semibold text-white">Are these a company&apos;s books, or your own?</div>
+                <PrChip items={A4_MANAGED_OFFER.map((l) => l.name)} value={entityIdx} set={setEntityIdx} cols={2} />
                 <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
-                  {A4_LADDER[tierIdx].tagline} {A4_LADDER[tierIdx].detail}
+                  {A4_MANAGED_OFFER[entityIdx]?.tagline} {A4_MANAGED_OFFER[entityIdx]?.detail}
                 </p>
-                <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[10px]">
-                  {LADDER_CAVEAT}
+
+                <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
+                  <div className="a4-font-body text-[14px] font-semibold text-white">
+                    About how much do you spend a month?
+                  </div>
+                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
+                    Total money out — suppliers, wages, rent, everything. This is what sets your bookkeeping
+                    price. It is not the transaction count the VAT and audit tabs ask for.
+                  </p>
+                  <PrChip items={PR_EXPENSE_LABELS} value={expensesIdx} set={setExpensesIdx} cols={3} />
+                  <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
+                    {bookRate == null
+                      ? "Tell us your monthly spend and we price this instantly."
+                      : `${prEuro(bookRate)} / month — ${A4_MANAGED_OFFER[entityIdx]?.name ?? ""} at ${PR_EXPENSE_LABELS[expensesIdx]} a month.`}
+                  </p>
+                </div>
+
+                <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
+                  <label htmlFor="pr-start" className="a4-font-body text-[14px] font-semibold text-white block">
+                    From which month should we start?
+                  </label>
+                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
+                    Required. The first month we keep the books — anything before it is catch-up.
+                  </p>
+                  <input
+                    id="pr-start"
+                    type="month"
+                    value={startMonth}
+                    onChange={(e) => setStartMonth(e.target.value)}
+                    className="mt-[10px] rounded-[var(--a4-r-md)] px-3 py-2.5 a4-font-body text-[13.5px] outline-none"
+                    style={{
+                      background: "var(--a4-surface-deep)",
+                      color: "#fff",
+                      border: "1px solid var(--a4-hairline-dark)",
+                      colorScheme: "dark",
+                    }}
+                  />
+                  {!startOk && (
+                    <p className="a4-font-body text-[12.5px] mt-[8px]" style={{ color: "#E8C08A" }}>
+                      Pick a month before we can price this.
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
+                  <div className="a4-font-body text-[14px] font-semibold text-white">
+                    Do you have earlier months that still need doing?
+                  </div>
+                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
+                    Each one costs the same as a month going forward — {bookRate == null ? "your own monthly rate" : prEuro(bookRate)}. No premium, no cap.
+                  </p>
+                  <PrChip
+                    items={PR_CATCHUP_MONTHS.map((m) => (m === 0 ? "None" : `${m} months`))}
+                    value={catchUpIdx}
+                    set={setCatchUpIdx}
+                    cols={3}
+                  />
+                  {catchUpMonths > 0 && (
+                    <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
+                      {catchUpLabel(catchUpMonths, entity, expenses)}
+                    </p>
+                  )}
+                </div>
+
+                <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[16px]">
+                  {MANAGED_CAVEAT}
                 </p>
               </div>
             )}
@@ -745,6 +885,32 @@ function PricingCalc() {
                     </div>
                   ))}
                 </div>
+
+                {/* Onboarding rides in the basket with no figure on it, so it
+                    is named here too — an unpriced item nobody mentioned reads
+                    as "included, free". Same sentence the quotation carries. */}
+                {totals.hasUnpricedOnboarding && (
+                  <p className="a4-font-body text-[11.5px] leading-[1.5] text-[var(--a4-mute)] mt-3 mb-0">
+                    {ONBOARDING_UNPRICED_NOTE}
+                  </p>
+                )}
+
+                {/* The independence consequence of the tab they are on, said
+                    before they send it — not discovered later. */}
+                {independenceText && (
+                  <div
+                    role="note"
+                    className="mt-5 p-3 rounded-[var(--a4-r-md)]"
+                    style={{ background: "rgba(73,79,223,.07)", border: "1px solid rgba(73,79,223,.28)" }}
+                  >
+                    <span className="block a4-font-body text-[10.5px] font-bold uppercase tracking-[.1em] text-[var(--a4-primary)]">
+                      Independence
+                    </span>
+                    <span className="block a4-font-body text-[12.5px] leading-[1.55] text-[var(--a4-mute)] mt-1">
+                      {independenceText}
+                    </span>
+                  </div>
+                )}
 
                 {isLeadPath ? (
                   // Company formation is not on the instant-quote fee schedule —

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
+import { pushChatToPortal } from "@/lib/portal-chat";
+import { pushLeadToPortal } from "@/lib/portal-lead";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -28,12 +30,21 @@ function validateEmail(email: string): boolean {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, issue, conversation } = body as {
+    const { name, email, issue, conversation, company_website } = body as {
       name?: string;
       email?: string;
       issue?: string;
       conversation?: ConversationEntry[];
+      company_website?: string;
     };
+
+    // Honeypot. The field is invisible and always submitted empty by a real
+    // visitor, so anything in it is a bot. Drop the submission — nothing is
+    // pushed to the portal and no email is sent — but answer 200 so the bot
+    // learns nothing about why it failed.
+    if (typeof company_website === "string" && company_website.trim()) {
+      return NextResponse.json({ ok: true });
+    }
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
@@ -47,7 +58,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (!validateEmail(email)) {
+    // Trim first: every later use trims, so validating the raw value rejected
+    // an otherwise fine address that arrived with padding.
+    if (!validateEmail(email.trim())) {
       return NextResponse.json(
         { error: "Invalid email address." },
         { status: 400 }
@@ -69,8 +82,30 @@ export async function POST(req: NextRequest) {
 
     const sessionToken = req.cookies.get("A4_session")?.value || "N/A";
 
-    // Portal push is primary — always capture the lead first.
-    await pushToPortal({ name, email, message: issue, service: "Support chat", source: "support-chat", priority: "Med", meta: { conversation } });
+    // Primary home is the portal's Messages area: the chat becomes a real
+    // thread staff can reply to, rather than a one-way form submission.
+    const thread = await pushChatToPortal({
+      name: name.trim(),
+      email: email.trim(),
+      message: issue.trim(),
+      pageUrl: req.headers.get("referer") || undefined,
+    });
+
+    // The chat thread carries the conversation but creates no lead, so the
+    // visitor shows up in the portal as an anonymous "Website visitor". File
+    // the lead separately — this is the row that carries their name and email.
+    // Non-fatal, exactly like the thread push above.
+    await pushLeadToPortal({
+      name: name.trim(),
+      email: email.trim(),
+      message: issue.trim(),
+    });
+
+    // If the chat module could not be reached the conversation must still land
+    // somewhere a human looks, so fall back to the Requests inbox.
+    if (!thread) {
+      await pushToPortal({ name, email, message: issue, service: "Support chat", source: "support-chat", priority: "Med", meta: { conversation } });
+    }
 
     // Email is best-effort — a missing/broken SMTP config must never cause a 5xx.
     try {

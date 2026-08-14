@@ -122,13 +122,28 @@
     "headerTitle": "Support",
     "closeChatAria": "Close chat",
     "botWelcome": "Hi 👋 How can I help you today?",
+    "botAskIdentity": "Hi 👋 Leave your name and email and we'll pick it up from there.",
     "botAskName": "Great, who should we address our reply to?",
     "botAskEmail": "Thanks! What's the best email to reach you on?",
+    "nameLabel": "Your name",
+    "emailLabel": "Email",
+    "startChat": "Start the chat",
+    "identityError": "Add your name and a valid email so we can reply.",
+    "privacyNote": "We only use these details to reply to you.",
     "botSuccess": "Thank you for your time. Our support team will review this conversation and contact you as soon as possible.",
     "botErrorSend": "We couldn't send your request. Please try again or email us at info@a4.com.mt.",
     "submitErrorFailed": "Failed to submit.",
     "startNewChat": "Start new chat",
     "inputPlaceholder": "Type a message..."
+  },
+  "reviewError": {
+    "title": "We couldn't finish the review",
+    "serverBody": "Our review service didn't come back with a result. This is on our side, not your file.",
+    "requestBody": "We couldn't run the review on that submission.",
+    "networkBody": "We couldn't reach our review service. Please check your connection and try again — if it keeps failing, email us at info@a4.com.mt.",
+    "leadCaptured": "Your details and the file name are with our team, so nothing is lost — someone will follow up by email within one business day. You're welcome to try again in the meantime.",
+    "leadNotCaptured": "We may not have a record of your request, so please don't wait on us — email info@a4.com.mt and we'll pick it up straight away. You're welcome to try again too.",
+    "connectRequestFailed": "We couldn't send your connection request."
   },
   "cookieConsent": {
     "title": "We use cookies",

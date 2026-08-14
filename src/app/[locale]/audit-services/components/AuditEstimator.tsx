@@ -4,12 +4,15 @@ import React, { useRef, useState } from "react";
 import { Button, Icon, Container } from "@/components/a4-landing/Primitives";
 import { Field, primaryBtn, outlineBtn } from "@/app/[locale]/accounting-health-check/components/Field";
 import { FindingsList } from "@/app/[locale]/accounting-health-check/components/FindingsList";
+import { ReviewFailureNotice } from "@/app/[locale]/accounting-health-check/components/ReviewFailureNotice";
+import { NETWORK_FAILURE, readReviewFailure, type ReviewFailure } from "@/lib/review-failure";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
 import {
   SECTORS, TXN, SIZES, PAYROLL, VAT, BANKS, TAX_RETURN, YEARS, NYRS, CHANGES, STEPS,
   calcAuditFee, feeLines, euro, type AuditInput,
 } from "@/lib/audit-fee";
 import { AUDIT_PRE_TRADING, TAX_RETURN_FROM, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
+import { trackConversion } from "@/lib/analytics";
 
 type Opt = { id: string; label: string; sub?: string };
 
@@ -92,7 +95,7 @@ export function AuditEstimator() {
   const [contact, setContact] = useState({ email: "", name: "", company: "" });
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<ReviewFailure | null>(null);
   const [data, setData] = useState<ReviewResponse | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -138,7 +141,7 @@ export function AuditEstimator() {
 
   async function runReview() {
     if (submitDisabled || !file) return;
-    setStatus("loading"); setError("");
+    setStatus("loading"); setFailure(null);
     const scoping = [
       `Year to audit: ${labelOf(YEARS, answers.year)}${answers.year === "multi" ? ` (${labelOf(NYRS, answers.nyrs)})` : ""}`,
       `Major changes since: ${labelOf(CHANGES, answers.chg)}`,
@@ -158,14 +161,23 @@ export function AuditEstimator() {
     fd.append("scoping", scoping);
     try {
       const res = await fetch("/api/fs-gap-review", { method: "POST", body: fd });
+      // Status first: a gateway error page is not JSON, and letting res.json()
+      // throw here would report a server fault as a network one.
+      if (!res.ok) { setFailure(await readReviewFailure(res)); setStatus("error"); return; }
       const body = await res.json();
-      if (!res.ok) { setError(body.error || "Review failed."); setStatus("error"); return; }
+      // The engine accepted the statements and the lead is recorded. Only here —
+      // a 502 from the review route lands on the !res.ok branch above.
+      trackConversion("financial_upload_submit");
       setData(body); setStatus("idle");
-    } catch { setError("Review failed. Please try again or book a call."); setStatus("error"); }
+    } catch {
+      // fetch rejected, or a 2xx body that would not parse — nothing reached us
+      // on a rejected fetch, so we must not claim the lead was captured.
+      setFailure(NETWORK_FAILURE); setStatus("error");
+    }
   }
 
   const resetReview = () => {
-    setFile(null); setData(null); setStatus("idle"); setError("");
+    setFile(null); setData(null); setStatus("idle"); setFailure(null);
     setConsent(false); setVerifiedToken(""); setVerifiedEmail(""); setCodeSent(false); setCode("");
   };
 
@@ -382,6 +394,11 @@ export function AuditEstimator() {
                   )}
                 </div>
 
+                {data.aiCommentary && (
+                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.6, color: "var(--a4-body)", margin: "16px 0 0", padding: "12px 14px", background: "var(--a4-surface-soft)", borderRadius: 8, textWrap: "pretty" }}>
+                    {data.aiCommentary}
+                  </p>
+                )}
                 <div style={{ marginTop: 16 }}><FindingsList findings={data.findings} /></div>
 
                 <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid var(--a4-hairline-light)", display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -497,13 +514,13 @@ export function AuditEstimator() {
 
                     <label style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, display: "flex", gap: 9, alignItems: "flex-start", color: "var(--a4-charcoal)", lineHeight: 1.5 }}>
                       <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: "var(--a4-primary)", width: 16, height: 16 }} />
-                      I understand my file is processed to generate this review and is not stored.
+                      I understand my file is processed — including by AI models — to generate this review, and is not stored.
                     </label>
 
                     <button type="button" disabled={submitDisabled} onClick={runReview} style={primaryBtn(submitDisabled)}>
                       {status === "loading" ? "Analyzing… (up to ~60s)" : verified ? "Run my review" : "Confirm your email to run"}
                     </button>
-                    {status === "error" && <p style={{ color: "#c2303d", fontFamily: "var(--a4-font-body)", fontSize: 14, margin: 0 }}>{error}</p>}
+                    {status === "error" && failure && <ReviewFailureNotice failure={failure} />}
                   </div>
                 )}
 
