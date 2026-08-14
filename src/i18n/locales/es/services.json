@@ -917,7 +917,7 @@
     "pricing": {
       "eyebrow": "Precios",
       "title": "Two prices. We keep the books.",
-      "desc": "Managed bookkeeping at a flat monthly price: EUR 24/month if you are self-employed, EUR 49/month for a company. The price does not move with your transaction volume, and there is no software-only plan. All fees exclude VAT.",
+      "desc": "Managed bookkeeping from EUR 24/month if you are self-employed, from EUR 49/month for a company, set by your monthly expenses. It does not move with your transaction volume, and there is no software-only plan. All fees exclude VAT.",
       "from": "",
       "startingFrom": "IVA no incluido",
       "month": "/mes",

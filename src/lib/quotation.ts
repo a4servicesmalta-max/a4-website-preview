@@ -16,15 +16,16 @@ import {
   A4_QUOTE_PACK_VERSION,
   AUDIT_FROM,
   AUDIT_YEARLY,
-  BOOKKEEPING_MANAGED_MONTHLY,
+  BOOKKEEPING_COMPANY,
+  BOOKKEEPING_FROM,
   MBR_ANNUAL_RETURN,
   PAYROLL_BEST_RATE,
   PAYROLL_ENTRY_RATE,
   VAT_FROM,
   VAT_MONTHLY,
-  catchUpAmount,
   catchUpLabel,
   managedMonthly,
+  type ExpenseBand,
   type ManagedEntity,
 } from "@/data/a4QuotePack";
 
@@ -70,15 +71,16 @@ const BASELINES: Record<
     passThrough?: boolean;
   }
 > = {
-  // Managed bookkeeping is FLAT — €24 self-employed, €49 company — so it does
-  // not scale with the revenue band and there is no "from" to hedge. This
-  // builder is a company-facing form (it asks for a company name and an MBR
-  // number), so the company rate is the baseline; `entity` overrides it.
+  // Managed bookkeeping is set by entity × monthly expenses (pack
+  // mt-2026-08-14-volume), so it does not scale with the revenue band this
+  // builder otherwise uses. This is a company-facing form (it asks for a
+  // company name and an MBR number), so the company entry rate is the
+  // baseline; `entity` and `expenses` set the real figure.
   accounts: {
     name: "Managed bookkeeping",
-    hint: `We keep the books: documents coded, bank reconciled, monthly figures — €${BOOKKEEPING_MANAGED_MONTHLY.company}/mo for a company, €${BOOKKEEPING_MANAGED_MONTHLY.sole}/mo self-employed`,
+    hint: `We keep the books: documents coded, bank reconciled, monthly figures — from €${BOOKKEEPING_COMPANY}/mo for a company, from €${BOOKKEEPING_FROM}/mo self-employed, set by your monthly expenses`,
     type: "monthly",
-    base: BOOKKEEPING_MANAGED_MONTHLY.company,
+    base: BOOKKEEPING_COMPANY,
   },
   // Floored at the pack's audit floor so the cheapest band can never quote
   // below the advertised "from €750/year".
@@ -118,11 +120,22 @@ export type QuoteInput = {
   revenueBand: RevenueBandId;
   services: QuoteServiceId[];
   /**
-   * Whose books these are. Sets the flat managed bookkeeping rate and, with
-   * it, the per-month catch-up rate. Defaults to `company` — this builder asks
-   * for a company name and an MBR number.
+   * Whose books these are. With `expenses` it sets the managed bookkeeping
+   * rate and, with it, the per-month catch-up rate. Defaults to `company` —
+   * this builder asks for a company name and an MBR number.
    */
   entity?: ManagedEntity;
+  /**
+   * Monthly expenses band — the OTHER half of the bookkeeping price under pack
+   * mt-2026-08-14-volume.
+   *
+   * Deliberately NOT defaulted. If it is missing or unrecognised the
+   * bookkeeping line is quoted "On request" and the catch-up line is dropped,
+   * because there is no rate to charge a backdated month at. Falling back to
+   * the entry band would silently under-quote every client who skipped the
+   * question, which is the one direction that loses money invisibly.
+   */
+  expenses?: ExpenseBand;
   /**
    * Earlier months that still need doing. THE catch-up input.
    *
@@ -174,6 +187,10 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   let monthly = 0;
   let annual = 0;
   let hasOnRequest = false;
+  // null when the expenses band is missing or unrecognised. Resolved once and
+  // shared by the bookkeeping line and the catch-up line below, so the two can
+  // never disagree about the client's own monthly rate.
+  const bookRate = input.expenses == null ? null : managedMonthly(entity, input.expenses);
 
   for (const id of input.services) {
     const b = BASELINES[id];
@@ -183,15 +200,24 @@ export function buildQuote(input: QuoteInput): QuoteResult {
       lines.push({ id, name: b.name, hint: b.hint, display: "On request", annualEur: null });
       continue;
     }
-    // Bookkeeping and VAT are banded by transaction volume in the pack, not by
-    // revenue, so they stay at their band price here rather than double-scaling.
+    // Managed bookkeeping is set by entity × monthly expenses — never by the
+    // revenue band this builder otherwise scales on. With no usable expenses
+    // band there is no price, so it is quoted "On request" rather than guessed.
+    if (id === "accounts") {
+      const bookFee = bookRate;
+      if (bookFee == null) {
+        hasOnRequest = true;
+        lines.push({ id, name: b.name, hint: b.hint, display: "On request", annualEur: null });
+        continue;
+      }
+      monthly += bookFee;
+      lines.push({ id, name: b.name, hint: b.hint, display: `${euro(bookFee)} / month`, annualEur: bookFee * 12 });
+      continue;
+    }
+    // VAT stays at its band price rather than double-scaling on revenue.
     // Government fees are charged at cost. Everything else scales by band, with
     // the audit floored at the advertised "from" price.
-    const fee = id === "accounts"
-      // Managed bookkeeping is flat and set only by the entity — never by
-      // revenue and never by volume.
-      ? managedMonthly(entity)
-      : b.passThrough || id === "vat"
+    const fee = b.passThrough || id === "vat"
       ? b.base
       : id === "audit"
         ? Math.max(AUDIT_FROM, round5(b.base * band.mult))
@@ -205,14 +231,16 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     }
   }
 
-  if (catchUpMonths > 0 && input.services.includes("accounts")) {
+  // Needs a known band: a backdated month is charged at the client's own
+  // monthly rate, so without that rate there is nothing to charge.
+  if (catchUpMonths > 0 && input.services.includes("accounts") && input.expenses != null && bookRate != null) {
     // Same monthly rate, per month, uncapped. The label is the exact form the
     // wire contract fixes, so the figure reads identically everywhere.
-    const fee = catchUpAmount(catchUpMonths, entity);
+    const fee = catchUpMonths * bookRate;
     annual += fee;
     lines.push({
       id: "catchup",
-      name: catchUpLabel(catchUpMonths, entity),
+      name: catchUpLabel(catchUpMonths, entity, input.expenses) ?? "Catch-up",
       hint: "One-off: earlier months brought up to date before the monthly cycle starts. Charged at the same monthly rate — no catch-up premium, no cap.",
       display: `${euro(fee)} one-off`,
       annualEur: fee,

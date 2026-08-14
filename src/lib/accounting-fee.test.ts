@@ -2,11 +2,13 @@ import { describe, it, expect } from "vitest";
 import { calcAccountingFee, accountingSummary, formatStartMonth, nextMonth, type AccountingInput } from "./accounting-fee";
 import { BOOKKEEPING_MANAGED_MONTHLY, LAUNCH_PROMO } from "@/data/a4QuotePack";
 
-const SOLE = BOOKKEEPING_MANAGED_MONTHLY.sole; // 24
-const CO = BOOKKEEPING_MANAGED_MONTHLY.company; // 49
+// The entry expenses band, which `base` below pins. Bookkeeping is banded by
+// monthly expenses now, so these are a band rate, not a flat rate.
+const SOLE = BOOKKEEPING_MANAGED_MONTHLY.sole["0-10k"]; // 24
+const CO = BOOKKEEPING_MANAGED_MONTHLY.company["0-10k"]; // 49
 
 const base: AccountingInput = {
-  sector: "shop", txn: "21-60", entity: "company", head: 0, vatreg: "none", behind: "0",
+  sector: "shop", txn: "21-60", entity: "company", expenses: "0-10k", head: 0, vatreg: "none", behind: "0",
   startMonth: "2026-09",
 };
 // Inside the launch-promo window, so the discount branch is exercised.
@@ -15,10 +17,10 @@ const AFTER_PROMO = new Date("2026-09-01T12:00:00Z");
 const at = (p: Partial<AccountingInput>, now = DURING_PROMO) => calcAccountingFee({ ...base, ...p }, now);
 
 describe("accounting fee engine", () => {
-  it("bills managed bookkeeping flat, by entity, whatever the volume", () => {
+  it("bills managed bookkeeping by entity and expenses, never by transaction volume", () => {
     expect(at({ entity: "sole" })).toMatchObject({ entityLabel: "Self-employed", monthlyFull: SOLE });
     expect(at({ entity: "company" })).toMatchObject({ entityLabel: "Company", monthlyFull: CO });
-    // Volume must not move it — that was the retired banded pricing.
+    // The TRANSACTION band must not move it — expenses is the only driver.
     expect(at({ entity: "company", txn: "1-20" })).toMatchObject({ monthlyFull: CO });
     expect(at({ entity: "company", txn: "1000+" })).toMatchObject({ monthlyFull: CO });
   });

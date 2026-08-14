@@ -6,7 +6,15 @@ import {
   isServiceStartMonth,
   type A4Item,
 } from "./websiteQuotation";
-import { A4_QUOTE_PACK_VERSION, LAUNCH_PROMO, catchUpLabel } from "@/data/a4QuotePack";
+import {
+  A4_QUOTE_PACK_VERSION,
+  EXPENSE_BANDS,
+  LAUNCH_PROMO,
+  catchUpAmount,
+  catchUpLabel,
+  managedMonthly,
+  type ExpenseBand,
+} from "@/data/a4QuotePack";
 
 /** Inside the launch window, and safely after it. */
 const DURING = new Date("2026-08-02T12:00:00Z");
@@ -49,12 +57,13 @@ describe("A4 selections contract", () => {
 });
 
 describe("per-item pricing", () => {
-  it("prices managed bookkeeping flat, by entity, with no risk uplift", () => {
-    expect(gross([{ service: "bookkeeping-managed", entity: "sole" }]).monthly).toBe(24);
-    expect(gross([{ service: "bookkeeping-managed", entity: "company" }]).monthly).toBe(49);
-    // Flat means flat: the sector risk multiplier must not touch it.
-    expect(gross([{ service: "bookkeeping-managed", entity: "company" }], "high").monthly).toBe(49);
-    expect(gross([{ service: "bookkeeping-managed", entity: "sole" }], "elevated").monthly).toBe(24);
+  it("prices managed bookkeeping by entity and expenses, with no risk uplift", () => {
+    expect(gross([{ service: "bookkeeping-managed", entity: "sole", expenses: "0-10k" }]).monthly).toBe(24);
+    expect(gross([{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }]).monthly).toBe(49);
+    // Expenses moves it; the sector risk multiplier still must not touch it.
+    expect(gross([{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }], "high").monthly).toBe(49);
+    expect(gross([{ service: "bookkeeping-managed", entity: "sole", expenses: "0-10k" }], "elevated").monthly).toBe(24);
+    expect(gross([{ service: "bookkeeping-managed", entity: "company", expenses: "200-300k" }], "high").monthly).toBe(299);
   });
 
   it("has no software-only tier and no volume-banded bookkeeping left", () => {
@@ -123,27 +132,27 @@ describe("per-item pricing", () => {
   });
 
   it("charges catch-up at the monthly rate, per month, with no cap", () => {
-    expect(gross([{ service: "catchup", months: 6, entity: "sole" }]).oneOff).toBe(144); // 6 × 24
-    expect(gross([{ service: "catchup", months: 6, entity: "company" }]).oneOff).toBe(294); // 6 × 49
+    expect(gross([{ service: "catchup", months: 6, entity: "sole", expenses: "0-10k" }]).oneOff).toBe(144); // 6 × 24
+    expect(gross([{ service: "catchup", months: 6, entity: "company", expenses: "0-10k" }]).oneOff).toBe(294); // 6 × 49
     // The contract's worked example: 12 × 49 = 588. NOT 240, NOT 300.
-    expect(gross([{ service: "catchup", months: 12, entity: "company" }]).oneOff).toBe(588);
+    expect(gross([{ service: "catchup", months: 12, entity: "company", expenses: "0-10k" }]).oneOff).toBe(588);
     // 24 months is simply twice that — no yearly cap survives.
-    expect(gross([{ service: "catchup", months: 24, entity: "company" }]).oneOff).toBe(1176);
+    expect(gross([{ service: "catchup", months: 24, entity: "company", expenses: "0-10k" }]).oneOff).toBe(1176);
     // And no risk uplift on it either.
-    expect(gross([{ service: "catchup", months: 12, entity: "company" }], "high").oneOff).toBe(588);
-    expect(evaluateA4Items([{ service: "catchup", months: 0, entity: "company" }], "standard", AFTER).lines).toEqual([]);
+    expect(gross([{ service: "catchup", months: 12, entity: "company", expenses: "0-10k" }], "high").oneOff).toBe(588);
+    expect(evaluateA4Items([{ service: "catchup", months: 0, entity: "company", expenses: "0-10k" }], "standard", AFTER).lines).toEqual([]);
   });
 
   it("labels the catch-up line in exactly the contracted form", () => {
-    const t = evaluateA4Items([{ service: "catchup", months: 12, entity: "company" }], "standard", AFTER);
+    const t = evaluateA4Items([{ service: "catchup", months: 12, entity: "company", expenses: "0-10k" }], "standard", AFTER);
     expect(t.lines[0].label).toBe("Catch-up: 12 months x EUR 49 = EUR 588");
-    expect(t.lines[0].label).toBe(catchUpLabel(12, "company"));
-    expect(catchUpLabel(6, "sole")).toBe("Catch-up: 6 months x EUR 24 = EUR 144");
+    expect(t.lines[0].label).toBe(catchUpLabel(12, "company", "0-10k"));
+    expect(catchUpLabel(6, "sole", "0-10k")).toBe("Catch-up: 6 months x EUR 24 = EUR 144");
   });
 
   it("reports the catch-up slice off the item, not off the label text", () => {
     const t = evaluateA4Items(
-      [{ service: "bookkeeping-managed", entity: "company" }, { service: "catchup", months: 3, entity: "company" }],
+      [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }, { service: "catchup", months: 3, entity: "company", expenses: "0-10k" }],
       "standard",
       AFTER
     );
@@ -153,7 +162,7 @@ describe("per-item pricing", () => {
 
   it("drops unpriceable items rather than sinking them into the totals", () => {
     const t = evaluateA4Items(
-      [{ service: "bookkeeping-managed", entity: "company" }, { service: "payroll", heads: -1 }],
+      [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }, { service: "payroll", heads: -1 }],
       "standard",
       AFTER
     );
@@ -164,14 +173,14 @@ describe("per-item pricing", () => {
 
 describe("IESBA independence routing", () => {
   it("rules A4 out as auditor once the basket asks us to keep the books", () => {
-    const t = evaluateA4Items([{ service: "bookkeeping-managed", entity: "company" }], "standard", AFTER);
+    const t = evaluateA4Items([{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }], "standard", AFTER);
     expect(t.wantsBookkeeping).toBe(true);
     expect(t.wantsAudit).toBe(false);
     expect(t.independenceConflict).toBe(false);
   });
 
   it("treats a catch-up-only basket as bookkeeping too", () => {
-    const t = evaluateA4Items([{ service: "catchup", months: 6, entity: "sole" }], "standard", AFTER);
+    const t = evaluateA4Items([{ service: "catchup", months: 6, entity: "sole", expenses: "0-10k" }], "standard", AFTER);
     expect(t.wantsBookkeeping).toBe(true);
   });
 
@@ -193,7 +202,7 @@ describe("IESBA independence routing", () => {
 
   it("flags the conflict when both are asked for at once", () => {
     const t = evaluateA4Items(
-      [{ service: "bookkeeping-managed", entity: "company" }, { service: "audit", txn: "21-60" }],
+      [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }, { service: "audit", txn: "21-60" }],
       "standard",
       AFTER
     );
@@ -202,7 +211,7 @@ describe("IESBA independence routing", () => {
 
   it("flags the conflict for a review engagement alongside the books", () => {
     const t = evaluateA4Items(
-      [{ service: "bookkeeping-managed", entity: "company" }, { service: "audit", txn: "21-60", review: true }],
+      [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }, { service: "audit", txn: "21-60", review: true }],
       "standard",
       AFTER
     );
@@ -211,7 +220,7 @@ describe("IESBA independence routing", () => {
 
   it("carries the conclusion into the submitted selections", () => {
     const r = buildQuoteRecord(
-      { name: "A", email: "a@b.com", items: [{ service: "bookkeeping-managed", entity: "sole" }], serviceStartDate: START },
+      { name: "A", email: "a@b.com", items: [{ service: "bookkeeping-managed", entity: "sole", expenses: "0-10k" }], serviceStartDate: START },
       DURING
     );
     expect(r.selections.independence).toEqual({
@@ -219,6 +228,143 @@ describe("IESBA independence routing", () => {
       bookkeepingEligible: true,
       route: "bookkeeping",
     });
+  });
+});
+
+describe("bookkeeping by monthly expenses (pack mt-2026-08-14-volume)", () => {
+  /** The contract's table, restated here so a silent edit to the pack fails. */
+  const TABLE: Record<ExpenseBand, { sole: number; company: number }> = {
+    "0-10k": { sole: 24, company: 49 },
+    "10-25k": { sole: 39, company: 69 },
+    "25-50k": { sole: 59, company: 99 },
+    "50-100k": { sole: 89, company: 149 },
+    "100-200k": { sole: 129, company: 219 },
+    "200-300k": { sole: 179, company: 299 },
+    "300-400k": { sole: 229, company: 379 },
+    "400-500k": { sole: 279, company: 449 },
+    "500k+": { sole: 339, company: 549 },
+  };
+
+  it("prices every band, for both entities, exactly as the contract says", () => {
+    for (const band of EXPENSE_BANDS) {
+      for (const entity of ["sole", "company"] as const) {
+        const got = gross([{ service: "bookkeeping-managed", entity, expenses: band.id }]).monthly;
+        expect(`${entity}/${band.id} = ${got}`).toBe(`${entity}/${band.id} = ${TABLE[band.id][entity]}`);
+      }
+    }
+  });
+
+  it("prices the top band instantly — 500k+ is a real price, not a 'talk to us'", () => {
+    // The whole point of the band: no unpriceable arm is left in bookkeeping.
+    const t = evaluateA4Items(
+      [{ service: "bookkeeping-managed", entity: "company", expenses: "500k+" }],
+      "standard",
+      AFTER
+    );
+    expect(t.lines).toHaveLength(1);
+    expect(t.grossMonthly).toBe(549);
+    expect(gross([{ service: "bookkeeping-managed", entity: "sole", expenses: "500k+" }]).monthly).toBe(339);
+  });
+
+  it("rises monotonically and never cliffs, for both entities", () => {
+    for (const entity of ["sole", "company"] as const) {
+      const rates = EXPENSE_BANDS.map((b) => managedMonthly(entity, b.id)!);
+      for (let i = 1; i < rates.length; i++) {
+        expect(rates[i]).toBeGreaterThan(rates[i - 1]);
+        // Each step is a real increase but never more than a doubling.
+        expect(rates[i] / rates[i - 1]).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
+  it("holds the entry price, so no already-issued quote is invalidated", () => {
+    expect(managedMonthly("sole", "0-10k")).toBe(24);
+    expect(managedMonthly("company", "0-10k")).toBe(49);
+  });
+
+  it("nulls an unknown band to the lead path, and NEVER to the cheapest band", () => {
+    // This is the load-bearing one. Defaulting down is the direction that
+    // loses money invisibly, so an unrecognised band must price nothing.
+    for (const bad of ["", "0", "unknown", "10k", "500K+", "constructor", "toString", "__proto__"]) {
+      expect(managedMonthly("company", bad as ExpenseBand)).toBeNull();
+      const t = evaluateA4Items(
+        [{ service: "bookkeeping-managed", entity: "company", expenses: bad as ExpenseBand }],
+        "standard",
+        AFTER
+      );
+      expect(t.lines).toEqual([]);
+      expect(t.grossMonthly).toBe(0);
+      // Specifically NOT the entry band.
+      expect(t.grossMonthly).not.toBe(24);
+      expect(t.grossMonthly).not.toBe(49);
+    }
+  });
+
+  it("drops a catch-up whose band is unknown rather than charging the entry rate", () => {
+    expect(catchUpAmount(12, "company", "nope" as ExpenseBand)).toBeNull();
+    expect(catchUpLabel(12, "company", "nope" as ExpenseBand)).toBeNull();
+    const t = evaluateA4Items(
+      [{ service: "catchup", months: 12, entity: "company", expenses: "nope" as ExpenseBand }],
+      "standard",
+      AFTER
+    );
+    expect(t.lines).toEqual([]);
+    expect(t.grossOneOff).toBe(0);
+    expect(t.grossOneOff).not.toBe(588); // the entry-band figure
+  });
+
+  it("charges a backdated month at the client's OWN rate — worked example at €25–50k", () => {
+    // A company at the 25-50k band pays €99/mo, so 9 backdated months is
+    // 9 × 99 = 891 — NOT 9 × 49 = 441, which is what defaulting to the entry
+    // band would have charged. Deliberately a non-entry band.
+    const t = evaluateA4Items(
+      [
+        { service: "bookkeeping-managed", entity: "company", expenses: "25-50k" },
+        { service: "catchup", months: 9, entity: "company", expenses: "25-50k" },
+      ],
+      "standard",
+      AFTER
+    );
+    expect(t.grossMonthly).toBe(99);
+    expect(t.grossOneOff).toBe(891);
+    expect(t.catchup).toBe(891);
+    expect(t.grossOneOff).not.toBe(9 * 49);
+    // The label carries the client's own rate, in the contracted form.
+    expect(catchUpLabel(9, "company", "25-50k")).toBe("Catch-up: 9 months x EUR 99 = EUR 891");
+    expect(t.lines.find((l) => l.cadence === "oneoff")?.label).toBe(
+      "Catch-up: 9 months x EUR 99 = EUR 891"
+    );
+    // And a live month costs exactly what a backdated one does: 891 / 9 = 99.
+    expect(t.grossOneOff / 9).toBe(t.grossMonthly);
+  });
+
+  it("prices a sole trader's catch-up off the sole table, at a non-entry band", () => {
+    // 100-200k sole = €129/mo. 6 months = 774.
+    expect(catchUpAmount(6, "sole", "100-200k")).toBe(774);
+    expect(catchUpLabel(6, "sole", "100-200k")).toBe("Catch-up: 6 months x EUR 129 = EUR 774");
+  });
+
+  it("keeps every other service on the transaction band, untouched by expenses", () => {
+    // Bookkeeping only. VAT, tax, audit, payroll, MBR and the registered
+    // office must price identically whatever the expenses band says.
+    const others: A4Item[] = [
+      { service: "vat", txn: "21-60", vatreg: "art10" },
+      { service: "taxret", txn: "61-150" },
+      { service: "audit", txn: "21-60" },
+      { service: "payroll", heads: 3 },
+      { service: "mbr", capital: "5000" },
+      { service: "registered-office" },
+    ];
+    const baseline = gross(others);
+    expect(baseline.monthly).toBe(45 + 96);
+    expect(baseline.yearly).toBe(420 + 995 + 260 + 1200);
+    // Adding bookkeeping at the TOP band moves only the bookkeeping line.
+    const withTopBand = gross([
+      ...others,
+      { service: "bookkeeping-managed", entity: "company", expenses: "500k+" },
+    ]);
+    expect(withTopBand.monthly).toBe(baseline.monthly + 549);
+    expect(withTopBand.yearly).toBe(baseline.yearly);
   });
 });
 
@@ -236,7 +382,11 @@ describe("server input bounds", () => {
 
   it("rejects catch-up months outside 1..240", () => {
     const m = (n: number) =>
-      evaluateA4Items([{ service: "catchup", months: n, entity: "company" }], "standard", AFTER).lines;
+      evaluateA4Items(
+        [{ service: "catchup", months: n, entity: "company", expenses: "0-10k" }],
+        "standard",
+        AFTER
+      ).lines;
     expect(m(1)).toHaveLength(1);
     expect(m(240)).toHaveLength(1);
     expect(m(0)).toEqual([]);
@@ -248,7 +398,7 @@ describe("server input bounds", () => {
     // 500 heads is comfortably past the >10 tier, so €25/head throughout.
     expect(gross([{ service: "payroll", heads: 500 }]).monthly).toBe(12_500);
     // 240 months = 20 years of a company's books at €49/mo, uncapped.
-    expect(gross([{ service: "catchup", months: 240, entity: "company" }]).oneOff).toBe(240 * 49);
+    expect(gross([{ service: "catchup", months: 240, entity: "company", expenses: "0-10k" }]).oneOff).toBe(240 * 49);
   });
 
   it("rounds every line to whole euros, like the server", () => {
@@ -262,9 +412,9 @@ describe("server input bounds", () => {
 describe("launch promo", () => {
   it("takes 25% off monthly and yearly, never off one-offs", () => {
     const items: A4Item[] = [
-      { service: "bookkeeping-managed", entity: "company" }, // 49 / mo
+      { service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }, // 49 / mo
       { service: "taxret", txn: "21-60" }, // 325 / yr
-      { service: "catchup", months: 3, entity: "company" }, // 147 one-off
+      { service: "catchup", months: 3, entity: "company", expenses: "0-10k" }, // 147 one-off
     ];
     const t = evaluateA4Items(items, "standard", DURING);
     expect(t.promoApplied).toBe(true);
@@ -285,7 +435,7 @@ describe("launch promo", () => {
   });
 
   it("stops discounting once the window closes, with no code change", () => {
-    const items: A4Item[] = [{ service: "bookkeeping-managed", entity: "company" }];
+    const items: A4Item[] = [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }];
     expect(evaluateA4Items(items, "standard", AFTER)).toMatchObject({
       promoApplied: false,
       monthly: 49,
@@ -293,7 +443,7 @@ describe("launch promo", () => {
   });
 
   it("does not claim a discount on a basket of pure one-offs", () => {
-    const t = evaluateA4Items([{ service: "catchup", months: 2, entity: "sole" }], "standard", DURING);
+    const t = evaluateA4Items([{ service: "catchup", months: 2, entity: "sole", expenses: "0-10k" }], "standard", DURING);
     expect(t.promoApplied).toBe(false);
     expect(t.oneOff).toBe(48);
   });
@@ -304,13 +454,13 @@ describe("mixed basket, hand-computed", () => {
   // payroll for 8, the annual return at €5,000 capital, unpriced onboarding,
   // and a year of catch-up.
   const items: A4Item[] = [
-    { service: "bookkeeping-managed", entity: "company" },
+    { service: "bookkeeping-managed", entity: "company", expenses: "0-10k" },
     { service: "vat", txn: "61-150", vatreg: "art10" },
     { service: "taxret", txn: "61-150" },
     { service: "payroll", heads: 8 },
     { service: "mbr", capital: "5000" },
     { service: "onboarding" },
-    { service: "catchup", months: 12, entity: "company" },
+    { service: "catchup", months: 12, entity: "company", expenses: "0-10k" },
   ];
 
   it("totals every cadence correctly before the promo", () => {
@@ -359,11 +509,11 @@ describe("call-site baskets", () => {
   // The exact baskets /pricing builds, one per tab. Each must reprice to the
   // same totals it shows, or the backend 202s and no quote email is sent.
   const baskets: Record<string, A4Item[]> = {
-    "bookkeeping · self-employed": [{ service: "bookkeeping-managed", entity: "sole" }],
-    "bookkeeping · company": [{ service: "bookkeeping-managed", entity: "company" }],
+    "bookkeeping · self-employed": [{ service: "bookkeeping-managed", entity: "sole", expenses: "0-10k" }],
+    "bookkeeping · company": [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }],
     "bookkeeping · company + 12 months catch-up": [
-      { service: "bookkeeping-managed", entity: "company" },
-      { service: "catchup", months: 12, entity: "company" },
+      { service: "bookkeeping-managed", entity: "company", expenses: "0-10k" },
+      { service: "catchup", months: 12, entity: "company", expenses: "0-10k" },
     ],
     "vat · up to 20": [{ service: "vat", txn: "1-20", vatreg: "art10" }],
     "vat · 20 to 60": [{ service: "vat", txn: "21-60", vatreg: "art10" }],
@@ -392,9 +542,13 @@ describe("call-site baskets", () => {
     });
   }
 
-  it("prices the two published bookkeeping prices, and only those two", () => {
+  it("prices the entry band for both entities — the published 'from' prices", () => {
     const at = (entity: "sole" | "company") =>
-      evaluateA4Items([{ service: "bookkeeping-managed", entity }], "standard", AFTER).grossMonthly;
+      evaluateA4Items(
+        [{ service: "bookkeeping-managed", entity, expenses: "0-10k" }],
+        "standard",
+        AFTER
+      ).grossMonthly;
     expect([at("sole"), at("company")]).toEqual([24, 49]);
   });
 });
@@ -405,7 +559,7 @@ describe("the submitted record", () => {
   it("stamps the pack version and currency the backend validates against", () => {
     const r = buildQuoteRecord({ name: "A", email: "a@b.com", items, serviceStartDate: START }, DURING);
     expect(r.pack).toBe(A4_QUOTE_PACK_VERSION);
-    expect(r.pack).toBe("mt-2026-08-14-managed");
+    expect(r.pack).toBe("mt-2026-08-14-volume");
     expect(r.currency).toBe("EUR");
     expect(r.quotedAt).toBe(DURING.toISOString());
   });

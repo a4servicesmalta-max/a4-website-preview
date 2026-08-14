@@ -2,7 +2,7 @@
 
 import { Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import LocalizedLink from "@/components/common/LocalizedLink";
-import { BOOKKEEPING_MANAGED_MONTHLY } from "@/data/a4QuotePack";
+import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
 import { INDEPENDENCE_BOOKKEEPING } from "@/lib/independence";
 
 // Managed bookkeeping — the firm KEEPS the books. This block used to sell A4
@@ -60,8 +60,8 @@ export function A4BooksPromo() {
             >
               You send us the paperwork and we keep the books: every document
               coded, the bank reconciled, and figures you can rely on each month.
-              €{BOOKKEEPING_MANAGED_MONTHLY.sole} a month if you are self-employed,
-              €{BOOKKEEPING_MANAGED_MONTHLY.company} for a company — no per-document
+              from €{BOOKKEEPING_FROM} a month if you are self-employed,
+              from €{BOOKKEEPING_COMPANY} for a company — no per-document
               fees, no hourly meters.
             </p>
             <p
@@ -105,11 +105,16 @@ export function A4BooksPromo() {
               }}
             >
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                {/* "from" is load-bearing: €24 is the entry expenses band, not a
+                    flat rate. Nine bands price bookkeeping under the volume pack. */}
+                <span className="a4-font-body" style={{ fontSize: 15, color: "var(--a4-on-dark-mute)" }}>
+                  from
+                </span>
                 <span
                   className="a4-font-display"
                   style={{ fontWeight: 500, fontSize: 54, color: "#fff", letterSpacing: "-2px", lineHeight: 1 }}
                 >
-                  €{BOOKKEEPING_MANAGED_MONTHLY.sole}
+                  €{BOOKKEEPING_FROM}
                 </span>
                 <span className="a4-font-body" style={{ fontSize: 15, color: "var(--a4-on-dark-mute)" }}>
                   / month
@@ -119,7 +124,7 @@ export function A4BooksPromo() {
                 className="a4-font-body"
                 style={{ fontSize: 14.5, fontWeight: 600, color: "var(--a4-primary-bright)", marginTop: 6 }}
               >
-                Self-employed · €{BOOKKEEPING_MANAGED_MONTHLY.company}/mo for a company
+                Self-employed · from €{BOOKKEEPING_COMPANY}/mo for a company
               </div>
               <ul style={{ listStyle: "none", padding: 0, margin: "22px 0 0", display: "flex", flexDirection: "column", gap: 11 }}>
                 {PLAN_LINES.map((line) => (

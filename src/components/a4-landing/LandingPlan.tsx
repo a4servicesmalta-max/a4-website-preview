@@ -6,7 +6,8 @@ import { MANAGED_CAVEAT, MANAGED_CATCHUP_NOTE, MANAGED_SOLE, MANAGED_COMPANY } f
 import {
   VAT_MONTHLY, VAT_RULES, AUDIT_FROM, TAX_RETURN_FROM,
   PAYROLL_ENTRY_RATE, PAYROLL_BEST_RATE, payrollRate, PRICING_VAT_NOTE,
-  catchUpAmount, catchUpLabel, managedMonthly, type ManagedEntity,
+  catchUpAmount, catchUpLabel, managedMonthly, EXPENSE_BANDS,
+  type ManagedEntity, type ExpenseBand,
 } from "@/data/a4QuotePack";
 import { INDEPENDENCE_BOOKKEEPING, flagsForServiceSelection } from "@/lib/independence";
 import { nextMonth } from "@/lib/accounting-fee";
@@ -23,6 +24,10 @@ const LP_MANAGED: Record<"company" | "personal", { name: string; price: number; 
 };
 /** This component's own entity vocabulary → the pack's. */
 const LP_ENTITY: Record<"company" | "personal", ManagedEntity> = { company: "company", personal: "sole" };
+
+/** Human label for an expenses band, for the lead email and the picker. */
+const LP_EXPENSE_LABEL = (id: ExpenseBand) =>
+  (EXPENSE_BANDS.find((b) => b.id === id) ?? EXPENSE_BANDS[0]).label;
 
 // VAT returns — priced the way quote pack mt-2026-08-01 prices them: a monthly
 // fee set by transaction volume, whatever the filing frequency. Art. 11 small-
@@ -85,6 +90,9 @@ export function LandingPlan() {
   const [emps, setEmps] = useState(2);
   const [annualSel, setAnnualSel] = useState<Record<AnnualItemId, boolean>>({ accounts: true, tax: true, audit: false });
 
+  /** Monthly expenses — the bookkeeping price driver. Defaults to €10–25k/mo. */
+  const [expenses, setExpenses] = useState<ExpenseBand>("10-25k");
+
   const [modal, setModal] = useState(false);
   const [booked, setBooked] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
@@ -98,7 +106,10 @@ export function LandingPlan() {
 
   const packEntity = LP_ENTITY[entity];
   const plan = LP_MANAGED[entity];
-  const base = plan.price;
+  // The bookkeeping price is entity × monthly expenses. `plan.price` is only
+  // the entry band, so it can never be the figure we bill on — it would
+  // under-quote every band above the first.
+  const base = managedMonthly(packEntity, expenses) ?? plan.price;
   const vatFee = vat ? LP_VAT[vatFreq].fee : 0;
   const payFee = isCompany && payroll ? emps * payrollRate(emps) : 0;
   const monthly = base + vatFee + payFee;                   // recurring
@@ -106,7 +117,7 @@ export function LandingPlan() {
   const selectedAnnual = annualItems.filter((it) => annualSel[it.id]);
   const annualFee = selectedAnnual.reduce((s, it) => s + it.fee, 0); // once a year
   // One-off, charged at the same monthly rate. Never discounted, never capped.
-  const catchUpFee = catchUpMonths > 0 ? catchUpAmount(catchUpMonths, packEntity) : 0;
+  const catchUpFee = catchUpMonths > 0 ? (catchUpAmount(catchUpMonths, packEntity, expenses) ?? 0) : 0;
 
   // Bookkeeping is always in this basket, so A4 can never be the auditor of a
   // client who buys from this page. Said on the page, and carried on the lead.
@@ -134,7 +145,8 @@ export function LandingPlan() {
             `Phone: ${form.phone}`,
             `Entity: ${entity}`,
             `Start month: ${startMonth || "not given"}`,
-            catchUpMonths > 0 ? catchUpLabel(catchUpMonths, packEntity) : "No earlier months",
+            `Monthly expenses: ${LP_EXPENSE_LABEL(expenses)}`,
+            catchUpMonths > 0 ? (catchUpLabel(catchUpMonths, packEntity, expenses) ?? "Catch-up") : "No earlier months",
             `Monthly total: ${lpEuro(monthly)}/mo${annualFee > 0 ? ` + ${lpEuro(annualFee)}/yr` : ""}`,
             `Reference: ${ref}`,
           ].join("\n"),
@@ -172,7 +184,7 @@ export function LandingPlan() {
           align="center"
           eyebrow="Build your price"
           title="Build your plan"
-          sub={`We keep your books — you send us the paperwork. ${MANAGED_CAVEAT} ${MANAGED_CATCHUP_NOTE} Fixed monthly price, cancel anytime.`}
+          sub={`We keep your books — you send us the paperwork. ${MANAGED_CAVEAT} ${MANAGED_CATCHUP_NOTE} One agreed monthly price, no per-document fees, cancel anytime.`}
           maxWidth={620}
         /></Reveal>
 
@@ -232,8 +244,30 @@ export function LandingPlan() {
                   />
 
                   <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--a4-hairline-light)" }}>
+                    <div style={fieldLabel}>About how much do you spend a month?</div>
+                    <div style={fieldSub}>
+                      Total money out — suppliers, wages, rent, everything. It is what sets the bookkeeping
+                      price, and you already know it without counting anything.
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                      {EXPENSE_BANDS.map((b) => {
+                        const on = expenses === b.id;
+                        return (
+                          <button key={b.id} type="button" onClick={() => setExpenses(b.id)} style={{
+                            padding: "7px 13px", borderRadius: "var(--a4-r-full)", cursor: "pointer",
+                            border: "1px solid " + (on ? "var(--a4-primary)" : "var(--a4-hairline-light)"),
+                            background: on ? "var(--a4-primary)" : "transparent",
+                            color: on ? "#fff" : "var(--a4-body)",
+                            fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600,
+                          }}>{b.label}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--a4-hairline-light)" }}>
                     <div style={fieldLabel}>Earlier months that still need doing</div>
-                    <div style={fieldSub}>{MANAGED_CATCHUP_NOTE} Each one is {lpEuro(managedMonthly(packEntity))}.</div>
+                    <div style={fieldSub}>{MANAGED_CATCHUP_NOTE} Each one is {lpEuro(base)}.</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                       {[0, 3, 6, 12, 24, 36].map((m) => {
                         const on = catchUpMonths === m;
@@ -250,7 +284,7 @@ export function LandingPlan() {
                     </div>
                     {catchUpFee > 0 && (
                       <div style={{ marginTop: 10, fontFamily: "var(--a4-font-body)", fontSize: 13, fontVariantNumeric: "tabular-nums", color: "var(--a4-ink)", fontWeight: 600 }}>
-                        {catchUpLabel(catchUpMonths, packEntity)}
+                        {catchUpLabel(catchUpMonths, packEntity, expenses)}
                       </div>
                     )}
                   </div>

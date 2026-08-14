@@ -3,11 +3,11 @@ import "@/components/a4-landing/styles.css";
 import { AccountingApp } from "./components/AccountingParts";
 import { ACCOUNTING_FAQS } from "@/data/serviceFaqs";
 import { pageMetadata } from "@/lib/page-metadata";
-import { BOOKKEEPING_MANAGED_MONTHLY } from "@/data/a4QuotePack";
+import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
 
 export const metadata: Metadata = pageMetadata(
   "Accounting & Bookkeeping in Malta",
-  `Managed bookkeeping by qualified Maltese accountants — €${BOOKKEEPING_MANAGED_MONTHLY.sole}/month self-employed, €${BOOKKEEPING_MANAGED_MONTHLY.company}/month for a company. We keep the books: documents coded, bank reconciled, VAT from the same ledger. Get your monthly price in sixty seconds.`,
+  `Managed bookkeeping by qualified Maltese accountants — from €${BOOKKEEPING_FROM}/month self-employed, from €${BOOKKEEPING_COMPANY}/month for a company, set by monthly expenses. We keep the books: documents coded, bank reconciled, VAT from the same ledger. Get your monthly price in sixty seconds.`,
 );
 
 const faqPage = {

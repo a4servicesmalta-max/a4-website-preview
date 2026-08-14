@@ -33,6 +33,7 @@ import {
   payrollRate,
   roundEur,
   type CapitalBand,
+  type ExpenseBand,
   type ManagedEntity,
   type TxnBand,
 } from "@/data/a4QuotePack";
@@ -74,9 +75,14 @@ export type A4Risk = "standard" | "elevated" | "high";
 export type A4Item =
   /**
    * The ONLY bookkeeping item. Replaces both the retired `software` tier and
-   * the retired volume-banded `bookkeeping-full`. Flat, and NOT risk-uplifted.
+   * the retired volume-banded `bookkeeping-full`. Priced by entity × monthly
+   * expenses (pack mt-2026-08-14-volume), and NOT risk-uplifted.
+   *
+   * `expenses` is a string band id, never a number — a numeric band invites
+   * silent coercion. A missing or unrecognised band drops the item, which
+   * sends the basket down the lead path.
    */
-  | { service: "bookkeeping-managed"; entity: ManagedEntity }
+  | { service: "bookkeeping-managed"; entity: ManagedEntity; expenses: ExpenseBand }
   | { service: "vat"; txn: TxnBand; vatreg: "art10" | "art11" | "art12" }
   | { service: "taxret"; txn: TxnBand }
   | { service: "audit"; txn: TxnBand; review?: true }
@@ -84,7 +90,12 @@ export type A4Item =
   | { service: "mbr"; capital: CapitalBand }
   | { service: "registered-office" }
   | { service: "onboarding" }
-  | { service: "catchup"; months: number; entity: ManagedEntity };
+  /**
+   * Backdated months, at the client's OWN monthly rate — so it carries the
+   * same `expenses` band as the bookkeeping item beside it. A backdated month
+   * must cost what a live month costs for that client.
+   */
+  | { service: "catchup"; months: number; entity: ManagedEntity; expenses: ExpenseBand };
 
 /**
  * `YYYY-MM` — the first month in scope. REQUIRED on every submitted quote.
@@ -207,8 +218,11 @@ function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
 
   switch (item.service) {
     case "bookkeeping-managed": {
-      const price = managedMonthly(item.entity);
-      if (!price) return null;
+      // null on a missing or unrecognised expenses band. Dropping the item
+      // nulls the quote to the lead path, which is the contracted behaviour —
+      // it must NEVER fall back to the cheapest band.
+      const price = managedMonthly(item.entity, item.expenses);
+      if (price == null) return null;
       return mo(`Managed bookkeeping — ${MANAGED_ENTITY_LABELS[item.entity]}`, price);
     }
     case "vat": {
@@ -256,9 +270,14 @@ function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
       // Whole months only, and within the range the server will accept.
       if (!isIntWithin(item.months, A4_LIMITS.months.min, A4_LIMITS.months.max)) return null;
       const m = item.months;
-      // Same monthly rate, per month, uncapped, never discounted. The label is
-      // fixed by the wire contract and compared literally downstream.
-      return one(catchUpLabel(m, item.entity), catchUpAmount(m, item.entity));
+      // Same monthly rate as a live month for this client, per month, uncapped,
+      // never discounted. The label is fixed by the wire contract and compared
+      // literally downstream. Both go null on an unknown band — same lead-path
+      // rule as the bookkeeping item.
+      const label = catchUpLabel(m, item.entity, item.expenses);
+      const amount = catchUpAmount(m, item.entity, item.expenses);
+      if (label == null || amount == null) return null;
+      return one(label, amount);
     }
     default:
       // A stale cached page sending a retired item (`software`,

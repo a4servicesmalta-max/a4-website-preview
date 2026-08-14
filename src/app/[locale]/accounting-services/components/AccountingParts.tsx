@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { ScrollVideo } from "@/components/a4-landing/ScrollVideo";
 import { AccountingEstimator } from "./AccountingEstimator";
-import { BOOKKEEPING_MANAGED_MONTHLY, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
+import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
 import { ACCOUNTING_FAQS } from "@/data/serviceFaqs";
 import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
 
@@ -33,7 +33,7 @@ function AccountingHero() {
             Your books,<br /><span style={{ color: "var(--a4-primary-bright)" }}>always up to date.</span>
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 660, margin: "24px auto 0", textWrap: "pretty" }}>
-            We keep your books. You send the paperwork; our accountants code it, reconcile the bank, and hand you figures you can rely on each month — <strong style={{ color: "#fff", fontWeight: 600 }}>&euro;{BOOKKEEPING_MANAGED_MONTHLY.sole} a month self-employed, &euro;{BOOKKEEPING_MANAGED_MONTHLY.company} for a company</strong>.
+            We keep your books. You send the paperwork; our accountants code it, reconcile the bank, and hand you figures you can rely on each month — <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;{BOOKKEEPING_FROM} a month self-employed, from &euro;{BOOKKEEPING_COMPANY} for a company, set by your monthly spend</strong>.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get my price <Icon name="arrow-right" size={18} color="#000" /></Button>

@@ -14,6 +14,8 @@ import {
   AUDIT_FROM,
   BOOKKEEPING_FROM,
   BOOKKEEPING_COMPANY,
+  BOOKKEEPING_COMPANY_TOP,
+  EXPENSE_BANDS,
   MANAGED_ENTITY_OPTIONS,
   INCORPORATION,
   INCORPORATION_FROM,
@@ -26,6 +28,7 @@ import {
   PRICING_VAT_NOTE,
   PRICING_GOV_NOTE,
   ONBOARDING_UNPRICED_NOTE,
+  type ExpenseBand,
   type ManagedEntity,
 } from "@/data/a4QuotePack";
 import {
@@ -61,6 +64,16 @@ const PR_VOLUME_LABELS = ["Up to 20", "20 to 60", "60 to 150", "150 to 400"];
  * bookkeeping tab picks an entity and nothing else.
  */
 const PR_ENTITY_IDS: ManagedEntity[] = MANAGED_ENTITY_OPTIONS.map((o) => o.id);
+
+/**
+ * Monthly-expenses bands — the BOOKKEEPING price driver under pack
+ * mt-2026-08-14-volume. Separate from PR_VOLUME_BANDS above, which is the
+ * TRANSACTION band and drives VAT and audit. The accounting tab asks for
+ * expenses; the VAT and audit tabs ask for transactions. Same calculator, two
+ * different questions, never shown as one.
+ */
+const PR_EXPENSE_IDS: ExpenseBand[] = EXPENSE_BANDS.map((b) => b.id);
+const PR_EXPENSE_LABELS = EXPENSE_BANDS.map((b) => b.label);
 
 /** Earlier months the calculator offers. Priced at the monthly rate, uncapped. */
 const PR_CATCHUP_MONTHS = [0, 3, 6, 12, 24, 36];
@@ -430,7 +443,7 @@ function PricingStartingTiers() {
             className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4"
             style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}
           >
-            We keep your books, at a flat monthly price: {prEuro(BOOKKEEPING_FROM)}/mo if you are self-employed, {prEuro(BOOKKEEPING_COMPANY)}/mo for a company. The price does not move with your transaction volume, and there is no software-only plan — a qualified accountant is on the file either way. VAT, audit, tax and company formation are priced separately below. {MANAGED_CATCHUP_NOTE}
+            We keep your books, priced on what you spend each month: from {prEuro(BOOKKEEPING_FROM)}/mo if you are self-employed, from {prEuro(BOOKKEEPING_COMPANY)}/mo for a company, up to {prEuro(BOOKKEEPING_COMPANY_TOP)}/mo at the top band. Nine bands, every one priced instantly — and there is no software-only plan, a qualified accountant is on the file either way. VAT, audit, tax and company formation are priced separately below, on your transaction volume. {MANAGED_CATCHUP_NOTE}
           </p>
           {isPromoActive() && (
             <p className="a4-font-body text-[13px] font-semibold text-[var(--a4-primary-bright)] mt-3">
@@ -517,6 +530,7 @@ function PricingInfoBanner() {
 function PricingCalc() {
   const [svc, setSvc] = useState<ServiceId>("accounting");
   const [entityIdx, setEntityIdx] = useState(1); // company by default
+  const [expensesIdx, setExpensesIdx] = useState(1); // €10–25k/mo by default
   // REQUIRED before the quote is priceable. Suggested as next month, never
   // assumed — it decides which months are catch-up and which are not.
   const [startMonth, setStartMonth] = useState<string>(() => nextMonth());
@@ -548,12 +562,15 @@ function PricingCalc() {
   let items: A4Item[] = [];
 
   const entity = PR_ENTITY_IDS[entityIdx] ?? "company";
+  const expenses = PR_EXPENSE_IDS[expensesIdx] ?? "0-10k";
   const catchUpMonths = PR_CATCHUP_MONTHS[catchUpIdx] ?? 0;
+  /** null when the band is unknown — the quote then nulls to the lead path. */
+  const bookRate = managedMonthly(entity, expenses);
 
   if (svc === "accounting") {
     items = [
-      { service: "bookkeeping-managed", entity },
-      ...(catchUpMonths > 0 ? [{ service: "catchup" as const, months: catchUpMonths, entity }] : []),
+      { service: "bookkeeping-managed", entity, expenses },
+      ...(catchUpMonths > 0 ? [{ service: "catchup" as const, months: catchUpMonths, entity, expenses }] : []),
     ];
   } else if (svc === "vat") {
     items = [{ service: "vat", txn: PR_VOLUME_BANDS[vatVol], vatreg: "art10" }];
@@ -683,6 +700,22 @@ function PricingCalc() {
                 </p>
 
                 <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
+                  <div className="a4-font-body text-[14px] font-semibold text-white">
+                    About how much do you spend a month?
+                  </div>
+                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
+                    Total money out — suppliers, wages, rent, everything. This is what sets your bookkeeping
+                    price. It is not the transaction count the VAT and audit tabs ask for.
+                  </p>
+                  <PrChip items={PR_EXPENSE_LABELS} value={expensesIdx} set={setExpensesIdx} cols={3} />
+                  <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
+                    {bookRate == null
+                      ? "Tell us your monthly spend and we price this instantly."
+                      : `${prEuro(bookRate)} / month — ${A4_MANAGED_OFFER[entityIdx]?.name ?? ""} at ${PR_EXPENSE_LABELS[expensesIdx]} a month.`}
+                  </p>
+                </div>
+
+                <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
                   <label htmlFor="pr-start" className="a4-font-body text-[14px] font-semibold text-white block">
                     From which month should we start?
                   </label>
@@ -714,7 +747,7 @@ function PricingCalc() {
                     Do you have earlier months that still need doing?
                   </div>
                   <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    Each one costs the same as a month going forward — {prEuro(managedMonthly(entity))}. No premium, no cap.
+                    Each one costs the same as a month going forward — {bookRate == null ? "your own monthly rate" : prEuro(bookRate)}. No premium, no cap.
                   </p>
                   <PrChip
                     items={PR_CATCHUP_MONTHS.map((m) => (m === 0 ? "None" : `${m} months`))}
@@ -724,7 +757,7 @@ function PricingCalc() {
                   />
                   {catchUpMonths > 0 && (
                     <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
-                      {catchUpLabel(catchUpMonths, entity)}
+                      {catchUpLabel(catchUpMonths, entity, expenses)}
                     </p>
                   )}
                 </div>

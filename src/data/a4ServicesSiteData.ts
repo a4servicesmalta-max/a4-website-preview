@@ -83,7 +83,7 @@ export const A4_SERVICES_DATA: Record<ServiceKey, A4SiteService> = {
       { icon: "refresh-cw", t: "Bank reconciliations", s: "Every bank, EMI and card account reconciled to the ledger each month — differences investigated, not carried forward." },
       { icon: "badge-check", t: "Reviewed, at a fixed price", s: "A qualified accountant reviews the postings and passes the necessary journals every period — on a flat monthly fee (€24 self-employed, €49 for a company) through Xero, QuickBooks or Sage." },
     ],
-    included: ["Document capture & OCR posting", "Monthly bank reconciliations", "VAT-ready transaction coding", "Xero, QuickBooks & Sage expertise", "Accountant review & journals", "Flat monthly price — €24 self-employed, €49 company"],
+    included: ["Document capture & OCR posting", "Monthly bank reconciliations", "VAT-ready transaction coding", "Xero, QuickBooks & Sage expertise", "Accountant review & journals", "From €24 self-employed, €49 company — set by monthly expenses"],
     who: "Businesses that want their books done properly without doing them — and never want a VAT inspection, audit or due-diligence review to find a backlog.",
     related: ["accounting-finance", "audit-readiness", "tax-compliance"],
   },

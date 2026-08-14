@@ -3,6 +3,7 @@ import { pushToPortal } from "@/lib/portal";
 import { buildQuote, REVENUE_BANDS, type QuoteInput, type QuoteServiceId } from "@/lib/quotation";
 import { renderQuotationPdf } from "@/lib/quotation-pdf";
 import { INDEPENDENCE_CONFLICT, independenceRoute } from "@/lib/independence";
+import { EXPENSE_BANDS, type ExpenseBand } from "@/data/a4QuotePack";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -47,7 +48,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: INDEPENDENCE_CONFLICT }, { status: 422 });
     }
 
-    const input: QuoteInput = { company, regNo, industry, revenueBand, services, entity, catchUpMonths, startMonth };
+    // Only pass a band the pack actually knows. Anything else is left
+    // undefined so buildQuote quotes bookkeeping "On request" rather than
+    // pricing it at a band nobody chose.
+    const expenses = EXPENSE_BANDS.some((x) => x.id === b.expenses)
+      ? (b.expenses as ExpenseBand)
+      : undefined;
+    const input: QuoteInput = { company, regNo, industry, revenueBand, services, entity, expenses, catchUpMonths, startMonth };
     const quote = buildQuote(input);
 
     // Lead is captured regardless of what the visitor does with the PDF.

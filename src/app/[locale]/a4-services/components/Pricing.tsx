@@ -4,7 +4,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import {
-  BOOKKEEPING_MANAGED_MONTHLY,
+  BOOKKEEPING_COMPANY,
+  BOOKKEEPING_FROM,
   VAT_FROM,
   TAX_RETURN_FROM,
   PAYROLL_ENTRY_RATE,
@@ -12,7 +13,7 @@ import {
   payrollRate,
   PRICING_VAT_NOTE,
 } from "@/data/a4QuotePack";
-// Managed bookkeeping — A4 keeps the books at a flat monthly price (EUR 24
+// Managed bookkeeping — A4 keeps the books, priced by monthly expenses (from EUR 24
 // self-employed / EUR 49 company), plus optional VAT / payroll / annual
 // accounts. Every figure comes from quote pack mt-2026-08-14-managed
 // (src/data/a4QuotePack.ts). There is no software-only tier.
@@ -59,8 +60,8 @@ export function Pricing() {
   const [emps, setEmps] = useState(2);
   const [annual, setAnnual] = useState(false);
 
-  const book = BOOKKEEPING_MANAGED_MONTHLY.company;
-  // Reconciling every account IS managed bookkeeping — the flat price covers it.
+  const book = BOOKKEEPING_COMPANY;
+  // Reconciling every account IS managed bookkeeping — the monthly price covers it.
   const recon = 0;
   const acct = PR_BANDS[rev].acct;
   const vatFee = vat ? VAT_FROM : 0;
@@ -86,7 +87,7 @@ export function Pricing() {
         <Reveal><SectionHead
           dark align="center"
           eyebrow="Pricing calculator"
-          title={<>Build your plan — from €{BOOKKEEPING_MANAGED_MONTHLY.sole}/month</>}
+          title={<>Build your plan — from €{BOOKKEEPING_FROM}/month</>}
           sub="Transparent, fixed monthly pricing that scales with your business. Adjust the inputs to see your estimate, then create your account to confirm."
           maxWidth={640}
         /></Reveal>
@@ -112,8 +113,8 @@ export function Pricing() {
 
               {/* bookkeeping — flat */}
               <div>
-                <div style={fieldLabel}>Managed bookkeeping — €{BOOKKEEPING_MANAGED_MONTHLY.company}/mo flat for a company</div>
-                <div style={fieldSub}>We keep the books: unlimited documents, no per-document fees — invoices, expenses and bank lines included, every account reconciled. A qualified accountant is on the file. Self-employed is €{BOOKKEEPING_MANAGED_MONTHLY.sole}/mo.</div>
+                <div style={fieldLabel}>Managed bookkeeping — from €{BOOKKEEPING_COMPANY}/mo for a company</div>
+                <div style={fieldSub}>We keep the books: unlimited documents, no per-document fees — invoices, expenses and bank lines included, every account reconciled. A qualified accountant is on the file. Self-employed starts at €{BOOKKEEPING_FROM}/mo. The price is set by what you spend each month.</div>
               </div>
 
               {/* bank accounts */}

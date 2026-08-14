@@ -22,7 +22,7 @@ import { evaluateA4Items } from "@/lib/websiteQuotation";
  * independence forbids, so `qCalc` produces no figures at all. The visitor is
  * asked which of the two is ours; the two fixtures below are the two answers.
  */
-const DEFAULT_PATH: QState = { ...Q_INIT, step: 8, book: "managed", pay: "we", assure: "we", startMonth: "2026-09" };
+const DEFAULT_PATH: QState = { ...Q_INIT, step: 9, book: "managed", pay: "we", assure: "we", startMonth: "2026-09" };
 
 /** "Keep the bookkeeping with us" — the canonical priced basket. */
 const CANONICAL: QState = { ...DEFAULT_PATH, assure: "none" };
@@ -45,8 +45,9 @@ describe("the canonical quote", () => {
     const after = qCalc(CANONICAL, PROMO_OFF);
     if (after.refer) throw new Error("unpriceable");
     expect(after.promoApplied).toBe(false);
-    // Bookkeeping 49 + payroll 2 × 32 = 113/mo; MBR (our 50 + registry 100)/yr.
-    expect([after.moTot, after.yrTot]).toEqual([113, 150]);
+    // Bookkeeping 69 (company at the €10–25k default band) + payroll 2 × 32
+    // = 133/mo; MBR (our 50 + registry 100)/yr.
+    expect([after.moTot, after.yrTot]).toEqual([133, 150]);
     // The assurance side, priced on its own: payroll 64/mo, review 547 + MBR 150.
     const assured = qCalc(ASSURED, PROMO_OFF);
     if (assured.refer) throw new Error("unpriceable");
@@ -61,12 +62,12 @@ describe("the canonical quote", () => {
 
   it("holds the pinned totals", () => {
     if (r.refer) throw new Error("the canonical path must be priceable");
-    // List: bookkeeping 49 (flat) + payroll 2 × 32 = 113/mo; MBR (our 50 +
-    // registry 100) = 150/yr. Onboarding is UNPRICED.
-    expect(r.grossMo).toBe(113);
+    // List: bookkeeping 69 (company, €10–25k band) + payroll 2 × 32 = 133/mo;
+    // MBR (our 50 + registry 100) = 150/yr. Onboarding is UNPRICED.
+    expect(r.grossMo).toBe(133);
     expect(r.grossYr).toBe(150);
     // As quoted, with the 25% launch discount and the registry fee exempt.
-    expect(r.moTot).toBe(85); // 113 × 0.75 = 84.75 → 85
+    expect(r.moTot).toBe(100); // 133 × 0.75 = 99.75 → 100
     expect(r.yrTot).toBe(138); // (150 − 100) × 0.75 = 37.5 → 38, + 100
     expect(r.oneTot).toBe(0); // nothing one-off: onboarding carries no number
   });
@@ -96,24 +97,61 @@ describe("the canonical quote", () => {
   });
 
   it("does not move the bookkeeping price with transaction volume", () => {
+    // Transactions price VAT/tax/audit. Only the expenses band moves the books.
     for (const txn of ["1-20", "21-60", "61-150", "1000+"]) {
       const q = qCalc({ ...CANONICAL, txn }, PROMO_OFF);
       if (q.refer) throw new Error("unpriceable");
-      expect(line(q, "Bookkeeping")?.v).toBe(49);
+      expect(line(q, "Bookkeeping")?.v).toBe(69);
     }
   });
 
   it("charges the self-employed rate when the books are not a company's", () => {
     const q = qCalc({ ...CANONICAL, entity: "sole" }, PROMO_OFF);
     if (q.refer) throw new Error("unpriceable");
-    expect(line(q, "Bookkeeping")?.v).toBe(24);
+    expect(line(q, "Bookkeeping")?.v).toBe(39); // sole at the €10–25k band
   });
 
-  it("keeps the bookkeeping price flat across every risk sector", () => {
+  it("moves the bookkeeping price with the expenses band, for both entities", () => {
+    // The whole point of mt-2026-08-14-volume: nine bands, both entities, every
+    // one priced on the homepage without a call.
+    const expected: Record<string, [number, number]> = {
+      // band: [sole, company]
+      "0-10k": [24, 49],
+      "10-25k": [39, 69],
+      "25-50k": [59, 99],
+      "50-100k": [89, 149],
+      "100-200k": [129, 219],
+      "200-300k": [179, 299],
+      "300-400k": [229, 379],
+      "400-500k": [279, 449],
+      "500k+": [339, 549],
+    };
+    for (const [band, [sole, company]] of Object.entries(expected)) {
+      for (const [entity, want] of [["sole", sole], ["company", company]] as const) {
+        const q = qCalc({ ...CANONICAL, entity, expenses: band as QState["expenses"] }, PROMO_OFF);
+        if (q.refer) throw new Error("unpriceable");
+        expect(`${entity}/${band}=${line(q, "Bookkeeping")?.v}`).toBe(`${entity}/${band}=${want}`);
+      }
+    }
+  });
+
+  it("puts the chosen band on the wire, so the backend reprices the same figure", () => {
+    const q: QState = { ...CANONICAL, entity: "sole", expenses: "300-400k" };
+    expect(qItems(q)).toContainEqual({
+      service: "bookkeeping-managed",
+      entity: "sole",
+      expenses: "300-400k",
+    });
+    const shown = qCalc(q, PROMO_OFF);
+    if (shown.refer) throw new Error("unpriceable");
+    expect(line(shown, "Bookkeeping")?.v).toBe(229);
+  });
+
+  it("never lets the sector risk multiplier touch the bookkeeping price", () => {
     for (const sector of ["shop", "hospitality", "regulated"]) {
       const q = qCalc({ ...CANONICAL, sector }, PROMO_OFF);
       if (q.refer) throw new Error("unpriceable");
-      expect(line(q, "Bookkeeping")?.v).toBe(49);
+      expect(line(q, "Bookkeeping")?.v).toBe(69);
     }
   });
 });
@@ -140,21 +178,22 @@ describe("catch-up", () => {
   it("charges the same monthly rate per earlier month, uncapped", () => {
     const r = qCalc({ ...CANONICAL, behind: "24" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(r.oneTot).toBe(24 * 49); // 1,176 — the retired cap would have said 480
+    expect(r.oneTot).toBe(24 * 69); // 1,656 — the retired cap would have said 480
     expect(r.oneTot).not.toBe(480);
   });
 
   it("uses the exact contracted label", () => {
     const r = qCalc({ ...CANONICAL, behind: "12" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(line(r, "Catch-up: 12 months x EUR 49 = EUR 588")?.v).toBe(588);
-    expect(line(r, catchUpLabel(12, "company"))?.v).toBe(588);
+    expect(line(r, "Catch-up: 12 months x EUR 69 = EUR 828")?.v).toBe(828);
+    // Non-null: "10-25k" is a real band, so the pack always has a label for it.
+    expect(line(r, catchUpLabel(12, "company", "10-25k")!)?.v).toBe(828);
   });
 
   it("follows the entity, like the monthly price does", () => {
     const r = qCalc({ ...CANONICAL, entity: "sole", behind: "12" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(r.oneTot).toBe(12 * 24);
+    expect(r.oneTot).toBe(12 * 39); // sole at the €10–25k band
   });
 
   it("is never discounted by the launch promo", () => {
@@ -178,7 +217,7 @@ describe("catch-up", () => {
 describe("the basket we submit", () => {
   it("carries the canonical quote as priceable items", () => {
     expect(qItems(CANONICAL)).toEqual([
-      { service: "bookkeeping-managed", entity: "company" },
+      { service: "bookkeeping-managed", entity: "company", expenses: "10-25k" },
       { service: "payroll", heads: 2 },
       { service: "mbr", capital: "1500" },
       // Unpriced, but IN the basket — it is what makes the backend name
@@ -231,7 +270,7 @@ describe("the basket we submit", () => {
   it("submits bookkeeping alone when nothing else is switched on", () => {
     const q: QState = { ...CANONICAL, pay: "none", assure: "none", vat: "none", taxret: "none", regoff: "none" };
     expect(qItems(q)).toEqual([
-      { service: "bookkeeping-managed", entity: "company" },
+      { service: "bookkeeping-managed", entity: "company", expenses: "10-25k" },
       { service: "mbr", capital: "1500" },
       { service: "onboarding" },
     ]);
@@ -248,9 +287,9 @@ describe("the basket we submit", () => {
 
   it("submits the catch-up with the entity that priced it", () => {
     expect(qItems({ ...CANONICAL, behind: "6" }))
-      .toContainEqual({ service: "catchup", months: 6, entity: "company" });
+      .toContainEqual({ service: "catchup", months: 6, entity: "company", expenses: "10-25k" });
     expect(qItems({ ...CANONICAL, entity: "sole", behind: "6" }))
-      .toContainEqual({ service: "catchup", months: 6, entity: "sole" });
+      .toContainEqual({ service: "catchup", months: 6, entity: "sole", expenses: "10-25k" });
   });
 
   it("drops nothing at all — every displayed line has an item behind it", () => {
@@ -296,14 +335,14 @@ describe("IESBA independence", () => {
    * caught client-side, or the visitor is priced a basket the server refuses.
    */
   it("catches the conflict on the untouched default path", () => {
-    // Eight Next clicks from Q_INIT, touching nothing — the wizard's own
+    // Nine Next clicks from Q_INIT, touching nothing — the wizard's own
     // transition function, not a restatement of it.
     let atQuote: QState = { ...Q_INIT };
     expect(atQuote.book).toBe("managed");
     expect(atQuote.assure).toBe("none");
-    for (let i = 0; i < 8; i++) atQuote = { ...atQuote, ...qAdvance(atQuote, 8) };
-    expect(atQuote.step).toBe(8);
-    // Nobody chose this: `next()` switches the assurance question on at step 6.
+    for (let i = 0; i < 9; i++) atQuote = { ...atQuote, ...qAdvance(atQuote, 9) };
+    expect(atQuote.step).toBe(9);
+    // Nobody chose this: `next()` switches the assurance question on at step 7.
     expect(atQuote.assure).toBe("we");
     expect(atQuote.book).toBe("managed");
     expect(qIndependence(atQuote).route).toBe("conflict");
@@ -367,7 +406,7 @@ describe("what we show equals what we quote", () => {
   it("agrees with the engine line-for-line before any discount", () => {
     const engine = evaluateA4Items(items, qRisk(CANONICAL), PROMO_OFF);
     if (shown.refer) throw new Error("unpriceable");
-    expect(engine.grossMonthly).toBe(shown.grossMo); // 113
+    expect(engine.grossMonthly).toBe(shown.grossMo); // 133
     expect(engine.grossYearly).toBe(shown.grossYr);  // 150 — includes our €50 MBR fee
     expect(engine.grossOneOff).toBe(shown.oneTot);   // 0
   });
@@ -377,8 +416,8 @@ describe("what we show equals what we quote", () => {
     if (shown.refer) throw new Error("unpriceable");
     expect(engine.promoApplied).toBe(true);
     expect(LAUNCH_PROMO.pct).toBe(0.25);
-    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([85, 138, 0]);
-    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([85, 138, 0]);
+    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([100, 138, 0]);
+    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([100, 138, 0]);
     const yearOne = (m: number, y: number, o: number) => m * 12 + y + o;
     expect(yearOne(shown.moTot, shown.yrTot, shown.oneTot))
       .toBe(yearOne(engine.monthly, engine.yearly, engine.oneOff));
@@ -398,7 +437,7 @@ describe("what we show equals what we quote", () => {
     const engine = evaluateA4Items(qItems(bigger), qRisk(bigger), PROMO_ON);
     if (s.refer) throw new Error("unpriceable");
     expect([s.moTot, s.yrTot, s.oneTot]).toEqual([engine.monthly, engine.yearly, engine.oneOff]);
-    expect(s.oneTot).toBe(588);
+    expect(s.oneTot).toBe(828);
   });
 
   it("never discounts the government registry fee", () => {

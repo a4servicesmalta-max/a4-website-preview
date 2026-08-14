@@ -14,8 +14,10 @@ import {
 import { nextMonth } from "@/lib/accounting-fee";
 import { flagsForServiceSelection, independenceNotice } from "@/lib/independence";
 import {
+  EXPENSE_BANDS,
   MANAGED_ENTITY_OPTIONS,
   PRICING_GOV_NOTE,
+  type ExpenseBand,
   type ManagedEntity,
 } from "@/data/a4QuotePack";
 
@@ -74,6 +76,12 @@ export function QuotationBuilder() {
   const [industry, setIndustry] = useState<string>(QUOTE_INDUSTRIES[5]);
   const [revenueBand, setRevenueBand] = useState<RevenueBandId>("100k-500k");
   const [entity, setEntity] = useState<ManagedEntity>("company");
+  /**
+   * Monthly expenses — the bookkeeping price driver. Without it `buildQuote`
+   * quotes bookkeeping "On request" rather than guessing the entry band, so
+   * this field is what keeps the PDF priced.
+   */
+  const [expenses, setExpenses] = useState<ExpenseBand>("10-25k");
   // Earlier months that still need doing. This used to be `overdueYears`
   // because catch-up was capped per year; it is now priced per month at the
   // monthly rate, so months are the honest unit and the picker offers them.
@@ -126,10 +134,11 @@ export function QuotationBuilder() {
             revenueBand,
             services: [...services],
             entity,
+            expenses,
             catchUpMonths,
             startMonth,
           }),
-    [conflict, company, regNo, industry, revenueBand, services, entity, catchUpMonths, startMonth]
+    [conflict, company, regNo, industry, revenueBand, services, entity, expenses, catchUpMonths, startMonth]
   );
 
   /**
@@ -188,7 +197,7 @@ export function QuotationBuilder() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name, email, company, regNo, industry, revenueBand,
-          services: [...services], entity, catchUpMonths, startMonth,
+          services: [...services], entity, expenses, catchUpMonths, startMonth,
           auditEligible: independence.auditEligible,
           bookkeepingEligible: independence.bookkeepingEligible,
         }),
@@ -266,6 +275,22 @@ export function QuotationBuilder() {
                   {MANAGED_ENTITY_OPTIONS.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.label} — {o.sub}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                {/* Distinct from the revenue band above: revenue scales audit,
+                    tax and payroll; monthly SPEND is what prices the books. */}
+                <span style={label}>Monthly expenses *</span>
+                <select
+                  value={expenses}
+                  onChange={(e) => priced(setExpenses)(e.target.value as ExpenseBand)}
+                  style={{ ...field, cursor: "pointer" }}
+                >
+                  {EXPENSE_BANDS.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.label} — {b.hint}
                     </option>
                   ))}
                 </select>

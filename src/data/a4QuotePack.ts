@@ -39,13 +39,19 @@
  *   /audit-services is a price the calculator will actually quote.
  * Both are carried forward here unchanged.
  *
+ * mt-2026-08-14-volume SUPERSEDES that: bookkeeping is priced by MONTHLY
+ * EXPENSES across nine bands (owner direction 2026-08-14), replacing the flat
+ * two-price table above. BOOKKEEPING ONLY — VAT, tax, audit, payroll, MBR and
+ * the registered office keep their current prices and stay driven by the
+ * TRANSACTION band. See BOOKKEEPING_MANAGED_MONTHLY below.
+ *
  * ⚠ Three copies of this pack must carry the SAME version string, or the
  * backend hard-rejects the record before it even reprices (which is the
  * intent while the three lanes land at different times):
  *   - vacei-marketing-site/index.html
  *   - portal-backend/src/modules/quote-pack/malta-pack.ts
  */
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-14-managed";
+export const A4_QUOTE_PACK_VERSION = "mt-2026-08-14-volume";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -119,17 +125,81 @@ export const sectorTier = (id: string): RiskTier =>
 export type ManagedEntity = "sole" | "company";
 
 /**
- * Managed bookkeeping — flat €/mo, by entity. NOT banded by transaction
- * volume, NOT uplifted by the sector risk multiplier, and NOT a software
- * licence: A4 keeps the books.
+ * How much the business spends in a month. THE bookkeeping price driver.
  *
- * These two numbers ARE the pack as far as bookkeeping is concerned. The
- * backend reprices from its own copy and refuses to issue a quotation if we
- * disagree by more than €1 / 1%, so they are not decorative.
+ * Deliberately NOT the transaction band. A client knows their monthly spend
+ * without counting anything, and it tracks document volume — which is what
+ * actually consumes reviewer minutes. The transaction band still drives VAT,
+ * tax returns and audit, so both questions are asked; they are not duplicates
+ * of each other and must never be presented as one.
  */
-export const BOOKKEEPING_MANAGED_MONTHLY: Record<ManagedEntity, number> = {
-  sole: 24,
-  company: 49,
+export type ExpenseBand =
+  | "0-10k"
+  | "10-25k"
+  | "25-50k"
+  | "50-100k"
+  | "100-200k"
+  | "200-300k"
+  | "300-400k"
+  | "400-500k"
+  | "500k+";
+
+export const EXPENSE_BANDS: { id: ExpenseBand; label: string; hint: string }[] = [
+  { id: "0-10k", label: "Up to €10,000", hint: "just starting" },
+  { id: "10-25k", label: "€10,000 – 25,000", hint: "small and steady" },
+  { id: "25-50k", label: "€25,000 – 50,000", hint: "growing" },
+  { id: "50-100k", label: "€50,000 – 100,000", hint: "established" },
+  { id: "100-200k", label: "€100,000 – 200,000", hint: "busy" },
+  { id: "200-300k", label: "€200,000 – 300,000", hint: "high volume" },
+  { id: "300-400k", label: "€300,000 – 400,000", hint: "very high" },
+  { id: "400-500k", label: "€400,000 – 500,000", hint: "large" },
+  { id: "500k+", label: "Over €500,000", hint: "enterprise" },
+];
+
+/**
+ * Managed bookkeeping — €/mo by ENTITY × MONTHLY EXPENSES. NOT uplifted by the
+ * sector risk multiplier, and NOT a software licence: A4 keeps the books.
+ *
+ * These eighteen numbers ARE the pack as far as bookkeeping is concerned. The
+ * backend reprices from its own copy and refuses to issue a quotation if we
+ * disagree by more than €1 / 1%, so they are not decorative — all three copies
+ * (this file, vacei-marketing-site/index.html and the portal's malta-pack)
+ * must carry identical figures under pack mt-2026-08-14-volume.
+ *
+ * The steps TAPER on purpose — each is a smaller multiple than the one below
+ * it (company: 1.41× 1.43× 1.51× 1.47× 1.36× 1.27× 1.18× 1.22×). Fixed
+ * onboarding and month-end overhead amortises as a client grows, so a flat
+ * multiple would over-charge the top and read as a penalty for scaling.
+ *
+ * `500k+` is a REAL priced band with a real number, not a "talk to us". Every
+ * band prices instantly; there is no unpriceable arm left in bookkeeping.
+ *
+ * The entry price is unchanged at €24 / €49, so the launch promise still holds
+ * and no existing quote is invalidated.
+ */
+export const BOOKKEEPING_MANAGED_MONTHLY: Record<ManagedEntity, Record<ExpenseBand, number>> = {
+  sole: {
+    "0-10k": 24,
+    "10-25k": 39,
+    "25-50k": 59,
+    "50-100k": 89,
+    "100-200k": 129,
+    "200-300k": 179,
+    "300-400k": 229,
+    "400-500k": 279,
+    "500k+": 339,
+  },
+  company: {
+    "0-10k": 49,
+    "10-25k": 69,
+    "25-50k": 99,
+    "50-100k": 149,
+    "100-200k": 219,
+    "200-300k": 299,
+    "300-400k": 379,
+    "400-500k": 449,
+    "500k+": 549,
+  },
 };
 
 export const MANAGED_ENTITY_LABELS: Record<ManagedEntity, string> = {
@@ -142,34 +212,70 @@ export const MANAGED_ENTITY_OPTIONS: { id: ManagedEntity; label: string; sub: st
   { id: "company", label: "Company", sub: "a Malta limited company" },
 ];
 
-/** The monthly rate for an entity — the single reader for both price and catch-up. */
-export function managedMonthly(entity: ManagedEntity): number {
-  return BOOKKEEPING_MANAGED_MONTHLY[entity] ?? BOOKKEEPING_MANAGED_MONTHLY.company;
+/**
+ * The monthly rate for an entity at an expenses band — the single reader for
+ * both the price and the catch-up.
+ *
+ * Returns `null` for a MISSING or UNRECOGNISED band, and callers must degrade
+ * to the lead path on null. It must NEVER fall back to the cheapest band:
+ * defaulting down is the direction that loses money and is invisible;
+ * defaulting up is the direction that loses the customer. A stale cached page
+ * sending a retired band id has to fail loudly, exactly like a retired service.
+ */
+export function managedMonthly(entity: ManagedEntity, expenses: ExpenseBand): number | null {
+  const row = BOOKKEEPING_MANAGED_MONTHLY[entity];
+  if (!row) return null;
+  // Own-property + typeof guard: an arbitrary runtime string (including
+  // "constructor" and friends) must miss, not inherit something off the
+  // prototype chain.
+  const rate = Object.prototype.hasOwnProperty.call(row, expenses) ? row[expenses] : undefined;
+  return typeof rate === "number" ? rate : null;
 }
 
 /**
- * Catch-up / backdated months. Charged at the SAME monthly rate, per month,
- * uncapped and never discounted (it is a one-off).
+ * Catch-up / backdated months. Charged at the SAME monthly rate as a live
+ * month for that client, per month, uncapped and never discounted (it is a
+ * one-off).
  *
- *   12 months of a company's books = 12 × €49 = €588.
+ *   12 months of a company's books at €25–50k/mo = 12 × €99 = €1,188.
+ *
+ * A backdated month costing exactly what a live month costs is deliberate: it
+ * keeps the quote-stage price identical to the held-period billing price, so
+ * declaring a backlog honestly costs the same as under-declaring it.
+ *
+ * Returns `null` when the band is unknown — see managedMonthly.
  */
-export function catchUpAmount(months: number, entity: ManagedEntity): number {
+export function catchUpAmount(
+  months: number,
+  entity: ManagedEntity,
+  expenses: ExpenseBand
+): number | null {
+  const rate = managedMonthly(entity, expenses);
+  if (rate == null) return null;
   const m = Math.max(0, Math.floor(Number(months) || 0));
-  return m * managedMonthly(entity);
+  return m * rate;
 }
 
 /**
  * The catch-up line label, in the EXACT form all three repos must emit — the
  * backend matches on it and the client reads it on the quotation.
  *
- *   "Catch-up: 12 months x EUR 49 = EUR 588"
+ *   "Catch-up: 12 months x EUR 99 = EUR 1188"
  *
  * Plain ASCII "x" and "EUR" on purpose: this string travels over the wire and
  * is compared literally, so it must not depend on a locale or a × glyph.
+ *
+ * Returns `null` when the band is unknown — there is no honest label for a
+ * price we cannot compute.
  */
-export function catchUpLabel(months: number, entity: ManagedEntity): string {
+export function catchUpLabel(
+  months: number,
+  entity: ManagedEntity,
+  expenses: ExpenseBand
+): string | null {
+  const rate = managedMonthly(entity, expenses);
+  if (rate == null) return null;
   const m = Math.max(0, Math.floor(Number(months) || 0));
-  const rate = managedMonthly(entity);
   return `Catch-up: ${m} months x EUR ${rate} = EUR ${m * rate}`;
 }
 
@@ -371,13 +477,19 @@ export const PAYROLL_ENTRY_RATE = PAYROLL_PER_HEAD[0].rate; // €32/head, up to
 export const PAYROLL_BEST_RATE = PAYROLL_PER_HEAD[PAYROLL_PER_HEAD.length - 1].rate; // €25/head
 
 /**
- * Managed bookkeeping floor — the "from €24/mo" headline. It is the
- * self-employed rate; a company is €49. Not a "from" in the old banded sense:
- * there are exactly two prices and both are published.
+ * Managed bookkeeping ENTRY-BAND floors — the honest "from €X/mo" headline.
+ *
+ * Under mt-2026-08-14-volume these are genuine "from" prices: the entry
+ * expenses band (up to €10,000/mo), the cheapest rung of nine. Copy reading
+ * them MUST say "from", never "flat" and never "the price does not move with
+ * your volume" — it does now, it moves with monthly expenses.
  */
-export const BOOKKEEPING_FROM = BOOKKEEPING_MANAGED_MONTHLY.sole;
-/** Managed bookkeeping for a limited company. */
-export const BOOKKEEPING_COMPANY = BOOKKEEPING_MANAGED_MONTHLY.company;
+export const BOOKKEEPING_FROM = BOOKKEEPING_MANAGED_MONTHLY.sole["0-10k"];
+/** Managed bookkeeping for a limited company, entry band. Also a "from". */
+export const BOOKKEEPING_COMPANY = BOOKKEEPING_MANAGED_MONTHLY.company["0-10k"];
+/** Top of the published bookkeeping range — the ceiling both entities top out at. */
+export const BOOKKEEPING_SOLE_TOP = BOOKKEEPING_MANAGED_MONTHLY.sole["500k+"];
+export const BOOKKEEPING_COMPANY_TOP = BOOKKEEPING_MANAGED_MONTHLY.company["500k+"];
 /**
  * Statutory audit floor for a company that actually TRADES — the "from €750/yr"
  * headline. Deliberately the "1-20" band, not the table minimum: the "0" band

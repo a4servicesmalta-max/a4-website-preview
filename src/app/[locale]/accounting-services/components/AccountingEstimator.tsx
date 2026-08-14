@@ -5,11 +5,11 @@ import { Button, Icon, Container } from "@/components/a4-landing/Primitives";
 import { useQuoteActions } from "@/components/a4-landing/QuoteActions";
 import type { QuotePayload } from "@/lib/quote-handoff";
 import {
-  SECTORS, TXN, ENTITIES, VAT_REG, BEHIND, STEPS,
+  SECTORS, TXN, ENTITIES, EXPENSES, VAT_REG, BEHIND, STEPS,
   calcAccountingFee, accountingSummary, euro, formatStartMonth, nextMonth,
   type AccountingInput, type VatRegId,
 } from "@/lib/accounting-fee";
-import { LAUNCH_PROMO, MANAGED_ENTITY_LABELS, PRICING_VAT_NOTE, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
+import { LAUNCH_PROMO, MANAGED_ENTITY_LABELS, PRICING_VAT_NOTE, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { INDEPENDENCE_BOOKKEEPING, flagsForServiceSelection } from "@/lib/independence";
 
 type Opt = { id: string; label: string; sub?: string };
@@ -52,7 +52,8 @@ const tagLabel: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontS
 
 const QUESTIONS: { title: string; help: string }[] = [
   { title: "What does the company do?", help: "Some sectors need extra checks when we take you on. It is built into the price rather than added later." },
-  { title: "Are these a company's books, or your own?", help: "It is the only thing that changes the bookkeeping price. We keep the books either way — there is no software-only option." },
+  { title: "Are these a company's books, or your own?", help: "With your monthly spend, it is what sets the bookkeeping price. We keep the books either way — there is no software-only option." },
+  { title: "About how much do you spend a month?", help: "Total money out. It is what sets the bookkeeping price — a different question from the transaction count, which prices VAT, the tax return and the audit." },
   { title: "Anyone on payroll?", help: "Payslips, monthly employer filing and annual returns, priced per person and cheaper as the team grows." },
   { title: "Are you VAT registered?", help: "VAT returns are built only from entries we have already worked and reconciled." },
   { title: "From which month should we start?", help: "The first month we keep the books. Anything before it is catch-up, and we need the month before we can price either." },
@@ -64,7 +65,7 @@ const LAST = QUESTIONS.length - 1; // the price step
 export function AccountingEstimator() {
   const [step, setStep] = useState(0);
   const [s, setS] = useState<AccountingInput>({
-    sector: "shop", txn: "21-60", entity: "company", head: 2, vatreg: "art10", behind: "0",
+    sector: "shop", txn: "21-60", entity: "company", expenses: "10-25k", head: 2, vatreg: "art10", behind: "0",
     startMonth: nextMonth(),
   });
   const set = (patch: Partial<AccountingInput>) => setS((a) => ({ ...a, ...patch }));
@@ -106,6 +107,7 @@ export function AccountingEstimator() {
     answers: [
       { k: "Sector", v: labelOf(SECTORS, s.sector) },
       { k: "Transactions / month", v: labelOf(TXN, s.txn) },
+      { k: "Monthly expenses", v: labelOf(EXPENSES, s.expenses) },
       { k: "Whose books", v: MANAGED_ENTITY_LABELS[s.entity] },
       { k: "Payroll headcount", v: String(s.head) },
       { k: "VAT registration", v: labelOf(VAT_REG, s.vatreg) },
@@ -186,7 +188,8 @@ export function AccountingEstimator() {
                 <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
                   <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>About how many transactions a month?</div>
                   <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 }}>
-                    It sets your VAT and tax-return fees. The bookkeeping price does not move with it.
+                    It sets your VAT and tax-return fees. The bookkeeping price is set by your monthly
+                    spend instead — that is the next question.
                   </div>
                   <div style={{ marginTop: 10 }}>
                     <Pills items={TXN} value={s.txn} set={(id) => set({ txn: id as TxnBand })} />
@@ -196,6 +199,20 @@ export function AccountingEstimator() {
             )}
 
             {step === 2 && (
+              <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>About how much do you spend a month?</div>
+                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 }}>
+                  Total money out — suppliers, wages, rent, everything. This is the bookkeeping price
+                  driver, and a different question from the transaction count above.
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <Pills items={EXPENSES} value={s.expenses} set={(id) => set({ expenses: id as ExpenseBand })} />
+                </div>
+              </div>
+            )}
+
+            {/* Order must match QUESTIONS above: 3 = payroll, 4 = VAT. */}
+            {step === 3 && (
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 <label htmlFor="ae-head" className="sr-only" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>People on payroll</label>
                 <input id="ae-head" type="range" min={0} max={50} step={1} value={s.head} onChange={(e) => set({ head: +e.target.value })} style={sliderStyle} />
@@ -203,9 +220,9 @@ export function AccountingEstimator() {
               </div>
             )}
 
-            {step === 3 && <Pills items={VAT_REG} value={s.vatreg} set={(id) => set({ vatreg: id as VatRegId })} />}
+            {step === 4 && <Pills items={VAT_REG} value={s.vatreg} set={(id) => set({ vatreg: id as VatRegId })} />}
 
-            {step === 4 && (
+            {step === 5 && (
               <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
                 <label htmlFor="ae-start" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
                   First month we keep the books
@@ -223,7 +240,7 @@ export function AccountingEstimator() {
               </div>
             )}
 
-            {step === 5 && <Pills items={BEHIND} value={s.behind} set={(id) => set({ behind: id })} />}
+            {step === 6 && <Pills items={BEHIND} value={s.behind} set={(id) => set({ behind: id })} />}
 
             {step === LAST && (
               <div>

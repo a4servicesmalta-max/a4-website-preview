@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, PAYROLL_PER_HEAD, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, PAYROLL_PER_HEAD, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, EXPENSE_BANDS, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 import { independenceFlags, independenceNotice } from "@/lib/independence";
 import { formatStartMonth, nextMonth } from "@/lib/accounting-fee";
@@ -78,14 +78,23 @@ const QT: Record<string, Record<string, number>> = {
   assure: AUDIT_YEARLY,
 };
 const QPAY = PAYROLL_PER_HEAD.map((t) => ({ upTo: t.upTo ?? 1e9, rate: t.rate }));
-const QSTEPS = ["What you do", "Whose books", "Volume", "Payroll", "When we start", "VAT", "Company size", "Your services", "Your quote"];
+// Two separate volume questions, deliberately. "Monthly spend" (expenses) sets
+// the BOOKKEEPING price; "Volume" (transactions) sets VAT, the tax return and
+// the audit. They sit apart in the flow and are worded differently so neither
+// reads as a repeat of the other.
+const QSTEPS = ["What you do", "Whose books", "Monthly spend", "Volume", "Payroll", "When we start", "VAT", "Company size", "Your services", "Your quote"];
 
 export type QState = {
   step: number;
   sector: string;
   txn: string;
-  /** Whose books these are — the only thing that moves the bookkeeping price. */
+  /** Whose books these are — with `expenses`, what sets the bookkeeping price. */
   entity: ManagedEntity;
+  /**
+   * Monthly expenses band — the bookkeeping price driver. Distinct from `txn`:
+   * this one prices the books, `txn` prices VAT, the tax return and the audit.
+   */
+  expenses: ExpenseBand;
   /** Authorised share capital band — sets the MBR registry fee on the annual return. */
   cap: CapitalBand;
   head: number;
@@ -105,7 +114,7 @@ export type QState = {
 };
 
 export const Q_INIT: QState = {
-  step: 0, sector: "shop", txn: "21-60", entity: "company", cap: "1500", head: 2, behind: "0",
+  step: 0, sector: "shop", txn: "21-60", entity: "company", expenses: "10-25k", cap: "1500", head: 2, behind: "0",
   // Suggested, not assumed — the visitor confirms it on the "When we start" step.
   startMonth: nextMonth(), vatreg: "art10", size: "small",
   book: "managed", pay: "none", vat: "none", taxret: "none", assure: "none", regoff: "none",
@@ -116,6 +125,10 @@ type Note = [string, string];
 
 /** Volumes at which a company is unlikely to stay under the small-company thresholds. */
 const QT_BIG_VOL = ["151-400", "401-1000", "1000+"];
+
+/** The human label for an expenses band, for use inside prose. */
+const prettyBand = (id: ExpenseBand) =>
+  (EXPENSE_BANDS.find((b) => b.id === id) ?? EXPENSE_BANDS[0]).label;
 
 /**
  * Whether the assurance line is a review engagement rather than a full audit.
@@ -162,11 +175,14 @@ export function qCalc(q: QState, now: Date = new Date()) {
   const mo: Line[] = [], yr: Line[] = [], one: Line[] = [];
   // Flat, and deliberately NOT × rm — the sector loading applies to the
   // compliance work, not to keeping the books.
-  if (q.book === "managed") {
+  // null on an unrecognised expenses band — the line is dropped rather than
+  // priced at the cheapest band, which nulls the quote to the lead path.
+  const bookRate = managedMonthly(entity, q.expenses);
+  if (q.book === "managed" && bookRate != null) {
     mo.push({
       n: "Bookkeeping",
       e: MANAGED_ENTITY_LABELS[entity] + " — you send the paperwork, we keep the books",
-      v: managedMonthly(entity),
+      v: bookRate,
     });
   }
   if (q.pay === "we" && q.head > 0) {
@@ -231,11 +247,13 @@ export function qCalc(q: QState, now: Date = new Date()) {
   // wire-contract label — `qItems` keys the basket off it, so it must not be
   // reworded here without changing catchUpLabel in the pack.
   const months = +q.behind;
-  if (months > 0 && q.book === "managed") {
+  const catchUpName = catchUpLabel(months, entity, q.expenses);
+  const catchUpFee = catchUpAmount(months, entity, q.expenses);
+  if (months > 0 && q.book === "managed" && catchUpName != null && catchUpFee != null) {
     one.push({
-      n: catchUpLabel(months, entity),
+      n: catchUpName,
       e: "the same monthly rate for each earlier month — no catch-up premium, no cap",
-      v: catchUpAmount(months, entity),
+      v: catchUpFee,
     });
   }
   [mo, yr, one].forEach((a) => a.forEach((l) => { l.v = Math.round(l.v); }));
@@ -296,7 +314,7 @@ export function qItems(q: QState): A4Item[] {
   const entity: ManagedEntity = q.entity === "sole" ? "sole" : "company";
   const items: A4Item[] = [];
 
-  if (has("Bookkeeping")) items.push({ service: "bookkeeping-managed", entity });
+  if (has("Bookkeeping")) items.push({ service: "bookkeeping-managed", entity, expenses: q.expenses });
   if (has("Payroll")) items.push({ service: "payroll", heads: q.head });
   if (has("VAT returns")) items.push({ service: "vat", txn, vatreg: q.vatreg === "art12" ? "art12" : "art10" });
   if (has("VAT declaration")) items.push({ service: "vat", txn, vatreg: "art11" });
@@ -305,7 +323,7 @@ export function qItems(q: QState): A4Item[] {
   if (has("Registered office")) items.push({ service: "registered-office" });
   if (has("MBR annual return fee")) items.push({ service: "mbr", capital: q.cap || "1500" });
   // Catch-up is keyed on the answer, not on the (now dynamic) line label.
-  if (q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity });
+  if (q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity, expenses: q.expenses });
   // Onboarding carries NO figure, but it IS part of the basket — the backend
   // reads `hasUnpricedOnboarding` off the items to add "onboarding is not
   // included in the figures below" to the quotation description. Omitting it
@@ -339,9 +357,10 @@ export function qItems(q: QState): A4Item[] {
  */
 export function qAdvance(q: QState, lastStep: number): Partial<QState> {
   const patch: Partial<QState> = { step: Math.min(lastStep, q.step + 1) };
-  if (q.step === 2 && q.book === "none") { patch.book = "managed"; patch.taxret = "we"; }
-  if (q.step === 3) patch.pay = q.head > 0 ? "we" : "none";
-  if (q.step === 6 && q.assure === "none") patch.assure = "we";
+  // Step indices shifted by one when "Monthly spend" was inserted at 2.
+  if (q.step === 3 && q.book === "none") { patch.book = "managed"; patch.taxret = "we"; }
+  if (q.step === 4) patch.pay = q.head > 0 ? "we" : "none";
+  if (q.step === 7 && q.assure === "none") patch.assure = "we";
   return patch;
 }
 
@@ -434,8 +453,9 @@ export function LandingQuoteCalculator() {
 
   const STEP_META: [string, string, (() => Opt[]) | null][] = [
     ["What does the company do?", "Some sectors carry heavier checks on our side. That is what moves the price — not the bookkeeping.", () => opts(QSECT.map((s) => [s[0], s[1], ""] as [string, string, string]), "sector")],
-    ["Are these a company's books, or your own?", "It is the only thing that changes the bookkeeping price: €" + managedMonthly("sole") + " a month if you are self-employed, €" + managedMonthly("company") + " for a company." + (q.entity === "company" ? " Then tell us the company's authorised share capital." : ""), () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
-    ["About how many transactions a month?", "Count each invoice, receipt and bank line. A rough number is fine — we confirm it before anything is agreed. It sets your VAT, tax-return and audit fees; the bookkeeping price does not move.", () => opts(QTXN, "txn")],
+    ["Are these a company's books, or your own?", "It sets the bookkeeping price together with your monthly spend, which we ask next: from €" + BOOKKEEPING_FROM + " a month if you are self-employed, from €" + BOOKKEEPING_COMPANY + " for a company." + (q.entity === "company" ? " Then tell us the company's authorised share capital." : ""), () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
+    ["About how much do you spend a month?", "Total money out — suppliers, wages, rent, everything. You already know this number; you do not have to count anything. It is what sets your bookkeeping price: " + prettyBand(q.expenses) + " works out at €" + (managedMonthly(q.entity === "sole" ? "sole" : "company", q.expenses) ?? "—") + " a month for " + (q.entity === "sole" ? "a self-employed person" : "a company") + ".", () => EXPENSE_BANDS.map((b) => ({ key: b.id, label: b.label, sub: b.hint, pick: () => setQ({ expenses: b.id }), on: q.expenses === b.id }))],
+    ["About how many transactions a month?", "A different question from your spend above: this one counts DOCUMENTS AND LINES — each invoice, receipt and bank line. A rough number is fine. It sets your VAT, tax-return and audit fees; it does not move the bookkeeping price.", () => opts(QTXN, "txn")],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person.", null],
     ["From which month should we start?", "Pick the first month we keep the books. Anything before it is catch-up, charged at the same monthly rate — no premium, no cap.", null],
     ["Are you registered for VAT?", "Different registrations carry very different filing loads. Not sure? Pick the last option and we check the register for you.", () => QVATREG.map(([k, label, sub]) => ({ key: k, label, sub: sub || "", pick: () => setQ({ vatreg: k, vat: k === "none" ? "none" : "we" }), on: q.vatreg === k }))],
@@ -448,10 +468,12 @@ export function LandingQuoteCalculator() {
   const stepTag = step === LAST_STEP ? "Your quote" : "Question " + Math.min(step + 1, LAST_STEP) + " of " + LAST_STEP;
   const isOpts = !!STEP_META[step][2];
   const stepOpts = isOpts ? STEP_META[step][2]!() : [];
+  // Indices track STEP_META above; "Monthly spend" was inserted at 2 and
+  // pushed everything after it down by one.
   const isEntity = step === 1;
-  const isNum = step === 3;
-  const isStart = step === 4;
-  const isSvc = step === 7;
+  const isNum = step === 4;
+  const isStart = step === 5;
+  const isSvc = step === 8;
   const isQuote = step === LAST_STEP;
 
   // Bands and labels come straight from the pack — the same five rows the
@@ -651,7 +673,7 @@ export function LandingQuoteCalculator() {
                       Do you have earlier months that still need doing?
                     </div>
                     <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                      Each one costs the same as a month going forward — €{managedMonthly(q.entity === "sole" ? "sole" : "company")}. No premium, no cap.
+                      Each one costs the same as a month going forward — €{managedMonthly(q.entity === "sole" ? "sole" : "company", q.expenses) ?? "—"}. No premium, no cap.
                     </div>
                     <div style={{ marginTop: 10 }}>
                       <OptPills opts={QBEHIND.map(([k, label, sub]) => ({ key: k, label, sub, on: q.behind === k, pick: () => setQ({ behind: k }) }))} />

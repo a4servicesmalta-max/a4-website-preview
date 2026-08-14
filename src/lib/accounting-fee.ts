@@ -16,8 +16,9 @@
 import {
   TXN_BANDS, RISK_TIERS, VAT_MONTHLY, VAT_RULES,
   PAYROLL_PER_HEAD, payrollRate, LAUNCH_PROMO, isPromoActive, roundEur, sectorTier,
-  MANAGED_ENTITY_LABELS, MANAGED_ENTITY_OPTIONS, catchUpAmount, catchUpLabel, managedMonthly,
-  type TxnBand, type RiskTier, type ManagedEntity,
+  MANAGED_ENTITY_LABELS, MANAGED_ENTITY_OPTIONS, EXPENSE_BANDS,
+  catchUpAmount, catchUpLabel, managedMonthly,
+  type TxnBand, type RiskTier, type ManagedEntity, type ExpenseBand,
 } from "@/data/a4QuotePack";
 
 // The sector list is pack data — one definition for every calculator.
@@ -51,12 +52,22 @@ export const BEHIND: { id: string; label: string; sub: string }[] = [
   { id: "36", label: "3 years +", sub: "behind" },
 ];
 
-export const STEPS = ["What you do", "Whose books", "Payroll", "VAT", "Start month", "Earlier months", "Your price"];
+/**
+ * Monthly-expenses options — the BOOKKEEPING price driver. Presented as its
+ * own question, never merged with TXN above: `txn` prices VAT, the tax return
+ * and the audit; `expenses` prices the books. Two drivers, two questions.
+ */
+export const EXPENSES = EXPENSE_BANDS.map((b) => ({ id: b.id, label: b.label, sub: b.hint }));
+
+export const STEPS = ["What you do", "Whose books", "Monthly spend", "Payroll", "VAT", "Start month", "Earlier months", "Your price"];
 
 export type AccountingInput = {
   sector: string;
+  /** Transactions a month — drives VAT, tax returns and audit. NOT bookkeeping. */
   txn: TxnBand;
   entity: ManagedEntity;
+  /** Monthly expenses — drives BOOKKEEPING only. A different question from `txn`. */
+  expenses: ExpenseBand;
   head: number;
   vatreg: VatRegId;
   /** Whole months of backlog, as a string id from BEHIND. */
@@ -99,11 +110,16 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   const monthly: Line[] = [];
   const oneOff: Line[] = [];
 
-  // Managed bookkeeping — flat, and deliberately NOT × rm. The sector loading
-  // applies to the compliance work below it, not to keeping the books.
+  // Managed bookkeeping — by entity × monthly expenses, and deliberately NOT
+  // × rm. The sector loading applies to the compliance work below it, not to
+  // keeping the books.
   const entity: ManagedEntity = s.entity === "sole" ? "sole" : "company";
   const entityLabel = MANAGED_ENTITY_LABELS[entity];
-  monthly.push({ k: `Managed bookkeeping · ${entityLabel}`, v: managedMonthly(entity) });
+  const bookRate = managedMonthly(entity, s.expenses);
+  // An unknown expenses band is not priceable. Degrade to the referral path
+  // rather than guessing — and never to the cheapest band.
+  if (bookRate == null) return { refer: true };
+  monthly.push({ k: `Managed bookkeeping · ${entityLabel}`, v: bookRate });
 
   if (s.head > 0) {
     const rate = payrollRate(s.head);
@@ -127,7 +143,11 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   // launch discount — it is a one-off. The label is the wire-contract form.
   const months = parseInt(s.behind, 10) || 0;
   if (months > 0) {
-    oneOff.push({ k: catchUpLabel(months, entity), v: catchUpAmount(months, entity) });
+    const k = catchUpLabel(months, entity, s.expenses);
+    const v = catchUpAmount(months, entity, s.expenses);
+    // Both are non-null here — bookRate above already proved the band — but the
+    // guard keeps the null contract explicit rather than asserting it away.
+    if (k != null && v != null) oneOff.push({ k, v });
   }
 
   const sum = (a: Line[]) => a.reduce((t, l) => t + l.v, 0);
