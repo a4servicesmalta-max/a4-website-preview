@@ -426,3 +426,62 @@ describe("VAT gating (Vacei parity)", () => {
     expect(line(r, "VAT returns")?.v).toBe(45);
   });
 });
+
+/**
+ * The MBR annual return is a COMPANY filing. A Malta sole trader is not on the
+ * Business Registry, files no annual return, and has no authorised share capital
+ * for the registry fee to key on.
+ *
+ * This was live: the line was gated on `labour` alone — i.e. on the prospect
+ * having bought anything at all — so every self-employed visitor was quoted
+ * EUR 150/yr for a filing we could not have made on their behalf, and was asked
+ * for a share-capital band that has no meaning for them. Found by walking a real
+ * sole-trader journey end to end; no unit test covered the combination, because
+ * every existing case built on CANONICAL, which is a company.
+ *
+ * vacei.com carries the same predicate as `mbrApplies`. Keep the two in step.
+ */
+describe("a sole trader is never quoted a company filing", () => {
+  const SOLE: QState = { ...CANONICAL, entity: "sole" };
+
+  it("does not quote the MBR annual return", () => {
+    const r = qCalc(SOLE, PROMO_OFF);
+    if (r.refer) throw new Error("unpriceable");
+    expect(line(r, "MBR annual return fee")).toBeUndefined();
+  });
+
+  it("does not put the mbr item on the wire", () => {
+    const r = qCalc(SOLE, PROMO_OFF);
+    if (r.refer) throw new Error("unpriceable");
+    expect(qItems(SOLE).some((i) => i.service === "mbr")).toBe(false);
+  });
+
+  it("still tells them onboarding is unpriced — that note is not company-only", () => {
+    const r = qCalc(SOLE, PROMO_OFF);
+    if (r.refer) throw new Error("unpriceable");
+    expect(r.notes.some(([tone]) => tone === "info")).toBe(true);
+  });
+
+  it("the share capital band cannot move a sole trader's total", () => {
+    const small = qCalc({ ...SOLE, cap: "1500" }, PROMO_OFF);
+    const large = qCalc({ ...SOLE, cap: "50000" }, PROMO_OFF);
+    if (small.refer || large.refer) throw new Error("unpriceable");
+    expect(large.yrTot).toBe(small.yrTot);
+  });
+
+  it("a company in the same basket still gets it, at our fee plus the registry fee", () => {
+    const r = qCalc({ ...CANONICAL, entity: "company", cap: "1500" }, PROMO_OFF);
+    if (r.refer) throw new Error("unpriceable");
+    const mbr = line(r, "MBR annual return fee");
+    expect(mbr?.v).toBe(MBR_ANNUAL_RETURN.ourFee + MBR_ANNUAL_RETURN.registryFeeByCapital["1500"]);
+    expect(qItems({ ...CANONICAL, entity: "company" }).some((i) => i.service === "mbr")).toBe(true);
+  });
+
+  it("what the sole trader is spared is exactly the company's annual-return line", () => {
+    const sole = qCalc(SOLE, PROMO_OFF);
+    const company = qCalc({ ...CANONICAL, entity: "company" }, PROMO_OFF);
+    if (sole.refer || company.refer) throw new Error("unpriceable");
+    const mbr = line(company, "MBR annual return fee")!.v;
+    expect(company.yrTot - sole.yrTot).toBe(mbr);
+  });
+});

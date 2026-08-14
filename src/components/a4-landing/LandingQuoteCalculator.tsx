@@ -199,7 +199,15 @@ export function qCalc(q: QState, now: Date = new Date()) {
   const labour = mo.reduce((s, l) => s + l.v, 0) + yr.reduce((s, l) => s + l.v, 0) > 0;
   /** Government money inside the yearly total — never discounted. */
   let registry = 0;
-  if (labour) {
+  // The annual return is a COMPANY filing. A Malta sole trader is not on the
+  // Business Registry, files no annual return, and has no authorised share
+  // capital for the registry fee to be keyed on — so quoting it to one bills
+  // for a filing we could not make on their behalf even if they paid. This was
+  // live: `labour` alone gated it, so every self-employed prospect who bought
+  // any service at all was quoted €150/yr for it. Found by walking a real
+  // sole-trader journey end to end, not by any test. vacei.com carries the
+  // same predicate as `mbrApplies` — keep the two in step.
+  if (labour && entity === "company") {
     // The registry fee is set by authorised share capital (electronic rates) and
     // passed through at cost. Read from the pack — never a literal, or every
     // prospect above €1,500 capital is silently under-quoted.
@@ -211,8 +219,11 @@ export function qCalc(q: QState, now: Date = new Date()) {
     // NOTE: the line NAME is the key `qItems` matches on to build the basket —
     // renaming it silently drops the MBR item from the submitted quote.
     yr.push({ n: "MBR annual return fee", e: "our €" + MBR_ANNUAL_RETURN.ourFee + " fee to prepare and file it, plus the government registry fee passed through at cost, set by your share capital (" + capRow.note + ")", v: MBR_ANNUAL_RETURN.ourFee + registry });
+  }
+  if (labour) {
     // Onboarding and opening balances are done but NOT priced here — no €0
-    // line either, which would read as "included, free".
+    // line either, which would read as "included, free". This applies to every
+    // entity, which is why it is not inside the company-only block above.
     notes.push(["info", ONBOARDING_UNPRICED_NOTE]);
   }
   if (!labour && tier.note && notes.indexOf(tier.note) !== -1) notes.splice(notes.indexOf(tier.note), 1);
@@ -423,7 +434,7 @@ export function LandingQuoteCalculator() {
 
   const STEP_META: [string, string, (() => Opt[]) | null][] = [
     ["What does the company do?", "Some sectors carry heavier checks on our side. That is what moves the price — not the bookkeeping.", () => opts(QSECT.map((s) => [s[0], s[1], ""] as [string, string, string]), "sector")],
-    ["Are these a company's books, or your own?", "It is the only thing that changes the bookkeeping price: €" + managedMonthly("sole") + " a month if you are self-employed, €" + managedMonthly("company") + " for a company. Then tell us the company's authorised share capital.", () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
+    ["Are these a company's books, or your own?", "It is the only thing that changes the bookkeeping price: €" + managedMonthly("sole") + " a month if you are self-employed, €" + managedMonthly("company") + " for a company." + (q.entity === "company" ? " Then tell us the company's authorised share capital." : ""), () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
     ["About how many transactions a month?", "Count each invoice, receipt and bank line. A rough number is fine — we confirm it before anything is agreed. It sets your VAT, tax-return and audit fees; the bookkeeping price does not move.", () => opts(QTXN, "txn")],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person.", null],
     ["From which month should we start?", "Pick the first month we keep the books. Anything before it is catch-up, charged at the same monthly rate — no premium, no cap.", null],
@@ -599,7 +610,11 @@ export function LandingQuoteCalculator() {
 
               {isOpts && <OptPills opts={stepOpts} />}
 
-              {isEntity && (
+              {/* Share capital exists only to price the MBR annual return, which is a
+                  company filing. Asking a sole trader for it is asking a question with
+                  no answer, about a fee they will not be charged — so it follows the
+                  same predicate as the line itself. */}
+              {isEntity && q.entity === "company" && (
                 <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
                   <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Authorised share capital</div>
                   <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
