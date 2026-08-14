@@ -173,6 +173,23 @@ const RISK_UPLIFTED: ReadonlySet<A4Item["service"]> = new Set([
   "payroll",
 ]);
 
+/**
+ * Server-side input bounds. Anything outside these is REJECTED, not clamped —
+ * clamping would quietly price something the prospect did not ask for, and the
+ * backend would then disagree on the reprice.
+ *
+ * `months` tops out at 240 (20 years), which is also the ceiling the wire
+ * contract puts on a `catchup` item.
+ */
+export const A4_LIMITS = {
+  maxItems: 50,
+  heads: { min: 1, max: 500 },
+  months: { min: 1, max: 240 },
+} as const;
+
+const isIntWithin = (n: unknown, min: number, max: number): boolean =>
+  typeof n === "number" && Number.isInteger(n) && n >= min && n <= max;
+
 type PricedItem = QuoteLineItem & { registry?: number };
 
 /** Price one item. Returns null when the item cannot be priced (never throws). */
@@ -217,9 +234,9 @@ function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
       );
     }
     case "payroll": {
-      const heads = Number(item.heads);
-      if (!Number.isFinite(heads) || heads <= 0) return null;
-      return mo("Payroll", heads * payrollRate(heads) * rm);
+      // Whole people only, and within the range the server will accept.
+      if (!isIntWithin(item.heads, A4_LIMITS.heads.min, A4_LIMITS.heads.max)) return null;
+      return mo("Payroll", item.heads * payrollRate(item.heads) * rm);
     }
     case "mbr": {
       const registry = MBR_ANNUAL_RETURN.registryFeeByCapital[item.capital];
@@ -236,8 +253,9 @@ function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
       // `evaluateA4Items` reports it separately via `hasUnpricedOnboarding`.
       return null;
     case "catchup": {
-      const m = Math.floor(Number(item.months));
-      if (!Number.isFinite(m) || m <= 0) return null;
+      // Whole months only, and within the range the server will accept.
+      if (!isIntWithin(item.months, A4_LIMITS.months.min, A4_LIMITS.months.max)) return null;
+      const m = item.months;
       // Same monthly rate, per month, uncapped, never discounted. The label is
       // fixed by the wire contract and compared literally downstream.
       return one(catchUpLabel(m, item.entity), catchUpAmount(m, item.entity));
@@ -404,6 +422,11 @@ export async function submitWebsiteQuotation(
   }
   if (!input.items.length) {
     return { status: "error", message: "Pick at least one service so we have something to quote." };
+  }
+  if (input.items.length > A4_LIMITS.maxItems) {
+    // Over the server's cap the whole submission is refused, so say so here
+    // rather than firing a request that can only come back as a 202.
+    return { status: "error", message: "That's more services than we can quote online — let's scope it on a call." };
   }
   // A quote with no start month is a quote about an unknown period. Refuse it
   // here rather than guessing "this month" — the caller must collect it, and

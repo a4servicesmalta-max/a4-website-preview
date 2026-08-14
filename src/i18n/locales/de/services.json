@@ -964,8 +964,8 @@
         "inc9": ""
       },
       "pkg2": {
-        "label": "Partner",
-        "title": "Partner",
+        "label": "Manager",
+        "title": "Manager",
         "pos": "Betreuung & Beratung auf Partner-Ebene",
         "desc": "Full-Service-Betreuung durch einen A4-Partner: Management-Reporting, Forecasting und monatliche Beratungsgespräche.",
         "bestFor": "Wachsende Unternehmen, die Betreuung und Beratung auf Partner-Ebene wollen.",

@@ -964,8 +964,8 @@
         "inc9": ""
       },
       "pkg2": {
-        "label": "Partner",
-        "title": "Partner",
+        "label": "Manager",
+        "title": "Manager",
         "pos": "Supervisione e consulenza a livello partner",
         "desc": "Supervisione completa di un partner A4: reportistica direzionale, previsioni e call di consulenza mensili.",
         "bestFor": "Aziende in crescita che vogliono supervisione e consulenza a livello di partner.",

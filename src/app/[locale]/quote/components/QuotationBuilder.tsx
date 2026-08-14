@@ -206,6 +206,10 @@ export function QuotationBuilder() {
       // PDF plus the ops-portal record IS the deliverable here; the instant
       // quotation lives on /pricing and the homepage calculator, which build
       // real baskets.
+      //
+      // To make this builder instant, it has to collect a TRANSACTION band and
+      // drop the on-request lines, so its displayed total is the sum of
+      // priceable A4Items — see /pricing, which does exactly that.
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not generate the quotation.");
     } finally {

@@ -24,6 +24,29 @@ export function middleware(request: NextRequest) {
     return ensureSessionCookie(request, NextResponse.next());
   }
 
+  // Homepage lives at the root URL (no visible locale prefix): serve the
+  // default-locale homepage via an internal rewrite so the address bar stays
+  // "/", not "/en".
+  if (pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${defaultLocale}`;
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(LOCALE_HEADER, defaultLocale);
+    requestHeaders.set("x-pathname", "/");
+    const response = NextResponse.rewrite(url, {
+      request: { headers: requestHeaders },
+    });
+    response.headers.set(LOCALE_HEADER, defaultLocale);
+    return ensureSessionCookie(request, response);
+  }
+
+  // Collapse the bare default-locale homepage ("/en") onto the canonical root.
+  if (pathname === `/${defaultLocale}` || pathname === `/${defaultLocale}/`) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return ensureSessionCookie(request, NextResponse.redirect(url, 308));
+  }
+
   const pathLocale = getLocaleFromPath(pathname);
 
   // The default locale is never shown in the URL: collapse any "/en" or

@@ -964,8 +964,8 @@
         "inc9": ""
       },
       "pkg2": {
-        "label": "Partner",
-        "title": "Partner",
+        "label": "Manager",
+        "title": "Manager",
         "pos": "Toezicht en advies op partnerniveau",
         "desc": "Full-service toezicht van een A4-partner: managementrapportage, forecasting en maandelijkse adviesgesprekken.",
         "bestFor": "Groeiende bedrijven die toezicht en advies op partnerniveau willen.",

@@ -998,8 +998,8 @@
         "inc9": ""
       },
       "pkg2": {
-        "label": "Partner",
-        "title": "Partner",
+        "label": "Manager",
+        "title": "Manager",
         "pos": "Partner-level oversight & advisory",
         "desc": "Full-service oversight from an A4 partner: management reporting, forecasting and monthly advisory calls.",
         "bestFor": "Growing companies that want partner-level oversight and advisory.",

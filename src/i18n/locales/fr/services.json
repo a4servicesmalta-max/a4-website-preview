@@ -964,8 +964,8 @@
         "inc9": ""
       },
       "pkg2": {
-        "label": "Partner",
-        "title": "Partner",
+        "label": "Manager",
+        "title": "Manager",
         "pos": "Supervision et conseil au niveau associé",
         "desc": "Supervision complète par un associé A4 : reporting de gestion, prévisions et appels de conseil mensuels.",
         "bestFor": "Entreprises en croissance qui veulent une supervision et des conseils au niveau associé.",

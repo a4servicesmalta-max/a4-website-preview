@@ -30,8 +30,14 @@
  *   NEW      catch-up is the SAME monthly rate per backdated month, uncapped
  *   NEW      onboarding / opening balances carries NO number at all
  *
- * mt-2026-08-02b flattened the audit volume curve and mirrored the cut onto the
- * tax-return table; those two tables are unchanged here.
+ * Inherited pack history, still live in the tables below:
+ *   mt-2026-08-02b flattened the audit volume curve and mirrored the cut onto
+ *   the tax-return table (owner 2026-08-02): entry bands held, reductions
+ *   deepening from −13% to −37% as volume rises. Top audit band 5,800 → 3,650.
+ *   mt-2026-08-02 added the pre-trading band: AUDIT_YEARLY["0"] 0 → 600 and
+ *   TAX_RETURN_YEARLY["0"] 0 → 175, so the "audit from €600/yr" headline on
+ *   /audit-services is a price the calculator will actually quote.
+ * Both are carried forward here unchanged.
  *
  * ⚠ Three copies of this pack must carry the SAME version string, or the
  * backend hard-rejects the record before it even reprices (which is the

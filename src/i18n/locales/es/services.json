@@ -964,8 +964,8 @@
         "inc9": ""
       },
       "pkg2": {
-        "label": "Partner",
-        "title": "Partner",
+        "label": "Manager",
+        "title": "Manager",
         "pos": "Supervisión y asesoramiento de socio",
         "desc": "Supervisión integral de un socio de A4: informes de gestión, previsiones y llamadas de asesoramiento mensuales.",
         "bestFor": "Empresas en crecimiento que quieren supervisión y asesoramiento a nivel de socio.",
