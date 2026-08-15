@@ -5,6 +5,9 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { TrustBar } from "./HomeConversionSections";
 import { useReduceMotion } from "@/contexts/ReduceMotionContext";
+// Bookkeeping figures come from the quote pack. Under mt-2026-08-14-volume they
+// are the ENTRY band of nine, priced by monthly expenses — always shown as "from".
+import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
 
 /** Typewriter cycle for the hero — types/deletes each word with a caret. Static under reduced motion. */
 function TypeCycle({ words, fallback }: { words: string[]; fallback: string }) {
@@ -102,7 +105,7 @@ export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit F
             <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
           </div>
           <div style={{ display: "flex", gap: "6px 22px", marginTop: 22, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
-            {["Quotes within 24 hours", "Managed bookkeeping €24/mo self-employed, €49/mo company", "Free accounting health check"].map((fact, i) => (
+            {["Quotes within 24 hours", `Managed bookkeeping from €${BOOKKEEPING_FROM}/mo self-employed, from €${BOOKKEEPING_COMPANY}/mo company`, "Free accounting health check"].map((fact, i) => (
               <span key={fact} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 500, color: "var(--a4-on-dark-mute)" }}>
                 <Icon name="check" size={14} color="var(--a4-primary-bright)" stroke={2.5} />
                 {fact}

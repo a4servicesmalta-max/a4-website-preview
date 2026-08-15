@@ -33,7 +33,7 @@ const nunito = Nunito({
 const siteUrl = getSiteUrl();
 const rootMeta = pageMetadata(
   "Accounting, Audit & Corporate Services in Malta",
-  "A4 Services Limited — a licensed Malta accounting and audit firm. Fixed monthly bookkeeping, VAT, payroll, audit and corporate services. Internationally capable via BOKS International.",
+  "A4 Services Limited — a licensed Malta accounting and audit firm. Managed monthly bookkeeping from €24, plus VAT, payroll, audit and corporate services. Internationally capable via BOKS International.",
 );
 
 export const metadata: Metadata = {

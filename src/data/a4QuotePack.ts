@@ -144,15 +144,63 @@ export type ExpenseBand =
   | "400-500k"
   | "500k+";
 
+/**
+ * THE band ceilings, in euro of monthly spend. `null` is the open top band.
+ *
+ * Ceilings are INCLUSIVE (QUOTE-WIRE-CONTRACT-V2 amendment, 2026-08-15): a
+ * client at exactly €10,000/month is in `0-10k`, exactly €25,000 is `10-25k`,
+ * exactly €500,000 is `400-500k`. That resolves every boundary in the CLIENT's
+ * favour, which is the defensible direction in a dispute, and it matches the
+ * plain reading of "Up to €10,000".
+ *
+ * The labels below are the client-facing statement of this same rule, so the
+ * two are pinned against each other in the pack tests.
+ */
+export const EXPENSE_BAND_CEILINGS: { id: ExpenseBand; ceiling: number | null }[] = [
+  { id: "0-10k", ceiling: 10_000 },
+  { id: "10-25k", ceiling: 25_000 },
+  { id: "25-50k", ceiling: 50_000 },
+  { id: "50-100k", ceiling: 100_000 },
+  { id: "100-200k", ceiling: 200_000 },
+  { id: "200-300k", ceiling: 300_000 },
+  { id: "300-400k", ceiling: 400_000 },
+  { id: "400-500k", ceiling: 500_000 },
+  { id: "500k+", ceiling: null },
+];
+
+/**
+ * Which band a given monthly spend falls in, applying the inclusive-ceiling
+ * rule above. Returns `null` for a negative or non-finite amount — there is no
+ * honest band for a nonsense number, and the same "never guess" contract as
+ * `managedMonthly` applies.
+ */
+export function bandForMonthlyExpenses(amount: number): ExpenseBand | null {
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  for (const { id, ceiling } of EXPENSE_BAND_CEILINGS) {
+    if (ceiling == null || amount <= ceiling) return id;
+  }
+  return "500k+";
+}
+
+/**
+ * Band labels, DISJOINT in words.
+ *
+ * These used to read "Up to €10,000" / "€10,000 – 25,000" / "€25,000 – 50,000",
+ * which claimed each boundary amount twice: a client spending exactly €25,000
+ * matched two labels, saw €69 on one button and €99 on the next, and had no
+ * rule anywhere on either site to choose between them. The "Over X, up to Y"
+ * form states the inclusive-ceiling rule in the label itself, so the picker
+ * answers the question without a footnote.
+ */
 export const EXPENSE_BANDS: { id: ExpenseBand; label: string; hint: string }[] = [
   { id: "0-10k", label: "Up to €10,000", hint: "just starting" },
-  { id: "10-25k", label: "€10,000 – 25,000", hint: "small and steady" },
-  { id: "25-50k", label: "€25,000 – 50,000", hint: "growing" },
-  { id: "50-100k", label: "€50,000 – 100,000", hint: "established" },
-  { id: "100-200k", label: "€100,000 – 200,000", hint: "busy" },
-  { id: "200-300k", label: "€200,000 – 300,000", hint: "high volume" },
-  { id: "300-400k", label: "€300,000 – 400,000", hint: "very high" },
-  { id: "400-500k", label: "€400,000 – 500,000", hint: "large" },
+  { id: "10-25k", label: "Over €10,000, up to €25,000", hint: "small and steady" },
+  { id: "25-50k", label: "Over €25,000, up to €50,000", hint: "growing" },
+  { id: "50-100k", label: "Over €50,000, up to €100,000", hint: "established" },
+  { id: "100-200k", label: "Over €100,000, up to €200,000", hint: "busy" },
+  { id: "200-300k", label: "Over €200,000, up to €300,000", hint: "high volume" },
+  { id: "300-400k", label: "Over €300,000, up to €400,000", hint: "very high" },
+  { id: "400-500k", label: "Over €400,000, up to €500,000", hint: "large" },
   { id: "500k+", label: "Over €500,000", hint: "enterprise" },
 ];
 

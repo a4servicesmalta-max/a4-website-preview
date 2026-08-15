@@ -118,8 +118,78 @@ export function independenceLeadNote(flags: IndependenceFlags): string | null {
 export const BOOKKEEPING_SERVICE_IDS = ["Bookkeeping"] as const;
 export const AUDIT_SERVICE_IDS = ["Audit & Annual Accounts"] as const;
 
-export function flagsForServiceSelection(selected: readonly string[]): IndependenceFlags {
-  const has = (ids: readonly string[]) => selected.some((s) => ids.includes(s));
+/**
+ * Page-level service LABELS that mean one of the canonical ids above.
+ *
+ * Surfaces that are not the multi-select request form describe themselves in
+ * their own words — the accounting estimator hands off
+ * `service: "Accounting & bookkeeping"`, which is a page title, not a form id.
+ * Without this map that lead routed `neutral` while its own payload asserted
+ * `Audit eligible: false`, so one record made two contradictory statements
+ * about whether A4 may ever audit that client.
+ *
+ * Keep this SMALL and explicit. It is a compatibility shim for known surfaces,
+ * not fuzzy matching: a label nobody has mapped stays neutral, loudly, rather
+ * than being guessed into an independence conclusion.
+ */
+const SERVICE_LABEL_ALIASES: Record<string, string> = {
+  "accounting & bookkeeping": "Bookkeeping",
+  "accounting and bookkeeping": "Bookkeeping",
+  "managed bookkeeping": "Bookkeeping",
+  "audit & annual accounts": "Audit & Annual Accounts",
+  "audit and annual accounts": "Audit & Annual Accounts",
+  "audit or review": "Audit & Annual Accounts",
+  "statutory audit": "Audit & Annual Accounts",
+  "review engagement": "Audit & Annual Accounts",
+};
+
+/**
+ * Whatever a client sent → the canonical service ids, ready for exact matching.
+ *
+ * Clients disagree about the wire shape and always have:
+ *   - `ProcessStepsSection` sends a real array of ids;
+ *   - `QuoteContent` sends ONE COMMA-JOINED STRING in both `services` and
+ *     `service` (`sel.join(", ")`);
+ *   - `QuoteActions` sends a single page LABEL in `service`.
+ *
+ * The route used to do `Array.isArray(x) ? x.map(String) : [String(x)]`, which
+ * turned the joined string into a single element that could never equal
+ * `"Bookkeeping"` — so the derivation silently never fired for the very case
+ * it exists to catch (someone asking for the books AND the audit).
+ *
+ * Splitting on commas is safe because no canonical id contains one; the ids use
+ * `&` and `/` as separators precisely so a join round-trips.
+ */
+export function normaliseServiceSelection(raw: unknown): string[] {
+  const flat: string[] = [];
+  const push = (v: unknown) => {
+    if (v == null) return;
+    if (Array.isArray(v)) return v.forEach(push);
+    // Split a joined string back into its parts, then trim the join's spaces.
+    String(v)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach((s) => flat.push(s));
+  };
+  push(raw);
+
+  const canonical = [...BOOKKEEPING_SERVICE_IDS, ...AUDIT_SERVICE_IDS] as readonly string[];
+  return flat.map((s) => {
+    // Exact id wins; otherwise a known label alias; otherwise pass it through
+    // unchanged so it stays visibly unmatched rather than silently reshaped.
+    if (canonical.includes(s)) return s;
+    return SERVICE_LABEL_ALIASES[s.toLowerCase()] ?? s;
+  });
+}
+
+/**
+ * `selected` may be raw client input in any of the shapes above — it is
+ * normalised here so no caller can forget to.
+ */
+export function flagsForServiceSelection(selected: readonly string[] | unknown): IndependenceFlags {
+  const ids = normaliseServiceSelection(selected);
+  const has = (want: readonly string[]) => ids.some((s) => want.includes(s));
   return independenceFlags({
     wantsBookkeeping: has(BOOKKEEPING_SERVICE_IDS),
     wantsAudit: has(AUDIT_SERVICE_IDS),

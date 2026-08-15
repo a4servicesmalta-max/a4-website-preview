@@ -66,8 +66,16 @@ export type AccountingInput = {
   /** Transactions a month — drives VAT, tax returns and audit. NOT bookkeeping. */
   txn: TxnBand;
   entity: ManagedEntity;
-  /** Monthly expenses — drives BOOKKEEPING only. A different question from `txn`. */
-  expenses: ExpenseBand;
+  /**
+   * Monthly expenses — drives BOOKKEEPING only. A different question from `txn`.
+   *
+   * `""` means NOT YET ANSWERED, and it is the honest initial value: there is
+   * no default band. Pre-selecting one produces a binding price for an answer
+   * the prospect never gave, and the band id is valid so nothing downstream can
+   * catch it — a company spending €300k/month would be quoted the €69 band.
+   * The engine withholds the whole quote until this is a real band.
+   */
+  expenses: ExpenseBand | "";
   head: number;
   vatreg: VatRegId;
   /** Whole months of backlog, as a string id from BEHIND. */
@@ -78,8 +86,19 @@ export type AccountingInput = {
 
 export type Line = { k: string; v: number };
 
+/**
+ * Why a quote carries no figures.
+ *
+ * These were one outcome (`{ refer: true }`) and had to be split: "your sector
+ * needs a director call" and "we do not have your monthly spend yet" are
+ * different facts about different things, and only one of them is the
+ * visitor's to fix in a click. Collapsing them told prospects their industry
+ * was the problem when the real answer was one unanswered question.
+ */
+export type UnpricedReason = "sector" | "no-expenses";
+
 export type AccountingQuote =
-  | { refer: true }
+  | { refer: true; reason: UnpricedReason }
   | {
       refer: false;
       tier: { label: string; mult: number };
@@ -104,8 +123,15 @@ const find = <T extends { id: string }>(list: T[], id: string) => list.find((x) 
 export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): AccountingQuote {
   const tierId = sectorTier(s.sector);
   const tierDef = RISK_TIERS[tierId];
-  if (tierDef.multiplier == null) return { refer: true };
+  if (tierDef.multiplier == null) return { refer: true, reason: "sector" };
   const rm = tierDef.multiplier;
+
+  // No usable spend answer → NOTHING is priced, and the reason is the band, not
+  // the sector. Checked before any line is built: a partial price (payroll and
+  // VAT without the books) is still a figure the visitor anchors on, and it
+  // would be a figure for an engagement we have not been told the shape of.
+  const bookRateEarly = s.expenses === "" ? null : managedMonthly(s.entity === "sole" ? "sole" : "company", s.expenses);
+  if (bookRateEarly == null) return { refer: true, reason: "no-expenses" };
 
   const monthly: Line[] = [];
   const oneOff: Line[] = [];
@@ -115,10 +141,10 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   // keeping the books.
   const entity: ManagedEntity = s.entity === "sole" ? "sole" : "company";
   const entityLabel = MANAGED_ENTITY_LABELS[entity];
-  const bookRate = managedMonthly(entity, s.expenses);
-  // An unknown expenses band is not priceable. Degrade to the referral path
-  // rather than guessing — and never to the cheapest band.
-  if (bookRate == null) return { refer: true };
+  // Proved non-null by the `no-expenses` guard above, so `s.expenses` is a real
+  // band from here down and the catch-up below can rely on it too.
+  const bookRate = bookRateEarly;
+  const expenses = s.expenses as ExpenseBand;
   monthly.push({ k: `Managed bookkeeping · ${entityLabel}`, v: bookRate });
 
   if (s.head > 0) {
@@ -143,8 +169,8 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   // launch discount — it is a one-off. The label is the wire-contract form.
   const months = parseInt(s.behind, 10) || 0;
   if (months > 0) {
-    const k = catchUpLabel(months, entity, s.expenses);
-    const v = catchUpAmount(months, entity, s.expenses);
+    const k = catchUpLabel(months, entity, expenses);
+    const v = catchUpAmount(months, entity, expenses);
     // Both are non-null here — bookRate above already proved the band — but the
     // guard keeps the null contract explicit rather than asserting it away.
     if (k != null && v != null) oneOff.push({ k, v });
@@ -172,9 +198,50 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   };
 }
 
+/**
+ * THE itemised breakdown, formatted — for every surface that renders one.
+ *
+ * There used to be two hand-written copies of this mapping in
+ * AccountingEstimator: one in the on-screen price panel and one in the payload
+ * handed to sales. They disagreed. The panel discounted one-off lines
+ * (`l.v * (1 - discountPct)`) while the payload did not, so inside the live
+ * promo window a 12-month company catch-up read €441 on screen and €588 in the
+ * proposal email — and €588 is what the pack rule and the backend actually
+ * bill, because ONE-OFFS ARE NEVER DISCOUNTED. The screen was the wrong one.
+ *
+ * Both call sites read this function now, so the two cannot drift apart again:
+ * there is one mapping, and the promo is applied where the engine applies it
+ * (the monthly) and nowhere else.
+ */
+export function quoteBreakdown(q: Extract<AccountingQuote, { refer: false }>): { k: string; v: string }[] {
+  return [
+    ...q.monthly.map((l) => ({ k: l.k, v: euro(l.v) })),
+    // No discount here, deliberately. See the docblock above.
+    ...q.oneOff.map((l) => ({ k: l.k, v: euro(l.v) + " one-off" })),
+  ];
+}
+
+/**
+ * What the visitor is told when the sector cannot be priced instantly.
+ * A fact about their industry, and not their fault or their fix.
+ */
+export const ACCOUNTING_REFER_NOTE =
+  "Your sector needs a short call with a director before we put a number on it — usually the same day.";
+
+/**
+ * What the visitor is told when we simply do not have their spend answer yet.
+ *
+ * Deliberately NOT the sector line: nothing is wrong, one question is
+ * unanswered, and saying so is both true and immediately actionable. Pricing
+ * the entry band instead would be worse than either — it is a real, binding
+ * figure for an answer nobody gave.
+ */
+export const ACCOUNTING_NO_EXPENSES_NOTE =
+  "Tell us roughly how much you spend a month and your price appears straight away. We do not guess it — the monthly spend is what sets the bookkeeping fee, and a guess would be someone else's price.";
+
 /** Plain-language recap of what the client just configured. */
 export function accountingSummary(s: AccountingInput, q: AccountingQuote): string {
-  if (q.refer) return "Your sector needs a short call with a director before we put a number on it — usually the same day.";
+  if (q.refer) return q.reason === "no-expenses" ? ACCOUNTING_NO_EXPENSES_NOTE : ACCOUNTING_REFER_NOTE;
   const bits: string[] = ["you send us the paperwork and we keep the books"];
   if (s.head > 0) bits.push(`we run payroll for ${s.head}`);
   if (s.vatreg !== "none") bits.push("we file your VAT");

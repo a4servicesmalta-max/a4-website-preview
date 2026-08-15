@@ -6,7 +6,8 @@ import { useQuoteActions } from "@/components/a4-landing/QuoteActions";
 import type { QuotePayload } from "@/lib/quote-handoff";
 import {
   SECTORS, TXN, ENTITIES, EXPENSES, VAT_REG, BEHIND, STEPS,
-  calcAccountingFee, accountingSummary, euro, formatStartMonth, nextMonth,
+  calcAccountingFee, accountingSummary, quoteBreakdown, euro, formatStartMonth,
+  ACCOUNTING_NO_EXPENSES_NOTE,
   type AccountingInput, type VatRegId,
 } from "@/lib/accounting-fee";
 import { LAUNCH_PROMO, MANAGED_ENTITY_LABELS, PRICING_VAT_NOTE, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
@@ -64,24 +65,46 @@ const LAST = QUESTIONS.length - 1; // the price step
 
 export function AccountingEstimator() {
   const [step, setStep] = useState(0);
+  /**
+   * B1 — NOTHING about the price is pre-answered.
+   *
+   * `expenses` and `startMonth` both ship EMPTY. They used to ship "10-25k"
+   * and `nextMonth()`, which meant a visitor who never reached those questions
+   * still got a complete, binding price: a company spending €300k/month was
+   * quoted the €69 band, and because that band id is perfectly valid the
+   * backend re-priced it, agreed, and issued the quotation. Defaulting down
+   * loses money invisibly; defaulting up loses the customer. The pack's own
+   * docblock forbids both, vacei.com holds Next until they are answered, and
+   * this surface now does the same.
+   */
   const [s, setS] = useState<AccountingInput>({
-    sector: "shop", txn: "21-60", entity: "company", expenses: "10-25k", head: 2, vatreg: "art10", behind: "0",
-    startMonth: nextMonth(),
+    sector: "shop", txn: "21-60", entity: "company", expenses: "", head: 2, vatreg: "art10", behind: "0",
+    startMonth: "",
   });
   const set = (patch: Partial<AccountingInput>) => setS((a) => ({ ...a, ...patch }));
 
   const q = calcAccountingFee(s);
   const summary = accountingSummary(s, q);
+  // A start month is REQUIRED, not suggested: it decides which months are
+  // catch-up, so a guessed one silently re-prices the whole engagement.
+  const startOk = /^\d{4}-(0[1-9]|1[0-2])$/.test(s.startMonth);
+  const noBand = q.refer && q.reason === "no-expenses";
+  /** Nothing is quotable until both unanswered questions have real answers. */
+  const priced = !q.refer && startOk;
   // Referral quotes carry no figures at all — read the discount through a
   // narrowed local so the referral branch stays type-safe.
   const discountPct = q.refer ? 0 : q.discountPct;
-  const feeBig = q.refer ? "Let’s talk" : euro(q.monthlyNet);
-  const feeMini = q.refer ? "Referral" : euro(q.monthlyNet) + " / mo";
-  const feeNote = q.refer
-    ? "We price most companies on the spot, but yours needs a short call with a director first. Usually the same day."
-    : (q.discountPct > 0 ? `${LAUNCH_PROMO.label.replace("25% off", "25% launch discount")} already applied. ` : "") +
-      (q.tier.label === "Standard" ? "" : `${q.tier.label}-risk sector loading included. `) +
-      PRICING_VAT_NOTE;
+  const feeBig = priced ? euro(q.monthlyNet) : noBand ? "Not yet" : !q.refer ? "Not yet" : "Let’s talk";
+  const feeMini = priced ? euro(q.monthlyNet) + " / mo" : noBand || !q.refer ? "—" : "Referral";
+  const feeNote = noBand
+    ? ACCOUNTING_NO_EXPENSES_NOTE
+    : q.refer
+      ? "We price most companies on the spot, but yours needs a short call with a director first. Usually the same day."
+      : !startOk
+        ? "Tell us which month we should start from and this price is final. Anything before it is catch-up, so the month decides what you are charged for."
+        : (q.discountPct > 0 ? `${LAUNCH_PROMO.label.replace("25% off", "25% launch discount")} already applied. ` : "") +
+          (q.tier.label === "Standard" ? "" : `${q.tier.label}-risk sector loading included. `) +
+          PRICING_VAT_NOTE;
 
   // Every quote from this page is a bookkeeping quote, so A4 can never audit
   // this client. Stated on the page and carried on the record.
@@ -92,13 +115,31 @@ export function AccountingEstimator() {
   const payload = (): QuotePayload => ({
     page: "accounting",
     service: "Accounting & bookkeeping",
-    headline: q.refer ? "Referral — needs a director call" : `${euro(q.monthlyNet)} / month${q.oneOffFull > 0 ? ` + ${euro(q.oneOffNet)} one-off` : ""}`,
-    lines: q.refer ? [{ k: "Sector", v: "Needs a director call" }] : [
-      ...q.monthly.map((l) => ({ k: l.k, v: euro(l.v) + " /mo" })),
-      ...q.oneOff.map((l) => ({ k: l.k, v: euro(l.v) + " one-off" })),
-      ...(q.discountPct > 0 ? [{ k: `Launch discount (${Math.round(q.discountPct * 100)}%)`, v: "− " + euro(q.monthlyFull - q.monthlyNet) + " /mo" }] : []),
-    ],
-    services: q.refer ? ["Accounting — referral"] : [
+    // Degrades HONESTLY, and says which of the three reasons applies. A
+    // headline figure here would be a price for an answer we do not have.
+    headline: noBand
+      ? "Not priced — monthly spend not given"
+      : q.refer
+        ? "Referral — needs a director call"
+        : !startOk
+          ? "Not priced — start month not given"
+          : `${euro(q.monthlyNet)} / month${q.oneOffFull > 0 ? ` + ${euro(q.oneOffNet)} one-off` : ""}`,
+    lines: noBand
+      ? [{ k: "Monthly spend", v: "Not given — bookkeeping not priced" }]
+      : q.refer
+        ? [{ k: "Sector", v: "Needs a director call" }]
+        : [
+            // THE shared breakdown — the same function the price panel renders,
+            // so the emailed figures and the on-screen figures are one list.
+            ...quoteBreakdown(q).map((l) => (l.v.includes("one-off") ? l : { k: l.k, v: l.v + " /mo" })),
+            ...(q.discountPct > 0 ? [{ k: `Launch discount (${Math.round(q.discountPct * 100)}%)`, v: "− " + euro(q.monthlyFull - q.monthlyNet) + " /mo" }] : []),
+            ...(startOk ? [] : [{ k: "Start month", v: "Not given — please confirm before we bill" }]),
+          ],
+    // The canonical form id, stated outright. Every quote from this page is a
+    // bookkeeping quote, which is exactly what `independence` above is built
+    // from — so the lead's derived route now agrees with its own answers.
+    serviceIds: ["Bookkeeping"],
+    services: noBand ? ["Accounting — monthly spend not given"] : q.refer ? ["Accounting — referral"] : [
       `Managed bookkeeping — ${MANAGED_ENTITY_LABELS[s.entity]}`,
       ...(s.head > 0 ? [`Payroll for ${s.head} ${s.head === 1 ? "person" : "people"}`] : []),
       ...(s.vatreg !== "none" ? [`VAT returns (${labelOf(VAT_REG, s.vatreg)})`] : []),
@@ -107,7 +148,9 @@ export function AccountingEstimator() {
     answers: [
       { k: "Sector", v: labelOf(SECTORS, s.sector) },
       { k: "Transactions / month", v: labelOf(TXN, s.txn) },
-      { k: "Monthly expenses", v: labelOf(EXPENSES, s.expenses) },
+      // `labelOf` falls back to the FIRST option when the id is empty, which
+      // would report "Up to €10,000" for a question nobody answered. Say so.
+      { k: "Monthly expenses", v: s.expenses ? labelOf(EXPENSES, s.expenses) : "not given" },
       { k: "Whose books", v: MANAGED_ENTITY_LABELS[s.entity] },
       { k: "Payroll headcount", v: String(s.head) },
       { k: "VAT registration", v: labelOf(VAT_REG, s.vatreg) },
@@ -208,6 +251,13 @@ export function AccountingEstimator() {
                 <div style={{ marginTop: 10 }}>
                   <Pills items={EXPENSES} value={s.expenses} set={(id) => set({ expenses: id as ExpenseBand })} />
                 </div>
+                {/* Nothing is pre-selected, so say what the blank means rather
+                    than leaving the visitor to read it as a broken control. */}
+                {!s.expenses && (
+                  <div style={{ marginTop: 10, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
+                    Pick a band — we do not assume one. It is what sets your bookkeeping price.
+                  </div>
+                )}
               </div>
             )}
 
@@ -237,6 +287,15 @@ export function AccountingEstimator() {
                   onChange={(e) => set({ startMonth: e.target.value })}
                   style={{ marginTop: 10, height: 38, padding: "0 12px", borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", background: "#fff", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 13 }}
                 />
+                {/* "Required" is now true: the field ships empty and the price
+                    is withheld until it is filled. It used to be pre-filled
+                    with next month, so `startOk` passed on an answer nobody
+                    gave and the visitor could send without seeing this step. */}
+                {!startOk && (
+                  <div style={{ marginTop: 8, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
+                    Pick a month before we can price this.
+                  </div>
+                )}
               </div>
             )}
 
@@ -251,7 +310,9 @@ export function AccountingEstimator() {
                 </p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
                   <Button variant="dark" size="md" onClick={() => start("proposal")}>Request a proposal <Icon name="arrow-right" size={16} color="#fff" /></Button>
-                  {!q.refer && <Button variant="cobalt" size="md" onClick={() => start("account")}>Create my account</Button>}
+                  {/* Only when there IS a price. Signing someone up against a
+                      figure we never computed is the same defect as quoting it. */}
+                  {priced && <Button variant="cobalt" size="md" onClick={() => start("account")}>Create my account</Button>}
                 </div>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "10px 0 0" }}>Confirmed after a short call. {PRICING_VAT_NOTE}</p>
               </div>
@@ -274,7 +335,7 @@ export function AccountingEstimator() {
           <div className="af-panel" style={{ background: "#101114", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 90, textAlign: "left" }}>
             <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Your monthly price</div>
 
-            {!q.refer && q.discountPct > 0 && (
+            {priced && q.discountPct > 0 && (
               <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <span style={{ fontFamily: "var(--a4-font-display)", fontVariantNumeric: "tabular-nums", fontSize: 16, color: "rgba(255,255,255,.45)", textDecoration: "line-through" }}>{euro(q.monthlyFull)}</span>
                 <span style={{ padding: "3px 10px", borderRadius: "var(--a4-r-full)", background: "rgba(224,105,94,.18)", border: "1px solid rgba(224,105,94,.45)", color: "#F2A49C", fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" }}>
@@ -284,15 +345,21 @@ export function AccountingEstimator() {
             )}
 
             <div style={{ marginTop: 8, display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontVariantNumeric: "tabular-nums", fontSize: 38, letterSpacing: "-1.5px", lineHeight: 1, color: q.refer ? "#fff" : "#F2A49C" }}>{feeBig}</span>
-              {!q.refer && <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)" }}>/ month</span>}
+              <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontVariantNumeric: "tabular-nums", fontSize: 38, letterSpacing: "-1.5px", lineHeight: 1, color: priced ? "#F2A49C" : "#fff" }}>{feeBig}</span>
+              {priced && <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)" }}>/ month</span>}
             </div>
 
             <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)", display: "flex", flexDirection: "column", gap: 9 }}>
-              {(q.refer ? [{ k: "Sector", v: "Needs a call" }] : [
-                ...q.monthly.map((l) => ({ k: l.k, v: euro(l.v) })),
-                ...q.oneOff.map((l) => ({ k: l.k, v: euro(q.discountPct > 0 ? l.v * (1 - q.discountPct) : l.v) + " one-off" })),
-              ]).map((l) => (
+              {/* M2: the one-off used to be discounted HERE and nowhere else —
+                  on screen €441, in the proposal email €588, same catch-up.
+                  Both now read `quoteBreakdown`, which applies the promo to the
+                  monthly only, exactly as the engine and the backend do. */}
+              {(noBand
+                ? [{ k: "Monthly spend", v: "Not given" }]
+                : q.refer
+                  ? [{ k: "Sector", v: "Needs a call" }]
+                  : quoteBreakdown(q)
+              ).map((l) => (
                 <span key={l.k} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "var(--a4-font-body)", fontSize: 12.5 }}>
                   <span style={{ color: "var(--a4-on-dark-mute)" }}>{l.k}</span>
                   <span style={{ color: "#fff", fontWeight: 500, whiteSpace: "nowrap" }}>{l.v}</span>
@@ -305,7 +372,7 @@ export function AccountingEstimator() {
             <Button variant="primary" size="md" onClick={() => start("proposal")} style={{ width: "100%", marginTop: 18 }}>
               Request a proposal <Icon name="arrow-right" size={16} color="#000" />
             </Button>
-            {!q.refer && (
+            {priced && (
               <Button variant="outline-dark" size="md" onClick={() => start("account")} style={{ width: "100%", marginTop: 10 }}>
                 Create my account
               </Button>

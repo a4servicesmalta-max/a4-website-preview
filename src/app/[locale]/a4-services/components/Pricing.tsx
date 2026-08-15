@@ -5,7 +5,9 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import {
   BOOKKEEPING_COMPANY,
+  BOOKKEEPING_COMPANY_TOP,
   BOOKKEEPING_FROM,
+  BOOKKEEPING_SOLE_TOP,
   VAT_FROM,
   TAX_RETURN_FROM,
   PAYROLL_ENTRY_RATE,
@@ -13,11 +15,26 @@ import {
   payrollRate,
   PRICING_VAT_NOTE,
 } from "@/data/a4QuotePack";
-// Managed bookkeeping — A4 keeps the books, priced by monthly expenses (from EUR 24
-// self-employed / EUR 49 company), plus optional VAT / payroll / annual
-// accounts. Every figure comes from quote pack mt-2026-08-14-managed
+// Managed bookkeeping — A4 keeps the books, priced by monthly expenses (from €24
+// self-employed / €49 company), plus optional VAT / payroll / annual
+// accounts. Every figure comes from quote pack mt-2026-08-14-volume
 // (src/data/a4QuotePack.ts). There is no software-only tier.
 // Drives toward "create account".
+//
+// THIS SECTION QUOTES FLOORS, NOT A PRICE. It deliberately asks neither the
+// entity question nor the monthly-expenses question, so it cannot know which of
+// the nine bookkeeping bands a visitor falls into — and it never pretends to.
+// Every line here is the published "from" figure for its service (bookkeeping
+// entry band, VAT_FROM, the tax-return floor), so the sum is a genuine floor:
+// the least this selection can cost, never a quote. Adding the two questions
+// was the alternative and was rejected: it would make this the site's THIRD
+// pricing wizard, it would sit a "monthly expenses" question directly beside
+// the "annual revenue" question below (two money questions that look like
+// duplicates and are not), and it would still leave VAT and tax quoted at their
+// floors — so the total would go on looking exact while only one of its four
+// parts actually was. The real prices live in the two calculators this section
+// links to: /accounting-services#estimate (full estimator) and the homepage
+// #pricing wizard.
 
 const PR_BANDS = [
   { label: "Under €100k", acct: 0 },
@@ -60,7 +77,12 @@ export function Pricing() {
   const [emps, setEmps] = useState(2);
   const [annual, setAnnual] = useState(false);
 
-  const book = BOOKKEEPING_COMPANY;
+  // The entry band (self-employed, up to €10,000/mo spend) — the lowest published
+  // bookkeeping price there is, so the total below is a true floor. It is NOT
+  // BOOKKEEPING_COMPANY: charging every visitor the company price inside a
+  // precise-looking total, with no entity question on screen to justify it, was
+  // the bug this section carried.
+  const book = BOOKKEEPING_FROM;
   // Reconciling every account IS managed bookkeeping — the monthly price covers it.
   const recon = 0;
   const acct = PR_BANDS[rev].acct;
@@ -70,7 +92,7 @@ export function Pricing() {
   const total = book + recon + acct + vatFee + payFee + annualFee;
 
   const lines = [
-    { k: "Managed bookkeeping — company", v: book },
+    { k: "Managed bookkeeping — entry band", v: book },
     { k: `Bank reconciliations · ${banks} account${banks > 1 ? "s" : ""}`, v: recon, included: true },
     { k: "Accounting & management reports", v: acct, included: acct === 0 },
     vat && { k: "VAT returns", v: vatFee },
@@ -88,7 +110,7 @@ export function Pricing() {
           dark align="center"
           eyebrow="Pricing calculator"
           title={<>Build your plan — from €{BOOKKEEPING_FROM}/month</>}
-          sub="Transparent, fixed monthly pricing that scales with your business. Adjust the inputs to see your estimate, then create your account to confirm."
+          sub={`Transparent monthly pricing, published in full. Bookkeeping is set by what you spend each month — from €${BOOKKEEPING_FROM}/mo self-employed, from €${BOOKKEEPING_COMPANY}/mo for a company. Pick your add-ons to see the floor for that mix, then get your exact price from the full estimator.`}
           maxWidth={640}
         /></Reveal>
 
@@ -111,10 +133,13 @@ export function Pricing() {
                 </div>
               </div>
 
-              {/* bookkeeping — flat */}
+              {/* bookkeeping — a "from", set by monthly expenses (nine bands) */}
               <div>
-                <div style={fieldLabel}>Managed bookkeeping — from €{BOOKKEEPING_COMPANY}/mo for a company</div>
-                <div style={fieldSub}>We keep the books: unlimited documents, no per-document fees — invoices, expenses and bank lines included, every account reconciled. A qualified accountant is on the file. Self-employed starts at €{BOOKKEEPING_FROM}/mo. The price is set by what you spend each month.</div>
+                <div style={fieldLabel}>Managed bookkeeping — from €{BOOKKEEPING_FROM}/mo self-employed, from €{BOOKKEEPING_COMPANY}/mo for a company</div>
+                <div style={fieldSub}>
+                  We keep the books: unlimited documents, no per-document fees — invoices, expenses and bank lines included, every account reconciled. A qualified accountant is on the file. The price is set by what your business spends each month, across nine bands (€{BOOKKEEPING_FROM}–€{BOOKKEEPING_SOLE_TOP}/mo self-employed, €{BOOKKEEPING_COMPANY}–€{BOOKKEEPING_COMPANY_TOP}/mo for a company).{" "}
+                  <a href="/accounting-services#estimate" style={{ color: "var(--a4-primary-bright)", textDecoration: "underline" }}>Find your band in the full estimator →</a>
+                </div>
               </div>
 
               {/* bank accounts */}
@@ -157,8 +182,9 @@ export function Pricing() {
 
             {/* summary */}
             <div className="a4-sum" style={{ background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "clamp(24px,3vw,32px)", position: "sticky", top: 88 }}>
-              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--a4-stone)" }}>Your estimated plan</div>
+              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--a4-stone)" }}>Your plan starts at</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 12 }}>
+                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 20, color: "var(--a4-on-dark-mute)" }}>from</span>
                 <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 52, color: "#fff", letterSpacing: "-2px", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{prEuro(total)}</span>
                 <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-on-dark-mute)" }}>/ month</span>
               </div>
@@ -167,16 +193,20 @@ export function Pricing() {
                 {lines.map((l) => (
                   <div key={l.k} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                     <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-on-dark-mute)" }}>{l.k}</span>
-                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 500, color: l.included ? "var(--a4-accent-teal)" : "#fff", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{l.included ? "Included" : prEuro(l.v) + "/mo"}</span>
+                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 500, color: l.included ? "var(--a4-accent-teal)" : "#fff", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{l.included ? "Included" : "from " + prEuro(l.v) + "/mo"}</span>
                   </div>
                 ))}
+              </div>
+              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.5, color: "var(--a4-stone)", marginTop: 18 }}>
+                Every line above is the published starting price for that service. Bookkeeping moves with your monthly expenses, and VAT and tax with your transaction volume — neither question is asked here.{" "}
+                <a href="/accounting-services#estimate" style={{ color: "var(--a4-primary-bright)", textDecoration: "underline" }}>Get your exact price →</a>
               </div>
               <div style={{ marginTop: 24 }}>
                 <Button variant="primary" size="md" href="/contact" style={{ width: "100%" }}>Request information <Icon name="arrow-right" size={16} color="#000" /></Button>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 14 }}>
                 <Icon name="lock" size={13} color="var(--a4-stone)" />
-                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)" }}>Fixed price confirmed on signup · cancel anytime · {PRICING_VAT_NOTE}</span>
+                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)" }}>Your price confirmed in writing before we start · cancel anytime · {PRICING_VAT_NOTE}</span>
               </div>
             </div>
           </div>

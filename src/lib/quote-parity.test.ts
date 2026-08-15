@@ -25,8 +25,8 @@ import { calcAuditFee, type AuditInput } from "./audit-fee";
 import { calcAccountingFee, type AccountingInput } from "./accounting-fee";
 import {
   SECTORS, TXN_BANDS, RISK_TIERS, AUDIT_YEARLY, TAX_RETURN_YEARLY,
-  BOOKKEEPING_MANAGED_MONTHLY, EXPENSE_BANDS, VAT_MONTHLY, PAYROLL_PER_HEAD, sectorTier,
-  catchUpAmount, type TxnBand,
+  BOOKKEEPING_MANAGED_MONTHLY, EXPENSE_BANDS, EXPENSE_BAND_CEILINGS, VAT_MONTHLY, PAYROLL_PER_HEAD, sectorTier,
+  catchUpAmount, bandForMonthlyExpenses, type TxnBand,
 } from "@/data/a4QuotePack";
 
 /** Every sector × every volume band — the whole input space, not a sample. */
@@ -77,7 +77,9 @@ describe("quote parity across every surface", () => {
     // Never the cheapest band. /accounting-services refers it; /quote puts it
     // on request. Neither invents €24 or €49.
     const bad = "not-a-band" as (typeof EXPENSE_BANDS)[number]["id"];
-    expect(calcAccountingFee(accounting({ expenses: bad }))).toEqual({ refer: true });
+    // M10: the reason is the BAND, not the sector — the two outcomes are
+    // distinct now, and each carries its own copy.
+    expect(calcAccountingFee(accounting({ expenses: bad }))).toEqual({ refer: true, reason: "no-expenses" });
 
     const q = buildQuote({
       company: "T", industry: "Other", revenueBand: "100k-500k",
@@ -190,5 +192,74 @@ describe("quote parity across every surface", () => {
     expect(VAT_MONTHLY).toEqual({ "0": 0, "1-20": 29, "21-60": 45, "61-150": 69, "151-400": 99, "401-1000": 139, "1000+": 189 });
     expect(PAYROLL_PER_HEAD.map((p) => p.rate)).toEqual([32, 29, 25]);
     expect(Object.values(RISK_TIERS).map((t) => t.multiplier)).toEqual([1.0, 1.2, 1.45, null]);
+  });
+});
+
+/**
+ * M5 — the band boundary, which was previously defined by nothing anywhere in
+ * either repo.
+ *
+ * The old labels overlapped in words: "Up to €10,000" and "€10,000 – 25,000"
+ * both read as containing exactly €10,000, so a client at a boundary saw two
+ * buttons that each claimed them and two different prices with no rule to
+ * choose between. Mechanically harmless (the wire carries the band ID), but it
+ * is a billing dispute the first time the firm corrects a boundary client.
+ *
+ * QUOTE-WIRE-CONTRACT-V2 amendment, 2026-08-15, normative: band ceilings are
+ * INCLUSIVE, so exactly 10,000 is `0-10k`, exactly 25,000 is `10-25k`, exactly
+ * 500,000 is `400-500k`. It resolves every edge in the CLIENT's favour, which
+ * is the defensible direction in a dispute.
+ */
+describe("expenses band boundaries (contract v2)", () => {
+  it("labels the bands disjointly — no amount is claimed by two labels", () => {
+    expect(EXPENSE_BANDS.map((b) => b.label)).toEqual([
+      "Up to €10,000",
+      "Over €10,000, up to €25,000",
+      "Over €25,000, up to €50,000",
+      "Over €50,000, up to €100,000",
+      "Over €100,000, up to €200,000",
+      "Over €200,000, up to €300,000",
+      "Over €300,000, up to €400,000",
+      "Over €400,000, up to €500,000",
+      "Over €500,000",
+    ]);
+  });
+
+  it("puts a client at exactly €25,000 in 10-25k — the inclusive-ceiling rule", () => {
+    // THE boundary sentence. Ceilings are inclusive, so the client at the edge
+    // gets the cheaper of the two bands they could read themselves into.
+    expect(bandForMonthlyExpenses(25_000)).toBe("10-25k");
+    expect(bandForMonthlyExpenses(25_000.01)).toBe("25-50k");
+  });
+
+  it("resolves every other edge inclusively too", () => {
+    expect(bandForMonthlyExpenses(0)).toBe("0-10k");
+    expect(bandForMonthlyExpenses(10_000)).toBe("0-10k");
+    expect(bandForMonthlyExpenses(10_001)).toBe("10-25k");
+    expect(bandForMonthlyExpenses(50_000)).toBe("25-50k");
+    expect(bandForMonthlyExpenses(100_000)).toBe("50-100k");
+    expect(bandForMonthlyExpenses(200_000)).toBe("100-200k");
+    expect(bandForMonthlyExpenses(300_000)).toBe("200-300k");
+    expect(bandForMonthlyExpenses(400_000)).toBe("300-400k");
+    // Exactly 500,000 is the TOP of 400-500k, not the floor of 500k+.
+    expect(bandForMonthlyExpenses(500_000)).toBe("400-500k");
+    expect(bandForMonthlyExpenses(500_001)).toBe("500k+");
+    expect(bandForMonthlyExpenses(9_999_999)).toBe("500k+");
+  });
+
+  it("has no honest answer for a nonsense amount, and says so rather than guessing", () => {
+    // Same contract as managedMonthly: null degrades to the lead path, and
+    // never to the cheapest band.
+    expect(bandForMonthlyExpenses(-1)).toBeNull();
+    expect(bandForMonthlyExpenses(Number.NaN)).toBeNull();
+  });
+
+  it("keeps the label ceilings and the resolver in step", () => {
+    // The labels are the client-facing statement of the same rule the resolver
+    // applies. If someone edits one, this catches the other going stale.
+    for (const { id, ceiling } of EXPENSE_BAND_CEILINGS) {
+      if (ceiling == null) continue;
+      expect(`${id}@${ceiling}=${bandForMonthlyExpenses(ceiling)}`).toBe(`${id}@${ceiling}=${id}`);
+    }
   });
 });
