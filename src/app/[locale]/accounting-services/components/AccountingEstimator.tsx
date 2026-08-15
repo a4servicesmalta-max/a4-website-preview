@@ -54,7 +54,7 @@ const tagLabel: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontS
 const QUESTIONS: { title: string; help: string }[] = [
   { title: "What does the company do?", help: "Some sectors need extra checks when we take you on. It is built into the price rather than added later." },
   { title: "Are these a company's books, or your own?", help: "With your monthly spend, it is what sets the bookkeeping price. We keep the books either way — there is no software-only option." },
-  { title: "About how much do you spend a month?", help: "Total money out. It is what sets the bookkeeping price — a different question from the transaction count, which prices VAT, the tax return and the audit." },
+  { title: "About how much do you spend a month?", help: "Your monthly expenses are the money that leaves the business in a typical month — supplier bills, wages, rent, software, everything you spend. Exclude VAT, loan repayments, and transfers between your own accounts. New or seasonal business? Use your average over the last three months. It is what sets the bookkeeping price — a different question from the transaction count, which prices VAT, the tax return and the audit." },
   { title: "Anyone on payroll?", help: "Payslips, monthly employer filing and annual returns, priced per person and cheaper as the team grows." },
   { title: "Are you VAT registered?", help: "VAT returns are built only from entries we have already worked and reconciled." },
   { title: "From which month should we start?", help: "The first month we keep the books. Anything before it is catch-up, and we need the month before we can price either." },
@@ -245,8 +245,9 @@ export function AccountingEstimator() {
               <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>About how much do you spend a month?</div>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 }}>
-                  Total money out — suppliers, wages, rent, everything. This is the bookkeeping price
-                  driver, and a different question from the transaction count above.
+                  The money that leaves the business in a typical month — supplier bills, wages, rent, software,
+                  everything you spend, excluding VAT, loan repayments, and transfers between your own accounts.
+                  New or seasonal? Use your last three months&apos; average.
                 </div>
                 <div style={{ marginTop: 10 }}>
                   <Pills items={EXPENSES} value={s.expenses} set={(id) => set({ expenses: id as ExpenseBand })} />
