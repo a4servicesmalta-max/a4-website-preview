@@ -742,8 +742,10 @@ function PricingCalc() {
                     About how much do you spend a month?
                   </div>
                   <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    Total money out — suppliers, wages, rent, everything. This is what sets your bookkeeping
-                    price. It is not the transaction count the VAT and audit tabs ask for.
+                    The money that leaves the business in a typical month — supplier bills, wages, rent, software,
+                    everything you spend. Excludes VAT, loan repayments, and transfers between your own accounts.
+                    New or seasonal? Use your last three months&apos; average. It sets your bookkeeping price, not
+                    the transaction count the VAT and audit tabs ask for.
                   </p>
                   {/* Nothing pre-selected: `expensesIdx` starts at -1, which
                       matches no chip, so every chip renders unpicked. */}
