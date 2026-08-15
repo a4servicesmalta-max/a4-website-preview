@@ -11,7 +11,6 @@ import {
   type QuoteServiceId,
   type RevenueBandId,
 } from "@/lib/quotation";
-import { nextMonth } from "@/lib/accounting-fee";
 import { flagsForServiceSelection, independenceNotice } from "@/lib/independence";
 import {
   EXPENSE_BANDS,
@@ -77,18 +76,25 @@ export function QuotationBuilder() {
   const [revenueBand, setRevenueBand] = useState<RevenueBandId>("100k-500k");
   const [entity, setEntity] = useState<ManagedEntity>("company");
   /**
-   * Monthly expenses — the bookkeeping price driver. Without it `buildQuote`
-   * quotes bookkeeping "On request" rather than guessing the entry band, so
-   * this field is what keeps the PDF priced.
+   * Monthly expenses — the bookkeeping price driver.
+   *
+   * B1: ships EMPTY. It used to default to "10-25k", so a visitor who never
+   * touched the field downloaded a PDF quoting the €69 band — a written,
+   * binding quotation for an answer they never gave, and the one artefact here
+   * that outlives the page. `buildQuote` already quotes "On request" on a
+   * missing band rather than guessing the entry band; the default was what
+   * stopped that safeguard ever firing.
    */
-  const [expenses, setExpenses] = useState<ExpenseBand>("10-25k");
+  const [expenses, setExpenses] = useState<ExpenseBand | "">("");
   // Earlier months that still need doing. This used to be `overdueYears`
   // because catch-up was capped per year; it is now priced per month at the
   // monthly rate, so months are the honest unit and the picker offers them.
   const [catchUpMonths, setCatchUpMonths] = useState(0);
-  // Required. Suggested as next month, never assumed — a wrong start month
-  // silently changes which months are catch-up.
-  const [startMonth, setStartMonth] = useState<string>(() => nextMonth());
+  // Required, and now actually empty. It was pre-filled with next month while
+  // the label claimed it was required, so the field could sail through
+  // untouched and the PDF asserted a start month nobody chose — which decides
+  // which months are catch-up, and so what the client is billed for.
+  const [startMonth, setStartMonth] = useState<string>("");
   const [services, setServices] = useState<Set<QuoteServiceId>>(() => new Set(["accounts", "vat"] as QuoteServiceId[]));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -134,7 +140,9 @@ export function QuotationBuilder() {
             revenueBand,
             services: [...services],
             entity,
-            expenses,
+            // "" is "not answered" — pass undefined so `buildQuote` takes its
+            // On-request path rather than seeing a band-shaped empty string.
+            expenses: expenses || undefined,
             catchUpMonths,
             startMonth,
           }),
@@ -157,6 +165,31 @@ export function QuotationBuilder() {
   };
   /** Wraps a pricing input's setter so no call site can forget the line above. */
   const priced = <T,>(set: (v: T) => void) => (v: T) => { set(v); retireQuotation(); };
+
+  /**
+   * M4 — the MBR annual return is a COMPANY filing, so a sole trader is never
+   * offered it. Hidden rather than shown-and-refused: an option you cannot buy
+   * is a question with no answer, and this form previously let a self-employed
+   * visitor tick it and download a PDF quoting it. `buildQuote` and
+   * /api/quotation both drop it too — this is the friendliest of the three
+   * gates, not the only one.
+   */
+  const catalog = useMemo(
+    () => QUOTE_SERVICE_CATALOG.filter((s) => !(s.id === "mbr" && entity !== "company")),
+    [entity]
+  );
+
+  /** Switching to sole trader must also drop an MBR already ticked. */
+  const setEntityAndSync = (e: ManagedEntity) => {
+    setEntity(e);
+    if (e !== "company") setServices((prev) => {
+      if (!prev.has("mbr")) return prev;
+      const next = new Set(prev);
+      next.delete("mbr");
+      return next;
+    });
+    retireQuotation();
+  };
 
   const toggle = (id: QuoteServiceId) => {
     setServices((prev) => {
@@ -190,6 +223,12 @@ export function QuotationBuilder() {
     if (!name.trim()) return setError("Enter your name.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError("Enter a valid email address.");
     if (!startMonth) return setError("Choose the month we should start from.");
+    // B1: bookkeeping cannot go on a written quotation without the band that
+    // prices it. The quote would render it "On request", which is honest but
+    // is not what someone clicking "Download my quotation" is asking for — so
+    // ask the one question instead of issuing a half-priced PDF.
+    if (services.has("accounts") && !expenses)
+      return setError("Tell us roughly what you spend a month — it is what sets the bookkeeping price, and we do not assume a band.");
     setBusy(true);
     try {
       const res = await fetch("/api/quotation", {
@@ -271,7 +310,7 @@ export function QuotationBuilder() {
               </div>
               <div>
                 <span style={label}>Whose books *</span>
-                <select value={entity} onChange={(e) => priced(setEntity)(e.target.value as ManagedEntity)} style={{ ...field, cursor: "pointer" }}>
+                <select value={entity} onChange={(e) => setEntityAndSync(e.target.value as ManagedEntity)} style={{ ...field, cursor: "pointer" }}>
                   {MANAGED_ENTITY_OPTIONS.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.label} — {o.sub}
@@ -285,15 +324,25 @@ export function QuotationBuilder() {
                 <span style={label}>Monthly expenses *</span>
                 <select
                   value={expenses}
-                  onChange={(e) => priced(setExpenses)(e.target.value as ExpenseBand)}
+                  onChange={(e) => priced(setExpenses)(e.target.value as ExpenseBand | "")}
                   style={{ ...field, cursor: "pointer" }}
                 >
+                  {/* Unselected by default, and it stays a real option so the
+                      visitor can put it back. Without this the first band would
+                      be pre-selected by the browser and we would be back to
+                      pricing an answer nobody gave. */}
+                  <option value="">Select your monthly spend…</option>
                   {EXPENSE_BANDS.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.label} — {b.hint}
                     </option>
                   ))}
                 </select>
+                {!expenses && (
+                  <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
+                    Needed before we can price the bookkeeping — we do not assume a band.
+                  </span>
+                )}
               </div>
               <div>
                 <span style={label}>Start from *</span>
@@ -326,7 +375,7 @@ export function QuotationBuilder() {
             <div style={{ marginTop: 22 }}>
               <span style={label}>Services needed</span>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="max-[640px]:!grid-cols-1">
-                {QUOTE_SERVICE_CATALOG.map((s) => {
+                {catalog.map((s) => {
                   const on = services.has(s.id);
                   return (
                     <button

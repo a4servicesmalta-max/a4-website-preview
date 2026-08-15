@@ -19,14 +19,22 @@ export async function POST(req: NextRequest) {
     const regNo = String(b.regNo || "").slice(0, 40);
     const industry = String(b.industry || "").slice(0, 80);
     const revenueBand = REVENUE_BANDS.some((r) => r.id === b.revenueBand) ? b.revenueBand : "100k-500k";
+    const entity = b.entity === "sole" ? "sole" : "company";
     const services = (Array.isArray(b.services) ? b.services : []).filter((s: string) =>
       VALID_SERVICES.includes(s as QuoteServiceId)
-    ) as QuoteServiceId[];
+    )
+      // M4: a sole trader is NEVER quoted the MBR annual return — it is a
+      // company filing they cannot make. Stripped HERE as well as in
+      // `buildQuote`, and stripped BEFORE the "select at least one service"
+      // check below, so a direct POST of `{ entity: "sole", services: ["mbr"] }`
+      // is a 400 rather than a PDF quoting €0 for a filing that does not exist.
+      // The PDF is the artefact that outlives the page; this is the route that
+      // makes it.
+      .filter((s: string) => !(s === "mbr" && entity !== "company")) as QuoteServiceId[];
     // Months, not years — see QuoteInput.catchUpMonths. `overdueYears` is
     // still read so an in-flight POST from a cached page prices something
     // rather than silently pricing zero catch-up.
     const catchUpMonths = Number(b.catchUpMonths) || (Number(b.overdueYears) || 0) * 12;
-    const entity = b.entity === "sole" ? "sole" : "company";
     const startMonth = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(b.startMonth || "")) ? String(b.startMonth) : "";
 
     if (!company) return NextResponse.json({ error: "Company name is required." }, { status: 400 });

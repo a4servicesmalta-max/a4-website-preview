@@ -195,6 +195,14 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   for (const id of input.services) {
     const b = BASELINES[id];
     if (!b) continue;
+    // The MBR annual return is a COMPANY filing. A Malta sole trader is not on
+    // the Business Registry, files no annual return, and has no authorised
+    // share capital for the registry fee to key on — so quoting it bills for a
+    // filing we could not make on their behalf even if they paid. Dropped
+    // rather than priced at zero: a €0 line reads as "included, free".
+    // Mirrors `mbrApplies` on vacei.com and the homepage wizard's
+    // `labour && entity === "company"`. /api/quotation refuses it as well.
+    if (id === "mbr" && entity !== "company") continue;
     if (b.type === "on-request") {
       hasOnRequest = true;
       lines.push({ id, name: b.name, hint: b.hint, display: "On request", annualEur: null });

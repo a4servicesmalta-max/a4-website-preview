@@ -116,12 +116,19 @@ export async function POST(req: NextRequest) {
     // submitted rather than trusted from the client's `meta.auditEligible`:
     // a POST that skips the browser UI must still be routed correctly, and
     // this flag decides whether A4 may ever audit this prospect.
-    const selectedServices: string[] = Array.isArray(meta?.services)
-      ? meta.services.map(String)
-      : meta?.service
-        ? [String(meta.service)]
-        : [];
-    const independence = flagsForServiceSelection(selectedServices);
+    //
+    // M1: this used to be `Array.isArray(x) ? x.map(String) : [String(x)]`,
+    // which could not handle the comma-joined string two of the three real
+    // clients send — the whole joined value became ONE element, exact matching
+    // failed, and every such lead routed `neutral`. Including the one case the
+    // rule exists for: a prospect ticking bookkeeping AND audit together.
+    // `normaliseServiceSelection` (inside `flagsForServiceSelection`) splits,
+    // trims and maps page labels onto the canonical ids.
+    const independence = flagsForServiceSelection(
+      // Prefer the plural field; fall back to the singular. Both may be a
+      // joined string, an array, or a page label — the normaliser takes any.
+      meta?.services ?? meta?.service ?? []
+    );
 
     const leadWritten = await pushLeadToPortal({
       name,

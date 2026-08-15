@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcAccountingFee, accountingSummary, formatStartMonth, nextMonth, type AccountingInput } from "./accounting-fee";
+import { calcAccountingFee, accountingSummary, quoteBreakdown, formatStartMonth, nextMonth, type AccountingInput } from "./accounting-fee";
 import { BOOKKEEPING_MANAGED_MONTHLY, LAUNCH_PROMO } from "@/data/a4QuotePack";
 
 // The entry expenses band, which `base` below pins. Bookkeeping is banded by
@@ -26,7 +26,7 @@ describe("accounting fee engine", () => {
   });
 
   it("refers the sectors we do not price instantly", () => {
-    expect(at({ sector: "other" })).toEqual({ refer: true });
+    expect(at({ sector: "other" })).toEqual({ refer: true, reason: "sector" });
   });
 
   it("applies the sector risk multiplier to our compliance work but never to the books", () => {
@@ -106,5 +106,95 @@ describe("start month", () => {
     expect(nextMonth(new Date("2026-08-13T00:00:00Z"))).toBe("2026-09");
     expect(nextMonth(new Date("2026-12-31T00:00:00Z"))).toBe("2027-01");
     expect(nextMonth(new Date("2026-01-01T00:00:00Z"))).toBe("2026-02");
+  });
+});
+
+/**
+ * B1 / M10 — the missing expenses band must be its OWN outcome, with its own
+ * words, and it must never be pre-answered on the visitor's behalf.
+ *
+ * The engine used to collapse "we do not have your spend answer" into
+ * `{ refer: true }`, which is the SECTOR-referral outcome. A visitor who simply
+ * had not reached the spend question was told their industry needed a director
+ * call — a statement about them that is not true, and one that hides the real
+ * (and instantly fixable) reason no price appeared. vacei.com has always kept
+ * `noExpenses` and `refer` apart with separate copy; this engine now does too.
+ */
+describe("a missing expenses band is not a sector referral", () => {
+  it("returns a distinct no-expenses outcome, not the referral one", () => {
+    const q = at({ expenses: "" });
+    expect(q).toEqual({ refer: true, reason: "no-expenses" });
+    // …and the sector case keeps its own reason, so the two never merge again.
+    expect(at({ sector: "other" })).toEqual({ refer: true, reason: "sector" });
+  });
+
+  it("says different words for the two — the visitor is told the real reason", () => {
+    const noBand = accountingSummary({ ...base, expenses: "" }, at({ expenses: "" }));
+    const sector = accountingSummary({ ...base, sector: "other" }, at({ sector: "other" }));
+    expect(noBand).not.toBe(sector);
+    // The fixable one names the thing to fix, and does not blame the sector.
+    expect(noBand).toMatch(/spend/i);
+    expect(noBand).not.toMatch(/sector/i);
+    expect(sector).toMatch(/sector/i);
+  });
+
+  it("treats an unrecognised band the same way as a missing one", () => {
+    // A stale cached page sending a retired band id is "we have no usable
+    // answer", not "your industry needs a call".
+    const stale = at({ expenses: "500K+" as AccountingInput["expenses"] });
+    expect(stale).toEqual({ refer: true, reason: "no-expenses" });
+    // Never, ever the cheapest band.
+    expect(stale).not.toMatchObject({ refer: false });
+  });
+
+  it("never prices anything at all without the band — not even the payroll line", () => {
+    // The whole quote is withheld, not just the bookkeeping line. A partial
+    // price is still a price the visitor anchors on.
+    const q = at({ expenses: "", head: 4, vatreg: "art10" });
+    expect(q).toEqual({ refer: true, reason: "no-expenses" });
+  });
+});
+
+/**
+ * M2 — the estimator's price PANEL and its emailed PAYLOAD showed two
+ * different figures for the same one-off, on the same screen.
+ *
+ * The panel mapped one-offs through `l.v * (1 - q.discountPct)` while the
+ * engine, the tests and the payload all keep one-offs undiscounted (pack
+ * rule). Inside the live promo window a 12-month company catch-up read €441 on
+ * screen and €588 in the proposal email — and the €588 is the one the backend
+ * will bill. The renderers are one function now, so they cannot disagree again.
+ */
+describe("the price breakdown shown equals the price breakdown sent", () => {
+  const withCatchUp = { ...base, entity: "company" as const, expenses: "0-10k" as const, behind: "12" };
+
+  it("never discounts the one-off in the breakdown, inside the promo window", () => {
+    const q = calcAccountingFee(withCatchUp, DURING_PROMO);
+    if (q.refer) throw new Error("unpriceable");
+    expect(q.discountPct).toBe(LAUNCH_PROMO.pct);
+    const oneOff = quoteBreakdown(q).filter((l) => l.v.includes("one-off"));
+    expect(oneOff).toHaveLength(1);
+    // 12 × €49 = €588 — the full figure, NOT €441 (which is 588 × 0.75).
+    expect(oneOff[0].v).toBe("€588 one-off");
+    expect(oneOff[0].v).not.toContain("441");
+  });
+
+  it("gives the identical breakdown whether the promo is on or off", () => {
+    // The one-off is the same money either way; only the monthly moves.
+    const on = calcAccountingFee(withCatchUp, DURING_PROMO);
+    const off = calcAccountingFee(withCatchUp, AFTER_PROMO);
+    if (on.refer || off.refer) throw new Error("unpriceable");
+    const oneOffOf = (q: typeof on) => quoteBreakdown(q).filter((l) => l.v.includes("one-off"));
+    expect(oneOffOf(on)).toEqual(oneOffOf(off));
+  });
+
+  it("is the same list the panel renders and the payload sends", () => {
+    // One function, two call sites — this is the property that makes the
+    // divergence unrepresentable rather than merely fixed today.
+    const q = calcAccountingFee(withCatchUp, DURING_PROMO);
+    if (q.refer) throw new Error("unpriceable");
+    const breakdown = quoteBreakdown(q);
+    expect(breakdown.map((l) => l.k)).toEqual([...q.monthly, ...q.oneOff].map((l) => l.k));
+    expect(breakdown).toEqual(quoteBreakdown(q));
   });
 });

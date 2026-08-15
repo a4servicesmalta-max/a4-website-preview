@@ -74,6 +74,11 @@ export function useQuoteActions(quote: () => QuotePayload) {
             phone: contact.phone,
             companyName: contact.company,
             service: q.service,
+            // The canonical ids, so /api/quote can derive the IESBA route from
+            // what was actually asked for rather than from this page's title.
+            // `q.service` alone ("Accounting & bookkeeping") matches no form id
+            // and routed every estimator lead `neutral`.
+            ...(q.serviceIds?.length ? { services: q.serviceIds } : {}),
             intent,
             reference: ref,
             page: q.page,

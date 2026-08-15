@@ -1,5 +1,12 @@
 /** Pricing info page copy from New website (2)/pricing-info.html */
 
+/*
+ * Bookkeeping figures come from the quote pack. Under pack mt-2026-08-14-volume
+ * they are the ENTRY band of nine, priced by monthly expenses — so every chip
+ * reading them says "from", never a bare figure and never "flat".
+ */
+import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "./a4QuotePack";
+
 export const PRICING_FACTORS = [
   { icon: "scan-line", t: "Scope of work", s: "Which services you need and how deep they go — from monthly bookkeeping to a full statutory audit." },
   { icon: "building-2", t: "Business size & structure", s: "Single company or a multi-entity group, holding structures and the entities involved." },
@@ -48,7 +55,7 @@ export const PRICING_COMMIT = [
 ];
 
 export const PRICING_HERO_CHIPS = [
-  "Managed bookkeeping €24/mo self-employed · €49/mo company",
+  `Managed bookkeeping from €${BOOKKEEPING_FROM}/mo self-employed · from €${BOOKKEEPING_COMPANY}/mo company`,
   "No hidden fees",
   "Clear communication",
   "Tailored quotes for audit & complex work",

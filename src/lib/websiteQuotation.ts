@@ -174,8 +174,11 @@ export type A4Totals = {
 /**
  * Services that carry the sector risk multiplier (mirrors the pack).
  *
- * `bookkeeping-managed` is deliberately absent: €24 / €49 are flat prices, and
- * so is the catch-up derived from them.
+ * `bookkeeping-managed` is deliberately absent: the managed bookkeeping price is
+ * set by entity × monthly expenses and is NOT uplifted by the sector risk
+ * multiplier — and neither is the catch-up derived from it. (It stopped being a
+ * flat price under pack mt-2026-08-14-volume; not being risk-uplifted is a
+ * separate rule and still holds.)
  */
 const RISK_UPLIFTED: ReadonlySet<A4Item["service"]> = new Set([
   "vat",

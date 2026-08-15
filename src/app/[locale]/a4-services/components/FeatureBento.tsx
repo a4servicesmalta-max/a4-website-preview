@@ -3,9 +3,14 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-// size cards (a fixed-pricing tile, a tinted "always compliant" card with a
+import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
+// size cards (a published-pricing tile, a tinted "always compliant" card with a
 // filing-status snippet, a dark visibility card with a sparkline, and a
 // "filed faster" confirmation tile). Light band, on-brand cobalt/teal.
+//
+// The pricing tile shows "from" prices: bookkeeping is set by monthly expenses
+// across nine bands under pack mt-2026-08-14-volume, so €24/€49 are the entry
+// band, not a flat fee. Figures come from src/data/a4QuotePack.ts.
 
 export function FBChart() {
   // simple rising area sparkline (data-viz UI element)
@@ -36,14 +41,15 @@ export function FeatureBento() {
         <div style={{ marginTop: 52 }}>
           {/* row 1 */}
           <div style={{ display: "grid", gridTemplateColumns: "0.92fr 1.5fr", gap: 20 }} className="fb-row">
-            {/* fixed pricing */}
+            {/* published pricing */}
             <Reveal style={{ ...cardBase, display: "flex", flexDirection: "column" }}>
               <span style={{ width: 52, height: 52, borderRadius: "var(--a4-r-md)", background: "var(--a4-surface-soft)", display: "grid", placeItems: "center" }}><Icon name="badge-euro" size={26} color="var(--a4-primary)" stroke={1.75} /></span>
-              <h3 style={{ ...h3, marginTop: 22 }}>Fixed monthly pricing</h3>
-              <p style={p}>Know exactly what you'll pay. No hourly surprises, no hidden fees — just a clear fixed fee.</p>
+              <h3 style={{ ...h3, marginTop: 22 }}>Published monthly pricing</h3>
+              <p style={p}>Know exactly what you'll pay. No hourly surprises, no hidden fees — one monthly price, set by what your business spends each month.</p>
               <div style={{ marginTop: "auto", paddingTop: 22, display: "flex", alignItems: "baseline", gap: 6 }}>
-                <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 40, color: "var(--a4-ink)", letterSpacing: "-1.5px" }}>€24</span>
-                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-mute)" }}>/ mo self-employed · €49 company</span>
+                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 18, color: "var(--a4-mute)" }}>from</span>
+                <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 40, color: "var(--a4-ink)", letterSpacing: "-1.5px" }}>€{BOOKKEEPING_FROM}</span>
+                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-mute)" }}>/ mo self-employed · from €{BOOKKEEPING_COMPANY} company</span>
               </div>
             </Reveal>
 

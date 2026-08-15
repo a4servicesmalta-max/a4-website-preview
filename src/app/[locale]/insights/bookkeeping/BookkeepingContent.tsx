@@ -7,6 +7,7 @@ import { Calendar, ArrowUpRight, Check, X, Star, ChevronDown, RefreshCw, Clock }
 import { BlogPost } from '@/utils/blog';
 import { cn } from '@/lib/utils';
 import { CLIENT_ONBOARDING_URL } from '@/lib/external-links';
+import { BOOKKEEPING_FROM } from '@/data/a4QuotePack';
 
 // --- Sub-components for better organization ---
 
@@ -529,7 +530,16 @@ export default function BookkeepingContent({ relatedBlogs = [] }: { relatedBlogs
                       <td className="py-5 px-5 text-center"><Check className="mx-auto text-primary-blue" size={18} strokeWidth={3} /></td>
                       <td className="py-5 px-5 text-center"><Check className="mx-auto text-primary-blue" size={18} strokeWidth={3} /></td>
                       <td className="py-5 px-5 text-center font-bold text-primary-blue text-xs">Full Service</td>
-                      <td className="py-5 px-5 text-right font-bold text-primary-blue">€24–49/mo</td>
+                      {/*
+                        A "Starting" column, so this is the entry band only.
+                        NOT "€24–49/mo": that read as the full-service range and
+                        invented a €49 ceiling the ladder does not have. Under
+                        pack mt-2026-08-14-volume bookkeeping is priced by monthly
+                        expenses across nine bands and runs up to €339 self-employed
+                        / €549 for a company — see BOOKKEEPING_SOLE_TOP and
+                        BOOKKEEPING_COMPANY_TOP in src/data/a4QuotePack.ts.
+                      */}
+                      <td className="py-5 px-5 text-right font-bold text-primary-blue">From €{BOOKKEEPING_FROM}/mo</td>
                     </tr>
                   </tbody>
                 </table>

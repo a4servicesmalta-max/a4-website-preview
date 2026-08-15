@@ -17,18 +17,36 @@ import { CAPITAL_BANDS, MBR_ANNUAL_RETURN, LAUNCH_PROMO, catchUpLabel } from "@/
 import { evaluateA4Items } from "@/lib/websiteQuotation";
 
 /**
- * Where the wizard lands after eight Next clicks — and it is UNPRICEABLE: the
- * defaults ask A4 both to keep the books and to give assurance on them, which
- * independence forbids, so `qCalc` produces no figures at all. The visitor is
- * asked which of the two is ours; the two fixtures below are the two answers.
+ * Where the wizard lands after eight Next clicks — and it is UNPRICEABLE, now
+ * for TWO independent reasons:
+ *
+ *  1. the defaults ask A4 both to keep the books and to give assurance on
+ *     them, which independence forbids; and
+ *  2. `Q_INIT` no longer pre-answers the monthly-spend band, so there is no
+ *     rate to price the books at even if (1) were resolved (B1).
+ *
+ * This fixture deliberately inherits BOTH gaps from `Q_INIT` rather than
+ * papering over them, so a regression that reinstates either default fails
+ * here first. The priced fixtures below each state their own answers.
  */
-const DEFAULT_PATH: QState = { ...Q_INIT, step: 9, book: "managed", pay: "we", assure: "we", startMonth: "2026-09" };
+const DEFAULT_PATH: QState = { ...Q_INIT, step: 9, book: "managed", pay: "we", assure: "we" };
 
-/** "Keep the bookkeeping with us" — the canonical priced basket. */
-const CANONICAL: QState = { ...DEFAULT_PATH, assure: "none" };
+/**
+ * "Keep the bookkeeping with us" — the canonical priced basket.
+ *
+ * The band and the start month are stated EXPLICITLY here, because that is what
+ * a real visitor has to do: they are answers, not defaults. Every pinned figure
+ * below is the €10–25k company band, exactly as before.
+ */
+const CANONICAL: QState = { ...DEFAULT_PATH, assure: "none", expenses: "10-25k", startMonth: "2026-09" };
 
-/** "Take the audit or review with us" — pins the assurance side of the pack. */
-const ASSURED: QState = { ...DEFAULT_PATH, book: "none", vat: "none" };
+/**
+ * "Take the audit or review with us" — pins the assurance side of the pack.
+ * Carries NO expenses band on purpose: the band prices bookkeeping only, so an
+ * audit-only visitor must never be held on a question that prices nothing for
+ * them.
+ */
+const ASSURED: QState = { ...DEFAULT_PATH, book: "none", vat: "none", startMonth: "2026-09" };
 
 /** Fixed clocks — the launch promo expires by data, so tests must pin the day
  *  or every total below silently changes on 1 September 2026. */
@@ -58,6 +76,11 @@ describe("the canonical quote", () => {
     expect(Q_INIT.entity).toBe("company");
     expect(Q_INIT.cap).toBe("1500");
     expect(Q_INIT.book).toBe("managed");
+    // …but NEVER the price drivers themselves. See the B1 block at the foot of
+    // this file: entity and capital shape the quote, the spend band and the
+    // start month ARE the quote, and those two are the visitor's to give.
+    expect(Q_INIT.expenses).toBe("");
+    expect(Q_INIT.startMonth).toBe("");
   });
 
   it("holds the pinned totals", () => {
@@ -355,16 +378,26 @@ describe("IESBA independence", () => {
     expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([0, 0, 0]);
     expect(qItems(atQuote)).toEqual([]);
 
-    // Either button clears it AND prices immediately — the visitor is never
-    // denied a price, only asked one question first.
-    const keptBooks = { ...atQuote, assure: "none" };
+    // Either button clears the CONFLICT immediately. The bookkeeping side then
+    // still needs the spend band — the untouched default path trips both gates,
+    // and B1 is why the second one now exists at all. Answering it prices at
+    // once; that is the whole journey, and no step of it invents an answer.
+    const keptBooks = { ...atQuote, assure: "none" as const };
     expect(qIndependence(keptBooks).route).toBe("bookkeeping");
-    const kb = qCalc(keptBooks, PROMO_ON);
-    expect(kb.conflict).toBe(false);
-    expect(kb.moTot).toBeGreaterThan(0);
-    expect(qItems(keptBooks).length).toBeGreaterThan(0);
-    expect(evaluateA4Items(qItems(keptBooks), qRisk(keptBooks)).independenceConflict).toBe(false);
+    expect(qCalc(keptBooks, PROMO_ON).conflict).toBe(false);
+    expect(qCalc(keptBooks, PROMO_ON).noExpenses).toBe(true);
+    expect(qItems(keptBooks)).toEqual([]);
 
+    const banded = { ...keptBooks, expenses: "10-25k" as const };
+    const kb = qCalc(banded, PROMO_ON);
+    expect(kb.conflict).toBe(false);
+    expect(kb.noExpenses).toBe(false);
+    expect(kb.moTot).toBeGreaterThan(0);
+    expect(qItems(banded).length).toBeGreaterThan(0);
+    expect(evaluateA4Items(qItems(banded), qRisk(banded)).independenceConflict).toBe(false);
+
+    // The assurance side needs NO band — it does not buy bookkeeping, so it is
+    // never held on a question that prices nothing for it.
     const tookAssurance = { ...atQuote, book: "none", vat: "none" };
     expect(qIndependence(tookAssurance).route).toBe("audit");
     const ta = qCalc(tookAssurance, PROMO_ON);
@@ -522,5 +555,86 @@ describe("a sole trader is never quoted a company filing", () => {
     if (sole.refer || company.refer) throw new Error("unpriceable");
     const mbr = line(company, "MBR annual return fee")!.v;
     expect(company.yrTot - sole.yrTot).toBe(mbr);
+  });
+});
+
+/**
+ * B1 — the wizard must not pre-answer the monthly spend or the start month.
+ *
+ * `Q_INIT` used to ship `expenses: "10-25k"` and `startMonth: nextMonth()`, so
+ * a visitor who clicked Next through the wizard without reading it was given a
+ * complete, binding quote for two answers they never gave. The failure mode is
+ * worse than a silent degrade: the band id is VALID, so the backend re-prices
+ * it, agrees to within €1/1%, and issues a real quotation. A company spending
+ * €300k/month was quoted €69/mo (should be €379); a company spending €8k/month
+ * was quoted €69/mo (should be €49). The pack docblock names both directions of
+ * loss and the default produced both at once.
+ *
+ * vacei.com holds Next on an empty band and degrades to `noExpenses`. These
+ * pin the same behaviour here, walking the wizard's own `qAdvance` rather than
+ * restating the rules — the shape the independence default-path test uses.
+ */
+describe("nothing about the price is pre-answered", () => {
+  it("ships no band and no start month", () => {
+    expect(Q_INIT.expenses).toBe("");
+    expect(Q_INIT.startMonth).toBe("");
+  });
+
+  it("prices NOTHING on the untouched default path, and says the band is why", () => {
+    // Nine Next clicks from Q_INIT, touching nothing — the visitor's own path.
+    let atQuote: QState = { ...Q_INIT };
+    for (let i = 0; i < 9; i++) atQuote = { ...atQuote, ...qAdvance(atQuote, 9) };
+    expect(atQuote.step).toBe(9);
+    expect(atQuote.expenses).toBe("");
+
+    const shown = qCalc(atQuote, PROMO_ON);
+    expect(shown.noExpenses).toBe(true);
+    // Not one figure anywhere — not a line, not a total, not a struck-through
+    // "before discount" price to anchor on.
+    expect([...shown.mo, ...shown.yr, ...shown.one]).toEqual([]);
+    expect([shown.moTot, shown.yrTot, shown.oneTot, shown.grossMo, shown.grossYr]).toEqual([0, 0, 0, 0, 0]);
+    expect(shown.promoApplied).toBe(false);
+    // Nothing submittable either, so `canSend` (which needs items) stays false.
+    expect(qItems(atQuote)).toEqual([]);
+  });
+
+  it("never falls back to the cheapest band — the one direction that loses money invisibly", () => {
+    const noBand = qCalc({ ...CANONICAL, expenses: "" }, PROMO_OFF);
+    expect(line(noBand, "Bookkeeping")).toBeUndefined();
+    expect(noBand.grossMo).not.toBe(49); // the entry company band
+    expect(noBand.grossMo).toBe(0);
+  });
+
+  it("treats an unrecognised band as unanswered, not as the entry band", () => {
+    const stale = qCalc({ ...CANONICAL, expenses: "500K+" as QState["expenses"] }, PROMO_OFF);
+    expect(stale.noExpenses).toBe(true);
+    expect(stale.moTot).toBe(0);
+    expect(qItems({ ...CANONICAL, expenses: "500K+" as QState["expenses"] })).toEqual([]);
+  });
+
+  it("prices instantly the moment the band is picked — the visitor is never stuck", () => {
+    let atQuote: QState = { ...Q_INIT };
+    for (let i = 0; i < 9; i++) atQuote = { ...atQuote, ...qAdvance(atQuote, 9) };
+    // The default path is ALSO an independence conflict, so clear both.
+    const answered: QState = { ...atQuote, assure: "none", expenses: "10-25k", startMonth: "2026-09" };
+    const r = qCalc(answered, PROMO_OFF);
+    expect(r.noExpenses).toBe(false);
+    expect(r.conflict).toBe(false);
+    expect(line(r, "Bookkeeping")?.v).toBe(69);
+    expect(qItems(answered).length).toBeGreaterThan(0);
+  });
+
+  it("holds the send on an unconfirmed start month, so 'suggested not assumed' is true", () => {
+    // `startOk` is the wizard's own gate; an empty month must fail it. It used
+    // to be pre-filled, so this passed on an answer nobody gave.
+    const startOk = (v: string) => /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
+    expect(startOk(Q_INIT.startMonth)).toBe(false);
+    expect(startOk("2026-09")).toBe(true);
+  });
+
+  it("catch-up cannot be priced without the band either", () => {
+    const r = qCalc({ ...CANONICAL, expenses: "", behind: "12" }, PROMO_OFF);
+    expect(r.oneTot).toBe(0);
+    expect(r.one).toEqual([]);
   });
 });

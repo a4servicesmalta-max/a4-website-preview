@@ -530,10 +530,21 @@ function PricingInfoBanner() {
 function PricingCalc() {
   const [svc, setSvc] = useState<ServiceId>("accounting");
   const [entityIdx, setEntityIdx] = useState(1); // company by default
-  const [expensesIdx, setExpensesIdx] = useState(1); // €10–25k/mo by default
-  // REQUIRED before the quote is priceable. Suggested as next month, never
-  // assumed — it decides which months are catch-up and which are not.
-  const [startMonth, setStartMonth] = useState<string>(() => nextMonth());
+  /**
+   * B1 — the spend band is NOT pre-answered. `-1` is "nothing picked".
+   *
+   * This shipped `useState(1)` (the €10–25k band) under a comment reading
+   * "€10–25k/mo by default", so a visitor who never touched the chips was
+   * quoted €69/mo and could send it. The band id was valid, so the backend
+   * re-priced it, agreed, and issued the quotation — the failure is invisible
+   * from every side except the client's bank statement.
+   */
+  const [expensesIdx, setExpensesIdx] = useState(-1);
+  // REQUIRED before the quote is priceable — and now actually empty. It was
+  // pre-filled with next month while the comment claimed it was required, so
+  // `startOk` passed on an answer nobody gave and the visitor could send
+  // without ever seeing the field.
+  const [startMonth, setStartMonth] = useState<string>("");
   const [catchUpIdx, setCatchUpIdx] = useState(0);
   const [vatVol, setVatVol] = useState(1);
   const [turn, setTurn] = useState(1);
@@ -562,13 +573,20 @@ function PricingCalc() {
   let items: A4Item[] = [];
 
   const entity = PR_ENTITY_IDS[entityIdx] ?? "company";
-  const expenses = PR_EXPENSE_IDS[expensesIdx] ?? "0-10k";
+  // `undefined` while unanswered. NOT `?? "0-10k"` — falling back to the entry
+  // band is the one direction that loses money invisibly, and it is precisely
+  // what the pack docblock forbids callers from doing.
+  const expenses: ExpenseBand | undefined = PR_EXPENSE_IDS[expensesIdx];
   const catchUpMonths = PR_CATCHUP_MONTHS[catchUpIdx] ?? 0;
-  /** null when the band is unknown — the quote then nulls to the lead path. */
-  const bookRate = managedMonthly(entity, expenses);
+  /** null when the band is missing or unknown — the quote is then withheld. */
+  const bookRate = expenses == null ? null : managedMonthly(entity, expenses);
+  /** B1: the accounting tab cannot price anything without the band. */
+  const noExpenses = svc === "accounting" && bookRate == null;
 
   if (svc === "accounting") {
-    items = [
+    // No band → no basket. An empty basket is what keeps `canSend` false, so
+    // nothing can be submitted at a band the visitor never chose.
+    items = expenses == null ? [] : [
       { service: "bookkeeping-managed", entity, expenses },
       ...(catchUpMonths > 0 ? [{ service: "catchup" as const, months: catchUpMonths, entity, expenses }] : []),
     ];
@@ -634,14 +652,34 @@ function PricingCalc() {
   });
   const independenceText = independenceNotice(independence.route);
 
+  /**
+   * M13 — the start month only applies to the BOOKKEEPING basket.
+   *
+   * The month input renders on the accounting tab only, but `serviceStartDate:
+   * startMonth` was sent from every tab, so a VAT or audit submission carried a
+   * confidently-stated start date the visitor never saw a field for, let alone
+   * filled in. It is omitted from non-bookkeeping baskets rather than the field
+   * being added to tabs it does not apply to: a VAT return has no "first month
+   * we keep the books", so asking would be inventing a question to justify an
+   * answer we should not have been sending.
+   */
+  const needsStartMonth = svc === "accounting";
   const startOk = /^\d{4}-(0[1-9]|1[0-2])$/.test(startMonth);
   const canSend =
-    !isLeadPath && startOk && name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    !isLeadPath &&
+    items.length > 0 &&
+    !noExpenses &&
+    (!needsStartMonth || startOk) &&
+    name.trim().length > 0 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const send = async () => {
     if (!canSend || sending) return;
     setSending(true);
-    const result = await submitWebsiteQuotation({ name, email, items, serviceStartDate: startMonth });
+    const result = await submitWebsiteQuotation({
+      name, email, items,
+      ...(needsStartMonth && startOk ? { serviceStartDate: startMonth } : {}),
+    });
     setSent(result);
     // Conversion on a CONFIRMED backend result only — `error` means the record
     // never landed, and reporting it would bid on leads we do not have.
@@ -707,10 +745,12 @@ function PricingCalc() {
                     Total money out — suppliers, wages, rent, everything. This is what sets your bookkeeping
                     price. It is not the transaction count the VAT and audit tabs ask for.
                   </p>
+                  {/* Nothing pre-selected: `expensesIdx` starts at -1, which
+                      matches no chip, so every chip renders unpicked. */}
                   <PrChip items={PR_EXPENSE_LABELS} value={expensesIdx} set={setExpensesIdx} cols={3} />
-                  <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
+                  <p className="a4-font-body text-[13px] mt-[12px] tabular-nums" style={{ color: bookRate == null ? "#E8C08A" : "var(--a4-on-dark-mute)" }}>
                     {bookRate == null
-                      ? "Tell us your monthly spend and we price this instantly."
+                      ? "Pick a band and we price this instantly — we do not assume one for you."
                       : `${prEuro(bookRate)} / month — ${A4_MANAGED_OFFER[entityIdx]?.name ?? ""} at ${PR_EXPENSE_LABELS[expensesIdx]} a month.`}
                   </p>
                 </div>
@@ -855,23 +895,40 @@ function PricingCalc() {
                 <div className="a4-font-body text-[11px] uppercase tracking-[.12em] text-[var(--a4-mute)]">
                   Your fixed price
                 </div>
-                <div className="flex flex-wrap items-baseline gap-2 mt-[10px]">
-                  {unit !== "/ mo" && <span className="a4-font-body text-[17px] text-[var(--a4-mute)]">from</span>}
-                  <span
-                    className="a4-font-display font-medium text-[52px] text-[var(--a4-ink)] leading-none"
-                    style={{ letterSpacing: "-2px" }}
-                  >
-                    {prEuro(price)}
-                  </span>
-                  {discounted && (
-                    <span className="a4-font-body text-[17px] text-[var(--a4-mute)] line-through">{prEuro(gross)}</span>
-                  )}
-                  <span className="a4-font-body text-[14px] text-[var(--a4-mute)]">{unit}</span>
-                </div>
-                {discounted && (
-                  <div className="a4-font-body text-[12px] font-semibold text-[var(--a4-primary)] mt-2">
-                    {LAUNCH_PROMO.label}
-                  </div>
+                {/* B1: no band, no figure — not the headline, not the
+                    struck-through "before discount" price, not the line items.
+                    A number on screen is what a visitor anchors on, and this
+                    one would have been someone else's price. */}
+                {noExpenses ? (
+                  <>
+                    <div className="a4-font-display font-medium text-[32px] text-[var(--a4-ink)] leading-none mt-[10px]" style={{ letterSpacing: "-1px" }}>
+                      Tell us your spend
+                    </div>
+                    <p className="a4-font-body text-[13px] leading-[1.55] text-[var(--a4-mute)] mt-[10px]">
+                      Pick a monthly-spend band above and your full itemised price appears here straight away. We do not assume a band — it is what sets the bookkeeping fee.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-baseline gap-2 mt-[10px]">
+                      {unit !== "/ mo" && <span className="a4-font-body text-[17px] text-[var(--a4-mute)]">from</span>}
+                      <span
+                        className="a4-font-display font-medium text-[52px] text-[var(--a4-ink)] leading-none"
+                        style={{ letterSpacing: "-2px" }}
+                      >
+                        {prEuro(price)}
+                      </span>
+                      {discounted && (
+                        <span className="a4-font-body text-[17px] text-[var(--a4-mute)] line-through">{prEuro(gross)}</span>
+                      )}
+                      <span className="a4-font-body text-[14px] text-[var(--a4-mute)]">{unit}</span>
+                    </div>
+                    {discounted && (
+                      <div className="a4-font-body text-[12px] font-semibold text-[var(--a4-primary)] mt-2">
+                        {LAUNCH_PROMO.label}
+                      </div>
+                    )}
+                  </>
                 )}
                 <div className="h-px bg-[var(--a4-hairline-light)] my-5" />
                 <div className="flex flex-col gap-[9px]">

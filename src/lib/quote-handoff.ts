@@ -35,6 +35,20 @@ export type QuotePayload = {
   lines: QuoteLineOut[];
   /** Plain-English list of what they actually asked for. */
   services: string[];
+  /**
+   * The CANONICAL service ids this quote covers, from
+   * `src/data/serviceRequestForms.ts` — "Bookkeeping",
+   * "Audit & Annual Accounts", and so on.
+   *
+   * Distinct from `services` above, which is prose for a human to read, and
+   * from `service`, which is this page's own title. /api/quote derives the
+   * IESBA independence route from these, and an unmapped page label routes
+   * `neutral`: the accounting estimator sent only "Accounting & bookkeeping"
+   * and so produced a lead whose greppable independence line said
+   * `audit_eligible=true` while its own answers said false. State the ids and
+   * the derivation cannot be wrong about a surface it has never heard of.
+   */
+  serviceIds?: string[];
   /** Every question and the answer they gave, for the scoping call. */
   answers: { k: string; v: string }[];
   note?: string;

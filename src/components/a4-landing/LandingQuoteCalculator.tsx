@@ -12,9 +12,13 @@ import { trackConversion } from "@/lib/analytics";
 // The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
 // change it there first and mirror it here.
 //
-// Pack mt-2026-08-14-managed removed the software-only route this wizard used
-// to open with ("Only software" / "Software + accountants"). There is one
-// bookkeeping service: A4 keeps the books, flat, priced by entity.
+// CURRENT PACK: mt-2026-08-14-volume (see A4_QUOTE_PACK_VERSION). Bookkeeping
+// is priced by ENTITY × MONTHLY EXPENSES across nine bands — it is not flat,
+// and copy reading these figures must say "from", never "flat".
+//
+// History: the superseded mt-2026-08-14-managed pack removed the software-only
+// route this wizard used to open with ("Only software" / "Software +
+// accountants"). There is one bookkeeping service: A4 keeps the books.
 
 const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["shop", "Shop, trade or services", "standard"],
@@ -93,8 +97,11 @@ export type QState = {
   /**
    * Monthly expenses band — the bookkeeping price driver. Distinct from `txn`:
    * this one prices the books, `txn` prices VAT, the tax return and the audit.
+   *
+   * `""` means NOT YET ANSWERED. There is no default band, deliberately — see
+   * `Q_INIT`.
    */
-  expenses: ExpenseBand;
+  expenses: ExpenseBand | "";
   /** Authorised share capital band — sets the MBR registry fee on the annual return. */
   cap: CapitalBand;
   head: number;
@@ -113,10 +120,27 @@ export type QState = {
   regoff: string;
 };
 
+/**
+ * The wizard's opening state.
+ *
+ * `expenses` and `startMonth` are EMPTY, and must stay that way. They used to
+ * ship `"10-25k"` and `nextMonth()`, which handed a visitor who clicked Next
+ * without reading a complete, binding quote for two answers they never gave.
+ * That is worse than a silent degrade: the band id is valid, so the backend
+ * re-priced it, agreed within €1/1%, and issued a real quotation. A company
+ * spending €300k/month was quoted €69/mo instead of €379; one spending €8k/mo
+ * was quoted €69 instead of €49 — the pack docblock names both directions of
+ * loss and the single default produced both at once. The copy claimed
+ * "Suggested, not assumed — the visitor confirms it"; nothing required a
+ * confirmation, and `startOk` passed on the suggestion.
+ *
+ * Everything else here IS a safe default: they shape the quote (which sector,
+ * whose books, how many staff) but none of them is the price driver, and each
+ * is visible on a step the visitor passes through.
+ */
 export const Q_INIT: QState = {
-  step: 0, sector: "shop", txn: "21-60", entity: "company", expenses: "10-25k", cap: "1500", head: 2, behind: "0",
-  // Suggested, not assumed — the visitor confirms it on the "When we start" step.
-  startMonth: nextMonth(), vatreg: "art10", size: "small",
+  step: 0, sector: "shop", txn: "21-60", entity: "company", expenses: "", cap: "1500", head: 2, behind: "0",
+  startMonth: "", vatreg: "art10", size: "small",
   book: "managed", pay: "none", vat: "none", taxret: "none", assure: "none", regoff: "none",
 };
 
@@ -126,9 +150,15 @@ type Note = [string, string];
 /** Volumes at which a company is unlikely to stay under the small-company thresholds. */
 const QT_BIG_VOL = ["151-400", "401-1000", "1000+"];
 
-/** The human label for an expenses band, for use inside prose. */
-const prettyBand = (id: ExpenseBand) =>
-  (EXPENSE_BANDS.find((b) => b.id === id) ?? EXPENSE_BANDS[0]).label;
+/**
+ * The human label for an expenses band, for use inside prose.
+ *
+ * Returns null when nothing is picked — the old `?? EXPENSE_BANDS[0]` fallback
+ * would have described the entry band to a visitor who chose nothing, which is
+ * exactly the pre-answering this component was fixed to stop doing.
+ */
+const prettyBand = (id: ExpenseBand | "") =>
+  EXPENSE_BANDS.find((b) => b.id === id)?.label ?? null;
 
 /**
  * Whether the assurance line is a review engagement rather than a full audit.
@@ -158,7 +188,7 @@ export function qCalc(q: QState, now: Date = new Date()) {
   const tier = QTIERS[(QSECT.find((s) => s[0] === q.sector) || QSECT[0])[2]];
   const notes: Note[] = [];
   if (tier.note) notes.push(tier.note);
-  if (tier.refer) return { refer: true as const, conflict: false as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false };
+  if (tier.refer) return { refer: true as const, conflict: false as const, noExpenses: false as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false };
   // IESBA independence, settled BEFORE anything is priced — the same shape
   // vacei.com uses, and for the same reason. A4 is not permitted to keep the
   // books AND give assurance on them, so there is no such engagement to put a
@@ -167,18 +197,29 @@ export function qCalc(q: QState, now: Date = new Date()) {
   // visitor anchors on. `qAdvance` turns the assurance question on by default,
   // so this is the path most homepage visitors take, not an edge case. The
   // wizard asks which of the two is ours; either answer prices instantly.
-  if (q.book === "managed" && q.assure === "we") {
-    return { refer: false as const, conflict: true as const, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false };
+  const entity: ManagedEntity = q.entity === "sole" ? "sole" : "company";
+  // null when the band is missing OR unrecognised. Only asked of a visitor who
+  // actually wants the books kept — the band prices bookkeeping and nothing
+  // else, so an audit-only enquiry is never held on it.
+  const bookRate = q.expenses === "" ? null : managedMonthly(entity, q.expenses);
+  const wantsBooks = q.book === "managed";
+  /** B1: the spend answer is missing, so the books cannot be priced at all. */
+  const noExpenses = wantsBooks && bookRate == null;
+  /** Both sides of the independence rule at once. */
+  const conflict = wantsBooks && q.assure === "we";
+  // Both flags are computed independently and reported independently: the
+  // untouched default path trips BOTH, and telling the visitor about only one
+  // sends them round a second time. Either one withholds every figure —
+  // producing lines and then hiding the button still puts a number on screen,
+  // and a number is what a visitor anchors on.
+  if (conflict || noExpenses) {
+    return { refer: false as const, conflict, noExpenses, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false };
   }
   const rm = tier.mult;
-  const entity: ManagedEntity = q.entity === "sole" ? "sole" : "company";
   const mo: Line[] = [], yr: Line[] = [], one: Line[] = [];
   // Flat, and deliberately NOT × rm — the sector loading applies to the
   // compliance work, not to keeping the books.
-  // null on an unrecognised expenses band — the line is dropped rather than
-  // priced at the cheapest band, which nulls the quote to the lead path.
-  const bookRate = managedMonthly(entity, q.expenses);
-  if (q.book === "managed" && bookRate != null) {
+  if (wantsBooks && bookRate != null) {
     mo.push({
       n: "Bookkeeping",
       e: MANAGED_ENTITY_LABELS[entity] + " — you send the paperwork, we keep the books",
@@ -247,9 +288,11 @@ export function qCalc(q: QState, now: Date = new Date()) {
   // wire-contract label — `qItems` keys the basket off it, so it must not be
   // reworded here without changing catchUpLabel in the pack.
   const months = +q.behind;
-  const catchUpName = catchUpLabel(months, entity, q.expenses);
-  const catchUpFee = catchUpAmount(months, entity, q.expenses);
-  if (months > 0 && q.book === "managed" && catchUpName != null && catchUpFee != null) {
+  // Proved a real band by the `noExpenses` guard above whenever the books are
+  // ours; an audit-only basket has no catch-up line to price.
+  const catchUpName = q.expenses === "" ? null : catchUpLabel(months, entity, q.expenses);
+  const catchUpFee = q.expenses === "" ? null : catchUpAmount(months, entity, q.expenses);
+  if (months > 0 && wantsBooks && catchUpName != null && catchUpFee != null) {
     one.push({
       n: catchUpName,
       e: "the same monthly rate for each earlier month — no catch-up premium, no cap",
@@ -272,7 +315,7 @@ export function qCalc(q: QState, now: Date = new Date()) {
   if (promo && (grossMo > 0 || grossYr > 0)) notes.push(["ok", LAUNCH_PROMO.note]);
 
   return {
-    refer: false as const, conflict: false as const, mo, yr, one, notes,
+    refer: false as const, conflict: false as const, noExpenses: false as const, mo, yr, one, notes,
     moTot, yrTot, oneTot: sum(one),
     /** List prices, for the struck-through originals. */
     grossMo, grossYr, promoApplied: promo && (grossMo > 0 || grossYr > 0),
@@ -304,17 +347,23 @@ export function qRisk(q: QState): A4Risk {
  */
 export function qItems(q: QState): A4Item[] {
   const r = qCalc(q);
-  // Nothing was priced, so there is nothing to submit. The conflict case is the
-  // load-bearing one: an empty basket is what keeps `canSend` false and what
-  // stops a quotation the server would refuse from ever leaving the page.
-  if (r.refer || r.conflict) return [];
+  // Nothing was priced, so there is nothing to submit. An empty basket is what
+  // keeps `canSend` false and what stops a quotation the server would refuse —
+  // or, for `noExpenses`, one the server would happily ACCEPT at a band nobody
+  // chose — from ever leaving the page. That second case is the money bug: the
+  // band id was valid, so no downstream check could have caught it.
+  if (r.refer || r.conflict || r.noExpenses) return [];
   const all = [...r.mo, ...r.yr, ...r.one];
   const has = (n: string) => all.some((l) => l.n === n);
   const txn = q.txn as TxnBand;
   const entity: ManagedEntity = q.entity === "sole" ? "sole" : "company";
   const items: A4Item[] = [];
+  // `qCalc` returned priced lines, which it only does once the band resolved,
+  // so `q.expenses` is a real band wherever a bookkeeping or catch-up item is
+  // built below. Narrowed once here rather than asserted at each use.
+  const expenses = q.expenses as ExpenseBand;
 
-  if (has("Bookkeeping")) items.push({ service: "bookkeeping-managed", entity, expenses: q.expenses });
+  if (has("Bookkeeping")) items.push({ service: "bookkeeping-managed", entity, expenses });
   if (has("Payroll")) items.push({ service: "payroll", heads: q.head });
   if (has("VAT returns")) items.push({ service: "vat", txn, vatreg: q.vatreg === "art12" ? "art12" : "art10" });
   if (has("VAT declaration")) items.push({ service: "vat", txn, vatreg: "art11" });
@@ -323,7 +372,7 @@ export function qItems(q: QState): A4Item[] {
   if (has("Registered office")) items.push({ service: "registered-office" });
   if (has("MBR annual return fee")) items.push({ service: "mbr", capital: q.cap || "1500" });
   // Catch-up is keyed on the answer, not on the (now dynamic) line label.
-  if (q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity, expenses: q.expenses });
+  if (q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity, expenses });
   // Onboarding carries NO figure, but it IS part of the basket — the backend
   // reads `hasUnpricedOnboarding` off the items to add "onboarding is not
   // included in the figures below" to the quotation description. Omitting it
@@ -357,8 +406,14 @@ export function qItems(q: QState): A4Item[] {
  */
 export function qAdvance(q: QState, lastStep: number): Partial<QState> {
   const patch: Partial<QState> = { step: Math.min(lastStep, q.step + 1) };
-  // Step indices shifted by one when "Monthly spend" was inserted at 2.
-  if (q.step === 3 && q.book === "none") { patch.book = "managed"; patch.taxret = "we"; }
+  // M12: the step-3 patch that re-enabled bookkeeping and the tax return
+  // (`if (q.step === 3 && q.book === "none") { book = "managed"; taxret = "we"; }`)
+  // is GONE. It was vestigial from the pre-managed flow, and it overrode an
+  // EXPLICIT choice: a visitor who switched bookkeeping off on the services
+  // step and then walked back through the wizard (Back ×5, Next) had it — and
+  // the tax return — switched silently back on, adding services and money they
+  // had already declined. A default may fill a blank; it may never overwrite an
+  // answer.
   if (q.step === 4) patch.pay = q.head > 0 ? "we" : "none";
   if (q.step === 7 && q.assure === "none") patch.assure = "we";
   return patch;
@@ -446,6 +501,11 @@ export function LandingQuoteCalculator() {
 
   const step = q.step;
   const r = qCalc(q);
+  // The client's own monthly rate, or null while the band is unanswered. Every
+  // place that used to interpolate a figure reads this and says so when null,
+  // rather than printing the entry band's number as if it were theirs.
+  const bandRate = q.expenses === "" ? null : managedMonthly(q.entity === "sole" ? "sole" : "company", q.expenses);
+  const bandLabel = prettyBand(q.expenses);
 
   const pill = (on: boolean) => ({ on });
   const opts = (list: [string, string, string][], key: keyof QState): Opt[] =>
@@ -454,7 +514,7 @@ export function LandingQuoteCalculator() {
   const STEP_META: [string, string, (() => Opt[]) | null][] = [
     ["What does the company do?", "Some sectors carry heavier checks on our side. That is what moves the price — not the bookkeeping.", () => opts(QSECT.map((s) => [s[0], s[1], ""] as [string, string, string]), "sector")],
     ["Are these a company's books, or your own?", "It sets the bookkeeping price together with your monthly spend, which we ask next: from €" + BOOKKEEPING_FROM + " a month if you are self-employed, from €" + BOOKKEEPING_COMPANY + " for a company." + (q.entity === "company" ? " Then tell us the company's authorised share capital." : ""), () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
-    ["About how much do you spend a month?", "Total money out — suppliers, wages, rent, everything. You already know this number; you do not have to count anything. It is what sets your bookkeeping price: " + prettyBand(q.expenses) + " works out at €" + (managedMonthly(q.entity === "sole" ? "sole" : "company", q.expenses) ?? "—") + " a month for " + (q.entity === "sole" ? "a self-employed person" : "a company") + ".", () => EXPENSE_BANDS.map((b) => ({ key: b.id, label: b.label, sub: b.hint, pick: () => setQ({ expenses: b.id }), on: q.expenses === b.id }))],
+    ["About how much do you spend a month?", "Total money out — suppliers, wages, rent, everything. You already know this number; you do not have to count anything. It is what sets your bookkeeping price." + (bandRate == null || bandLabel == null ? " Pick a band and the figure appears here — we do not assume one for you." : " " + bandLabel + " works out at €" + bandRate + " a month for " + (q.entity === "sole" ? "a self-employed person" : "a company") + "."), () => EXPENSE_BANDS.map((b) => ({ key: b.id, label: b.label, sub: b.hint, pick: () => setQ({ expenses: b.id }), on: q.expenses === b.id }))],
     ["About how many transactions a month?", "A different question from your spend above: this one counts DOCUMENTS AND LINES — each invoice, receipt and bank line. A rough number is fine. It sets your VAT, tax-return and audit fees; it does not move the bookkeeping price.", () => opts(QTXN, "txn")],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person.", null],
     ["From which month should we start?", "Pick the first month we keep the books. Anything before it is catch-up, charged at the same monthly rate — no premium, no cap.", null],
@@ -673,7 +733,7 @@ export function LandingQuoteCalculator() {
                       Do you have earlier months that still need doing?
                     </div>
                     <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                      Each one costs the same as a month going forward — €{managedMonthly(q.entity === "sole" ? "sole" : "company", q.expenses) ?? "—"}. No premium, no cap.
+                      Each one costs the same as a month going forward{bandRate == null ? " — at your own monthly rate, once you have told us your monthly spend" : ` — €${bandRate}`}. No premium, no cap.
                     </div>
                     <div style={{ marginTop: 10 }}>
                       <OptPills opts={QBEHIND.map(([k, label, sub]) => ({ key: k, label, sub, on: q.behind === k, pick: () => setQ({ behind: k }) }))} />
@@ -714,6 +774,13 @@ export function LandingQuoteCalculator() {
                       The bookkeeping and the audit or review cannot both be ours — we cannot give assurance on books we keep ourselves. That is why the amounts have gone blank. Switch one of the two off, or carry on and the quote step gives you the choice.
                     </p>
                   )}
+                  {/* Same reason the conflict note exists: a column of dashes
+                      with no explanation reads as a bug, not as a question. */}
+                  {r.noExpenses && (
+                    <p role="note" style={{ margin: "2px 0 0", padding: "11px 14px", borderRadius: 10, fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.55, background: NOTE_STYLE.warn.bg, color: NOTE_STYLE.warn.fg, border: "1px solid " + NOTE_STYLE.warn.bc }}>
+                      The amounts are blank because we do not know your monthly spend yet — it is what sets the bookkeeping price. Go back to “Monthly spend”, pick a band, and every figure here fills in straight away.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -730,7 +797,13 @@ export function LandingQuoteCalculator() {
                       ? "We price most sectors instantly. This one needs a short conversation with a director before we put a number to it — usually the same day."
                       : r.conflict
                         ? "Nothing is priced yet. Tell us which of the two is ours and the itemised quote appears here, in full, straight away."
-                        : qSummarise(q)}
+                        : /* B1: a DIFFERENT sentence from both of the above. The
+                             band is missing, which is neither a sector problem
+                             nor an independence problem — it is one unanswered
+                             question, and saying which one is the whole fix. */
+                          r.noExpenses
+                          ? "Nothing is priced yet. Go back to “Monthly spend” and pick a band — it is what sets your bookkeeping price, and we will not guess it for you."
+                          : qSummarise(q)}
                   </p>
                   {(r.notes || []).map(([tone, text], i) => {
                     const s = NOTE_STYLE[tone] || NOTE_STYLE.info;
@@ -802,6 +875,11 @@ export function LandingQuoteCalculator() {
                           Go back to “When we start” and pick a month — we will not price a quote without it.
                         </p>
                       )}
+                      {r.noExpenses && (
+                        <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.5, color: "#8A6100" }}>
+                          Go back to “Monthly spend” and pick a band — it is what sets your bookkeeping price, and we will not guess it.
+                        </p>
+                      )}
                     </div>
                   )}
                   <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-mute)" }}>KYC required before work starts. All fees exclude VAT.</p>
@@ -827,10 +905,14 @@ export function LandingQuoteCalculator() {
                   {/* The running total is a figure too — it must go dark on a
                       conflict as well, or the quote step shows nothing while
                       the footer still quotes a monthly price. */}
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-mute)" }}>{r.refer || r.conflict ? "" : "Every month"}</span>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 18, fontWeight: 600, color: "var(--a4-ink)" }}>{r.refer ? "Let's talk first" : r.conflict ? "One or the other" : euro(r.moTot)}</span>
-                  {!r.refer && !r.conflict && r.yrTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.yrTot) + " /yr"}</span>}
-                  {!r.refer && !r.conflict && r.oneTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.oneTot) + " once"}</span>}
+                  {/* The running total is a figure too, so it goes dark on the
+                      missing band exactly as it does on a conflict — otherwise
+                      the quote step shows nothing while the footer still quotes
+                      a monthly price for a band nobody picked. */}
+                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--a4-mute)" }}>{r.refer || r.conflict || r.noExpenses ? "" : "Every month"}</span>
+                  <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 18, fontWeight: 600, color: "var(--a4-ink)" }}>{r.refer ? "Let's talk first" : r.conflict ? "One or the other" : r.noExpenses ? "Tell us your spend" : euro(r.moTot)}</span>
+                  {!r.refer && !r.conflict && !r.noExpenses && r.yrTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.yrTot) + " /yr"}</span>}
+                  {!r.refer && !r.conflict && !r.noExpenses && r.oneTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.oneTot) + " once"}</span>}
                 </span>
               </div>
             </div>

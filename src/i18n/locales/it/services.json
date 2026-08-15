@@ -916,7 +916,7 @@
     },
     "pricing": {
       "eyebrow": "Prezzi",
-      "title": "Two prices. We keep the books.",
+      "title": "Published pricing. We keep the books.",
       "desc": "Managed bookkeeping from EUR 24/month if you are self-employed, from EUR 49/month for a company, set by your monthly expenses. It does not move with your transaction volume, and there is no software-only plan. All fees exclude VAT.",
       "from": "",
       "startingFrom": "IVA esclusa",
@@ -925,7 +925,7 @@
       "bestFor": "Ideale per",
       "viewAll": "Visualizza Tutte le Funzioni",
       "notes1": "Tutti i pacchetti includono l'accesso al tuo portale A4 per documenti, compiti, comunicazioni e visibilità finanziaria.",
-      "notes2": "Both prices are flat and include unlimited documents. Earlier months we have to go back and do cost the same as a month going forward, with no cap. Partner oversight is quoted after a short call. VAT filing, payroll and annual accounts are optional add-ons, priced separately. All fees exclude VAT.",
+      "notes2": "Both prices are starting prices — the entry band, set by what you spend each month — and both include unlimited documents. Earlier months we have to go back and do cost the same as a month going forward, with no cap. Partner oversight is quoted after a short call. VAT filing, payroll and annual accounts are optional add-ons, priced separately. All fees exclude VAT.",
       "notes3": "Per i clienti a Malta, A4 è supportato da A4 Services, una società di revisione e contabilità consolidata.",
       "ctaTitle": "Non sei sicuro di quale pacchetto sia il migliore?",
       "ctaDesc": "Crea il tuo account, richiedi un preventivo e ti raccomanderemo il giusto livello di supporto.",
