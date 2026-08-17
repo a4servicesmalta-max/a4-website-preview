@@ -12,7 +12,7 @@ import {
   TAX_RETURN_FROM,
   PAYROLL_ENTRY_RATE,
   PAYROLL_BEST_RATE,
-  payrollRate,
+  payrollFee,
   PRICING_VAT_NOTE,
 } from "@/data/a4QuotePack";
 // Managed bookkeeping — A4 keeps the books, priced by monthly expenses (from €24
@@ -87,7 +87,8 @@ export function Pricing() {
   const recon = 0;
   const acct = PR_BANDS[rev].acct;
   const vatFee = vat ? VAT_FROM : 0;
-  const payFee = payroll ? emps * payrollRate(emps) : 0;
+  // Marginal tiers (findings A2 + A3).
+  const payFee = payroll ? payrollFee(emps) : 0;
   const annualFee = annual ? Math.round(TAX_RETURN_FROM / 12) : 0;
   const total = book + recon + acct + vatFee + payFee + annualFee;
 

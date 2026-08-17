@@ -51,7 +51,13 @@
  *   - vacei-marketing-site/index.html
  *   - portal-backend/src/modules/quote-pack/malta-pack.ts
  */
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-14-volume";
+/*
+ * mt-2026-08-17-corrections — the external pricing review's corrections
+ * (17 Aug): marginal un-multiplied payroll (A2+A3), VAT nil-return floor €19
+ * (A4), company 400-500k 449→459 (C1), catch-up joins the launch promo at its
+ * own line (C3), incorporation promo on recurring lines (B1).
+ */
+export const A4_QUOTE_PACK_VERSION = "mt-2026-08-17-corrections";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -245,7 +251,9 @@ export const BOOKKEEPING_MANAGED_MONTHLY: Record<ManagedEntity, Record<ExpenseBa
     "100-200k": 219,
     "200-300k": 299,
     "300-400k": 379,
-    "400-500k": 449,
+    // mt-2026-08-17-corrections (finding C1): 449 → 459 so the euro
+    // increments never shrink on the way up (20/30/50/70/80/80/80/90).
+    "400-500k": 459,
     "500k+": 549,
   },
 };
@@ -296,12 +304,15 @@ export function managedMonthly(entity: ManagedEntity, expenses: ExpenseBand): nu
 export function catchUpAmount(
   months: number,
   entity: ManagedEntity,
-  expenses: ExpenseBand
+  expenses: ExpenseBand,
+  /** Pass `isPromoActive(now)` — catch-up joins the launch promo (finding C3). */
+  promoNow = false
 ): number | null {
   const rate = managedMonthly(entity, expenses);
   if (rate == null) return null;
   const m = Math.max(0, Math.floor(Number(months) || 0));
-  return m * rate;
+  const full = m * rate;
+  return promoNow ? roundEur(full * (1 - LAUNCH_PROMO.pct)) : full;
 }
 
 /**
@@ -319,12 +330,18 @@ export function catchUpAmount(
 export function catchUpLabel(
   months: number,
   entity: ManagedEntity,
-  expenses: ExpenseBand
+  expenses: ExpenseBand,
+  /** Pass `isPromoActive(now)` — inside the promo the discount is written INTO
+   *  the label so the line still reproduces from its own text (finding C3). */
+  promoNow = false
 ): string | null {
   const rate = managedMonthly(entity, expenses);
   if (rate == null) return null;
   const m = Math.max(0, Math.floor(Number(months) || 0));
-  return `Catch-up: ${m} months x EUR ${rate} = EUR ${m * rate}`;
+  const full = m * rate;
+  if (!promoNow) return `Catch-up: ${m} months x EUR ${rate} = EUR ${full}`;
+  const net = roundEur(full * (1 - LAUNCH_PROMO.pct));
+  return `Catch-up: ${m} months x EUR ${rate} = EUR ${full}, less ${Math.round(LAUNCH_PROMO.pct * 100)}% launch promo = EUR ${net}`;
 }
 
 /** Onboarding / opening balances is quoted by a person, never by the calculator. */
@@ -333,7 +350,9 @@ export const ONBOARDING_UNPRICED_NOTE =
 
 /** VAT returns at art. 10 — €/mo by transaction band, × art factor × risk. */
 export const VAT_MONTHLY: Record<TxnBand, number> = {
-  "0": 0,
+  // mt-2026-08-17-corrections (finding A4): '0' 0 → 19 — a registered,
+  // not-yet-trading company still has nil returns prepared and filed.
+  "0": 19,
   "1-20": 29,
   "21-60": 45,
   "61-150": 69,
@@ -404,12 +423,46 @@ export const VAT_RULES = {
  * total the backend reprices.
  */
 
-/** Payroll — €/head/mo; the whole book bills at its headcount tier. */
+/**
+ * Payroll — €/head/mo, MARGINAL tiers since mt-2026-08-17-corrections
+ * (finding A2): the first five heads bill at €32, the next five at €29,
+ * everyone after at €25, so the total never FALLS as headcount grows (the
+ * retired flat tiers priced 11 people at €275 vs €290 for 10). And it is no
+ * longer risk-multiplied (finding A3) — AML sector risk is priced on VAT, the
+ * tax return and the audit, where the extra checking actually happens.
+ */
 export const PAYROLL_PER_HEAD: { upTo: number | null; rate: number }[] = [
   { upTo: 5, rate: 32 },
   { upTo: 10, rate: 29 },
   { upTo: null, rate: 25 },
 ];
+
+/** The MARGINAL payroll fee for a whole book — €/mo. */
+export function payrollFee(headcount: number): number {
+  let fee = 0;
+  let prev = 0;
+  for (const t of PAYROLL_PER_HEAD) {
+    const cap = t.upTo ?? Number.POSITIVE_INFINITY;
+    const n = Math.max(0, Math.min(headcount, cap) - prev);
+    fee += n * t.rate;
+    prev = cap;
+  }
+  return fee;
+}
+
+/** The payroll arithmetic as prose — "5 × €32 + 3 × €29" — so the amount
+ *  beside it is always reproducible by the person reading it. */
+export function payrollFeeLabel(headcount: number): string {
+  const parts: string[] = [];
+  let prev = 0;
+  for (const t of PAYROLL_PER_HEAD) {
+    const cap = t.upTo ?? Number.POSITIVE_INFINITY;
+    const n = Math.max(0, Math.min(headcount, cap) - prev);
+    if (n > 0) parts.push(`${n} × €${t.rate}`);
+    prev = cap;
+  }
+  return parts.join(" + ");
+}
 
 /** Registered office — flat €/yr, no risk multiplier. */
 export const REGISTERED_OFFICE_YEARLY = 1200;
@@ -486,11 +539,14 @@ export const LAUNCH_PROMO = {
   // Always carry the year. An undated "until 31 Aug" reads as evergreen and
   // will outlive the campaign pointing at it.
   label: "25% off until 31 August 2026",
-  note: "25% launch discount — a quarter off your whole quote, already deducted. Valid until 31 August 2026. Government fees stay at cost.",
+  note: "25% launch discount — a quarter off your monthly and yearly totals and any catch-up months, already deducted. Valid until 31 August 2026. Other one-off charges and government fees stay at cost.",
 };
 
 export function isPromoActive(now: Date = new Date()): boolean {
-  return now.getTime() <= Date.parse(`${LAUNCH_PROMO.until}T23:59:59.999Z`);
+  // Inclusive of the 'until' date, whole day, MALTA TIME (+02:00 in August) —
+  // the same clock as vacei.com and the portal backend, or the three engines
+  // disagree for two hours on expiry night.
+  return now.getTime() <= Date.parse(`${LAUNCH_PROMO.until}T23:59:59.999+02:00`);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -514,10 +570,10 @@ export function fromPrice(table: Record<TxnBand, number>): number {
 }
 
 /** Payroll rate for a given headcount. */
-export function payrollRate(headcount: number): number {
-  const row = PAYROLL_PER_HEAD.find((t) => t.upTo != null && headcount <= t.upTo);
-  return (row ?? PAYROLL_PER_HEAD[PAYROLL_PER_HEAD.length - 1]).rate;
-}
+/* `payrollRate` (the flat whole-book tier rate) is DELETED, not deprecated:
+   flat arithmetic on marginal tiers is exactly the silent mispricing the
+   corrections removed, so any caller still doing `heads * rate` must fail to
+   compile and be moved to `payrollFee`. */
 
 /** Entry payroll rate (small teams) — the honest "from" for payroll copy. */
 export const PAYROLL_ENTRY_RATE = PAYROLL_PER_HEAD[0].rate; // €32/head, up to five

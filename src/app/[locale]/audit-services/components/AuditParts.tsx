@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { AuditEstimator } from "./AuditEstimator";
+import { AUDIT_PRE_TRADING, REVIEW_ENGAGEMENT_FACTOR } from "@/data/a4QuotePack";
 // NOTE: `./FSReview` was imported here but has never existed — no file on disk,
 // no history in any branch, not gitignored. The import has been present since
 // the "pages added" commit, so this module has never typechecked and
@@ -60,7 +61,7 @@ function AuditHero() {
             Need an audit?<br /><span style={{ color: "var(--a4-primary-bright)" }}>We make it simple.</span>
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 620, margin: "24px auto 0", textWrap: "pretty" }}>
-            Every company in Malta must file audited financial statements. As a licensed audit firm, A4 delivers a rigorous, independent, on-time audit — with a fixed fee agreed up front, <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;750/year</strong> (dormant companies from &euro;600).
+            Every company in Malta must file audited financial statements. As a licensed audit firm, A4 delivers a rigorous, independent, on-time audit — with a fixed fee agreed up front, <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;{AUDIT_PRE_TRADING}/year</strong>. Where a review engagement is enough, it is {Math.round(REVIEW_ENGAGEMENT_FACTOR * 100)}% of the audit fee.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get your audit estimate <Icon name="arrow-right" size={18} color="#000" /></Button>

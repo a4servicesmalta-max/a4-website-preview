@@ -799,7 +799,7 @@ function PricingCalc() {
                   />
                   {catchUpMonths > 0 && (
                     <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
-                      {catchUpLabel(catchUpMonths, entity, expenses)}
+                      {catchUpLabel(catchUpMonths, entity, expenses, isPromoActive())}
                     </p>
                   )}
                 </div>

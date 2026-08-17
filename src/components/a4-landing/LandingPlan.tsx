@@ -5,7 +5,7 @@ import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-la
 import { MANAGED_CAVEAT, MANAGED_CATCHUP_NOTE, MANAGED_SOLE, MANAGED_COMPANY } from "@/data/a4ManagedOffer";
 import {
   VAT_MONTHLY, VAT_RULES, TAX_RETURN_FROM,
-  PAYROLL_ENTRY_RATE, PAYROLL_BEST_RATE, payrollRate, PRICING_VAT_NOTE,
+  PAYROLL_ENTRY_RATE, PAYROLL_BEST_RATE, payrollFee, PRICING_VAT_NOTE,
   LAUNCH_PROMO, isPromoActive,
   catchUpAmount, catchUpLabel, managedMonthly, EXPENSE_BANDS,
   type ManagedEntity, type ExpenseBand,
@@ -162,7 +162,8 @@ export function lpCalc(s: LPState, now: Date = new Date()): LPQuote {
   }
 
   const vatFee = s.vat ? LP_VAT[s.vatFreq].fee : 0;
-  const payFee = isCompany && s.payroll ? s.emps * payrollRate(s.emps) : 0;
+  // Marginal tiers (findings A2 + A3) — no flat whole-book rate any more.
+  const payFee = isCompany && s.payroll ? payrollFee(s.emps) : 0;
 
   // `base` is proved non-null above, so the band is a real one from here down.
   const expenses = s.expenses as ExpenseBand;
@@ -181,13 +182,14 @@ export function lpCalc(s: LPState, now: Date = new Date()): LPQuote {
   const promoApplied = isPromoActive(now);
   const monthly = promoApplied ? Math.round(grossMonthly * (1 - LAUNCH_PROMO.pct)) : grossMonthly;
 
-  // One-off, at the same monthly rate. Never discounted, never capped.
-  const catchUp = s.catchUpMonths > 0 ? (catchUpAmount(s.catchUpMonths, packEntity, expenses) ?? 0) : 0;
+  // One-off, at the same monthly rate, never capped — and inside the promo
+  // window the quarter comes off at this line, in the label (finding C3).
+  const catchUp = s.catchUpMonths > 0 ? (catchUpAmount(s.catchUpMonths, packEntity, expenses, promoApplied) ?? 0) : 0;
 
   return {
     priced: true, reason: "ok", base, lines,
     grossMonthly, monthly, annualFee, catchUp,
-    catchUpLabel: s.catchUpMonths > 0 ? catchUpLabel(s.catchUpMonths, packEntity, expenses) : null,
+    catchUpLabel: s.catchUpMonths > 0 ? catchUpLabel(s.catchUpMonths, packEntity, expenses, promoApplied) : null,
     promoApplied, independence, selectedAnnual,
   };
 }

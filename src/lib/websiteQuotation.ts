@@ -30,7 +30,7 @@ import {
   catchUpLabel,
   isPromoActive,
   managedMonthly,
-  payrollRate,
+  payrollFee,
   roundEur,
   type CapitalBand,
   type ExpenseBand,
@@ -180,11 +180,12 @@ export type A4Totals = {
  * flat price under pack mt-2026-08-14-volume; not being risk-uplifted is a
  * separate rule and still holds.)
  */
+// 'payroll' REMOVED at mt-2026-08-17-corrections (finding A3): payroll effort
+// does not scale with AML sector risk.
 const RISK_UPLIFTED: ReadonlySet<A4Item["service"]> = new Set([
   "vat",
   "taxret",
   "audit",
-  "payroll",
 ]);
 
 /**
@@ -206,8 +207,10 @@ const isIntWithin = (n: unknown, min: number, max: number): boolean =>
 
 type PricedItem = QuoteLineItem & { registry?: number };
 
-/** Price one item. Returns null when the item cannot be priced (never throws). */
-function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
+/** Price one item. Returns null when the item cannot be priced (never throws).
+ *  `promoNow` reaches only the catch-up arm — the one line whose promo
+ *  discount is written into the line itself (finding C3). */
+function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem | null {
   const tier = RISK_TIERS[risk];
   const rm = RISK_UPLIFTED.has(item.service) ? (tier.multiplier ?? 1) : 1;
   const mo = (label: string, amount: number): PricedItem => ({ label, amount: roundEur(amount), cadence: "monthly" });
@@ -252,8 +255,9 @@ function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
     }
     case "payroll": {
       // Whole people only, and within the range the server will accept.
+      // Marginal tiers, NOT risk-multiplied (findings A2 + A3).
       if (!isIntWithin(item.heads, A4_LIMITS.heads.min, A4_LIMITS.heads.max)) return null;
-      return mo("Payroll", item.heads * payrollRate(item.heads) * rm);
+      return mo("Payroll", payrollFee(item.heads));
     }
     case "mbr": {
       const registry = MBR_ANNUAL_RETURN.registryFeeByCapital[item.capital];
@@ -273,12 +277,13 @@ function priceItem(item: A4Item, risk: A4Risk): PricedItem | null {
       // Whole months only, and within the range the server will accept.
       if (!isIntWithin(item.months, A4_LIMITS.months.min, A4_LIMITS.months.max)) return null;
       const m = item.months;
-      // Same monthly rate as a live month for this client, per month, uncapped,
-      // never discounted. The label is fixed by the wire contract and compared
-      // literally downstream. Both go null on an unknown band — same lead-path
-      // rule as the bookkeeping item.
-      const label = catchUpLabel(m, item.entity, item.expenses);
-      const amount = catchUpAmount(m, item.entity, item.expenses);
+      // Same monthly rate as a live month for this client, per month, uncapped.
+      // Inside the promo window the quarter comes off AT THIS LINE, with the
+      // discount written into the label (finding C3). The label is fixed by
+      // the wire contract and compared literally downstream. Both go null on
+      // an unknown band — same lead-path rule as the bookkeeping item.
+      const label = catchUpLabel(m, item.entity, item.expenses, promoNow);
+      const amount = catchUpAmount(m, item.entity, item.expenses, promoNow);
       if (label == null || amount == null) return null;
       return one(label, amount);
     }
@@ -304,8 +309,9 @@ export function evaluateA4Items(
   // Keep each priced line paired with the item that produced it. The catch-up
   // slice used to be recovered by matching the label with a regex, which made
   // a copy edit able to silently change a submitted total.
+  const promoNow = isPromoActive(now);
   const pairs = items
-    .map((item) => ({ item, line: priceItem(item, risk) }))
+    .map((item) => ({ item, line: priceItem(item, risk, promoNow) }))
     .filter((p): p is { item: A4Item; line: PricedItem } => p.line != null);
   const priced = pairs.map((p) => p.line);
 
