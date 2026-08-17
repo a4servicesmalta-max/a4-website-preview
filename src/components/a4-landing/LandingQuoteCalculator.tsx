@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, PAYROLL_PER_HEAD, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, EXPENSE_BANDS, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, EXPENSE_BANDS, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 import { independenceFlags, independenceNotice } from "@/lib/independence";
 import { formatStartMonth, nextMonth } from "@/lib/accounting-fee";
@@ -81,7 +81,8 @@ const QT: Record<string, Record<string, number>> = {
   taxret: TAX_RETURN_YEARLY,
   assure: AUDIT_YEARLY,
 };
-const QPAY = PAYROLL_PER_HEAD.map((t) => ({ upTo: t.upTo ?? 1e9, rate: t.rate }));
+/* QPAY (the flat whole-book tier alias) is gone with `payrollRate`: payroll is
+   MARGINAL and un-multiplied since mt-2026-08-17-corrections (A2+A3). */
 // Two separate volume questions, deliberately. "Monthly spend" (expenses) sets
 // the BOOKKEEPING price; "Volume" (transactions) sets VAT, the tax return and
 // the audit. They sit apart in the flow and are worded differently so neither
@@ -166,7 +167,11 @@ const prettyBand = (id: ExpenseBand | "") =>
  * disagree about which of the two the visitor was quoted.
  */
 function qAuditIsReview(q: QState) {
-  return (q.size === "small" || q.size === "unsure") && QT_BIG_VOL.indexOf(q.txn) === -1;
+  // The size answer cannot beat arithmetic (finding A1, mirrored from
+  // vacei.com): €100k+ of MONTHLY spend cannot be under €93k of ANNUAL
+  // turnover, so those bands price a full audit whatever was ticked.
+  const bandBig = ["100-200k", "200-300k", "300-400k", "400-500k", "500k+"].indexOf(q.expenses) !== -1;
+  return !bandBig && (q.size === "small" || q.size === "unsure") && QT_BIG_VOL.indexOf(q.txn) === -1;
 }
 
 /**
@@ -227,8 +232,9 @@ export function qCalc(q: QState, now: Date = new Date()) {
     });
   }
   if (q.pay === "we" && q.head > 0) {
-    const t = QPAY.find((t) => q.head <= t.upTo)!;
-    mo.push({ n: "Payroll", e: q.head + " × €" + t.rate + " per person", v: q.head * t.rate * rm });
+    // Marginal tiers, NOT risk-multiplied (findings A2 + A3). The label is the
+    // arithmetic, so the amount always reproduces from it.
+    mo.push({ n: "Payroll", e: payrollFeeLabel(q.head) + " per person", v: payrollFee(q.head) });
   }
   // We only put our name to a VAT return when we have worked the ledger.
   const selfFile = q.book !== "managed";
@@ -290,8 +296,8 @@ export function qCalc(q: QState, now: Date = new Date()) {
   const months = +q.behind;
   // Proved a real band by the `noExpenses` guard above whenever the books are
   // ours; an audit-only basket has no catch-up line to price.
-  const catchUpName = q.expenses === "" ? null : catchUpLabel(months, entity, q.expenses);
-  const catchUpFee = q.expenses === "" ? null : catchUpAmount(months, entity, q.expenses);
+  const catchUpName = q.expenses === "" ? null : catchUpLabel(months, entity, q.expenses, isPromoActive(now));
+  const catchUpFee = q.expenses === "" ? null : catchUpAmount(months, entity, q.expenses, isPromoActive(now));
   if (months > 0 && wantsBooks && catchUpName != null && catchUpFee != null) {
     one.push({
       n: catchUpName,

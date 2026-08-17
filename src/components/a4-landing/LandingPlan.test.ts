@@ -75,11 +75,12 @@ describe("M9 — the launch promo applies here too", () => {
     expect(on.monthly).toBeLessThan(off.monthly!);
   });
 
-  it("never discounts the one-off catch-up", () => {
+  it("discounts the catch-up at its own line inside the promo window (finding C3)", () => {
     const on = lpCalc({ ...ANSWERED, catchUpMonths: 12 }, PROMO_ON);
     const off = lpCalc({ ...ANSWERED, catchUpMonths: 12 }, PROMO_OFF);
-    expect(on.catchUp).toBe(12 * 69);
-    expect(on.catchUp).toBe(off.catchUp);
+    expect(off.catchUp).toBe(12 * 69);
+    expect(on.catchUp).toBe(Math.round(12 * 69 * 0.75));
+    expect(on.catchUpLabel).toContain("less 25% launch promo = EUR 621");
   });
 });
 

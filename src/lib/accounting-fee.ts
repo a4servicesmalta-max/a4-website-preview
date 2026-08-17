@@ -15,7 +15,7 @@
 
 import {
   TXN_BANDS, RISK_TIERS, VAT_MONTHLY, VAT_RULES,
-  PAYROLL_PER_HEAD, payrollRate, LAUNCH_PROMO, isPromoActive, roundEur, sectorTier,
+  PAYROLL_PER_HEAD, payrollFee, payrollFeeLabel, LAUNCH_PROMO, isPromoActive, roundEur, sectorTier,
   MANAGED_ENTITY_LABELS, MANAGED_ENTITY_OPTIONS, EXPENSE_BANDS,
   catchUpAmount, catchUpLabel, managedMonthly,
   type TxnBand, type RiskTier, type ManagedEntity, type ExpenseBand,
@@ -148,8 +148,9 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   monthly.push({ k: `Managed bookkeeping · ${entityLabel}`, v: bookRate });
 
   if (s.head > 0) {
-    const rate = payrollRate(s.head);
-    monthly.push({ k: `Payroll · ${s.head} × ${euro(rate)}`, v: s.head * rate * rm });
+    // Marginal tiers, NOT risk-multiplied (findings A2 + A3) — and the label
+    // is the arithmetic, so the amount reproduces from it.
+    monthly.push({ k: `Payroll · ${payrollFeeLabel(s.head)}`, v: payrollFee(s.head) });
   }
 
   // VAT is built from a ledger we have worked, which is now always the case.
@@ -165,12 +166,14 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
     }
   }
 
-  // Earlier months, at the same monthly rate. No cap, no premium, and no
-  // launch discount — it is a one-off. The label is the wire-contract form.
+  // Earlier months, at the same monthly rate. No cap, no premium — and inside
+  // the promo window the quarter comes off AT THIS LINE, with the discount
+  // written into the wire-contract label (finding C3).
   const months = parseInt(s.behind, 10) || 0;
   if (months > 0) {
-    const k = catchUpLabel(months, entity, expenses);
-    const v = catchUpAmount(months, entity, expenses);
+    const promoNow = isPromoActive(now);
+    const k = catchUpLabel(months, entity, expenses, promoNow);
+    const v = catchUpAmount(months, entity, expenses, promoNow);
     // Both are non-null here — bookRate above already proved the band — but the
     // guard keeps the null contract explicit rather than asserting it away.
     if (k != null && v != null) oneOff.push({ k, v });
@@ -189,9 +192,10 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
     monthlyFull,
     oneOffFull,
     monthlyNet: roundEur(monthlyFull * (1 - discountPct)),
-    // One-offs are NOT discounted (pack rule). Catch-up is a one-off, so the
-    // net and full figures are the same — kept as a field so callers that
-    // render "one-off net" do not have to know the rule.
+    // Catch-up already carries its promo discount at its own line (finding
+    // C3), and the other one-offs are never discounted — so no further cut is
+    // applied to the one-off total. Kept as a field so callers that render
+    // "one-off net" do not have to know the rule.
     oneOffNet: oneOffFull,
     discountPct,
     entityLabel,

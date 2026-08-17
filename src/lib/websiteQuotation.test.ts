@@ -100,11 +100,17 @@ describe("per-item pricing", () => {
     expect(gross([{ service: "audit", txn: "21-60" }], "high").yearly).toBe(1443);
   });
 
-  it("bills the whole payroll at its headcount tier", () => {
+  it("bills payroll on MARGINAL tiers — the total never falls as the team grows", () => {
+    // mt-2026-08-17-corrections (finding A2): 5 × €32 + next 5 × €29 + rest × €25.
     expect(gross([{ service: "payroll", heads: 3 }]).monthly).toBe(96); // 3 × 32
     expect(gross([{ service: "payroll", heads: 5 }]).monthly).toBe(160); // 5 × 32
-    expect(gross([{ service: "payroll", heads: 8 }]).monthly).toBe(232); // 8 × 29, not 5×32+3×29
-    expect(gross([{ service: "payroll", heads: 20 }]).monthly).toBe(500); // 20 × 25
+    expect(gross([{ service: "payroll", heads: 8 }]).monthly).toBe(247); // 5×32 + 3×29, not 8×29
+    expect(gross([{ service: "payroll", heads: 10 }]).monthly).toBe(305);
+    // The flat tiers priced 11 people BELOW 10 (290 → 275). Never again.
+    expect(gross([{ service: "payroll", heads: 11 }]).monthly).toBe(330);
+    expect(gross([{ service: "payroll", heads: 20 }]).monthly).toBe(555);
+    // And no risk multiplier on payroll any more (finding A3).
+    expect(gross([{ service: "payroll", heads: 5 }], "high").monthly).toBe(160);
     expect(evaluateA4Items([{ service: "payroll", heads: 0 }], "standard", AFTER).lines).toEqual([]);
   });
 
@@ -241,7 +247,8 @@ describe("bookkeeping by monthly expenses (pack mt-2026-08-14-volume)", () => {
     "100-200k": { sole: 129, company: 219 },
     "200-300k": { sole: 179, company: 299 },
     "300-400k": { sole: 229, company: 379 },
-    "400-500k": { sole: 279, company: 449 },
+    // mt-2026-08-17-corrections (finding C1): company 449 -> 459.
+    "400-500k": { sole: 279, company: 459 },
     "500k+": { sole: 339, company: 549 },
   };
 
@@ -395,8 +402,8 @@ describe("server input bounds", () => {
   });
 
   it("prices the top of each range at the pack rate", () => {
-    // 500 heads is comfortably past the >10 tier, so €25/head throughout.
-    expect(gross([{ service: "payroll", heads: 500 }]).monthly).toBe(12_500);
+    // 500 heads: 5×32 + 5×29 + 490×25 = 160 + 145 + 12,250 (marginal tiers).
+    expect(gross([{ service: "payroll", heads: 500 }]).monthly).toBe(12_555);
     // 240 months = 20 years of a company's books at €49/mo, uncapped.
     expect(gross([{ service: "catchup", months: 240, entity: "company", expenses: "0-10k" }]).oneOff).toBe(240 * 49);
   });
@@ -410,7 +417,7 @@ describe("server input bounds", () => {
 });
 
 describe("launch promo", () => {
-  it("takes 25% off monthly and yearly, never off one-offs", () => {
+  it("takes 25% off monthly, yearly and the catch-up line — other one-offs never", () => {
     const items: A4Item[] = [
       { service: "bookkeeping-managed", entity: "company", expenses: "0-10k" }, // 49 / mo
       { service: "taxret", txn: "21-60" }, // 325 / yr
@@ -420,7 +427,13 @@ describe("launch promo", () => {
     expect(t.promoApplied).toBe(true);
     expect(t.monthly).toBe(37); // 49 × 0.75 = 36.75 → 37
     expect(t.yearly).toBe(244); // 325 × 0.75 = 243.75 → 244
-    expect(t.oneOff).toBe(147); // untouched — catch-up is a one-off
+    // Catch-up is discounted AT ITS LINE since mt-2026-08-17-corrections
+    // (finding C3): 147 × 0.75 = 110.25 → 110, and the label says so.
+    expect(t.oneOff).toBe(110);
+    expect(t.catchup).toBe(110);
+    expect(t.lines.find((l) => l.label.startsWith("Catch-up"))!.label).toBe(
+      "Catch-up: 3 months x EUR 49 = EUR 147, less 25% launch promo = EUR 110"
+    );
     expect(LAUNCH_PROMO.pct).toBe(0.25);
   });
 
@@ -442,10 +455,14 @@ describe("launch promo", () => {
     });
   });
 
-  it("does not claim a discount on a basket of pure one-offs", () => {
+  it("a pure catch-up basket: line discounted (self-explaining label), promo flag stays off", () => {
+    // `promoApplied` still describes the monthly/yearly totals — there are
+    // none here, so it is false — but the catch-up line itself carries its
+    // promo inside its own label and amount (finding C3): 48 × 0.75 = 36.
     const t = evaluateA4Items([{ service: "catchup", months: 2, entity: "sole", expenses: "0-10k" }], "standard", DURING);
     expect(t.promoApplied).toBe(false);
-    expect(t.oneOff).toBe(48);
+    expect(t.oneOff).toBe(36);
+    expect(t.lines[0].label).toContain("less 25% launch promo = EUR 36");
   });
 });
 
@@ -466,10 +483,10 @@ describe("mixed basket, hand-computed", () => {
   it("totals every cadence correctly before the promo", () => {
     const t = evaluateA4Items(items, "elevated", AFTER);
     // Monthly: bookkeeping 49 (flat, NO uplift)
-    //        + VAT      69 × 1.2 = 82.8            → 83
-    //        + payroll  8 × 29 = 232 × 1.2 = 278.4 → 278
-    expect(t.grossMonthly).toBe(49 + 83 + 278);
-    expect(t.grossMonthly).toBe(410);
+    //        + VAT      69 × 1.2 = 82.8 → 83
+    //        + payroll  5×32 + 3×29 = 247 (marginal, NO uplift — A2+A3)
+    expect(t.grossMonthly).toBe(49 + 83 + 247);
+    expect(t.grossMonthly).toBe(379);
     // Yearly: tax return 420 × 1.2 = 504, + MBR (50 + 210) = 260
     expect(t.grossYearly).toBe(504 + 260);
     expect(t.grossYearly).toBe(764);
@@ -484,9 +501,10 @@ describe("mixed basket, hand-computed", () => {
 
   it("applies the promo to the right slices", () => {
     const t = evaluateA4Items(items, "elevated", DURING);
-    expect(t.monthly).toBe(308); // 410 × 0.75 = 307.5 → 308
+    expect(t.monthly).toBe(284); // 379 × 0.75 = 284.25 → 284
     expect(t.yearly).toBe(626); // (764 − 210) × 0.75 = 416, + 210 = 626
-    expect(t.oneOff).toBe(588); // one-offs never discounted
+    expect(t.oneOff).toBe(441); // catch-up discounted at its line (C3): 588 × 0.75
+    expect(t.catchup).toBe(441);
   });
 
   it("submits exactly the totals it displays", () => {
@@ -559,7 +577,7 @@ describe("the submitted record", () => {
   it("stamps the pack version and currency the backend validates against", () => {
     const r = buildQuoteRecord({ name: "A", email: "a@b.com", items, serviceStartDate: START }, DURING);
     expect(r.pack).toBe(A4_QUOTE_PACK_VERSION);
-    expect(r.pack).toBe("mt-2026-08-14-volume");
+    expect(r.pack).toBe("mt-2026-08-17-corrections");
     expect(r.currency).toBe("EUR");
     expect(r.quotedAt).toBe(DURING.toISOString());
   });

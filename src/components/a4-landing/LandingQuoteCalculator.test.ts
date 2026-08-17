@@ -146,7 +146,8 @@ describe("the canonical quote", () => {
       "100-200k": [129, 219],
       "200-300k": [179, 299],
       "300-400k": [229, 379],
-      "400-500k": [279, 449],
+      // mt-2026-08-17-corrections (finding C1): company 449 -> 459.
+      "400-500k": [279, 459],
       "500k+": [339, 549],
     };
     for (const [band, [sole, company]] of Object.entries(expected)) {
@@ -219,11 +220,11 @@ describe("catch-up", () => {
     expect(r.oneTot).toBe(12 * 39); // sole at the €10–25k band
   });
 
-  it("is never discounted by the launch promo", () => {
+  it("is discounted at its own line inside the promo window (finding C3)", () => {
     const on = qCalc({ ...CANONICAL, behind: "12" }, PROMO_ON);
     const off = qCalc({ ...CANONICAL, behind: "12" }, PROMO_OFF);
     if (on.refer || off.refer) throw new Error("unpriceable");
-    expect(on.oneTot).toBe(off.oneTot);
+    expect(on.oneTot).toBe(Math.round(off.oneTot * 0.75));
   });
 
   it("charges nothing when bookkeeping is switched off", () => {
@@ -466,11 +467,13 @@ describe("what we show equals what we quote", () => {
 
   it("still agrees once the basket grows — canonical path plus VAT and catch-up", () => {
     const bigger: QState = { ...CANONICAL, vat: "we", behind: "12" };
-    const s = qCalc(bigger);
+    // Pin `now` inside the promo window on BOTH sides, or this flips on 1 Sep.
+    const s = qCalc(bigger, PROMO_ON);
     const engine = evaluateA4Items(qItems(bigger), qRisk(bigger), PROMO_ON);
     if (s.refer) throw new Error("unpriceable");
     expect([s.moTot, s.yrTot, s.oneTot]).toEqual([engine.monthly, engine.yearly, engine.oneOff]);
-    expect(s.oneTot).toBe(828);
+    // 12 x 69 = 828, less the 25% promo at the line (finding C3) = 621.
+    expect(s.oneTot).toBe(621);
   });
 
   it("never discounts the government registry fee", () => {
