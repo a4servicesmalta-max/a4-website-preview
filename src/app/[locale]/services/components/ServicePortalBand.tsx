@@ -16,7 +16,7 @@ export function ServicePortalBand({ serviceName }: { serviceName: string }) {
           style={{ gridTemplateColumns: "1fr 1.1fr" }}
         >
           <Reveal>
-            <Eyebrow dark>The client portal</Eyebrow>
+            <Eyebrow dark>Digital Onboarding</Eyebrow>
             <h2
               className="a4-font-display font-medium text-white mt-4"
               style={{
