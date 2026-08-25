@@ -354,6 +354,37 @@ export function AuditEstimator() {
                     <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
                     <Button variant="outline-light" size="md" onClick={() => openModal("consultation")}>Book a consultation</Button>
                   </div>
+                  {/* The upload lives INSIDE the questions now, not only as a
+                      mode toggle above them. `answers` and the review state are
+                      separate pieces of state, so opening the upload keeps
+                      every answer — which is what makes it safe to offer here,
+                      at the point the visitor is looking at a fee and can see
+                      what sending the file would take off it. */}
+                  <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", background: "var(--a4-surface-soft)" }}>
+                    {data || held !== null ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
+                        <Icon name="file-check-2" size={16} color="var(--a4-primary)" />
+                        <span>
+                          {held !== null
+                            ? "Priced from the statements you sent us — the fee above is the one we quoted you."
+                            : "Your statements have been read, and the planning saving is already off the fee above."}
+                          {data && (
+                            <> <button type="button" onClick={() => setAmode("docs")} style={{ background: "none", border: 0, padding: 0, color: "var(--a4-primary)", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>See the findings</button></>
+                          )}
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Have last year&apos;s figures? Attach them and this fee comes down.</div>
+                        <div style={{ marginTop: 4, fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.55, color: "var(--a4-mute)" }}>
+                          Financial statements or management accounts, PDF or Word. We run a real disclosure, consistency and casting review on the file, send you the findings, and take the planning saving off the fee. Your answers here are kept.
+                        </div>
+                        <Button variant="outline-light" size="sm" onClick={() => setAmode("docs")} style={{ marginTop: 12 }}>
+                          <Icon name="upload-cloud" size={15} color="var(--a4-primary)" /> Upload last year&apos;s FS or management accounts
+                        </Button>
+                      </>
+                    )}
+                  </div>
                   <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "10px 0 0" }}>Fixed after a short scoping call. Never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}</p>
                 </div>
               ) : (
@@ -390,6 +421,13 @@ export function AuditEstimator() {
               </div>
               <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "var(--a4-stone)", margin: "18px 0 0", paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)" }}>{feeNote}</p>
               <Button variant="primary" size="md" onClick={() => openModal("proposal")} style={{ width: "100%", marginTop: 18 }}>{ctaLabel} <Icon name="arrow-right" size={16} color="#000" /></Button>
+              {/* Reachable from every question, not just the last one — and it
+                  keeps the answers, so there is nothing to lose by trying it. */}
+              {!data && held === null && (
+                <button type="button" onClick={() => setAmode("docs")} style={{ width: "100%", marginTop: 10, height: 38, borderRadius: "var(--a4-r-full)", border: "1px solid rgba(255,255,255,.28)", background: "transparent", color: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+                  Upload last year&apos;s FS instead — the fee drops
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -448,10 +486,16 @@ export function AuditEstimator() {
               </div>
             ) : (
               <div>
-                <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 21, letterSpacing: "-.015em", color: "var(--a4-ink)", margin: 0 }}>Skip the questions — send the numbers</h3>
+                <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 21, letterSpacing: "-.015em", color: "var(--a4-ink)", margin: 0 }}>Send the numbers</h3>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, lineHeight: 1.6, color: "var(--a4-mute)", margin: "8px 0 0", textWrap: "pretty" }}>
                   Upload last year&apos;s financial statements or management accounts. We run a real disclosure, consistency and casting review on the file and come back with the findings — and the planning saving comes off your audit fee.
                 </p>
+                {/* The way back. Nothing here clears an answer, so a visitor who
+                    opened this from the fee step returns to exactly what they
+                    left — saying so is what makes the trip safe to take. */}
+                <button type="button" onClick={() => setAmode("ask")} style={{ marginTop: 10, background: "none", border: 0, padding: 0, color: "var(--a4-primary)", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+                  ← Back to the questions — your answers are kept
+                </button>
 
                 <div style={{ marginTop: 18 }}>
                   <div style={fieldLabel}>Which year needs auditing?</div>

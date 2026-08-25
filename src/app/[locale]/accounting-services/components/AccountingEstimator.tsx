@@ -5,8 +5,8 @@ import { Button, Icon, Container } from "@/components/a4-landing/Primitives";
 import { useQuoteActions } from "@/components/a4-landing/QuoteActions";
 import type { QuotePayload } from "@/lib/quote-handoff";
 import {
-  SECTORS, TXN, ENTITIES, EXPENSES, VAT_REG, BEHIND, STEPS,
-  calcAccountingFee, accountingSummary, quoteBreakdown, euro, formatStartMonth,
+  SECTORS, TXN, ENTITIES, EXPENSES, VAT_REG, STEPS,
+  calcAccountingFee, accountingSummary, quoteBreakdown, euro, formatStartMonth, catchUpMonthsFrom, ongoingStartMonth,
   ACCOUNTING_NO_EXPENSES_NOTE,
   type AccountingInput, type VatRegId,
 } from "@/lib/accounting-fee";
@@ -57,8 +57,10 @@ const QUESTIONS: { title: string; help: string }[] = [
   { title: "About how much do you spend a month?", help: "Your monthly expenses are the money that leaves the business in a typical month — supplier bills, wages, rent, software, everything you spend. Exclude VAT, loan repayments, and transfers between your own accounts. New or seasonal business? Use your average over the last three months. It is what sets the bookkeeping price — a different question from the transaction count, which prices VAT, the tax return and the audit." },
   { title: "Anyone on payroll?", help: "Payslips, monthly employer filing and annual returns, priced per person and cheaper as the team grows." },
   { title: "Are you VAT registered?", help: "VAT returns are built only from entries we have already worked and reconciled." },
-  { title: "From which month should we start?", help: "The first month we keep the books. Anything before it is catch-up, and we need the month before we can price either." },
-  { title: "Do you have earlier months that still need doing?", help: "Each one costs the same as a month going forward — no catch-up premium and no cap." },
+  // ONE question, not two. It used to ask for the start month and then, in
+  // different words, how many months were behind — the same fact twice, since
+  // a start month in the past IS the count of months behind.
+  { title: "From which month do you need us?", help: "Pick the earliest month that still needs doing. Everything before this month is catch-up at the same monthly rate — no premium, no cap — and the monthly fee runs from now on." },
   { title: "Your price", help: "Everything on the right is itemised — nothing appears later that is not on that list." },
 ];
 const LAST = QUESTIONS.length - 1; // the price step
@@ -88,6 +90,8 @@ export function AccountingEstimator() {
   // A start month is REQUIRED, not suggested: it decides which months are
   // catch-up, so a guessed one silently re-prices the whole engagement.
   const startOk = /^\d{4}-(0[1-9]|1[0-2])$/.test(s.startMonth);
+  /** Derived from the start month by the picker — never a question of its own. */
+  const behindMonths = parseInt(s.behind, 10) || 0;
   const noBand = q.refer && q.reason === "no-expenses";
   /** Nothing is quotable until both unanswered questions have real answers. */
   const priced = !q.refer && startOk;
@@ -154,8 +158,12 @@ export function AccountingEstimator() {
       { k: "Whose books", v: MANAGED_ENTITY_LABELS[s.entity] },
       { k: "Payroll headcount", v: String(s.head) },
       { k: "VAT registration", v: labelOf(VAT_REG, s.vatreg) },
-      { k: "Start month", v: formatStartMonth(s.startMonth) || "not given" },
-      { k: "Earlier months", v: labelOf(BEHIND, s.behind) },
+      // The month WORK BEGINS BILLING, which is this month whenever there is
+      // a backlog — the same split the wire makes. The earliest month still
+      // to do is the row below, as a count.
+      { k: "Start month", v: formatStartMonth(ongoingStartMonth(s.startMonth)) || "not given" },
+      // Derived from the start month, never answered separately.
+      { k: "Earlier months", v: behindMonths > 0 ? `${behindMonths} ${behindMonths === 1 ? "month" : "months"}` : "none — up to date" },
       { k: "Risk tier", v: q.refer ? "Referral" : q.tier.label },
       // IESBA — carried through to whoever picks this quote up.
       { k: "Audit eligible", v: String(independence.auditEligible) },
@@ -276,31 +284,37 @@ export function AccountingEstimator() {
             {step === 5 && (
               <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
                 <label htmlFor="ae-start" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
-                  First month we keep the books
+                  Earliest month that still needs doing
                 </label>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 }}>
-                  Required — we do not guess a start month.
+                  Required — we do not guess a start month. Already up to date? Pick this month.
                 </div>
                 <input
                   id="ae-start"
                   type="month"
                   value={s.startMonth}
-                  onChange={(e) => set({ startMonth: e.target.value })}
+                  onChange={(e) => set({ startMonth: e.target.value, behind: String(catchUpMonthsFrom(e.target.value)) })}
                   style={{ marginTop: 10, height: 38, padding: "0 12px", borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", background: "#fff", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 13 }}
                 />
                 {/* "Required" is now true: the field ships empty and the price
                     is withheld until it is filled. It used to be pre-filled
                     with next month, so `startOk` passed on an answer nobody
                     gave and the visitor could send without seeing this step. */}
-                {!startOk && (
+                {startOk ? (
+                  /* The catch-up split, READ BACK from the month just picked —
+                     the second question this step used to ask. */
+                  <div style={{ marginTop: 12, padding: "11px 14px", borderRadius: 10, background: "rgba(73,79,223,.06)", border: "1px solid rgba(73,79,223,.25)", fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "var(--a4-body)" }}>
+                    {behindMonths > 0
+                      ? `${behindMonths} ${behindMonths === 1 ? "month" : "months"} of catch-up, from ${formatStartMonth(s.startMonth)} up to last month, charged once at the same monthly rate. Then ongoing from this month.`
+                      : `Nothing to catch up — we pick the books up at ${formatStartMonth(s.startMonth)} and keep them from there.`}
+                  </div>
+                ) : (
                   <div style={{ marginTop: 8, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
                     Pick a month before we can price this.
                   </div>
                 )}
               </div>
             )}
-
-            {step === 6 && <Pills items={BEHIND} value={s.behind} set={(id) => set({ behind: id })} />}
 
             {step === LAST && (
               <div>

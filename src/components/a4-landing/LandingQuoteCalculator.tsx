@@ -5,7 +5,7 @@ import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-la
 import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, EXPENSE_BANDS, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 import { independenceFlags, independenceNotice } from "@/lib/independence";
-import { formatStartMonth, nextMonth } from "@/lib/accounting-fee";
+import { catchUpMonthsFrom, formatStartMonth, nextMonth, ongoingStartMonth } from "@/lib/accounting-fee";
 import { trackConversion } from "@/lib/analytics";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
@@ -47,18 +47,8 @@ const QTXN: [string, string, string][] = [
   ["401-1000", "400 to 1,000", "very high"],
   ["1000+", "1,000+", "enterprise"],
 ];
-/**
- * Earlier months that still need doing. Months, not years: they are priced at
- * the monthly rate, one by one, so a year is simply 12 of them.
- */
-const QBEHIND: [string, string, string][] = [
-  ["0", "None", "up to date"],
-  ["3", "3 months", "behind"],
-  ["6", "6 months", "behind"],
-  ["12", "12 months", "behind"],
-  ["24", "24 months", "behind"],
-  ["36", "36 months", "behind"],
-];
+/* QBEHIND (the "how many months behind?" pill row) is GONE. It asked a second
+   time for something the start month already says — see `catchUpMonthsFrom`. */
 const QVATREG: [string, string, string][] = [
   ["none", "Not registered", "tax return only"],
   ["art10", "Yes", "charging and reclaiming"],
@@ -106,9 +96,21 @@ export type QState = {
   /** Authorised share capital band — sets the MBR registry fee on the annual return. */
   cap: CapitalBand;
   head: number;
-  /** Earlier months that still need doing, as a whole number in a string. */
+  /**
+   * Earlier months that still need doing, as a whole number in a string.
+   *
+   * DERIVED, never asked: the start-month picker writes it through
+   * `catchUpMonthsFrom`. It stays on the state (rather than being computed in
+   * `qCalc`) because it is the wire value `qItems` submits and the pack prices
+   * on — keeping it here means the quote on screen and the quote on the wire
+   * read the same field, exactly as they did when a visitor answered it.
+   */
   behind: string;
-  /** `YYYY-MM` — the first month in scope. REQUIRED before a quote can be sent. */
+  /**
+   * `YYYY-MM` — the EARLIEST month that still needs doing, and so the first
+   * month in scope. REQUIRED before a quote can be sent. Everything from it up
+   * to last month is catch-up; the monthly fee runs from this month on.
+   */
   startMonth: string;
   vatreg: string;
   size: string;
@@ -444,12 +446,20 @@ function qSummarise(q: QState) {
   const j = bits.length === 1 ? bits[0] : bits.slice(0, -1).join(", ") + ", and " + bits[bits.length - 1];
   let out = "So: " + j;
   const start = formatStartMonth(q.startMonth);
-  out += start ? `, starting ${start}.` : ".";
-  if (+q.behind > 0 && q.book === "managed") out += ` The ${q.behind} months before that are quoted separately, at the same monthly rate.`;
+  out += start ? `, from ${start} onwards.` : ".";
+  // Derived from that same month, not asked separately: everything before this
+  // month is catch-up, billed once at the client's own monthly rate.
+  if (+q.behind > 0 && q.book === "managed") out += ` The ${q.behind} months from ${start} up to this one are catch-up, charged once at the same monthly rate.`;
   return out;
 }
 
 const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB");
+
+/** `YYYY-MM` for the month `back` months before now — 0 is this month. */
+const monthKey = (back: number, now: Date = new Date()) => {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+};
 
 const NOTE_STYLE: Record<string, { bg: string; fg: string; bc: string }> = {
   ok: { bg: "rgba(0,168,126,.10)", fg: "#0b7a5d", bc: "rgba(0,168,126,.30)" },
@@ -512,6 +522,11 @@ export function LandingQuoteCalculator() {
   // rather than printing the entry band's number as if it were theirs.
   const bandRate = q.expenses === "" ? null : managedMonthly(q.entity === "sole" ? "sole" : "company", q.expenses);
   const bandLabel = prettyBand(q.expenses);
+  /** Derived from the start month, never answered — see `catchUpMonthsFrom`. */
+  const startBehind = +q.behind || 0;
+  const catchUpEuro = q.expenses === "" || startBehind <= 0
+    ? null
+    : catchUpAmount(startBehind, q.entity === "sole" ? "sole" : "company", q.expenses, isPromoActive());
 
   const pill = (on: boolean) => ({ on });
   const opts = (list: [string, string, string][], key: keyof QState): Opt[] =>
@@ -523,7 +538,7 @@ export function LandingQuoteCalculator() {
     ["About how much do you spend a month?", "Your monthly expenses are the money that leaves the business in a typical month — supplier bills, wages, rent, software, everything you spend. Exclude VAT, loan repayments, and transfers between your own accounts. New or seasonal business? Use your average over the last three months. It is what sets your bookkeeping price." + (bandRate == null || bandLabel == null ? " Pick a band and the figure appears here — we do not assume one for you." : " " + bandLabel + " works out at €" + bandRate + " a month for " + (q.entity === "sole" ? "a self-employed person" : "a company") + "."), () => EXPENSE_BANDS.map((b) => ({ key: b.id, label: b.label, sub: b.hint, pick: () => setQ({ expenses: b.id }), on: q.expenses === b.id }))],
     ["About how many transactions a month?", "A different question from your spend above: this one counts DOCUMENTS AND LINES — each invoice, receipt and bank line. A rough number is fine. It sets your VAT, tax-return and audit fees; it does not move the bookkeeping price.", () => opts(QTXN, "txn")],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person.", null],
-    ["From which month should we start?", "Pick the first month we keep the books. Anything before it is catch-up, charged at the same monthly rate — no premium, no cap.", null],
+    ["From which month do you need us?", "Pick the earliest month that still needs doing. Anything before this month is catch-up, charged at the same monthly rate — no premium, no cap — and the monthly fee runs from now on. One question, because the month you pick already tells us how far back to go.", null],
     ["Are you registered for VAT?", "Different registrations carry very different filing loads. Not sure? Pick the last option and we check the register for you.", () => QVATREG.map(([k, label, sub]) => ({ key: k, label, sub: sub || "", pick: () => setQ({ vatreg: k, vat: k === "none" ? "none" : "we" }), on: q.vatreg === k }))],
     ["How big is the company?", "Only matters if you need an audit. Small companies usually qualify for a lighter review instead.", () => opts(QSIZE, "size")],
     ["What do you need from us?", "Switch anything off that you handle yourself. The total updates as you click.", null],
@@ -590,6 +605,19 @@ export function LandingQuoteCalculator() {
     ...r.one.filter((l) => l.v > 0).map((l) => ({ n: l.n, e: l.e, v: euro(l.v) + " once" })),
   ];
 
+  // The live panel reads the SAME `qCalc` result as the quote step, so the two
+  // can never quote differently. `panelDark` is the union of the three states
+  // that withhold every figure.
+  const panelDark = r.refer || r.conflict || r.noExpenses;
+  const panelBig = r.refer ? "Let's talk first" : r.conflict ? "One or the other" : r.noExpenses ? "Tell us your spend" : euro(r.moTot);
+  const panelNote = r.refer
+    ? "We price most companies on the spot. Yours needs a short call with a director first — usually the same day."
+    : r.conflict
+      ? "We cannot give assurance on books we keep ourselves. Tell us which of the two is ours and every figure fills in."
+      : r.noExpenses
+        ? "Your monthly spend sets the bookkeeping price. Pick a band on “Monthly spend” and every figure fills in — we will not guess it."
+        : "Updates as you answer. Nothing is gated behind an email. KYC before work starts. All fees exclude VAT.";
+
   // Capture. The basket is what the backend reprices, so the visitor gets a
   // real quotation record rather than an empty contact form.
   const items = isQuote && !r.refer ? qItems(q) : [];
@@ -616,7 +644,10 @@ export function LandingQuoteCalculator() {
     setSending(true);
     const result = await submitWebsiteQuotation({
       name, email, items, risk: qRisk(q),
-      serviceStartDate: q.startMonth,
+      // The wire wants the first ONGOING month, not the earliest month that
+      // still needs doing — the backlog travels as `catchup` items. See
+      // `ongoingStartMonth`: sending the picked month raw double-bills it.
+      serviceStartDate: ongoingStartMonth(q.startMonth),
       sourceDetail: "a4-homepage",
     });
     setSent(result);
@@ -666,7 +697,7 @@ export function LandingQuoteCalculator() {
             with pack mt-2026-08-14-managed. There is one bookkeeping service. */}
 
         <Reveal delay={100}>
-          <div className="lqc-grid" style={{ margin: "32px auto 0", display: "grid", gridTemplateColumns: "250px 1fr", gap: 32, alignItems: "start", maxWidth: 980, width: "100%" }}>
+          <div className="lqc-grid" style={{ margin: "32px auto 0", display: "grid", gridTemplateColumns: "230px 1fr 320px", gap: 24, alignItems: "start", maxWidth: 1180, width: "100%" }}>
             {/* step rail */}
             <div className="lqc-rail" style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "left", position: "sticky", top: 84 }}>
               {QSTEPS.map((label, i) => {
@@ -713,39 +744,44 @@ export function LandingQuoteCalculator() {
               )}
 
               {isStart && (
-                <>
-                  <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
-                    <label htmlFor="lqc-start" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
-                      First month we keep the books
-                    </label>
-                    <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                      Required — the price depends on it, so we do not guess.
-                    </div>
-                    <input
-                      id="lqc-start"
-                      type="month"
-                      value={q.startMonth}
-                      onChange={(e) => setQ({ startMonth: e.target.value })}
-                      style={{ ...Q_INPUT, marginTop: 10, flex: "0 1 220px" }}
-                    />
-                    {!/^\d{4}-(0[1-9]|1[0-2])$/.test(q.startMonth) && (
-                      <div style={{ marginTop: 8, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
-                        Pick a month before we can price this.
-                      </div>
-                    )}
+                <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                  <label htmlFor="lqc-start" style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
+                    Earliest month that still needs doing
+                  </label>
+                  <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                    Required — the price depends on it, so we do not guess. Already up to date? Pick this month.
                   </div>
-                  <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
-                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>
-                      Do you have earlier months that still need doing?
+                  <input
+                    id="lqc-start"
+                    type="month"
+                    value={q.startMonth}
+                    onChange={(e) => setQ({ startMonth: e.target.value, behind: String(catchUpMonthsFrom(e.target.value)) })}
+                    style={{ ...Q_INPUT, marginTop: 10, flex: "0 1 220px" }}
+                  />
+                  {/* The split the visitor is buying, in their own months and
+                      their own rate — said HERE rather than asked as a second
+                      question, because the month they just picked is the whole
+                      answer to it. */}
+                  {startOk ? (
+                    <div style={{ marginTop: 12, padding: "11px 14px", borderRadius: 10, background: NOTE_STYLE.info.bg, border: "1px solid " + NOTE_STYLE.info.bc, color: NOTE_STYLE.info.fg, fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6 }}>
+                      {startBehind > 0 ? (
+                        <>
+                          <div>
+                            <strong>{formatStartMonth(q.startMonth)} to {formatStartMonth(monthKey(1))}</strong> — {startBehind} {startBehind === 1 ? "month" : "months"} of catch-up
+                            {catchUpEuro != null ? `, ${euro(catchUpEuro)} charged once` : bandRate == null ? ", at your own monthly rate once you tell us your monthly spend" : ""}.
+                          </div>
+                          <div style={{ marginTop: 4 }}>Then ongoing from <strong>{formatStartMonth(monthKey(0))}</strong>{bandRate == null ? "" : `, €${bandRate} a month`}. No catch-up premium, no cap.</div>
+                        </>
+                      ) : (
+                        <>Nothing to catch up — we pick the books up at <strong>{formatStartMonth(q.startMonth)}</strong> and keep them from there.</>
+                      )}
                     </div>
-                    <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                      Each one costs the same as a month going forward{bandRate == null ? " — at your own monthly rate, once you have told us your monthly spend" : ` — €${bandRate}`}. No premium, no cap.
+                  ) : (
+                    <div style={{ marginTop: 8, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
+                      Pick a month before we can price this.
                     </div>
-                    <div style={{ marginTop: 10 }}>
-                      <OptPills opts={QBEHIND.map(([k, label, sub]) => ({ key: k, label, sub, on: q.behind === k, pick: () => setQ({ behind: k }) }))} />
-                    </div>
-                  </div>
-                </>
+                  )}
+                </div>
               )}
 
               {isNum && (
@@ -921,6 +957,44 @@ export function LandingQuoteCalculator() {
                   {!r.refer && !r.conflict && !r.noExpenses && r.oneTot > 0 && <span style={{ fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)" }}>{euro(r.oneTot) + " once"}</span>}
                 </span>
               </div>
+            </div>
+
+            {/* live price panel — the audit calculator's third column, brought
+                to the homepage. Every figure here is `qCalc`'s, so the panel
+                cannot show a price the quote step would contradict: it is the
+                same object, rendered twice. It goes dark on exactly the three
+                states that withhold figures (referral sector, the independence
+                conflict, no spend band), because a running total left showing
+                a number while the quote step shows none is the bug that makes
+                a visitor believe the higher of the two. */}
+            <div className="lqc-panel" style={{ background: "#000", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 84, textAlign: "left" }}>
+              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-stone)" }}>
+                {panelDark ? "Your price" : "Every month"}
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+                <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontVariantNumeric: "tabular-nums", fontSize: panelDark ? 22 : 38, letterSpacing: panelDark ? "-.4px" : "-1.5px", lineHeight: 1.15 }}>{panelBig}</span>
+                {!panelDark && <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)" }}>/ month</span>}
+              </div>
+              {!panelDark && (r.yrTot > 0 || r.oneTot > 0) && (
+                <div style={{ marginTop: 8, display: "flex", gap: 14, flexWrap: "wrap", fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-on-dark-mute)" }}>
+                  {r.yrTot > 0 && <span>{euro(r.yrTot)} / year</span>}
+                  {r.oneTot > 0 && <span>{euro(r.oneTot)} once</span>}
+                </div>
+              )}
+              <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)", display: quoteLines.length ? "flex" : "none", flexDirection: "column", gap: 9 }}>
+                {quoteLines.map((l) => (
+                  <span key={l.n + l.v} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "var(--a4-font-body)", fontSize: 12.5 }}>
+                    <span style={{ color: "var(--a4-on-dark-mute)" }}>{l.n}</span>
+                    <span style={{ color: "#fff", fontWeight: 500, whiteSpace: "nowrap" }}>{l.v}</span>
+                  </span>
+                ))}
+              </div>
+              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "var(--a4-stone)", margin: "18px 0 0", paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)" }}>{panelNote}</p>
+              {!isQuote && (
+                <Button variant="primary" size="md" onClick={() => setQ({ step: LAST_STEP })} style={{ width: "100%", marginTop: 18 }}>
+                  See the full quote <Icon name="arrow-right" size={16} color="#000" />
+                </Button>
+              )}
             </div>
           </div>
         </Reveal>
