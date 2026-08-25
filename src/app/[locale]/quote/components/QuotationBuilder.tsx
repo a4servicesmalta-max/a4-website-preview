@@ -11,7 +11,7 @@ import {
   type QuoteServiceId,
   type RevenueBandId,
 } from "@/lib/quotation";
-import { catchUpMonthsFrom } from "@/lib/accounting-fee";
+import { catchUpMonthsFrom, ongoingStartMonth } from "@/lib/accounting-fee";
 import { flagsForServiceSelection, independenceNotice } from "@/lib/independence";
 import {
   EXPENSE_BANDS,
@@ -237,7 +237,11 @@ export function QuotationBuilder() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name, email, company, regNo, industry, revenueBand,
-          services: [...services], entity, expenses, catchUpMonths, startMonth,
+          services: [...services], entity, expenses, catchUpMonths,
+          // The PDF prints "Bookkeeping starts X; N earlier months quoted
+          // separately", so X must be the first ONGOING month. The field the
+          // visitor filled is the earliest month still to do.
+          startMonth: ongoingStartMonth(startMonth),
           auditEligible: independence.auditEligible,
           bookkeepingEligible: independence.bookkeepingEligible,
         }),

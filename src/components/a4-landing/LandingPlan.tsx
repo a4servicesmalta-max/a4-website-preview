@@ -10,6 +10,7 @@ import {
   catchUpAmount, catchUpLabel, managedMonthly, EXPENSE_BANDS,
   type ManagedEntity, type ExpenseBand,
 } from "@/data/a4QuotePack";
+import { catchUpMonthsFrom } from "@/lib/accounting-fee";
 import { INDEPENDENCE_BOOKKEEPING, flagsForServiceSelection, type IndependenceFlags } from "@/lib/independence";
 // Confirm whose books + add-ons → live monthly price → two exits:
 // (1) Create account & request services, (2) Book a 15-min call.
@@ -358,13 +359,13 @@ export function LandingPlan() {
                 </div>
 
                 <div style={{ marginTop: 14, borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", padding: "15px 16px" }}>
-                  <label htmlFor="lp-start" style={{ ...fieldLabel, display: "block" }}>From which month should we start?</label>
-                  <div style={fieldSub}>Required. The first month we keep the books — anything before it is catch-up.</div>
+                  <label htmlFor="lp-start" style={{ ...fieldLabel, display: "block" }}>From which month do you need us?</label>
+                  <div style={fieldSub}>Required. Pick the earliest month that still needs doing — everything before this month is catch-up, and the monthly fee runs from now on.</div>
                   <input
                     id="lp-start"
                     type="month"
                     value={startMonth}
-                    onChange={(e) => patch({ startMonth: e.target.value })}
+                    onChange={(e) => patch({ startMonth: e.target.value, catchUpMonths: catchUpMonthsFrom(e.target.value) })}
                     style={{
                       marginTop: 10, height: 40, padding: "0 12px", borderRadius: "var(--a4-r-md)",
                       border: "1px solid var(--a4-hairline-light)", background: "var(--a4-surface-card)",
@@ -402,27 +403,19 @@ export function LandingPlan() {
                   </div>
 
                   <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--a4-hairline-light)" }}>
+                    {/* READ BACK, not asked. The chip row that used to sit
+                       here asked for the same fact the start month above
+                       already gives: a start month in the past IS the count
+                       of earlier months. */}
                     <div style={fieldLabel}>Earlier months that still need doing</div>
                     <div style={fieldSub}>{MANAGED_CATCHUP_NOTE} Each one is {lpEuroOr(base)}.</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                      {[0, 3, 6, 12, 24, 36].map((m) => {
-                        const on = catchUpMonths === m;
-                        return (
-                          <button key={m} type="button" onClick={() => patch({ catchUpMonths: m })} style={{
-                            padding: "7px 13px", borderRadius: "var(--a4-r-full)", cursor: "pointer",
-                            border: "1px solid " + (on ? "var(--a4-primary)" : "var(--a4-hairline-light)"),
-                            background: on ? "var(--a4-primary)" : "transparent",
-                            color: on ? "#fff" : "var(--a4-body)",
-                            fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600,
-                          }}>{m === 0 ? "None" : `${m} months`}</button>
-                        );
-                      })}
+                    <div style={{ marginTop: 10, fontFamily: "var(--a4-font-body)", fontSize: 13, fontVariantNumeric: "tabular-nums", color: "var(--a4-ink)", fontWeight: 600 }}>
+                      {!startOk
+                        ? "Pick a start month above and we work them out from it."
+                        : catchUpMonths === 0
+                          ? "None — we pick the books up at your start month."
+                          : q.catchUpLabel ?? `${catchUpMonths} ${catchUpMonths === 1 ? "month" : "months"}, once your monthly spend is picked.`}
                     </div>
-                    {catchUpFee > 0 && (
-                      <div style={{ marginTop: 10, fontFamily: "var(--a4-font-body)", fontSize: 13, fontVariantNumeric: "tabular-nums", color: "var(--a4-ink)", fontWeight: 600 }}>
-                        {q.catchUpLabel}
-                      </div>
-                    )}
                   </div>
                 </div>
 

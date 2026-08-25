@@ -301,3 +301,28 @@ export function catchUpMonthsFrom(startMonth: string, now: Date = new Date()): n
   const current = now.getUTCFullYear() * 12 + now.getUTCMonth();
   return Math.max(0, Math.min(240, current - started));
 }
+
+/**
+ * The month that goes ON THE WIRE as `serviceStartDate` / `startMonth`.
+ *
+ * THE TWO MONTHS ARE NOT THE SAME MONTH, and conflating them double-bills.
+ * What the visitor now picks is the EARLIEST month that still needs doing.
+ * What every consumer downstream means by a start month is the first ONGOING
+ * month, with the backlog being whatever falls before it: the portal's
+ * `websiteQuoteMeta` calls it "the period anchor" the accept fan-out seeds
+ * period services from, Books detects the months before it as held, and the
+ * quotation PDF prints "Bookkeeping starts X; N earlier months quoted
+ * separately". Send a past month there and the client is quoted ongoing
+ * bookkeeping from January AND seven catch-up months for the same seven
+ * months.
+ *
+ * So the picker's answer is split at this boundary and only here: the count
+ * goes out as catch-up, and the ongoing month goes out as the start. A month
+ * this month or later is already the ongoing month and passes through
+ * unchanged; an invalid one passes through too, for the caller's own
+ * `startOk` guard to refuse.
+ */
+export function ongoingStartMonth(startMonth: string, now: Date = new Date()): string {
+  if (catchUpMonthsFrom(startMonth, now) <= 0) return startMonth;
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+}

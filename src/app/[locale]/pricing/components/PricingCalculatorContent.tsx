@@ -39,7 +39,7 @@ import {
   type WebsiteQuoteResult,
 } from "@/lib/websiteQuotation";
 import { independenceFlags, independenceNotice } from "@/lib/independence";
-import { nextMonth } from "@/lib/accounting-fee";
+import { catchUpMonthsFrom, nextMonth, ongoingStartMonth } from "@/lib/accounting-fee";
 import { trackConversion } from "@/lib/analytics";
 
 const prEuro =(n: number) => "€" + Math.round(n).toLocaleString();
@@ -75,8 +75,8 @@ const PR_ENTITY_IDS: ManagedEntity[] = MANAGED_ENTITY_OPTIONS.map((o) => o.id);
 const PR_EXPENSE_IDS: ExpenseBand[] = EXPENSE_BANDS.map((b) => b.id);
 const PR_EXPENSE_LABELS = EXPENSE_BANDS.map((b) => b.label);
 
-/** Earlier months the calculator offers. Priced at the monthly rate, uncapped. */
-const PR_CATCHUP_MONTHS = [0, 3, 6, 12, 24, 36];
+/* PR_CATCHUP_MONTHS (the earlier-months chip row) is gone: the start month
+   already says how many there are — see `catchUpMonthsFrom`. */
 
 type ServiceId = (typeof PR_SERVICES)[number]["id"];
 
@@ -545,7 +545,6 @@ function PricingCalc() {
   // `startOk` passed on an answer nobody gave and the visitor could send
   // without ever seeing the field.
   const [startMonth, setStartMonth] = useState<string>("");
-  const [catchUpIdx, setCatchUpIdx] = useState(0);
   const [vatVol, setVatVol] = useState(1);
   const [turn, setTurn] = useState(1);
   const [incShareholders, setIncShareholders] = useState(1);
@@ -577,7 +576,13 @@ function PricingCalc() {
   // band is the one direction that loses money invisibly, and it is precisely
   // what the pack docblock forbids callers from doing.
   const expenses: ExpenseBand | undefined = PR_EXPENSE_IDS[expensesIdx];
-  const catchUpMonths = PR_CATCHUP_MONTHS[catchUpIdx] ?? 0;
+  /**
+   * DERIVED from the start month, not a second question. This calculator used
+   * to ask for the month and then, in different words, how many earlier
+   * months were outstanding — and a visitor whose two answers disagreed got a
+   * quote that matched neither.
+   */
+  const catchUpMonths = catchUpMonthsFrom(startMonth);
   /** null when the band is missing or unknown — the quote is then withheld. */
   const bookRate = expenses == null ? null : managedMonthly(entity, expenses);
   /** B1: the accounting tab cannot price anything without the band. */
@@ -678,7 +683,9 @@ function PricingCalc() {
     setSending(true);
     const result = await submitWebsiteQuotation({
       name, email, items,
-      ...(needsStartMonth && startOk ? { serviceStartDate: startMonth } : {}),
+      // The first ONGOING month, which is this month whenever the picked one
+      // is in the past — the backlog travels as the `catchup` item instead.
+      ...(needsStartMonth && startOk ? { serviceStartDate: ongoingStartMonth(startMonth) } : {}),
     });
     setSent(result);
     // Conversion on a CONFIRMED backend result only — `error` means the record
@@ -759,10 +766,10 @@ function PricingCalc() {
 
                 <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
                   <label htmlFor="pr-start" className="a4-font-body text-[14px] font-semibold text-white block">
-                    From which month should we start?
+                    From which month do you need us?
                   </label>
                   <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    Required. The first month we keep the books — anything before it is catch-up.
+                    Required. Pick the earliest month that still needs doing — everything before this month is catch-up, and the monthly fee runs from now on.
                   </p>
                   <input
                     id="pr-start"
@@ -777,32 +784,24 @@ function PricingCalc() {
                       colorScheme: "dark",
                     }}
                   />
-                  {!startOk && (
+                  {!startOk ? (
                     <p className="a4-font-body text-[12.5px] mt-[8px]" style={{ color: "#E8C08A" }}>
                       Pick a month before we can price this.
+                    </p>
+                  ) : catchUpMonths > 0 ? (
+                    /* The catch-up split, read back from the month just
+                       picked — the second question this tab used to ask. */
+                    <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
+                      {catchUpMonths} {catchUpMonths === 1 ? "month" : "months"} of catch-up, charged once at the same monthly rate. Then ongoing from this month.
+                      {expenses == null ? "" : ` ${catchUpLabel(catchUpMonths, entity, expenses, isPromoActive())}`}
+                    </p>
+                  ) : (
+                    <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px]">
+                      Nothing to catch up — we pick the books up there and keep them from then on.
                     </p>
                   )}
                 </div>
 
-                <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
-                  <div className="a4-font-body text-[14px] font-semibold text-white">
-                    Do you have earlier months that still need doing?
-                  </div>
-                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    Each one costs the same as a month going forward — {bookRate == null ? "your own monthly rate" : prEuro(bookRate)}. No premium, no cap.
-                  </p>
-                  <PrChip
-                    items={PR_CATCHUP_MONTHS.map((m) => (m === 0 ? "None" : `${m} months`))}
-                    value={catchUpIdx}
-                    set={setCatchUpIdx}
-                    cols={3}
-                  />
-                  {catchUpMonths > 0 && (
-                    <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
-                      {catchUpLabel(catchUpMonths, entity, expenses, isPromoActive())}
-                    </p>
-                  )}
-                </div>
 
                 <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[16px]">
                   {MANAGED_CAVEAT}

@@ -6,7 +6,7 @@ import { useQuoteActions } from "@/components/a4-landing/QuoteActions";
 import type { QuotePayload } from "@/lib/quote-handoff";
 import {
   SECTORS, TXN, ENTITIES, EXPENSES, VAT_REG, STEPS,
-  calcAccountingFee, accountingSummary, quoteBreakdown, euro, formatStartMonth, catchUpMonthsFrom,
+  calcAccountingFee, accountingSummary, quoteBreakdown, euro, formatStartMonth, catchUpMonthsFrom, ongoingStartMonth,
   ACCOUNTING_NO_EXPENSES_NOTE,
   type AccountingInput, type VatRegId,
 } from "@/lib/accounting-fee";
@@ -158,7 +158,10 @@ export function AccountingEstimator() {
       { k: "Whose books", v: MANAGED_ENTITY_LABELS[s.entity] },
       { k: "Payroll headcount", v: String(s.head) },
       { k: "VAT registration", v: labelOf(VAT_REG, s.vatreg) },
-      { k: "Start month", v: formatStartMonth(s.startMonth) || "not given" },
+      // The month WORK BEGINS BILLING, which is this month whenever there is
+      // a backlog — the same split the wire makes. The earliest month still
+      // to do is the row below, as a count.
+      { k: "Start month", v: formatStartMonth(ongoingStartMonth(s.startMonth)) || "not given" },
       // Derived from the start month, never answered separately.
       { k: "Earlier months", v: behindMonths > 0 ? `${behindMonths} ${behindMonths === 1 ? "month" : "months"}` : "none — up to date" },
       { k: "Risk tier", v: q.refer ? "Referral" : q.tier.label },

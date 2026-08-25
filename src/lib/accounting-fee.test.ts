@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcAccountingFee, accountingSummary, quoteBreakdown, catchUpMonthsFrom, formatStartMonth, nextMonth, type AccountingInput } from "./accounting-fee";
+import { calcAccountingFee, accountingSummary, quoteBreakdown, catchUpMonthsFrom, ongoingStartMonth, formatStartMonth, nextMonth, type AccountingInput } from "./accounting-fee";
 import { BOOKKEEPING_MANAGED_MONTHLY, LAUNCH_PROMO } from "@/data/a4QuotePack";
 
 // The entry expenses band, which `base` below pins. Bookkeeping is banded by
@@ -266,5 +266,31 @@ describe("catchUpMonthsFrom — the question the wizards no longer ask twice", (
     if (derived.refer || answered.refer) throw new Error("unpriceable");
     expect(derived.oneOffFull).toBe(answered.oneOffFull);
     expect(derived.monthlyNet).toBe(answered.monthlyNet);
+  });
+});
+
+describe("ongoingStartMonth — the month that goes on the wire", () => {
+  const AUG_2026 = new Date(Date.UTC(2026, 7, 25));
+
+  it("sends THIS month when the picked month is in the past", () => {
+    // The failure this prevents: the portal seeds period services from
+    // `serviceStartDate` and Books detects the months before it as held. Send
+    // January and the client is billed ongoing bookkeeping from January AND
+    // seven catch-up months — the same seven months, twice.
+    expect(ongoingStartMonth("2026-01", AUG_2026)).toBe("2026-08");
+    expect(catchUpMonthsFrom("2026-01", AUG_2026)).toBe(7);
+  });
+
+  it("passes this month and any future month straight through", () => {
+    // Nothing is behind, so the month picked IS the first ongoing month.
+    expect(ongoingStartMonth("2026-08", AUG_2026)).toBe("2026-08");
+    expect(ongoingStartMonth("2026-11", AUG_2026)).toBe("2026-11");
+  });
+
+  it("passes a malformed month through for the caller's own guard to refuse", () => {
+    // Every surface gates sending on its own `startOk`; inventing a month here
+    // would hand that guard something valid to pass on.
+    expect(ongoingStartMonth("", AUG_2026)).toBe("");
+    expect(ongoingStartMonth("2026-13", AUG_2026)).toBe("2026-13");
   });
 });

@@ -5,7 +5,7 @@ import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-la
 import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, EXPENSE_BANDS, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 import { independenceFlags, independenceNotice } from "@/lib/independence";
-import { catchUpMonthsFrom, formatStartMonth, nextMonth } from "@/lib/accounting-fee";
+import { catchUpMonthsFrom, formatStartMonth, nextMonth, ongoingStartMonth } from "@/lib/accounting-fee";
 import { trackConversion } from "@/lib/analytics";
 
 // Homepage pricing calculator — ported from the Vacei site's cost calculator.
@@ -644,7 +644,10 @@ export function LandingQuoteCalculator() {
     setSending(true);
     const result = await submitWebsiteQuotation({
       name, email, items, risk: qRisk(q),
-      serviceStartDate: q.startMonth,
+      // The wire wants the first ONGOING month, not the earliest month that
+      // still needs doing — the backlog travels as `catchup` items. See
+      // `ongoingStartMonth`: sending the picked month raw double-bills it.
+      serviceStartDate: ongoingStartMonth(q.startMonth),
       sourceDetail: "a4-homepage",
     });
     setSent(result);
