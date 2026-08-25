@@ -535,7 +535,19 @@ export const INCORPORATION = {
  */
 export const LAUNCH_PROMO = {
   pct: 0.25,
-  until: "2026-08-31",
+  // WITHDRAWN EARLY by owner ruling on 2026-08-24 — brought forward from
+  // 2026-08-31. Retiring it by DATE is the mechanism this pack is built on:
+  // `isPromoActive` goes false, every price on the site reverts to the rate
+  // card, and the discount arithmetic is left untouched for the quotes that
+  // were struck while it ran.
+  //
+  // ⚠ Three copies of this pack must agree — this one, portal-backend's
+  // src/modules/quote-pack/malta-pack.ts and vacei-marketing-site's
+  // index.html. The backend re-prices whatever this site submits and rejects a
+  // divergence over €1 / 1%, so a copy that still discounts while another does
+  // not turns that site's quotes into bare leads with no quotation attached,
+  // silently, because the caller still gets a 202.
+  until: "2026-08-24",
   // Always carry the year. An undated "until 31 Aug" reads as evergreen and
   // will outlive the campaign pointing at it.
   label: "25% off until 31 August 2026",

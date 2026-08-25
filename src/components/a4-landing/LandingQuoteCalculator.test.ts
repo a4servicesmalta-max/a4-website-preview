@@ -434,7 +434,12 @@ describe("IESBA independence", () => {
  * visitor is quoted the number they were shown. These pin that.
  */
 describe("what we show equals what we quote", () => {
-  const shown = qCalc(CANONICAL);
+  // Pin the date. `qCalc(CANONICAL)` reads the real clock, so while the launch
+  // promo was running these cases compared a discounted "today" against a
+  // discounted PROMO_ON and passed by coincidence — and started failing the
+  // day the promo window closed. Both sides must be priced AT THE SAME
+  // INSTANT or this suite tests the calendar, not the calculator.
+  const shown = qCalc(CANONICAL, PROMO_ON);
   const items = qItems(CANONICAL);
 
   it("agrees with the engine line-for-line before any discount", () => {
@@ -478,7 +483,7 @@ describe("what we show equals what we quote", () => {
 
   it("never discounts the government registry fee", () => {
     const top: QState = { ...CANONICAL, cap: "50000" };
-    const s = qCalc(top);
+    const s = qCalc(top, PROMO_ON);   // same instant as the engine call below
     const engine = evaluateA4Items(qItems(top), qRisk(top), PROMO_ON);
     if (s.refer) throw new Error("unpriceable");
     expect(s.yrTot).toBe(engine.yearly);
