@@ -16,6 +16,7 @@ import {
 import FooterCtaStrip from './FooterCtaStrip'
 
 const Logo = '/assets/images/a4-logo-new.webp'
+const VaceiLogo = '/assets/images/Logo.png'
 
 const Footer = () => {
   const pathname = usePathname()
@@ -88,6 +89,43 @@ const Footer = () => {
             <p className="text-sm text-gray leading-relaxed max-w-xs">
               {t('footer.tagline')}
             </p>
+
+            {/* The firm/software split, stated plainly: A4 is the firm, Vacei
+                is the software platform it builds and runs. Mirrored on
+                vacei.com, which carries the A4 mark. */}
+            <div className="w-full max-w-xs pt-3 mt-1 border-t border-gray-200 flex flex-col items-center md:items-start gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-gray">
+                Our software platform
+              </span>
+              <a
+                href="https://vacei.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Vacei — the software platform built by A4 Services"
+                className="inline-flex"
+              >
+                <Image
+                  src={VaceiLogo}
+                  alt="Vacei"
+                  width={112}
+                  height={52}
+                  className="object-contain"
+                />
+              </a>
+              <p className="text-xs text-gray leading-relaxed">
+                A4 Services is the firm. Vacei is the software platform we build
+                and run — the client portal, books and audit tools behind every
+                engagement.{' '}
+                <a
+                  href="https://vacei.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-primary-blue hover:underline"
+                >
+                  vacei.com
+                </a>
+              </p>
+            </div>
 
             <div className="flex items-center gap-4 pt-2 justify-center md:justify-start">
               <a

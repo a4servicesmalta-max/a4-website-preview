@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     // visitor shows up in the portal as an anonymous "Website visitor". File
     // the lead separately — this is the row that carries their name and email.
     // Non-fatal, exactly like the thread push above.
-    await pushLeadToPortal({
+    const leadWritten = await pushLeadToPortal({
       name: name.trim(),
       email: email.trim(),
       message: issue.trim(),
@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Email is best-effort — a missing/broken SMTP config must never cause a 5xx.
+    let emailSent = false;
     try {
       const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
       if (toAddress) {
@@ -131,9 +132,20 @@ ${transcript}
 --- End transcript ---
           `.trim(),
         });
+        emailSent = true;
       }
     } catch (emailErr) {
       console.warn("Support form email skipped (SMTP not configured or failed):", emailErr);
+    }
+
+    // Only claim success if at least one channel actually captured the
+    // request. Telling the visitor "we got it" when every channel failed
+    // earns silence from a prospect who thinks help is coming.
+    if (!thread && !leadWritten && !emailSent) {
+      return NextResponse.json(
+        { error: "We could not record your request just now. Please email us directly." },
+        { status: 502 }
+      );
     }
 
     return NextResponse.json({ ok: true });

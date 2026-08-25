@@ -20,21 +20,28 @@ export async function POST(req: NextRequest) {
     const transport = getTransport();
     const to = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
     const summary = `Score: ${score}/100 (${band})\n\n${(breakdown || []).map((r: { dimension: string; finding: string }) => `• ${r.dimension}: ${r.finding}`).join("\n")}`;
-    if (transport && to) {
-      await transport.sendMail({
-        from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-        to, replyTo: email,
-        subject: `Accounting health check — ${name || email} (${score}/100, ${band})`,
-        text: `Name: ${name}\nCompany: ${company}\nEmail: ${email}\n\n${summary}`,
-      });
-      await transport.sendMail({
-        from: `"A4 Services" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-        to: email,
-        subject: `Your accounting health check — ${score}/100 (${band})`,
-        text: `Hi ${name || ""},\n\nHere is your accounting health check result.\n\n${summary}\n\nWant a real review of your numbers? Reply or book a call: ${process.env.NEXT_PUBLIC_CALENDLY_BOOKING_URL || "https://a4.com.mt/contact"}\n\n— A4 Services`,
-      });
-    }
+
+    // Portal push is primary — an SMTP throw must never cost the lead.
     await pushToPortal({ name, email, company, message: `Accounting health score: ${score}/100 (${band})`, service: "Accounting health quiz", source: "health-check", priority: "Med", meta: { score, band, breakdown } });
+
+    if (transport && to) {
+      try {
+        await transport.sendMail({
+          from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+          to, replyTo: email,
+          subject: `Accounting health check — ${name || email} (${score}/100, ${band})`,
+          text: `Name: ${name}\nCompany: ${company}\nEmail: ${email}\n\n${summary}`,
+        });
+        await transport.sendMail({
+          from: `"A4 Services" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+          to: email,
+          subject: `Your accounting health check — ${score}/100 (${band})`,
+          text: `Hi ${name || ""},\n\nHere is your accounting health check result.\n\n${summary}\n\nWant a real review of your numbers? Reply or book a call: ${process.env.NEXT_PUBLIC_CALENDLY_BOOKING_URL || "https://a4.com.mt/contact"}\n\n— A4 Services`,
+        });
+      } catch (mailErr) {
+        console.error("health-check email failed (lead already pushed):", mailErr);
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {

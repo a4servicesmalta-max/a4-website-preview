@@ -32,17 +32,23 @@ export async function POST(req: NextRequest) {
     const transport = getTransport();
     const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
 
-    if (transport && toAddress) {
-      await transport.sendMail({
-        from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-        to: toAddress,
-        subject: "Lead magnet download — Malta compliance calendar 2026",
-        replyTo: email,
-        text: `Email: ${email}\nMagnet: Malta compliance deadline calendar 2026`,
-      });
-    }
-
+    // Portal push is primary — an SMTP throw must never cost the lead, and it
+    // must never cost the visitor the .ics they came for either.
     await pushToPortal({ email, service: `Lead magnet: ${magnet}`, source: "lead-magnet", priority: "Low", meta: { magnet } });
+
+    if (transport && toAddress) {
+      try {
+        await transport.sendMail({
+          from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+          to: toAddress,
+          subject: "Lead magnet download — Malta compliance calendar 2026",
+          replyTo: email,
+          text: `Email: ${email}\nMagnet: Malta compliance deadline calendar 2026`,
+        });
+      } catch (mailErr) {
+        console.error("lead-magnet email failed (lead already pushed):", mailErr);
+      }
+    }
 
     const ics = buildComplianceCalendarIcs();
     return new NextResponse(ics, {
