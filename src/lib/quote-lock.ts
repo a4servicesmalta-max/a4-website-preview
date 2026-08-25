@@ -123,9 +123,11 @@ export function readQuoteLock(
   return { fee: p.f, kind: p.k, email: p.e, issuedAt: p.i, expiresAt: p.x };
 }
 
-/** Cookie attributes. Not httpOnly: the estimator is a client component and
- *  reads the lock through /api/quote-lock, but keeping it readable costs
- *  nothing — the signature, not the secrecy, is what makes it trustworthy. */
+/** Cookie attributes. httpOnly deliberately: the estimator is a client
+ *  component but reads the lock through /api/quote-lock, so nothing in the
+ *  browser needs to parse the cookie itself. The signature is what makes the
+ *  token trustworthy; httpOnly is just one less copy of a prospect's fee
+ *  sitting where page scripts can reach it. */
 export function lockCookieOptions() {
   return {
     httpOnly: true,
