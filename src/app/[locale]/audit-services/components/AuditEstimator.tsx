@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button, Icon, Container } from "@/components/a4-landing/Primitives";
 import { Field, primaryBtn, outlineBtn } from "@/app/[locale]/accounting-health-check/components/Field";
 import { FindingsList } from "@/app/[locale]/accounting-health-check/components/FindingsList";
@@ -181,22 +181,58 @@ export function AuditEstimator() {
     setConsent(false); setVerifiedToken(""); setVerifiedEmail(""); setCodeSent(false); setCode("");
   };
 
+  // ---- A fee we have already quoted this visitor wins over a fresh estimate. ----
+  // Someone who uploaded their statements and then came back on a new tab must
+  // see the same number, not a second opinion from the rate card — and must not
+  // be able to shop the tool for a cheaper one by declining to upload.
+  // Identity is the signed cookie plus the verified email (never IP): see
+  // src/lib/quote-lock.ts.
+  const [lock, setLock] = useState<{ fee: number; issuedAt: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/quote-lock?kind=audit")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!cancelled && j?.locked && typeof j.fee === "number") {
+          setLock({ fee: j.fee, issuedAt: j.issuedAt });
+        }
+      })
+      .catch(() => {
+        // A quote we cannot look up is not a reason to fail the estimator;
+        // the visitor simply gets a fresh estimate, as they did before this.
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   // ---- The fee. Sending a real prior-year file unlocks the planning saving. ----
   const input: AuditInput = { ...answers, uploaded: !!data };
   const q = calcAuditFee(input);
-  const lines = feeLines(input, q);
-  const feeBig = q.refer ? "Let’s talk first" : euro(q.final);
-  const feeMini = q.refer ? "Let’s talk" : euro(q.final) + " /yr";
+  // A referral sector still needs a director, even if we quoted before.
+  const held = !q.refer && lock ? lock.fee : null;
+  // The derived breakdown explains how q.final was built, so it must not sit
+  // under a held figure it does not add up to.
+  const lines = held === null ? feeLines(input, q) : [];
+  const heldOn = lock
+    ? new Date(lock.issuedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long" })
+    : "";
+  const feeBig = q.refer ? "Let’s talk first" : euro(held ?? q.final);
+  const feeMini = q.refer ? "Let’s talk" : euro(held ?? q.final) + " /yr";
   const ctaLabel = q.refer ? "Request a call" : "Request a proposal";
   const feeNote = q.refer
     ? "We price most sectors instantly. This one needs a short conversation with a director before we put a number to it — usually the same day."
-    : (q.review ? "You likely qualify for a review instead of a full audit — we confirm it against your figures. " : "") +
-      `The fee is fixed after a short scoping call and never below €${AUDIT_PRE_TRADING}. ${PRICING_VAT_NOTE}`;
+    : held !== null
+      ? `This is the fee we quoted you on ${heldOn}, from the statements you sent. It stands for 30 days — answering the questions again will not change it. ${PRICING_VAT_NOTE}`
+
+      : (q.review ? "You likely qualify for a review instead of a full audit — we confirm it against your figures. " : "") +
+        `The fee is fixed after a short scoping call and never below €${AUDIT_PRE_TRADING}. ${PRICING_VAT_NOTE}`;
   const summary = q.refer
     ? "We price most sectors instantly, but this one needs a short conversation with a director before we put a number to it — usually the same day."
-    : `So: a ${q.review ? "review engagement" : "full financial audit"} at ${euro(q.final)} a year${answers.taxret === "yes" ? ", tax return included" : ""}, fixed after one short scoping call. Documents are collected once, in the portal, and we file on time at the MBR.`;
+    : held !== null
+      ? `Your fee is ${euro(held)} a year — the figure we gave you on ${heldOn} after reading your statements. We hold it for 30 days, so there is nothing to re-answer.`
+      : `So: a ${q.review ? "review engagement" : "full financial audit"} at ${euro(q.final)} a year${answers.taxret === "yes" ? ", tax return included" : ""}, fixed after one short scoping call. Documents are collected once, in the portal, and we file on time at the MBR.`;
   // Only the engine returns a fee read from the actual file; never invent one.
-  const engineFee = data?.quote?.fee ?? null;
+  // A held fee came from that same engine on an earlier visit, so it counts.
+  const engineFee = data?.quote?.fee ?? held;
 
   // ---- Lead capture ----
   const [modal, setModal] = useState(false);
@@ -344,7 +380,7 @@ export function AuditEstimator() {
                 <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontVariantNumeric: "tabular-nums", fontSize: 38, letterSpacing: "-1.5px", lineHeight: 1 }}>{feeBig}</span>
                 {!q.refer && <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)" }}>/ year</span>}
               </div>
-              <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)", display: "flex", flexDirection: "column", gap: 9 }}>
+              <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)", display: lines.length ? "flex" : "none", flexDirection: "column", gap: 9 }}>
                 {lines.map((l) => (
                   <span key={l.k} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "var(--a4-font-body)", fontSize: 12.5 }}>
                     <span style={{ color: "var(--a4-on-dark-mute)" }}>{l.k}</span>

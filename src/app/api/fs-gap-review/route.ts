@@ -5,6 +5,7 @@ import { pushToPortal } from "@/lib/portal";
 import { pushLeadToPortal } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
 import { augmentWithAiCommentary } from "@/lib/ai-review";
+import { issueQuoteLock, LOCK_COOKIE, lockCookieOptions } from "@/lib/quote-lock";
 import type { ReviewResponse } from "./types";
 
 export const runtime = "nodejs";
@@ -150,7 +151,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg, leadCaptured: leadWritten }, { status: engine.status === 422 ? 422 : 502 });
     }
 
-    return NextResponse.json(clientPayload);
+    // Lock the fee to this visitor. From here on the questionnaire path shows
+    // this number rather than re-pricing them from the rate card, so the same
+    // company cannot be quoted two different fees by the same site — and
+    // cannot shop the tool by declining to upload. Bound to the verified
+    // email, which we already hold at this point.
+    const res = NextResponse.json(clientPayload);
+    if (fullQuote && typeof fullQuote.fee === "number" && fullQuote.fee > 0) {
+      res.cookies.set(
+        LOCK_COOKIE,
+        issueQuoteLock(fullQuote.fee, "audit", email),
+        lockCookieOptions(),
+      );
+    }
+    return res;
   } catch (e) {
     console.error("fs-gap-review error:", e);
     return NextResponse.json({ error: "Review failed. Please try again or book a call." }, { status: 500 });
