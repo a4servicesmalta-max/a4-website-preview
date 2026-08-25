@@ -92,7 +92,7 @@ export function HowItWorks() {
   const steps = [
     { n: "1", t: "Initial consultation", s: "We understand your business, structure and goals." },
     { n: "2", t: "Service assessment", s: "We map the services you need across accounting, audit, tax and payroll." },
-    { n: "3", t: "Portal setup", s: "Your secure workspace is configured and ready in seconds." },
+    { n: "3", t: "Digital Onboarding", s: "Your secure workspace is configured and ready in seconds." },
     { n: "4", t: "Structured delivery", s: "Work is delivered through defined, repeatable processes." },
     { n: "5", t: "Ongoing support", s: "A dedicated team keeps you compliant and informed year-round." },
   ];
