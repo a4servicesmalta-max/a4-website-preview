@@ -94,6 +94,16 @@
   .af-panel { position: static !important; }
 }
 
+/* The homepage calculator carries the audit calculator's third column (the
+   live price panel). It drops to one column earlier than the 820px rule below,
+   at the same 1080px the audit grid uses — three columns in 980px of viewport
+   squeezes the question card to nothing. */
+@media (max-width: 1080px) {
+  .lqc-grid { grid-template-columns: 1fr !important; }
+  .lqc-rail { position: static !important; flex-direction: row !important; flex-wrap: wrap; }
+  .lqc-panel { position: static !important; }
+}
+
 /* Sticky summary panels — release on tablet/mobile */
 @media (max-width: 820px) {
   .a4-sum { position: static !important; }

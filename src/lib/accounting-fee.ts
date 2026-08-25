@@ -59,7 +59,9 @@ export const BEHIND: { id: string; label: string; sub: string }[] = [
  */
 export const EXPENSES = EXPENSE_BANDS.map((b) => ({ id: b.id, label: b.label, sub: b.hint }));
 
-export const STEPS = ["What you do", "Whose books", "Monthly spend", "Payroll", "VAT", "Start month", "Earlier months", "Your price"];
+/* "Earlier months" is gone: the start month already says how many there are,
+   and asking twice made visitors think one of the two had been ignored. */
+export const STEPS = ["What you do", "Whose books", "Monthly spend", "Payroll", "VAT", "When we start", "Your price"];
 
 export type AccountingInput = {
   sector: string;
@@ -275,4 +277,27 @@ export function formatStartMonth(v: string): string {
 export function nextMonth(now: Date = new Date()): string {
   const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Earlier months still to do, DERIVED from the start month.
+ *
+ * The wizards used to ask twice: "from which month should we start?" and then
+ * "how many earlier months are behind?". Two questions about one fact — the
+ * visitor picks a start month in the past and is then asked, in different
+ * words, how far in the past it was. Owner call 2026-08-25: ask ONCE. The start
+ * month is the earliest month that still needs doing; every month from it up to
+ * (but not including) the current one is catch-up, priced at the client's own
+ * monthly rate, and the ongoing fee runs from the current month.
+ *
+ * A start month this month or later is not behind at all → 0. Capped at 240:
+ * the shared pack prices 1–240 and returns null above it, so a 25-year-old
+ * start date must degrade to "talk to us", never to an unpriceable line.
+ */
+export function catchUpMonthsFrom(startMonth: string, now: Date = new Date()): number {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(startMonth)) return 0;
+  const [y, m] = startMonth.split("-").map(Number);
+  const started = y * 12 + (m - 1);
+  const current = now.getUTCFullYear() * 12 + now.getUTCMonth();
+  return Math.max(0, Math.min(240, current - started));
 }

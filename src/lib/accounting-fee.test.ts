@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcAccountingFee, accountingSummary, quoteBreakdown, formatStartMonth, nextMonth, type AccountingInput } from "./accounting-fee";
+import { calcAccountingFee, accountingSummary, quoteBreakdown, catchUpMonthsFrom, formatStartMonth, nextMonth, type AccountingInput } from "./accounting-fee";
 import { BOOKKEEPING_MANAGED_MONTHLY, LAUNCH_PROMO } from "@/data/a4QuotePack";
 
 // The entry expenses band, which `base` below pins. Bookkeeping is banded by
@@ -222,5 +222,49 @@ describe("the price breakdown shown equals the price breakdown sent", () => {
     const breakdown = quoteBreakdown(q);
     expect(breakdown.map((l) => l.k)).toEqual([...q.monthly, ...q.oneOff].map((l) => l.k));
     expect(breakdown).toEqual(quoteBreakdown(q));
+  });
+});
+
+describe("catchUpMonthsFrom — the question the wizards no longer ask twice", () => {
+  // Pinned: an assertion about "how many months back" that reads the wall
+  // clock flips every 1st of the month.
+  const AUG_2026 = new Date(Date.UTC(2026, 7, 25));
+
+  it("counts every month from the start month up to, but not including, this one", () => {
+    // The visitor picks January and it is August: Jan–Jul is seven months of
+    // catch-up, and the ongoing fee runs from August. Asking them for "7"
+    // afterwards was asking them to restate their own answer.
+    expect(catchUpMonthsFrom("2026-01", AUG_2026)).toBe(7);
+    expect(catchUpMonthsFrom("2025-08", AUG_2026)).toBe(12);
+  });
+
+  it("is zero for this month and for any future month", () => {
+    expect(catchUpMonthsFrom("2026-08", AUG_2026)).toBe(0);
+    expect(catchUpMonthsFrom("2026-12", AUG_2026)).toBe(0);
+  });
+
+  it("is zero for an empty or malformed month rather than guessing one", () => {
+    // The picker ships EMPTY and the quote is withheld until it is filled;
+    // a fallback here would price a start month nobody chose.
+    expect(catchUpMonthsFrom("")).toBe(0);
+    expect(catchUpMonthsFrom("2026-13", AUG_2026)).toBe(0);
+    expect(catchUpMonthsFrom("nonsense", AUG_2026)).toBe(0);
+  });
+
+  it("caps at 240, the most the shared pack will price", () => {
+    // Above 240 the pack returns null, so an uncapped derivation would put an
+    // unpriceable catch-up line into a basket the backend then rejects.
+    expect(catchUpMonthsFrom("1990-01", AUG_2026)).toBe(240);
+  });
+
+  it("prices the derived months exactly as an answered count used to", () => {
+    // The wire value is unchanged — only where it comes from changed. A start
+    // month six months back must build the same quote as the old "6 months"
+    // pill did, or every quotation the backend re-prices moves.
+    const derived = calcAccountingFee({ ...base, behind: String(catchUpMonthsFrom("2026-02", AUG_2026)), startMonth: "2026-02" });
+    const answered = calcAccountingFee({ ...base, behind: "6", startMonth: "2026-02" });
+    if (derived.refer || answered.refer) throw new Error("unpriceable");
+    expect(derived.oneOffFull).toBe(answered.oneOffFull);
+    expect(derived.monthlyNet).toBe(answered.monthlyNet);
   });
 });

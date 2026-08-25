@@ -11,6 +11,7 @@ import {
   type QuoteServiceId,
   type RevenueBandId,
 } from "@/lib/quotation";
+import { catchUpMonthsFrom } from "@/lib/accounting-fee";
 import { flagsForServiceSelection, independenceNotice } from "@/lib/independence";
 import {
   EXPENSE_BANDS,
@@ -344,30 +345,28 @@ export function QuotationBuilder() {
                   </span>
                 )}
               </div>
+              {/* ONE field, not two. The "earlier months" select that used to
+                  sit beside this asked for the same fact a second time: a start
+                  month in the past IS the count of months still to do, so the
+                  count is derived from it and read back below. */}
               <div>
                 <span style={label}>Start from *</span>
                 <input
                   type="month"
                   value={startMonth}
-                  onChange={(e) => priced(setStartMonth)(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    priced(setStartMonth)(v);
+                    priced(setCatchUpMonths)(catchUpMonthsFrom(v));
+                  }}
                   style={{ ...field, cursor: "pointer" }}
-                  aria-label="From which month should we start?"
+                  aria-label="From which month do you need us?"
                 />
                 <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                  The first month we keep the books. Anything before it is catch-up.
-                </span>
-              </div>
-              <div>
-                <span style={label}>Earlier months that still need doing</span>
-                <select value={catchUpMonths} onChange={(e) => priced(setCatchUpMonths)(Number(e.target.value))} style={{ ...field, cursor: "pointer" }}>
-                  {[0, 1, 2, 3, 6, 9, 12, 18, 24, 36].map((n) => (
-                    <option key={n} value={n}>
-                      {n === 0 ? "None — up to date" : `${n} ${n === 1 ? "month" : "months"}`}
-                    </option>
-                  ))}
-                </select>
-                <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                  Charged at the same monthly rate — no catch-up premium, no cap.
+                  The earliest month that still needs doing.{" "}
+                  {catchUpMonths > 0
+                    ? `${catchUpMonths} ${catchUpMonths === 1 ? "month" : "months"} of catch-up at the same monthly rate — no premium, no cap — then ongoing from this month.`
+                    : "Anything before this month would be catch-up at the same monthly rate."}
                 </span>
               </div>
             </div>
