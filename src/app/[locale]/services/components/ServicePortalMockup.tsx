@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@/components/a4-landing/Primitives";
 
-const PM_STEPS = ["Create account", "Request services", "Get your quote"];
+// A4 is not self-serve: the first step is a conversation, not a form.
+const PM_STEPS = ["Book a call", "We open your account", "Get your quote"];
 const PM_DURATION = 3800;
 
 function pmRise(i: number, reduce: boolean) {
@@ -43,7 +44,7 @@ function PMScreenAccount({ reduce }: { reduce: boolean }) {
       </div>
       <div className="mt-5" style={pmRise(4, reduce)}>
         <div className="flex items-center justify-center gap-2 h-[46px] rounded-[var(--a4-r-full)] bg-white text-black a4-font-body text-[14.5px] font-semibold">
-          Create account <Icon name="arrow-right" size={16} color="#000" />
+          Book a call <Icon name="arrow-right" size={16} color="#000" />
         </div>
       </div>
       <div

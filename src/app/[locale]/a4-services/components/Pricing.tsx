@@ -18,7 +18,8 @@ import {
 // self-employed / €49 company), plus optional VAT / payroll / annual
 // accounts. Every figure comes from quote pack mt-2026-08-14-volume
 // (src/data/a4QuotePack.ts). There is no software-only tier.
-// Drives toward "create account".
+// Drives toward a conversation — A4 is not self-serve, so the exit is a
+// proposal or a call, never a signup form.
 //
 // THIS SECTION QUOTES FLOORS, NOT A PRICE. It deliberately asks neither the
 // entity question nor the monthly-expenses question, so it cannot know which of

@@ -325,9 +325,11 @@ export function AccountingEstimator() {
                 </p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
                   <Button variant="dark" size="md" onClick={() => start("proposal")}>Request a proposal <Icon name="arrow-right" size={16} color="#fff" /></Button>
-                  {/* Only when there IS a price. Signing someone up against a
-                      figure we never computed is the same defect as quoting it. */}
-                  {priced && <Button variant="cobalt" size="md" onClick={() => start("account")}>Create my account</Button>}
+                  {/* Only when there IS a price. Offering a call against a
+                      figure we never computed is the same defect as quoting it.
+                      This used to say "Create my account" — A4 is not
+                      self-serve; we meet first and open the account ourselves. */}
+                  {priced && <Button variant="cobalt" size="md" onClick={() => start("consultation")}>Book a call</Button>}
                 </div>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "10px 0 0" }}>Confirmed after a short call. {PRICING_VAT_NOTE}</p>
               </div>
@@ -388,8 +390,8 @@ export function AccountingEstimator() {
               Request a proposal <Icon name="arrow-right" size={16} color="#000" />
             </Button>
             {priced && (
-              <Button variant="outline-dark" size="md" onClick={() => start("account")} style={{ width: "100%", marginTop: 10 }}>
-                Create my account
+              <Button variant="outline-dark" size="md" onClick={() => start("consultation")} style={{ width: "100%", marginTop: 10 }}>
+                Book a call
               </Button>
             )}
           </div>

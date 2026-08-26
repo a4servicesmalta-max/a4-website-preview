@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { quoteToText, booksSignupUrl, quoteRef, type QuotePayload, type QuoteContact } from "./quote-handoff";
+import { quoteToText, quoteRef, type QuotePayload, type QuoteContact } from "./quote-handoff";
 
 const contact: QuoteContact = { name: "Jane Borg", company: "Borg Trading Ltd", email: "jane@borg.mt", phone: "+356 9900 1122" };
 
@@ -53,20 +53,16 @@ describe("quote handoff", () => {
     expect(quoteToText({ ...quote, clientNotes: "   " }, contact, ref)).not.toContain("CLIENT NOTES");
   });
 
-  it("hands the signup the reference and the contact, and no plan", () => {
-    const url = new URL(booksSignupUrl(quote, contact, ref));
-    expect(url.origin + url.pathname).toBe("https://books.vacei.com/signup");
-    expect(url.searchParams.get("ref")).toBe(ref);
-    expect(url.searchParams.get("email")).toBe(contact.email);
-    expect(url.searchParams.get("company")).toBe(contact.company);
-    expect(url.searchParams.get("source")).toBe("a4-accounting");
-  });
-
-  it("never emits an empty prefill parameter", () => {
-    const bare = { name: "", company: "", email: "", phone: "" };
-    // `plan` is retired with the software ladder — it must never come back.
-    const url = new URL(booksSignupUrl(quote, bare, ref));
-    ["email", "name", "company", "plan"].forEach((k) => expect(url.searchParams.has(k)).toBe(false));
+  /**
+   * The signup hand-off used to be tested here. It is GONE (owner, 2026-08-26):
+   * A4 is not self-serve, so a finished quote cannot end at a form that opens
+   * an accounting relationship before anyone has met the client. This case
+   * replaces it and fails if the helper is ever reintroduced.
+   */
+  it("exposes no way to send a visitor to a signup form", async () => {
+    const mod = await import("./quote-handoff");
+    expect(Object.keys(mod)).not.toContain("booksSignupUrl");
+    expect(Object.keys(mod)).not.toContain("BOOKS_SIGNUP_URL");
   });
 
   it("generates a distinct reference per request", () => {
