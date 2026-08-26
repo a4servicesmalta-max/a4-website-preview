@@ -80,7 +80,7 @@ export function AccountingEstimator() {
    * this surface now does the same.
    */
   const [s, setS] = useState<AccountingInput>({
-    sector: "shop", txn: "21-60", banks: 1, entity: "company", expenses: "", head: 2, vatreg: "art10", behind: "0",
+    sector: "shop", txn: "1-20", banks: 1, entity: "company", expenses: "", head: 2, vatreg: "art10", behind: "0",
     startMonth: "",
   });
   const set = (patch: Partial<AccountingInput>) => setS((a) => ({ ...a, ...patch }));

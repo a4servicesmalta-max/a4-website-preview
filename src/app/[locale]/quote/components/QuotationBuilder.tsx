@@ -83,7 +83,8 @@ export function QuotationBuilder() {
    * answered, and the PDF outlives the page.
    */
   const [sector, setSector] = useState<string>("");
-  const [txn, setTxn] = useState<TxnBand | "">("");
+  // Owner ruling 2026-08-26: the volume question defaults to the "Up to 20" band on every calculator.
+  const [txn, setTxn] = useState<TxnBand | "">("1-20");
   const [banks, setBanks] = useState(1);
   const industry = SECTORS.find((x) => x.id === sector)?.label ?? "";
   const [entity, setEntity] = useState<ManagedEntity>("company");

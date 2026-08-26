@@ -258,7 +258,7 @@ const PR_STARTING_TIERS = [
     price: AUDIT_FROM,
     unit: "/ yr",
     from: true,
-    blurb: "Independent audit for companies that require one. Where a review engagement is enough, it is 55% of the audit fee.",
+    blurb: "Independent audit for companies that require one. Where a review engagement is enough, it is 55% of the audit fee. Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here.",
   },
   {
     id: "incorporation",
@@ -555,7 +555,7 @@ function PricingCalc() {
    * REQUIRED on the wire. Defaults mirror the vacei wizard: the 20-60 band
    * and a single account — a mid default, not the cheapest.
    */
-  const [bookTxnIdx, setBookTxnIdx] = useState(1); // BOOK_TXN_BANDS index — '21-60'
+  const [bookTxnIdx, setBookTxnIdx] = useState(1); // BOOK_TXN_BANDS index — '1-20' (owner ruling 2026-08-26: every calculator defaults to "Up to 20")
   const [bookBanks, setBookBanks] = useState(1);
   const [vatVol, setVatVol] = useState(1);
   const [turn, setTurn] = useState(1);
