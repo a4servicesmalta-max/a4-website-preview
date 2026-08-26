@@ -1,7 +1,7 @@
 /**
  * Deterministic indicative-quote engine for the website quotation builder.
  *
- * Every baseline comes from quote pack `mt-2026-08-01` (src/data/a4QuotePack.ts)
+ * Every baseline comes from the current quote pack (A4_QUOTE_PACK_VERSION in src/data/a4QuotePack.ts)
  * so /quote can never contradict /pricing or the Vacei calculator. The builder
  * asks for a revenue band rather than a transaction count, so where the pack
  * bands by volume this engine takes the middle '21-60' band as its default and

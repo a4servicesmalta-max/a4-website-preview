@@ -106,7 +106,11 @@ export function BookACallContent() {
     const here = new URLSearchParams(window.location.search || "");
     const ref = (here.get("quote") || "").trim().slice(0, 80);
     const email = (here.get("email") || "").trim().slice(0, 254);
+    // Reading the URL is only possible on the client, so this is a one-shot
+    // mount sync, not a cascading render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (ref) setQuoteRef(ref);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (email) setF((prev) => (prev.email ? prev : { ...prev, email }));
   }, []);
   // Honeypot — real visitors never see or fill this field.
