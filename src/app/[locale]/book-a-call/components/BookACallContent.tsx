@@ -110,7 +110,6 @@ export function BookACallContent() {
     // mount sync, not a cascading render.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (ref) setQuoteRef(ref);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (email) setF((prev) => (prev.email ? prev : { ...prev, email }));
   }, []);
   // Honeypot — real visitors never see or fill this field.
