@@ -435,6 +435,21 @@ const Navbar = () => {
                   />
                 </div>
               </LocalizedLink>
+              {/* The firm/software split, above the fold: A4 is the firm, Vacei is the software we build. */}
+              <a
+                href="https://vacei.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`hidden sm:inline-flex items-center gap-1.5 ml-3 px-3 py-1 rounded-full border text-[11px] font-medium tracking-wide whitespace-nowrap transition-colors ${useDarkNavbarTheme
+                  ? "border-white/30 text-white/85 hover:text-white hover:border-white/60"
+                  : "border-black/15 text-black/70 hover:text-black hover:border-black/40"
+                  }`}
+                aria-label="A4 Services is the firm behind Vacei, the software platform"
+              >
+                <span>The firm behind</span>
+                <span className="font-semibold">Vacei</span>
+                <span aria-hidden="true">&#8599;</span>
+              </a>
 
               {/* Desktop Navigation Links - Tight spacing with responsive font */}
               <div className="hidden lg:flex items-center gap-6 xl:gap-8 flex-1 justify-center px-4">
