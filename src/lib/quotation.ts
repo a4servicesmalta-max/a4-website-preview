@@ -1,11 +1,17 @@
 /**
  * Deterministic indicative-quote engine for the website quotation builder.
  *
- * Every baseline comes from the current quote pack (A4_QUOTE_PACK_VERSION in src/data/a4QuotePack.ts)
- * so /quote can never contradict /pricing or the Vacei calculator. The builder
- * asks for a revenue band rather than a transaction count, so where the pack
- * bands by volume this engine takes the middle '21-60' band as its default and
- * advertises the real floor as "from €X".
+ * Every figure comes from the quote pack (src/data/a4QuotePack.ts), priced by
+ * the SAME drivers the homepage wizard, /pricing and vacei.com use: the sector
+ * sets the risk tier, the transaction band prices VAT and the audit, the
+ * monthly spend prices the books, and extra bank accounts add to them. Until
+ * pack mt-2026-08-26c-volume this builder asked for an ANNUAL REVENUE band
+ * instead and scaled the audit by a multiplier of its own (0.85x .. 1.8x on the
+ * 21-60 figure) while pinning VAT to the 21-60 band whatever the volume — so
+ * the same company got one audit price on /quote and another on the homepage.
+ * That engine is gone: /quote now asks the wizard's questions and reads the
+ * wizard's tables, and a missing answer degrades the line to "On request"
+ * rather than guessing a cheaper band (the doctrine every other surface holds).
  *
  * Every output is labelled as subject to written confirmation within 24 hours,
  * matching the firm's published quoting process. No AI involved — pure
@@ -18,40 +24,44 @@ import {
   AUDIT_YEARLY,
   BOOKKEEPING_COMPANY,
   BOOKKEEPING_FROM,
+  EXTRA_BANK_PER_MONTH,
   MBR_ANNUAL_RETURN,
   PAYROLL_ENTRY_RATE,
+  RISK_TIERS,
+  SECTORS,
+  TXN_BANDS,
   VAT_FROM,
   VAT_MONTHLY,
+  catchUpAmount,
   catchUpLabel,
-  managedMonthly,
+  fullMonthlyBookkeeping,
+  roundEur,
+  sectorTier,
   type ExpenseBand,
   type ManagedEntity,
+  type TxnBand,
 } from "@/data/a4QuotePack";
 
 export const QUOTE_PACK_VERSION = A4_QUOTE_PACK_VERSION;
 
+/**
+ * RETIRED as a price driver (mt-2026-08-26c-volume). Kept only so an in-flight
+ * POST from a page loaded before the change still parses; nothing reads a
+ * multiplier off it any more and the builder no longer asks the question.
+ */
 export type RevenueBandId = "under100k" | "100k-500k" | "500k-1m" | "1m-5m" | "over5m";
 export type QuoteServiceId = "accounts" | "audit" | "vat" | "mbr" | "payroll";
 
-export const REVENUE_BANDS: { id: RevenueBandId; label: string; mult: number }[] = [
-  { id: "under100k", label: "Under €100k", mult: 0.85 },
-  { id: "100k-500k", label: "€100k – €500k", mult: 1.0 },
-  { id: "500k-1m", label: "€500k – €1M", mult: 1.15 },
-  { id: "1m-5m", label: "€1M – €5M", mult: 1.4 },
-  { id: "over5m", label: "Over €5M", mult: 1.8 },
+export const REVENUE_BANDS: { id: RevenueBandId; label: string }[] = [
+  { id: "under100k", label: "Under €100k" },
+  { id: "100k-500k", label: "€100k – €500k" },
+  { id: "500k-1m", label: "€500k – €1M" },
+  { id: "1m-5m", label: "€1M – €5M" },
+  { id: "over5m", label: "Over €5M" },
 ];
 
-export const QUOTE_INDUSTRIES = [
-  "Tourism & Hospitality",
-  "Import & Distribution",
-  "Construction & Property",
-  "Retail & FMCG",
-  "iGaming & Technology",
-  "Professional Services",
-  "Financial Services",
-  "Manufacturing",
-  "Other",
-] as const;
+/** Bank accounts the builder lets a visitor declare — same ceiling as the wizard. */
+export const QUOTE_MAX_BANKS = 8;
 
 /**
  * Baseline monthly/annual fees at multiplier 1.0 (€), straight from the pack.
@@ -115,8 +125,16 @@ const BASELINES: Record<
 export type QuoteInput = {
   company: string;
   regNo?: string;
+  /** Free text for the PDF header — the builder sends the chosen sector's label. */
   industry: string;
-  revenueBand: RevenueBandId;
+  /** Canonical sector id from `SECTORS`; sets the risk tier on VAT and the audit. */
+  sector?: string;
+  /** Transactions a month; prices VAT, the audit and the bookkeeping uplift. */
+  txn?: TxnBand;
+  /** Bank accounts to reconcile, 1..QUOTE_MAX_BANKS; each beyond the first adds to the books. */
+  banks?: number;
+  /** Retired driver — accepted, ignored. */
+  revenueBand?: RevenueBandId;
   services: QuoteServiceId[];
   /**
    * Whose books these are. With `expenses` it sets the managed bookkeeping
@@ -170,14 +188,10 @@ export type QuoteResult = {
   assumptions: string[];
 };
 
-const round5 = (n: number) => Math.round(n / 5) * 5;
 export const euro = (n: number) => "€" + n.toLocaleString("en-MT");
 
 export function buildQuote(input: QuoteInput): QuoteResult {
-  const band = REVENUE_BANDS.find((b) => b.id === input.revenueBand) ?? REVENUE_BANDS[1];
   const entity: ManagedEntity = input.entity === "sole" ? "sole" : "company";
-  // 20 years of backlog is already implausible; the ceiling is a guard against
-  // a fat-fingered or hostile number, not a commercial cap. There is no cap.
   const catchUpMonths = Math.max(
     0,
     Math.min(240, Math.floor(input.catchUpMonths ?? (input.overdueYears ?? 0) * 12))
@@ -186,49 +200,41 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   let monthly = 0;
   let annual = 0;
   let hasOnRequest = false;
-  // null when the expenses band is missing or unrecognised. Resolved once and
-  // shared by the bookkeeping line and the catch-up line below, so the two can
-  // never disagree about the client's own monthly rate.
-  const bookRate = input.expenses == null ? null : managedMonthly(entity, input.expenses);
+
+  // The wizard's drivers. Each is optional on the wire and REQUIRED to price:
+  // an unknown sector, band or volume takes the line to "On request" — never
+  // to the cheapest tier, which is the one direction that loses money silently.
+  const sectorRow = SECTORS.find((x) => x.id === input.sector);
+  const mult = sectorRow ? RISK_TIERS[sectorTier(sectorRow.id)].multiplier : null;
+  const txn = TXN_BANDS.some((b) => b.id === input.txn) ? (input.txn as TxnBand) : null;
+  const banks = Math.min(QUOTE_MAX_BANKS, Math.max(1, Math.floor(Number(input.banks) || 1)));
+  const bookRate = input.expenses == null || txn == null ? null : fullMonthlyBookkeeping(entity, input.expenses, txn, banks);
+
+  const onRequest = (id: QuoteServiceId, b: (typeof BASELINES)[QuoteServiceId]) => {
+    hasOnRequest = true;
+    lines.push({ id, name: b.name, hint: b.hint, display: "On request", annualEur: null });
+  };
 
   for (const id of input.services) {
     const b = BASELINES[id];
     if (!b) continue;
-    // The MBR annual return is a COMPANY filing. A Malta sole trader is not on
-    // the Business Registry, files no annual return, and has no authorised
-    // share capital for the registry fee to key on — so quoting it bills for a
-    // filing we could not make on their behalf even if they paid. Dropped
-    // rather than priced at zero: a €0 line reads as "included, free".
-    // Mirrors `mbrApplies` on vacei.com and the homepage wizard's
-    // `labour && entity === "company"`. /api/quotation refuses it as well.
     if (id === "mbr" && entity !== "company") continue;
-    if (b.type === "on-request") {
-      hasOnRequest = true;
-      lines.push({ id, name: b.name, hint: b.hint, display: "On request", annualEur: null });
-      continue;
-    }
-    // Managed bookkeeping is set by entity × monthly expenses — never by the
-    // revenue band this builder otherwise scales on. With no usable expenses
-    // band there is no price, so it is quoted "On request" rather than guessed.
+    if (b.type === "on-request") { onRequest(id, b); continue; }
     if (id === "accounts") {
-      const bookFee = bookRate;
-      if (bookFee == null) {
-        hasOnRequest = true;
-        lines.push({ id, name: b.name, hint: b.hint, display: "On request", annualEur: null });
-        continue;
-      }
-      monthly += bookFee;
-      lines.push({ id, name: b.name, hint: b.hint, display: `${euro(bookFee)} / month`, annualEur: bookFee * 12 });
+      if (bookRate == null) { onRequest(id, b); continue; }
+      monthly += bookRate;
+      lines.push({ id, name: b.name, hint: b.hint, display: `${euro(bookRate)} / month`, annualEur: bookRate * 12 });
       continue;
     }
-    // VAT stays at its band price rather than double-scaling on revenue.
-    // Government fees are charged at cost. Everything else scales by band, with
-    // the audit floored at the advertised "from" price.
-    const fee = b.passThrough || id === "vat"
-      ? b.base
-      : id === "audit"
-        ? Math.max(AUDIT_FROM, round5(b.base * band.mult))
-        : round5(b.base * band.mult);
+    let fee: number;
+    if (b.passThrough) fee = b.base;
+    else if (id === "vat") {
+      if (txn == null || mult == null) { onRequest(id, b); continue; }
+      fee = roundEur(VAT_MONTHLY[txn] * mult);
+    } else if (id === "audit") {
+      if (txn == null || mult == null) { onRequest(id, b); continue; }
+      fee = roundEur(AUDIT_YEARLY[txn] * mult);
+    } else fee = b.base;
     if (b.type === "monthly") {
       monthly += fee;
       lines.push({ id, name: b.name, hint: b.hint, display: `${euro(fee)} / month`, annualEur: fee * 12 });
@@ -238,24 +244,23 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     }
   }
 
-  // Needs a known band: a backdated month is charged at the client's own
-  // monthly rate, so without that rate there is nothing to charge.
-  if (catchUpMonths > 0 && input.services.includes("accounts") && input.expenses != null && bookRate != null) {
-    // Same monthly rate, per month, uncapped. The label is the exact form the
-    // wire contract fixes, so the figure reads identically everywhere.
-    const fee = catchUpMonths * bookRate;
+  if (catchUpMonths > 0 && input.services.includes("accounts") && input.expenses != null && txn != null && bookRate != null) {
+    // A backdated month bills at the same FULL monthly rate as a live one —
+    // base + volume uplift + extra bank accounts — exactly as the wizard and
+    // the portal price it. No premium, no cap.
+    const fee = catchUpAmount(catchUpMonths, entity, input.expenses, txn, banks) ?? catchUpMonths * bookRate;
     annual += fee;
     lines.push({
       id: "catchup",
-      // No transaction/account questions on this builder — the label quotes
-      // the low-volume single-account floor; the full quote prices both.
-      name: catchUpLabel(catchUpMonths, entity, input.expenses, "1-20", 1) ?? "Catch-up",
+      name: catchUpLabel(catchUpMonths, entity, input.expenses, txn, banks) ?? "Catch-up",
       hint: "One-off: earlier months brought up to date before the monthly cycle starts. Charged at the same monthly rate — no catch-up premium, no cap.",
       display: `${euro(fee)} one-off`,
       annualEur: fee,
     });
   }
 
+  const txnLabel = txn ? TXN_BANDS.find((b) => b.id === txn)?.label : null;
+  const tierLabel = sectorRow ? RISK_TIERS[sectorTier(sectorRow.id)].label.toLowerCase() : "unconfirmed";
   return {
     lines,
     monthlyTotalEur: monthly,
@@ -263,11 +268,11 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     indicativeAnnualEur: monthly * 12 + annual,
     hasOnRequestLines: hasOnRequest,
     assumptions: [
-      `Revenue band: ${band.label} · Industry: ${input.industry || "—"}`,
+      `Sector: ${sectorRow?.label ?? input.industry ?? "—"} (${tierLabel} risk tier) · Transactions: ${txnLabel ? `${txnLabel} a month` : "not given"} · Bank accounts: ${banks}${banks > 1 ? ` (each beyond the first adds €${EXTRA_BANK_PER_MONTH}/mo to the books)` : ""}.`,
       input.startMonth
         ? `Bookkeeping starts ${input.startMonth}${catchUpMonths > 0 ? `; ${catchUpMonths} earlier month${catchUpMonths === 1 ? "" : "s"} quoted separately above` : ""}.`
         : "Start month to be confirmed — it decides which months are catch-up.",
-      "Single Malta company; standard transaction volumes for the size band.",
+      "Single Malta company. VAT priced as an Article 10 registration; the audit as a full statutory audit — where a review engagement is enough it is 55% of that figure, confirmed against your accounts.",
       "All fees exclude VAT. Figures are indicative and confirmed in writing within 24 hours.",
       "Government and registry fees (including the MBR registry fee, €100–€379 by share capital) are passed through at cost.",
       "Regulated-sector obligations (e.g. MGA reporting) may adjust scope.",

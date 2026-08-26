@@ -558,10 +558,10 @@ export const MBR_ANNUAL_RETURN = {
 
 export const CAPITAL_BANDS: { id: CapitalBand; label: string; note: string }[] = [
   { id: "1500", label: "Up to €1,500", note: "MBR €100" },
-  { id: "5000", label: "€1,501–5,000", note: "MBR €210 + formula" },
-  { id: "10000", label: "€5,001–10,000", note: "MBR €294 + formula" },
-  { id: "50000", label: "€10,001–50,000", note: "MBR €379 + formula" },
-  { id: "50000+", label: "Over €50,000", note: "MBR from €379, by formula" },
+  { id: "5000", label: "€1,501–5,000", note: "MBR €210" },
+  { id: "10000", label: "€5,001–10,000", note: "MBR €294" },
+  { id: "50000", label: "€10,001–50,000", note: "MBR €379" },
+  { id: "50000+", label: "Over €50,000", note: "MBR from €379" },
 ];
 
 /* -------------------------------------------------------------------------- */
