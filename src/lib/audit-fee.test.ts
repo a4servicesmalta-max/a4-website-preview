@@ -34,24 +34,28 @@ describe("audit fee engine", () => {
   });
 
   it("drops the review discount once the company is big or the volume is heavy", () => {
-    expect(at({ size: "big" })).toMatchObject({ review: false, fee: 1000 });
+    // mt-2026-08-26: no €50 rounding, so this is the pack figure exactly — the
+    // same 995 the homepage wizard and /pricing quote for a 21-60 audit.
+    expect(at({ size: "big" })).toMatchObject({ review: false, fee: 995 });
     expect(at({ txn: "151-400" })).toMatchObject({ review: false, bigVol: true, fee: 1950 });
   });
 
   it("stacks payroll, VAT, bank and sector-risk loadings", () => {
-    // (3650 + 450 + 250 + 150) × 1.45 = 6525 → €6,550, plus 1040 × 1.45 tax return
+    // (3650 + 450 + 250 + 150) × 1.45 = 6525 → €6,550, plus the tax return at
+    // 830 FLAT — mt-2026-08-26-taxret took the risk multiplier off it, so the
+    // audit calculator and the bookkeeping calculator quote the same return.
     const r = at({ sector: "regulated", txn: "1000+", size: "big", pay: "21+", vat: "yes", banks: "4+", taxret: "yes" });
-    expect(r).toMatchObject({ payAdd: 450, vatAdd: 150, bankAdd: 250, taxAdd: 1508, fee: 8058 });
+    expect(r).toMatchObject({ payAdd: 450, vatAdd: 150, bankAdd: 250, taxAdd: 830, fee: 7355 });
   });
 
   it("passes the full 20% planning saving on for audited prior-year statements", () => {
     const r = at({ txn: "151-400", size: "big", uploaded: true, doc: "fs" });
-    expect(r).toMatchObject({ disc: 0.2, fee: 1950, final: 1550 });
+    expect(r).toMatchObject({ disc: 0.2, fee: 1950, final: 1560 });
   });
 
   it("halves the saving when the file is a weaker guide", () => {
-    expect(at({ txn: "151-400", size: "big", uploaded: true, doc: "mgmt" })).toMatchObject({ disc: 0.1, final: 1750 });
-    expect(at({ txn: "151-400", size: "big", uploaded: true, doc: "fs", chg: "yes" })).toMatchObject({ disc: 0.05, final: 1850 });
+    expect(at({ txn: "151-400", size: "big", uploaded: true, doc: "mgmt" })).toMatchObject({ disc: 0.1, final: 1755 });
+    expect(at({ txn: "151-400", size: "big", uploaded: true, doc: "fs", chg: "yes" })).toMatchObject({ disc: 0.05, final: 1853 });
   });
 
   it("refuses to discount below the floor instead of faking a saving", () => {

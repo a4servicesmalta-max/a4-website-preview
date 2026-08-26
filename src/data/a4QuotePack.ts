@@ -57,7 +57,7 @@
  * (A4), company 400-500k 449→459 (C1), catch-up joins the launch promo at its
  * own line (C3), incorporation promo on recurring lines (B1).
  */
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-17-corrections";
+export const A4_QUOTE_PACK_VERSION = "mt-2026-08-26-taxret";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -362,22 +362,29 @@ export const VAT_MONTHLY: Record<TxnBand, number> = {
 };
 
 /**
- * Annual company tax return — €/yr by transaction band, × risk.
+ * Annual company tax return — €/yr by transaction band. NOT × risk.
+ *
+ * ⚠ CALLERS MUST NOT MULTIPLY THIS BY THE RISK TIER. Owner decision
+ * 2026-08-26 (pack mt-2026-08-26-taxret): the band was cut ~20% AND the sector
+ * multiplier taken off it, on the same reasoning that de-multiplied payroll in
+ * the corrections flip — the extra AML work a licensed sector carries lands on
+ * the VAT return and the audit, not on preparing a TA2 from a ledger that is
+ * already closed. A regulated 1000+ return was quoting €1,508 (1040 × 1.45);
+ * it is now €830. The taper is preserved band for band.
  *
  * Owner decision 2026-08-02 (pack mt-2026-08-02b): same volume-flattening cut
  * as AUDIT_YEARLY, band for band, so the combined audit + tax-return quote
  * stays coherent. Entry bands held; reductions deepen with volume.
- *   21-60 −13% · 61-150 −20% · 151-400 −25% · 401-1000 −31% · 1000+ −37%
  */
 export const TAX_RETURN_YEARLY: Record<TxnBand, number> = {
   // Pre-trading company: still a return to file, just a much smaller one.
-  "0": 175, //   unchanged
-  "1-20": 275, // unchanged
-  "21-60": 325, //    was 375
-  "61-150": 420, //   was 525
-  "151-400": 560, //  was 750
-  "401-1000": 760, // was 1100
-  "1000+": 1040, //   was 1650
+  "0": 140, //      was 175
+  "1-20": 220, //   was 275
+  "21-60": 260, //  was 325
+  "61-150": 335, // was 420
+  "151-400": 450, //   was 560
+  "401-1000": 610, //  was 760
+  "1000+": 830, //     was 1040
 };
 
 /**

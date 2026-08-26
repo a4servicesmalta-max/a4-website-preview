@@ -159,10 +159,23 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   const payAdd = find(PAYROLL, s.pay).add;
   const vatAdd = find(VAT, s.vat).add;
   const bankAdd = find(BANKS, s.banks).add;
-  const taxAdd = s.taxret === "yes" ? Math.round(txn.tax * tier.mult) : 0;
+  // NOT × tier.mult since pack mt-2026-08-26-taxret. The audit itself still
+  // carries the sector loading; the tax return no longer does, so the audit
+  // calculator and the bookkeeping calculator quote the same return.
+  const taxAdd = s.taxret === "yes" ? Math.round(txn.tax) : 0;
 
+  // ⚠ NO €50 ROUNDING (owner, 2026-08-26: "ensure that the audit calculator
+  // actually matches the bookkeeping calculator").
+  //
+  // This used to round the audit to the nearest €50, so /audit-services quoted
+  // €1,000 for a 21-60 full audit while the homepage wizard, /pricing and the
+  // quote builder — all of which price the same band straight off the pack —
+  // quoted €995. One firm, one band, two numbers, and no visitor can tell which
+  // is theirs. The pack is the single figure the backend re-prices against, so
+  // the pack wins and the rounding goes; whole euros, exactly like every other
+  // line on every other surface.
   const fee =
-    Math.max(AUDIT_PRE_TRADING, Math.round(((txn.assure * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) + payAdd + vatAdd + bankAdd) * tier.mult) / 50) * 50) +
+    Math.max(AUDIT_PRE_TRADING, Math.round((txn.assure * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) + payAdd + vatAdd + bankAdd) * tier.mult)) +
     taxAdd;
 
   const yearsN = s.year === "multi" ? Math.max(2, parseInt(s.nyrs, 10) || 2) : 1;
@@ -188,7 +201,8 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
       reasons.push("trading volume is intensive relative to the fee, so the planning saving is smaller");
     }
     disc = Math.min(base, cap);
-    final = Math.max(AUDIT_PRE_TRADING, Math.round((fee * (1 - disc)) / 50) * 50);
+    // Same rule after the upload discount: whole euros, no €50 step.
+    final = Math.max(AUDIT_PRE_TRADING, Math.round(fee * (1 - disc)));
     if (final >= fee) {
       disc = 0;
       final = fee;

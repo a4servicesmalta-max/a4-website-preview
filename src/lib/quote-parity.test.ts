@@ -184,7 +184,7 @@ describe("quote parity across every surface", () => {
 
   it("pins the figures every surface is quoting, so a silent edit is visible", () => {
     expect(AUDIT_YEARLY).toEqual({ "0": 600, "1-20": 750, "21-60": 995, "61-150": 1395, "151-400": 1950, "401-1000": 2700, "1000+": 3650 });
-    expect(TAX_RETURN_YEARLY).toEqual({ "0": 175, "1-20": 275, "21-60": 325, "61-150": 420, "151-400": 560, "401-1000": 760, "1000+": 1040 });
+    expect(TAX_RETURN_YEARLY).toEqual({ "0": 140, "1-20": 220, "21-60": 260, "61-150": 335, "151-400": 450, "401-1000": 610, "1000+": 830 });
     expect(BOOKKEEPING_MANAGED_MONTHLY).toEqual({
       sole: { "0-10k": 24, "10-25k": 39, "25-50k": 59, "50-100k": 89, "100-200k": 129, "200-300k": 179, "300-400k": 229, "400-500k": 279, "500k+": 339 },
       company: { "0-10k": 49, "10-25k": 69, "25-50k": 99, "50-100k": 149, "100-200k": 219, "200-300k": 299, "300-400k": 379, "400-500k": 459, "500k+": 549 },

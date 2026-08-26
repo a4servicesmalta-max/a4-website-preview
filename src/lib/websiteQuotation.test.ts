@@ -92,7 +92,8 @@ describe("per-item pricing", () => {
   });
 
   it("prices the tax return and the audit yearly", () => {
-    expect(gross([{ service: "taxret", txn: "61-150" }]).yearly).toBe(420);
+    // mt-2026-08-26-taxret: 420 -> 335, and no risk multiplier on it.
+    expect(gross([{ service: "taxret", txn: "61-150" }]).yearly).toBe(335);
     expect(gross([{ service: "audit", txn: "21-60" }]).yearly).toBe(995);
     // Review engagement — 995 × 0.55 = 547.25 → €547
     expect(gross([{ service: "audit", txn: "21-60", review: true }]).yearly).toBe(547);
@@ -364,7 +365,7 @@ describe("bookkeeping by monthly expenses (pack mt-2026-08-14-volume)", () => {
     ];
     const baseline = gross(others);
     expect(baseline.monthly).toBe(45 + 96);
-    expect(baseline.yearly).toBe(420 + 995 + 260 + 1200);
+    expect(baseline.yearly).toBe(335 + 995 + 260 + 1200);
     // Adding bookkeeping at the TOP band moves only the bookkeeping line.
     const withTopBand = gross([
       ...others,
@@ -426,7 +427,7 @@ describe("launch promo", () => {
     const t = evaluateA4Items(items, "standard", DURING);
     expect(t.promoApplied).toBe(true);
     expect(t.monthly).toBe(37); // 49 × 0.75 = 36.75 → 37
-    expect(t.yearly).toBe(244); // 325 × 0.75 = 243.75 → 244
+    expect(t.yearly).toBe(195); // 260 × 0.75 = 195
     // Catch-up is discounted AT ITS LINE since mt-2026-08-17-corrections
     // (finding C3): 147 × 0.75 = 110.25 → 110, and the label says so.
     expect(t.oneOff).toBe(110);
@@ -487,9 +488,9 @@ describe("mixed basket, hand-computed", () => {
     //        + payroll  5×32 + 3×29 = 247 (marginal, NO uplift — A2+A3)
     expect(t.grossMonthly).toBe(49 + 83 + 247);
     expect(t.grossMonthly).toBe(379);
-    // Yearly: tax return 420 × 1.2 = 504, + MBR (50 + 210) = 260
-    expect(t.grossYearly).toBe(504 + 260);
-    expect(t.grossYearly).toBe(764);
+    // Yearly: tax return 335 (NOT × 1.2 since mt-2026-08-26-taxret), + MBR (50 + 210) = 260
+    expect(t.grossYearly).toBe(335 + 260);
+    expect(t.grossYearly).toBe(595);
     // One-off: onboarding is UNPRICED, so only catch-up 12 × 49 = 588
     expect(t.grossOneOff).toBe(588);
     expect(t.catchup).toBe(588);
@@ -502,7 +503,7 @@ describe("mixed basket, hand-computed", () => {
   it("applies the promo to the right slices", () => {
     const t = evaluateA4Items(items, "elevated", DURING);
     expect(t.monthly).toBe(284); // 379 × 0.75 = 284.25 → 284
-    expect(t.yearly).toBe(626); // (764 − 210) × 0.75 = 416, + 210 = 626
+    expect(t.yearly).toBe(499); // (595 − 210) × 0.75 = 288.75 → 289, + 210 = 499
     expect(t.oneOff).toBe(441); // catch-up discounted at its line (C3): 588 × 0.75
     expect(t.catchup).toBe(441);
   });
@@ -577,7 +578,7 @@ describe("the submitted record", () => {
   it("stamps the pack version and currency the backend validates against", () => {
     const r = buildQuoteRecord({ name: "A", email: "a@b.com", items, serviceStartDate: START }, DURING);
     expect(r.pack).toBe(A4_QUOTE_PACK_VERSION);
-    expect(r.pack).toBe("mt-2026-08-17-corrections");
+    expect(r.pack).toBe("mt-2026-08-26-taxret");
     expect(r.currency).toBe("EUR");
     expect(r.quotedAt).toBe(DURING.toISOString());
   });

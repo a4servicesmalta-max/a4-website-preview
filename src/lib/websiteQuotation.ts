@@ -242,8 +242,11 @@ function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem | 
       return mo("VAT returns", band * factor * rm);
     }
     case "taxret": {
+      // NOT × rm since pack mt-2026-08-26-taxret — the backend's own evaluator
+      // stopped multiplying it in the same flip, and this function exists to
+      // agree with that one to within €1/1%.
       const price = TAX_RETURN_YEARLY[item.txn];
-      return price == null ? null : yr("Annual tax return", price * rm);
+      return price == null ? null : yr("Annual tax return", price);
     }
     case "audit": {
       const price = AUDIT_YEARLY[item.txn];

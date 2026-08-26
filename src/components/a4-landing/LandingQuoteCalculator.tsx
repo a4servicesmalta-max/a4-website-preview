@@ -93,7 +93,16 @@ export type QState = {
    * `Q_INIT`.
    */
   expenses: ExpenseBand | "";
-  /** Authorised share capital band — sets the MBR registry fee on the annual return. */
+  /**
+   * Share-capital band — sets the MBR registry fee on the annual return.
+   *
+   * ASKED AS "issued", PRICED AS AUTHORISED. The registry scale is keyed to
+   * authorised capital under the Companies Act; issued is the figure a
+   * director knows, and for most companies they are the same number. The
+   * help text on the step says which one the fee follows, and the fee is a
+   * cost pass-through, so a difference is restated at filing rather than
+   * absorbed. Owner ruling 2026-08-26.
+   */
   cap: CapitalBand;
   head: number;
   /**
@@ -251,7 +260,8 @@ export function qCalc(q: QState, now: Date = new Date()) {
       if (q.vatreg === "unsure") notes.push(["info", "We have priced you as fully VAT registered, the most common case. If the register says otherwise the price drops — we tell you before you commit."]);
     }
   }
-  if (q.taxret === "we") yr.push({ n: "Annual tax return", e: "from the closed ledger, with schedules", v: QT.taxret[q.txn] * rm });
+  // NOT × rm since pack mt-2026-08-26-taxret — see TAX_RETURN_YEARLY.
+  if (q.taxret === "we") yr.push({ n: "Annual tax return", e: "from the closed ledger, with schedules", v: QT.taxret[q.txn] });
   if (q.assure === "we") {
     const bigVol = QT_BIG_VOL.indexOf(q.txn) !== -1;
     const review = qAuditIsReview(q);
@@ -534,7 +544,7 @@ export function LandingQuoteCalculator() {
 
   const STEP_META: [string, string, (() => Opt[]) | null][] = [
     ["What does the company do?", "Some sectors carry heavier checks on our side. That is what moves the price — not the bookkeeping.", () => opts(QSECT.map((s) => [s[0], s[1], ""] as [string, string, string]), "sector")],
-    ["Are these a company's books, or your own?", "It sets the bookkeeping price together with your monthly spend, which we ask next: from €" + BOOKKEEPING_FROM + " a month if you are self-employed, from €" + BOOKKEEPING_COMPANY + " for a company." + (q.entity === "company" ? " Then tell us the company's authorised share capital." : ""), () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
+    ["Are these a company's books, or your own?", "It sets the bookkeeping price together with your monthly spend, which we ask next: from €" + BOOKKEEPING_FROM + " a month if you are self-employed, from €" + BOOKKEEPING_COMPANY + " for a company." + (q.entity === "company" ? " Then tell us the company's issued share capital." : ""), () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
     ["About how much do you spend a month?", "Your monthly expenses are the money that leaves the business in a typical month — supplier bills, wages, rent, software, everything you spend. Exclude VAT, loan repayments, and transfers between your own accounts. New or seasonal business? Use your average over the last three months. It is what sets your bookkeeping price." + (bandRate == null || bandLabel == null ? " Pick a band and the figure appears here — we do not assume one for you." : " " + bandLabel + " works out at €" + bandRate + " a month for " + (q.entity === "sole" ? "a self-employed person" : "a company") + "."), () => EXPENSE_BANDS.map((b) => ({ key: b.id, label: b.label, sub: b.hint, pick: () => setQ({ expenses: b.id }), on: q.expenses === b.id }))],
     ["About how many transactions a month?", "A different question from your spend above: this one counts DOCUMENTS AND LINES — each invoice, receipt and bank line. A rough number is fine. It sets your VAT, tax-return and audit fees; it does not move the bookkeeping price.", () => opts(QTXN, "txn")],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person.", null],
@@ -735,9 +745,17 @@ export function LandingQuoteCalculator() {
                   same predicate as the line itself. */}
               {isEntity && q.entity === "company" && (
                 <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
-                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Authorised share capital</div>
+                  {/* The label asks for ISSUED capital, which is the figure a director
+                      actually knows. The MBR annual-return fee is set by the
+                      AUTHORISED capital under the Companies Act, and these bands
+                      are that scale — for most companies the two figures are the
+                      same, so the help says which one the fee follows rather than
+                      pretending issued sets it. The fee is passed through at cost,
+                      so where they differ the correction is a restatement, not a
+                      margin loss. Mirrors the same block on vacei.com. */}
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Issued share capital</div>
                   <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                    Sets the MBR registry fee on your annual return (electronic rates) — passed through at cost.
+                    Usually the same as your authorised capital, which is what the MBR registry fee on the annual return follows (electronic rates). Passed through at cost — we confirm the figure before filing.
                   </div>
                   <div style={{ marginTop: 10 }}><OptPills opts={capOpts} /></div>
                 </div>
