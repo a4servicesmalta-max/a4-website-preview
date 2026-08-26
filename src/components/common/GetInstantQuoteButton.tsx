@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import LocalizedLink from "@/components/common/LocalizedLink";
-import { CALENDLY_DEMO_URL, CLIENT_ONBOARDING_URL, isExternalHref } from "@/lib/external-links";
+import { BOOK_A_CALL_PATH, CLIENT_ONBOARDING_URL, isExternalHref } from "@/lib/external-links";
 
 interface GetInstantQuoteButtonProps {
   hasShadow?: boolean;
@@ -87,7 +86,7 @@ const GetInstantQuoteButton = ({
   }
 
   if (variant === "book-demo") {
-    const targetHref = href || CALENDLY_DEMO_URL;
+    const targetHref = href || BOOK_A_CALL_PATH;
     const classNames = `
           inline-flex items-center gap-2 bg-primary-blue hover:bg-primary-zinc-hover text-white px-6 py-3 rounded-full transition-all text-[15px] font-medium transform hover:-translate-y-0.5
           ${hasShadow ? "shadow-[0_4px_30px_var(--primary-zinc-shadow)] hover:shadow-[0_6px_40px_var(--primary-zinc-shadow)]" : ""}
@@ -106,12 +105,12 @@ const GetInstantQuoteButton = ({
     }
 
     return (
-      <Link href={targetHref} className={classNames}>
+      <LocalizedLink href={targetHref} className={classNames}>
         {text ?? defaultBookDemo}
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>
-      </Link>
+      </LocalizedLink>
     );
   }
 

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
+import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 import { WHATSAPP_HREF } from "@/lib/contact";
 
 const HIDE_ON = ["/privacy-policy", "/terms-and-conditions", "/cookie-policy"];
 
 export default function StickyConversionBar() {
+  const localizedHref = useLocalizedHref();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -36,9 +38,7 @@ export default function StickyConversionBar() {
         WhatsApp
       </a>
       <a
-        href={CALENDLY_BOOKING_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={localizedHref(BOOK_A_CALL_PATH)}
         className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-primary-blue px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-black/20 transition-opacity hover:opacity-90"
       >
         Book a free 15-min call
