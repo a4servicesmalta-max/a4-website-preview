@@ -95,7 +95,7 @@ const BASELINES: Record<
   // below the advertised "from €750/year".
   audit: {
     name: "Statutory audit",
-    hint: `GAPSME/IFRS, signed by a licensed audit firm — from €${AUDIT_FROM}/yr`,
+    hint: `GAPSME/IFRS, signed by a licensed audit firm — from €${AUDIT_FROM}/yr. Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here.`,
     type: "annual",
     base: AUDIT_YEARLY["21-60"],
   },

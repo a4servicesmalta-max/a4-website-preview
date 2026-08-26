@@ -83,7 +83,7 @@ export function AuditEstimator() {
   const [amode, setAmode] = useState<"ask" | "docs">("ask");
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Omit<AuditInput, "uploaded">>({
-    sector: "shop", txn: "21-60", size: "small", pay: "none", vat: "no", banks: "1",
+    sector: "shop", txn: "1-20", size: "small", pay: "none", vat: "no", banks: "1",
     taxret: "no", year: "2025", nyrs: "2", chg: "no", doc: "fs",
   });
   const [notes, setNotes] = useState("");
@@ -224,7 +224,7 @@ export function AuditEstimator() {
       ? `This is the fee we quoted you on ${heldOn}, from the statements you sent. It stands for 30 days — answering the questions again will not change it. ${PRICING_VAT_NOTE}`
 
       : (q.review ? "You likely qualify for a review instead of a full audit — we confirm it against your figures. " : "") +
-        `The fee is fixed after a short scoping call and never below €${AUDIT_PRE_TRADING}. ${PRICING_VAT_NOTE}`;
+        `The fee is fixed after a short scoping call and never below €${AUDIT_PRE_TRADING}. Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here. ${PRICING_VAT_NOTE}`;
   const summary = q.refer
     ? "We price most sectors instantly, but this one needs a short conversation with a director before we put a number to it — usually the same day."
     : held !== null
