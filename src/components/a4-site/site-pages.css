@@ -49,3 +49,108 @@
   .a4-site-page .hero-bg::before,
   .a4-site-page .hw-fade { animation: none; }
 }
+
+/* ── /book-a-call booking panel ────────────────────────────────────────────
+   A4's dark port of the vacei.com booking panel. Everything the panel needs
+   that an inline style cannot express — keyframes, :hover, :disabled,
+   ::placeholder — lives here; layout and colour stay inline in
+   BookACallContent.tsx alongside the rest of the page. */
+@keyframes bkpRise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes bkpIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes bkpSlideL { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+@keyframes bkpSlideR { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+@keyframes bkpPop { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+
+.a4-site-page .bkp { animation: bkpRise .7s cubic-bezier(.22,.6,.2,1) .06s both; }
+.a4-site-page .bkp-step { animation: bkpIn .3s ease both; }
+.a4-site-page .bkp-step-l { animation: bkpSlideL .28s ease both; }
+.a4-site-page .bkp-step-r { animation: bkpSlideR .28s ease both; }
+.a4-site-page .bkp-pop { animation: bkpPop .45s cubic-bezier(.22,.6,.2,1) .1s both; }
+
+.a4-site-page .bkp-glass {
+  width: 34px; height: 34px; border-radius: var(--a4-r-full); padding: 0;
+  border: 1px solid var(--a4-hairline-dark); background: rgba(255,255,255,.07);
+  color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s ease, transform .15s ease;
+}
+.a4-site-page .bkp-glass:hover:not(:disabled) { background: rgba(255,255,255,.18); transform: scale(1.06); }
+.a4-site-page .bkp-glass:disabled { opacity: .3; cursor: default; }
+
+.a4-site-page .bkp-day {
+  aspect-ratio: 1; border-radius: 11px; padding: 0; position: relative; cursor: pointer;
+  border: 1px solid var(--a4-hairline-dark); background: rgba(255,255,255,.05); color: #fff;
+  font-family: var(--a4-font-body); font-variant-numeric: tabular-nums;
+  font-size: 12.5px; font-weight: 600;
+  transition: background .14s ease, transform .14s ease, border-color .14s ease;
+}
+.a4-site-page .bkp-day:hover:not(:disabled):not(.sel) { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.34); transform: scale(1.08); }
+.a4-site-page .bkp-day:disabled { background: transparent; border-color: transparent; color: rgba(255,255,255,.26); cursor: default; }
+.a4-site-page .bkp-day.sel { background: #fff; border-color: #fff; color: #000; }
+.a4-site-page .bkp-day.pad { visibility: hidden; }
+
+.a4-site-page .bkp-time {
+  height: 46px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--a4-hairline-dark); background: rgba(255,255,255,.06); color: #fff;
+  font-family: var(--a4-font-body); font-variant-numeric: tabular-nums;
+  font-size: 13.5px; font-weight: 600;
+  transition: background .14s ease, transform .14s ease, border-color .14s ease;
+}
+.a4-site-page .bkp-time:hover { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.34); transform: scale(1.03); }
+
+.a4-site-page .bkp-input {
+  width: 100%; box-sizing: border-box; height: 44px; padding: 0 14px; border-radius: 12px;
+  border: 1px solid var(--a4-hairline-dark); background: rgba(255,255,255,.06); color: #fff;
+  font-family: var(--a4-font-body); font-size: 14px; outline: none;
+  transition: border-color .15s ease, background .15s ease;
+}
+.a4-site-page .bkp-input::placeholder { color: rgba(255,255,255,.4); }
+.a4-site-page .bkp-input:focus { border-color: var(--a4-primary-bright); background: rgba(255,255,255,.11); }
+.a4-site-page .bkp-input[data-invalid="true"] { border-color: #ef4444; }
+/* 16px on small screens: anything smaller makes iOS Safari zoom the page on
+   focus, which throws the visitor out of the form mid-answer. */
+@media (max-width: 880px) { .a4-site-page .bkp-input { font-size: 16px; } }
+
+.a4-site-page .bkp-chip {
+  height: 32px; padding: 0 14px; border-radius: var(--a4-r-full); cursor: pointer;
+  border: 1px solid var(--a4-hairline-dark); background: rgba(255,255,255,.06);
+  color: var(--a4-on-dark-mute);
+  font-family: var(--a4-font-body); font-size: 12px; font-weight: 600;
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.a4-site-page .bkp-chip:hover { background: rgba(255,255,255,.14); color: #fff; }
+.a4-site-page .bkp-chip[aria-pressed="true"] { background: #fff; border-color: #fff; color: #000; }
+
+.a4-site-page .bkp-confirm {
+  width: 100%; height: 48px; border: 0; border-radius: var(--a4-r-full); cursor: pointer;
+  background: #fff; color: #000;
+  font-family: var(--a4-font-body); font-size: 14.5px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background .18s ease;
+}
+.a4-site-page .bkp-confirm:hover:not(:disabled) { background: #e6e6e6; }
+.a4-site-page .bkp-confirm:disabled { opacity: .6; cursor: default; }
+
+.a4-site-page .bkp-ghost {
+  height: 38px; padding: 0 18px; border-radius: var(--a4-r-full); cursor: pointer;
+  border: 1px solid var(--a4-hairline-dark); background: rgba(255,255,255,.08); color: #fff;
+  font-family: var(--a4-font-body); font-size: 12.5px; font-weight: 600;
+  transition: background .15s ease;
+}
+.a4-site-page .bkp-ghost:hover { background: rgba(255,255,255,.2); }
+
+.a4-site-page .bkp-edit {
+  border: 0; background: none; padding: 0; cursor: pointer;
+  color: var(--a4-on-dark-mute); font-family: var(--a4-font-body); font-size: 12px; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.a4-site-page .bkp-edit:hover { color: #fff; }
+
+@media (max-width: 560px) { .a4-site-page .bkp { padding: 26px 20px 24px !important; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .a4-site-page .bkp,
+  .a4-site-page .bkp-step,
+  .a4-site-page .bkp-step-l,
+  .a4-site-page .bkp-step-r,
+  .a4-site-page .bkp-pop { animation: none; }
+}
