@@ -103,7 +103,9 @@ export type ConversionEvent =
   /** /quote — the quote request form posted successfully. */
   | "quote_form_submit"
   /** FS / trial-balance upload accepted by the review engine. */
-  | "financial_upload_submit";
+  | "financial_upload_submit"
+  /** /book-a-call — a demo slot booked through the in-house scheduler. */
+  | "book_a_call_submit";
 
 /**
  * Per-event Google Ads conversion label (the part after the slash in
@@ -118,6 +120,7 @@ const CONVERSION_LABELS: Record<ConversionEvent, string> = {
   contact_form_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_CONTACT),
   quote_form_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_QUOTE),
   financial_upload_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_UPLOAD),
+  book_a_call_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_BOOK_A_CALL),
 };
 
 /* -------------------------------------------------------------------------- */

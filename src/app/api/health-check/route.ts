@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
           from: `"A4 Services" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to: email,
           subject: `Your accounting health check — ${score}/100 (${band})`,
-          text: `Hi ${name || ""},\n\nHere is your accounting health check result.\n\n${summary}\n\nWant a real review of your numbers? Reply or book a call: ${process.env.NEXT_PUBLIC_CALENDLY_BOOKING_URL || "https://a4.com.mt/contact"}\n\n— A4 Services`,
+          text: `Hi ${name || ""},\n\nHere is your accounting health check result.\n\n${summary}\n\nWant a real review of your numbers? Reply or book a call: https://a4.com.mt/en/book-a-call\n\n— A4 Services`,
         });
       } catch (mailErr) {
         console.error("health-check email failed (lead already pushed):", mailErr);

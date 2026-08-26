@@ -3,11 +3,13 @@ import React, { useState } from "react";
 import { Mail, Phone, MapPin, PhoneCall } from "lucide-react";
 import { motion } from "framer-motion";
 import FormStatusModal from "@/components/common/FormStatusModal";
-import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
+import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 import { usePagesTranslation } from "@/hooks/usePagesTranslation";
 
 const ContactForm = () => {
   const { t } = usePagesTranslation("contact");
+  const localizedHref = useLocalizedHref();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -276,9 +278,7 @@ const ContactForm = () => {
                   <motion.a
                     whileHover={{ scale: 1.02, y: -1 }}
                     whileTap={{ scale: 0.97, y: 0 }}
-                    href={CALENDLY_BOOKING_URL}
-                    target="_blank"
-                    rel="noreferrer"
+                    href={localizedHref(BOOK_A_CALL_PATH)}
                     className="bg-primary-blue hover:bg-primary-zinc-hover text-white font-semibold py-4 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
                   >
                     <span>{t("info.cta.button")}</span>

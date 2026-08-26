@@ -580,7 +580,7 @@ export function LandingPlan() {
               <div style={{ textAlign: "center", padding: "10px 0" }}>
                 <div style={{ width: 54, height: 54, borderRadius: 999, background: "rgba(0,168,126,.12)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}><Icon name="check" size={26} color="var(--a4-accent-teal)" stroke={2.5} /></div>
                 <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>You&apos;re booked in</div>
-                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, lineHeight: 1.6, color: "var(--a4-mute)", margin: "10px 0 0" }}>Thanks, {form.name.split(" ")[0]}. We&apos;ll confirm your 15-minute call by email at <strong style={{ color: "var(--a4-ink)" }}>{form.email}</strong> within 2 business hours.</div>
+                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, lineHeight: 1.6, color: "var(--a4-mute)", margin: "10px 0 0" }}>Thanks, {form.name.split(" ")[0]}. We&apos;ll confirm your 30-minute call by email at <strong style={{ color: "var(--a4-ink)" }}>{form.email}</strong> within 2 business hours.</div>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 14 }}>Reference: {booked} · {lpEuroOr(monthly)}/mo{annualFee > 0 ? ` + ${lpEuro(annualFee)}/yr` : ""}</div>
                 <Button variant="outline-light" size="md" onClick={() => setModal(false)} style={{ width: "100%", marginTop: 22 }}>Close</Button>
               </div>

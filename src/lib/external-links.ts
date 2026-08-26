@@ -30,12 +30,7 @@ export const CLIENT_ONBOARDING_URL = resolveClientUrl(
 );
 
 /**
- * Calendly booking link — set NEXT_PUBLIC_CALENDLY_BOOKING_URL to your branded event
- * (e.g. https://calendly.com/a4-info/15-minute-consultation).
+ * In-house booking page (site-local, locale-aware via the usual link helpers).
+ * Replaces the old external Calendar-service links.
  */
-export const CALENDLY_BOOKING_URL =
-  process.env.NEXT_PUBLIC_CALENDLY_BOOKING_URL?.trim() ||
-  "https://calendly.com/a4-info";
-
-/** @deprecated Use CALENDLY_BOOKING_URL */
-export const CALENDLY_DEMO_URL = CALENDLY_BOOKING_URL;
+export const BOOK_A_CALL_PATH = "/book-a-call";

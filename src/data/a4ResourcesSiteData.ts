@@ -18,7 +18,7 @@ export const RESOURCE_HUB_CARDS: ResourceCard[] = [
 
 /** Former navbar Resources dropdown links */
 export const RESOURCE_NAV_CARDS: ResourceCard[] = [
-  { icon: "mail", t: "Contact", s: "Send a message, call the team, or book a free 15-minute call.", href: "/contact" },
+  { icon: "mail", t: "Contact", s: "Send a message, call the team, or book a free 30-minute call.", href: "/contact" },
   { icon: "bot", t: "Automated Bookkeeping", s: "AI-assisted bookkeeping with human review and a structured client portal.", href: "/automated-bookkeeping" },
   { icon: "file-search", t: "Audit Services", s: "Statutory audit delivered with transparency, structure and qualified review.", href: "/audit-services" },
   { icon: "handshake", t: "Partner Program", s: "Refer clients and earn recurring commission on every engagement.", href: "/partner-program" },

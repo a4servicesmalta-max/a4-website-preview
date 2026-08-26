@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/page-metadata";
 
 export const metadata: Metadata = pageMetadata(
   "Contact A4 Services Malta",
-  "Call, email or book a free 15-minute consultation with A4 Services Limited — licensed Malta accounting and audit firm.",
+  "Call, email or book a free 30-minute consultation with A4 Services Limited — licensed Malta accounting and audit firm.",
 );
 
 export default function ContactPage() {
