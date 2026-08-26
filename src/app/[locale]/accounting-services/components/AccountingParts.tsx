@@ -5,8 +5,8 @@ import { Button, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/compone
 import { ScrollVideo } from "@/components/a4-landing/ScrollVideo";
 import { AccountingEstimator } from "./AccountingEstimator";
 import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 import { ACCOUNTING_FAQS } from "@/data/serviceFaqs";
-import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
 
 // Structure and copy ported from the A4 Accounting design
 // (A4 New pages.zip → A4 Accounting.dc.html), rendered with A4's own
@@ -37,7 +37,7 @@ function AccountingHero() {
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get my price <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href={CALENDLY_BOOKING_URL} target="_blank" rel="noreferrer">Book a free call</Button>
+            <Button variant="outline-dark" size="lg" href={BOOK_A_CALL_PATH}>Book a free call</Button>
           </div>
           <div style={{ display: "flex", gap: "10px 28px", marginTop: 38, flexWrap: "wrap", justifyContent: "center" }}>
             {proof.map((t) => (
@@ -151,7 +151,7 @@ function AccountingFAQ() {
           <Eyebrow>FAQ</Eyebrow>
           <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "var(--a4-ink)", fontSize: "clamp(32px,4vw,48px)", lineHeight: 1.05, letterSpacing: "-.02em", margin: "18px 0 0", textWrap: "balance" }}>Bookkeeping questions, answered</h2>
           <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 17, lineHeight: 1.55, color: "var(--a4-mute)", margin: "18px 0 28px", maxWidth: 340 }}>Still unsure? Book a free call and we&apos;ll talk it through.</p>
-          <Button variant="dark" size="md" href={CALENDLY_BOOKING_URL} target="_blank" rel="noreferrer">Book a free call <Icon name="arrow-right" size={17} color="#fff" /></Button>
+          <Button variant="dark" size="md" href={BOOK_A_CALL_PATH}>Book a free call <Icon name="arrow-right" size={17} color="#fff" /></Button>
         </Reveal>
         <Reveal delay={100} style={{ flex: "1 1 520px", minWidth: 300 }}>
           <div style={{ borderTop: "1px solid var(--a4-hairline-light)" }}>
@@ -186,7 +186,7 @@ function AccountingCTA() {
           </p>
           <div style={{ marginTop: 28, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Button variant="primary" size="lg" href="#estimate">Get my price <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href={CALENDLY_BOOKING_URL} target="_blank" rel="noreferrer">Book a free call</Button>
+            <Button variant="outline-dark" size="lg" href={BOOK_A_CALL_PATH}>Book a free call</Button>
           </div>
           <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.6, color: "var(--a4-stone)", margin: "32px auto 0", maxWidth: 640 }}>
             A4 Services Limited is a licensed Maltese accounting and audit firm. {PRICING_VAT_NOTE}

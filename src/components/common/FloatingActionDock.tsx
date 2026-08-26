@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Globe, Check, ChevronUp, ChevronDown } from "lucide-react";
-import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 import { WHATSAPP_HREF } from "@/lib/contact";
 import {
   LOCALE_COOKIE,
@@ -236,9 +236,7 @@ export default function FloatingActionDock() {
 
         {/* Bar 2 — Book a call */}
         <motion.a
-          href={CALENDLY_BOOKING_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={withLocale(current, BOOK_A_CALL_PATH)}
           custom={1}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}

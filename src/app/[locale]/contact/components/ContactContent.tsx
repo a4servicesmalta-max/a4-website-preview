@@ -6,7 +6,7 @@ import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primiti
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONES } from "@/lib/contact";
-import { CALENDLY_BOOKING_URL } from "@/lib/external-links";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 import { trackConversion } from "@/lib/analytics";
 
 function ContactForm() {
@@ -238,7 +238,7 @@ export function ContactContent() {
                     <h3 className="a4-font-display font-medium text-[20px] text-white m-0">Book a free 15-minute call</h3>
                   </div>
                   <p className="a4-font-body text-[14.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[10px] mb-[18px]">Prefer to talk it through? Grab a slot and we&apos;ll learn about your business — no obligation.</p>
-                  <Button variant="primary" size="md" href={CALENDLY_BOOKING_URL} target="_blank" rel="noreferrer">
+                  <Button variant="primary" size="md" href={BOOK_A_CALL_PATH}>
                     Book a call <Icon name="arrow-right" size={16} color="#000" />
                   </Button>
                 </div>

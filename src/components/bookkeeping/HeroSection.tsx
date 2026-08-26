@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { CALENDLY_DEMO_URL, CLIENT_ONBOARDING_URL } from "@/lib/external-links";
+import LocalizedLink from "@/components/common/LocalizedLink";
+import { BOOK_A_CALL_PATH, CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 export default function HeroSection() {
   const { t } = useTranslation("services");
@@ -52,15 +53,10 @@ export default function HeroSection() {
                 {t("bookkeeping.hero.btnPrimary")}
                 <ArrowRight size={16} />
               </a>
-              <a
-                href={CALENDLY_DEMO_URL}
-                className="btn-outline-light"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <LocalizedLink href={BOOK_A_CALL_PATH} className="btn-outline-light">
                 <Play size={16} fill="currentColor" />
                 {t("bookkeeping.hero.btnOutline")}
-              </a>
+              </LocalizedLink>
             </div>
             <p className="cta-hint">
               {t("bookkeeping.hero.ctaHint")}
