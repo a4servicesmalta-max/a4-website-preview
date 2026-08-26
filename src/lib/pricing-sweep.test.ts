@@ -19,11 +19,11 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  EXPENSE_BANDS, TXN_BANDS, taxReturnYearly, AUDIT_YEARLY,
+  EXPENSE_BANDS, TXN_BANDS, taxReturnYearly, AUDIT_YEARLY, AUDIT_PRE_TRADING,
   REVIEW_ENGAGEMENT_FACTOR, type TxnBand, type ExpenseBand, type ManagedEntity,
 } from "@/data/a4QuotePack";
 import { evaluateA4Items, type A4Item, type A4Risk } from "@/lib/websiteQuotation";
-import { TAXRET_ESTIMATE_FROM, calcAuditFee, TXN as AUDIT_TXN, type AuditInput } from "@/lib/audit-fee";
+import { TAXRET_ESTIMATE_FROM, calcAuditFee, TXN as AUDIT_TXN, SECTORS as AUDIT_SECTORS, SIZES as AUDIT_SIZES, type AuditInput } from "@/lib/audit-fee";
 
 /** Promo is withdrawn; a fixed date keeps that true whatever the clock says. */
 const AT = new Date("2026-09-01T12:00:00Z");
@@ -34,7 +34,7 @@ const TXNS = TXN_BANDS.map((b) => b.id) as TxnBand[];
 
 const auditAt = (over: Partial<AuditInput>): ReturnType<typeof calcAuditFee> =>
   calcAuditFee({
-    sector: "shop", txn: "21-60", size: "big", pay: "none", vat: "no", banks: "1",
+    sector: "shop", txn: "21-60", size: "big",
     taxret: "no", year: "2025", nyrs: "1", chg: "no", doc: "fs", uploaded: false,
     ...over,
   } as AuditInput);
@@ -105,12 +105,28 @@ describe("pricing sweep", () => {
     // `evaluateA4Items` drives the homepage wizard, /pricing and the quote
     // builder. They read the same pack, so a divergence here means one of them
     // has grown arithmetic of its own.
+    //
+    // Owner ruling 2026-08-26: the audit page has NO payroll / VAT / bank
+    // add-ons any more, so this must hold across the WHOLE input space —
+    // every sector × band × company size — not just the add-on-free corner.
+    for (const sector of AUDIT_SECTORS) for (const t of AUDIT_TXN) for (const size of AUDIT_SIZES) {
+      const where = `${sector.id}/${t.id}/${size.id}`;
+      const viaAudit = auditAt({ sector: sector.id, txn: t.id, size: size.id });
+      if (sector.tier === "refer") {
+        expect(viaAudit.refer, where).toBe(true);
+        continue;
+      }
+      if (viaAudit.refer) throw new Error(`unexpected referral at ${where}`);
+      const review = size.id !== "big" && AUDIT_TXN.findIndex((b) => b.id === t.id) < 4;
+      expect(viaAudit.review, `review flag ${where}`).toBe(review);
+      const viaWizard = evaluateA4Items([review ? { service: "audit", txn: t.id, review: true } : { service: "audit", txn: t.id }], sector.tier, AT).yearly;
+      // Exact parity everywhere: the page's floor is the pack's band-0 figure
+      // for the engagement type, which the wizard's own table never goes under.
+      expect(viaAudit.final, where).toBe(viaWizard);
+    }
+
     for (const t of AUDIT_TXN) {
       expect(t.assure, `audit band ${t.id}`).toBe(AUDIT_YEARLY[t.id]);
-
-      const viaAudit = auditAt({ txn: t.id });
-      const viaWizard = evaluateA4Items([{ service: "audit", txn: t.id }], "standard", AT).yearly;
-      if (!viaAudit.refer) expect(viaAudit.final, `full audit ${t.id}`).toBe(viaWizard);
 
       const review = evaluateA4Items([{ service: "audit", txn: t.id, review: true }], "standard", AT).yearly;
       expect(review, `review ${t.id}`).toBe(Math.round(AUDIT_YEARLY[t.id] * REVIEW_ENGAGEMENT_FACTOR));

@@ -51,7 +51,7 @@ const COMBOS: { sector: string; band: TxnBand }[] = SECTORS.flatMap((s) =>
 const PRICEABLE = COMBOS.filter((c) => RISK_TIERS[sectorTier(c.sector)].multiplier != null);
 
 const auditOnly = (sector: string, band: TxnBand): AuditInput => ({
-  sector, txn: band, size: "big", pay: "none", vat: "no", banks: "1",
+  sector, txn: band, size: "big",
   taxret: "no", year: "2025", nyrs: "2", chg: "no", uploaded: false, doc: "fs",
 });
 

@@ -59,24 +59,6 @@ export const SIZES = [
   { id: "unsure", label: "Not sure", sub: "we’ll check" },
 ];
 
-export const PAYROLL: { id: string; label: string; sub: string; add: number }[] = [
-  { id: "none", label: "No payroll", sub: "", add: 0 },
-  { id: "1-5", label: "1–5 people", sub: "", add: 100 },
-  { id: "6-20", label: "6–20 people", sub: "", add: 250 },
-  { id: "21+", label: "21 or more", sub: "", add: 450 },
-];
-
-export const VAT: { id: string; label: string; sub: string; add: number }[] = [
-  { id: "yes", label: "Yes", sub: "registered and filing", add: 150 },
-  { id: "no", label: "No", sub: "not registered", add: 0 },
-];
-
-export const BANKS: { id: string; label: string; sub: string; add: number }[] = [
-  { id: "1", label: "One", sub: "", add: 0 },
-  { id: "2-3", label: "Two or three", sub: "", add: 100 },
-  { id: "4+", label: "Four or more", sub: "", add: 250 },
-];
-
 export const TAX_RETURN = [
   { id: "yes", label: "Yes", sub: "prepared with the audit" },
   { id: "no", label: "No", sub: "handled elsewhere" },
@@ -100,25 +82,13 @@ export const CHANGES = [
   { id: "yes", label: "Yes, major changes", sub: "" },
 ];
 
-/** Rail labels — seven questions then the fee. */
-export const STEPS = [
-  "What you do",
-  "Volume",
-  "Company size",
-  "Payroll",
-  "VAT",
-  "Bank accounts",
-  "Tax return",
-  "Your fee",
-];
+/** Rail labels — four questions then the fee. */
+export const STEPS = ["What you do", "Volume", "Company size", "Tax return", "Your fee"];
 
 export type AuditInput = {
   sector: string;
   txn: string;
   size: string;
-  pay: string;
-  vat: string;
-  banks: string;
   taxret: string;
   year: string;
   nyrs: string;
@@ -140,9 +110,6 @@ export type AuditQuote =
       reasons: string[];
       review: boolean;
       bigVol: boolean;
-      payAdd: number;
-      vatAdd: number;
-      bankAdd: number;
       taxAdd: number;
       yearsN: number;
       total: number;
@@ -151,6 +118,9 @@ export type AuditQuote =
 export const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB");
 
 const find = <T extends { id: string }>(list: T[], id: string) => list.find((x) => x.id === id) ?? list[0];
+
+/** Pack pre-trading figure for the engagement type: €600 full audit, €330 review engagement. */
+export const auditFloor = (review: boolean) => Math.round(AUDIT_PRE_TRADING * (review ? REVIEW_ENGAGEMENT_FACTOR : 1));
 
 export function calcAuditFee(s: AuditInput): AuditQuote {
   const tier = TIERS[find(SECTORS, s.sector).tier];
@@ -163,14 +133,17 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   // little over half the cost of a full audit.
   const review = s.size !== "big" && !bigVol;
 
-  const payAdd = find(PAYROLL, s.pay).add;
-  const vatAdd = find(VAT, s.vat).add;
-  const bankAdd = find(BANKS, s.banks).add;
   // NOT × tier.mult since pack mt-2026-08-26-taxret. The audit itself still
   // carries the sector loading; the tax return no longer does, so the audit
   // calculator and the bookkeeping calculator quote the same return.
   const taxAdd = s.taxret === "yes" ? TAXRET_ESTIMATE_FROM : 0;
 
+  // Owner ruling 2026-08-26: NO payroll / VAT / bank-account add-ons. The pack
+  // has none, so the homepage wizard, /pricing and the quote builder never
+  // charged them; this page did, inside the multiplied bracket, and quoted a
+  // different audit for the same company. Audit = pack band × review factor ×
+  // sector multiplier, floored at the pre-trading fee — nothing else.
+  //
   // ⚠ NO €50 ROUNDING (owner, 2026-08-26: "ensure that the audit calculator
   // actually matches the bookkeeping calculator").
   //
@@ -182,7 +155,10 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   // the pack wins and the rounding goes; whole euros, exactly like every other
   // line on every other surface.
   const fee =
-    Math.max(AUDIT_PRE_TRADING, Math.round((txn.assure * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) + payAdd + vatAdd + bankAdd) * tier.mult)) +
+    // The floor is the pack's own pre-trading figure for THIS engagement type —
+    // €600 for a full audit, €330 for a review — so the page can never quote
+    // above the homepage wizard, which reads the same table with no floor.
+    Math.max(auditFloor(review), Math.round(txn.assure * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) * tier.mult)) +
     taxAdd;
 
   const yearsN = s.year === "multi" ? Math.max(2, parseInt(s.nyrs, 10) || 2) : 1;
@@ -201,7 +177,7 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
     }
     if (fee <= 900) {
       cap = 0.05;
-      reasons.push(`the fee is already near the €${AUDIT_PRE_TRADING} floor of our scale`);
+      reasons.push(`the fee is already near the €${auditFloor(review)} floor of our scale`);
     }
     if (bigVol && fee <= 1500) {
       cap = Math.min(cap, 0.05);
@@ -209,11 +185,11 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
     }
     disc = Math.min(base, cap);
     // Same rule after the upload discount: whole euros, no €50 step.
-    final = Math.max(AUDIT_PRE_TRADING, Math.round(fee * (1 - disc)));
+    final = Math.max(auditFloor(review), Math.round(fee * (1 - disc)));
     if (final >= fee) {
       disc = 0;
       final = fee;
-      reasons = [`there is no honest room to discount without going below €${AUDIT_PRE_TRADING}`];
+      reasons = [`there is no honest room to discount without going below €${auditFloor(review)}`];
     }
     if (disc > 0 && !reasons.length) {
       reasons.push(
@@ -224,7 +200,7 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
     }
   }
 
-  return { refer: false, tier, fee, final, disc, reasons, review, bigVol, payAdd, vatAdd, bankAdd, taxAdd, yearsN, total: final * yearsN };
+  return { refer: false, tier, fee, final, disc, reasons, review, bigVol, taxAdd, yearsN, total: final * yearsN };
 }
 
 /** Itemised lines for the fee panel — every euro on the quote is on this list. */
@@ -235,9 +211,6 @@ export function feeLines(s: AuditInput, r: AuditQuote): { k: string; v: string }
     { k: "Transactions", v: find(TXN, s.txn).label + " /mo" },
     { k: "Engagement", v: r.review ? "Review — the lighter option" : "Full financial audit" },
   ];
-  if (r.payAdd > 0) lines.push({ k: "Payroll · " + find(PAYROLL, s.pay).label.toLowerCase(), v: "+ " + euro(r.payAdd) });
-  if (r.vatAdd > 0) lines.push({ k: "VAT registered", v: "+ " + euro(r.vatAdd) });
-  if (r.bankAdd > 0) lines.push({ k: "Bank accounts · " + find(BANKS, s.banks).label.toLowerCase(), v: "+ " + euro(r.bankAdd) });
   if (r.taxAdd > 0) lines.push({ k: "Annual tax return", v: "+ " + euro(r.taxAdd) });
   if (r.disc > 0) lines.push({ k: "Prior-year file · −" + Math.round(r.disc * 100) + "%", v: "− " + euro(r.fee - r.final) });
   if (r.yearsN > 1) lines.push({ k: "Years to audit", v: r.yearsN + " × " + euro(r.final) + " = " + euro(r.total) });

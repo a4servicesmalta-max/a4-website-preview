@@ -8,8 +8,8 @@ import { ReviewFailureNotice } from "@/app/[locale]/accounting-health-check/comp
 import { NETWORK_FAILURE, readReviewFailure, type ReviewFailure } from "@/lib/review-failure";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
 import {
-  SECTORS, TXN, SIZES, PAYROLL, VAT, BANKS, TAX_RETURN, YEARS, NYRS, CHANGES, STEPS,
-  calcAuditFee, feeLines, euro, type AuditInput,
+  SECTORS, TXN, SIZES, TAX_RETURN, YEARS, NYRS, CHANGES, STEPS,
+  calcAuditFee, auditFloor, feeLines, euro, type AuditInput,
 } from "@/lib/audit-fee";
 import { AUDIT_PRE_TRADING, TAX_RETURN_FROM, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
 import { trackConversion } from "@/lib/analytics";
@@ -72,9 +72,6 @@ const QUESTIONS: { key: AnswerKey; title: string; help: string; items: Opt[] }[]
   { key: "sector", title: "What does the company do?", help: "Some sectors carry heavier checks on our side — that is what moves the fee.", items: SECTORS },
   { key: "txn", title: "About how many transactions a month?", help: "Each invoice, receipt and bank line. More transactions means more sampling and testing.", items: TXN },
   { key: "size", title: "How big is the company?", help: "Small companies usually qualify for a lighter review engagement — about half the cost.", items: SIZES },
-  { key: "pay", title: "Anyone on the payroll?", help: "Payroll means employer filings and payroll testing during the audit.", items: PAYROLL },
-  { key: "vat", title: "Registered for VAT?", help: "VAT registration adds return reconciliations to the audit scope.", items: VAT },
-  { key: "banks", title: "How many bank accounts?", help: "Every account is confirmed and reconciled — more accounts, more confirmations.", items: BANKS },
   { key: "taxret", title: "Need the annual tax return as well?", help: `Prepared from the audited figures, so nothing is rebuilt twice. From €${TAX_RETURN_FROM} a year, set by your monthly spend — priced exactly in the final quote.`, items: TAX_RETURN },
 ];
 const LAST = QUESTIONS.length; // the fee step
@@ -83,7 +80,7 @@ export function AuditEstimator() {
   const [amode, setAmode] = useState<"ask" | "docs">("ask");
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Omit<AuditInput, "uploaded">>({
-    sector: "shop", txn: "1-20", size: "small", pay: "none", vat: "no", banks: "1",
+    sector: "shop", txn: "1-20", size: "small",
     taxret: "no", year: "2025", nyrs: "2", chg: "no", doc: "fs",
   });
   const [notes, setNotes] = useState("");
@@ -224,7 +221,7 @@ export function AuditEstimator() {
       ? `This is the fee we quoted you on ${heldOn}, from the statements you sent. It stands for 30 days — answering the questions again will not change it. ${PRICING_VAT_NOTE}`
 
       : (q.review ? "You likely qualify for a review instead of a full audit — we confirm it against your figures. " : "") +
-        `The fee is fixed after a short scoping call and never below €${AUDIT_PRE_TRADING}. Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here. ${PRICING_VAT_NOTE}`;
+        `The fee is fixed after a short scoping call and never below the pre-trading figure of our scale (€${AUDIT_PRE_TRADING} for a full audit, €${auditFloor(true)} for a review). Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here. ${PRICING_VAT_NOTE}`;
   const summary = q.refer
     ? "We price most sectors instantly, but this one needs a short conversation with a director before we put a number to it — usually the same day."
     : held !== null
@@ -260,7 +257,7 @@ export function AuditEstimator() {
           email: form.email,
           subject: `Audit ${intent === "proposal" ? "proposal request" : "consultation booking"} — ${form.company || form.name}`,
           message: `Company: ${form.company}\nPhone: ${form.phone}\nEstimated audit fee: ${quoted}\n` +
-            `Scope: ${labelOf(SECTORS, answers.sector)} · ${labelOf(TXN, answers.txn)} txn/mo · ${labelOf(SIZES, answers.size)} · payroll ${labelOf(PAYROLL, answers.pay)} · VAT ${answers.vat} · ${labelOf(BANKS, answers.banks)} bank account(s) · tax return ${answers.taxret}\n` +
+            `Scope: ${labelOf(SECTORS, answers.sector)} · ${labelOf(TXN, answers.txn)} txn/mo · ${labelOf(SIZES, answers.size)} · tax return ${answers.taxret}\n` +
             (notes.trim() ? `Notes: ${notes.trim()}\n` : "") +
             `Reference: ${ref}`,
           context: `audit-estimator-${intent}`,
@@ -296,12 +293,12 @@ export function AuditEstimator() {
             Your audit fee, in sixty seconds
           </h2>
           <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 15.5, lineHeight: 1.7, color: "rgba(255,255,255,.76)", margin: "14px auto 0", maxWidth: "56ch", textWrap: "pretty" }}>
-            Seven quick questions — the fee builds as you answer. Or send last year&apos;s statements: we run a real compliance review on them and the planning saving comes off your fee.
+            Four quick questions — the fee builds as you answer. Or send last year&apos;s statements: we run a real compliance review on them and the planning saving comes off your fee.
           </p>
         </div>
 
         <div style={{ margin: "30px auto 0", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-          <button type="button" onClick={() => setAmode("ask")} aria-pressed={amode === "ask"} style={modeBtn(amode === "ask")}>Answer seven questions</button>
+          <button type="button" onClick={() => setAmode("ask")} aria-pressed={amode === "ask"} style={modeBtn(amode === "ask")}>Answer four questions</button>
           <button type="button" onClick={() => setAmode("docs")} aria-pressed={amode === "docs"} style={modeBtn(amode === "docs")}>Just upload last year&apos;s FS</button>
         </div>
 
@@ -461,9 +458,9 @@ export function AuditEstimator() {
                     <>
                       <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Your fee</div>
                       <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.65, color: "var(--a4-on-dark-mute)", margin: "12px 0 0" }}>
-                        Your file is reviewed — we&apos;ll confirm the fixed fee on a short scoping call. For a number right now, answer the seven questions: sending this file takes the planning saving off whatever it lands on.
+                        Your file is reviewed — we&apos;ll confirm the fixed fee on a short scoping call. For a number right now, answer the four questions: sending this file takes the planning saving off whatever it lands on.
                       </p>
-                      <Button variant="outline-dark" size="md" onClick={() => { setAmode("ask"); setStep(0); }} style={{ marginTop: 16 }}>Answer seven questions <Icon name="arrow-right" size={16} color="#fff" /></Button>
+                      <Button variant="outline-dark" size="md" onClick={() => { setAmode("ask"); setStep(0); }} style={{ marginTop: 16 }}>Answer four questions <Icon name="arrow-right" size={16} color="#fff" /></Button>
                     </>
                   )}
                 </div>
@@ -482,7 +479,7 @@ export function AuditEstimator() {
                   )}
                   <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
                 </div>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "12px 0 0" }}>Indicative pre-check, not a substitute for audit. Fixed after a short scoping call, never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}</p>
+                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "12px 0 0" }}>Indicative pre-check, not a substitute for audit. Fixed after a short scoping call, never below the pre-trading figure of our scale (€{AUDIT_PRE_TRADING} for a full audit, €{auditFloor(true)} for a review). {PRICING_VAT_NOTE}</p>
               </div>
             ) : (
               <div>
@@ -605,7 +602,7 @@ export function AuditEstimator() {
                 )}
 
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "14px 0 0" }}>
-                  The file is only used to review and scope the audit. Fixed after a short scoping call, never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}
+                  The file is only used to review and scope the audit. Fixed after a short scoping call, never below the pre-trading figure of our scale (€{AUDIT_PRE_TRADING} for a full audit, €{auditFloor(true)} for a review). {PRICING_VAT_NOTE}
                 </p>
               </div>
             )}
