@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcAuditFee, feeLines, TXN, type AuditInput } from "./audit-fee";
+import { calcAuditFee, auditFloor, feeLines, TXN, type AuditInput } from "./audit-fee";
 import { AUDIT_YEARLY, AUDIT_FROM, AUDIT_PRE_TRADING } from "@/data/a4QuotePack";
 
 const base: AuditInput = {
@@ -15,16 +15,20 @@ describe("audit fee engine", () => {
 
   it("prices the default small company as a review engagement", () => {
     const r = at({});
-    // 995 assure × 0.55 review = 547.50 → €550 at the nearest €50, which is
-    // under the pre-trading floor, so the floor is what the client pays.
-    expect(r).toMatchObject({ refer: false, fee: 600, final: 600, review: true, yearsN: 1 });
+    // Fixture band is 21-60: 995 assure × 0.55 review = 547.25 → €547 — the same
+    // figure the homepage wizard quotes; no flat €600 floor lifts it any more.
+    expect(r).toMatchObject({ refer: false, fee: 547, final: 547, review: true, yearsN: 1 });
   });
 
   it("never goes below the pre-trading floor", () => {
     // The advertised "from" is the cheapest TRADING company, not the dormant one.
     expect(AUDIT_FROM).toBe(750);
     expect(AUDIT_PRE_TRADING).toBe(600);
-    expect(at({ txn: "0" })).toMatchObject({ fee: 600, final: 600 });
+    // Floor is the pack's band-0 figure PER ENGAGEMENT: €600 full audit, €330 review.
+    expect(at({ txn: "0", size: "big" })).toMatchObject({ fee: 600, final: 600 });
+    expect(at({ txn: "0" })).toMatchObject({ fee: 330, final: 330, review: true });
+    expect(auditFloor(false)).toBe(600);
+    expect(auditFloor(true)).toBe(330);
     // Any company that actually trades starts at the advertised floor.
     expect(at({ txn: "1-20", size: "big" })).toMatchObject({ fee: AUDIT_FROM });
   });
@@ -62,14 +66,14 @@ describe("audit fee engine", () => {
   });
 
   it("refuses to discount below the floor instead of faking a saving", () => {
-    const r = at({ txn: "0", uploaded: true, doc: "fs" });
+    const r = at({ txn: "0", size: "big", uploaded: true, doc: "fs" });
     expect(r).toMatchObject({ disc: 0, fee: 600, final: 600 });
     expect(r.refer === false && r.reasons[0]).toMatch(/no honest room/);
   });
 
   it("multiplies the total by the number of years to audit", () => {
     const r = at({ year: "multi", nyrs: "3" });
-    expect(r).toMatchObject({ yearsN: 3, final: 600, total: 1800 });
+    expect(r).toMatchObject({ yearsN: 3, final: 547, total: 1641 });
   });
 
   it("itemises every euro of the quote", () => {

@@ -119,6 +119,9 @@ export const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB")
 
 const find = <T extends { id: string }>(list: T[], id: string) => list.find((x) => x.id === id) ?? list[0];
 
+/** Pack pre-trading figure for the engagement type: €600 full audit, €330 review engagement. */
+export const auditFloor = (review: boolean) => Math.round(AUDIT_PRE_TRADING * (review ? REVIEW_ENGAGEMENT_FACTOR : 1));
+
 export function calcAuditFee(s: AuditInput): AuditQuote {
   const tier = TIERS[find(SECTORS, s.sector).tier];
   if (tier.refer) return { refer: true, tier };
@@ -152,7 +155,10 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   // the pack wins and the rounding goes; whole euros, exactly like every other
   // line on every other surface.
   const fee =
-    Math.max(AUDIT_PRE_TRADING, Math.round(txn.assure * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) * tier.mult)) +
+    // The floor is the pack's own pre-trading figure for THIS engagement type —
+    // €600 for a full audit, €330 for a review — so the page can never quote
+    // above the homepage wizard, which reads the same table with no floor.
+    Math.max(auditFloor(review), Math.round(txn.assure * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) * tier.mult)) +
     taxAdd;
 
   const yearsN = s.year === "multi" ? Math.max(2, parseInt(s.nyrs, 10) || 2) : 1;
@@ -171,7 +177,7 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
     }
     if (fee <= 900) {
       cap = 0.05;
-      reasons.push(`the fee is already near the €${AUDIT_PRE_TRADING} floor of our scale`);
+      reasons.push(`the fee is already near the €${auditFloor(review)} floor of our scale`);
     }
     if (bigVol && fee <= 1500) {
       cap = Math.min(cap, 0.05);
@@ -179,11 +185,11 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
     }
     disc = Math.min(base, cap);
     // Same rule after the upload discount: whole euros, no €50 step.
-    final = Math.max(AUDIT_PRE_TRADING, Math.round(fee * (1 - disc)));
+    final = Math.max(auditFloor(review), Math.round(fee * (1 - disc)));
     if (final >= fee) {
       disc = 0;
       final = fee;
-      reasons = [`there is no honest room to discount without going below €${AUDIT_PRE_TRADING}`];
+      reasons = [`there is no honest room to discount without going below €${auditFloor(review)}`];
     }
     if (disc > 0 && !reasons.length) {
       reasons.push(

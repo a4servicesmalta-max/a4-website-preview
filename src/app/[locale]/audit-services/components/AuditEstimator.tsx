@@ -9,7 +9,7 @@ import { NETWORK_FAILURE, readReviewFailure, type ReviewFailure } from "@/lib/re
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
 import {
   SECTORS, TXN, SIZES, TAX_RETURN, YEARS, NYRS, CHANGES, STEPS,
-  calcAuditFee, feeLines, euro, type AuditInput,
+  calcAuditFee, auditFloor, feeLines, euro, type AuditInput,
 } from "@/lib/audit-fee";
 import { AUDIT_PRE_TRADING, TAX_RETURN_FROM, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
 import { trackConversion } from "@/lib/analytics";
@@ -221,7 +221,7 @@ export function AuditEstimator() {
       ? `This is the fee we quoted you on ${heldOn}, from the statements you sent. It stands for 30 days — answering the questions again will not change it. ${PRICING_VAT_NOTE}`
 
       : (q.review ? "You likely qualify for a review instead of a full audit — we confirm it against your figures. " : "") +
-        `The fee is fixed after a short scoping call and never below €${AUDIT_PRE_TRADING}. Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here. ${PRICING_VAT_NOTE}`;
+        `The fee is fixed after a short scoping call and never below the pre-trading figure of our scale (€${AUDIT_PRE_TRADING} for a full audit, €${auditFloor(true)} for a review). Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here. ${PRICING_VAT_NOTE}`;
   const summary = q.refer
     ? "We price most sectors instantly, but this one needs a short conversation with a director before we put a number to it — usually the same day."
     : held !== null
@@ -479,7 +479,7 @@ export function AuditEstimator() {
                   )}
                   <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
                 </div>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "12px 0 0" }}>Indicative pre-check, not a substitute for audit. Fixed after a short scoping call, never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}</p>
+                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "12px 0 0" }}>Indicative pre-check, not a substitute for audit. Fixed after a short scoping call, never below the pre-trading figure of our scale (€{AUDIT_PRE_TRADING} for a full audit, €{auditFloor(true)} for a review). {PRICING_VAT_NOTE}</p>
               </div>
             ) : (
               <div>
@@ -602,7 +602,7 @@ export function AuditEstimator() {
                 )}
 
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "14px 0 0" }}>
-                  The file is only used to review and scope the audit. Fixed after a short scoping call, never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}
+                  The file is only used to review and scope the audit. Fixed after a short scoping call, never below the pre-trading figure of our scale (€{AUDIT_PRE_TRADING} for a full audit, €{auditFloor(true)} for a review). {PRICING_VAT_NOTE}
                 </p>
               </div>
             )}

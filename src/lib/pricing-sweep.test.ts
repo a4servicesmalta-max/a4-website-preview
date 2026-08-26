@@ -109,9 +109,6 @@ describe("pricing sweep", () => {
     // Owner ruling 2026-08-26: the audit page has NO payroll / VAT / bank
     // add-ons any more, so this must hold across the WHOLE input space —
     // every sector × band × company size — not just the add-on-free corner.
-    // The one figure the wizard does not apply is the €AUDIT_PRE_TRADING
-    // floor: a small company's review at a low band prices below it in the
-    // wizard and is lifted to it here.
     for (const sector of AUDIT_SECTORS) for (const t of AUDIT_TXN) for (const size of AUDIT_SIZES) {
       const where = `${sector.id}/${t.id}/${size.id}`;
       const viaAudit = auditAt({ sector: sector.id, txn: t.id, size: size.id });
@@ -123,8 +120,9 @@ describe("pricing sweep", () => {
       const review = size.id !== "big" && AUDIT_TXN.findIndex((b) => b.id === t.id) < 4;
       expect(viaAudit.review, `review flag ${where}`).toBe(review);
       const viaWizard = evaluateA4Items([review ? { service: "audit", txn: t.id, review: true } : { service: "audit", txn: t.id }], sector.tier, AT).yearly;
-      expect(viaAudit.final, where).toBe(Math.max(AUDIT_PRE_TRADING, viaWizard));
-      if (viaWizard >= AUDIT_PRE_TRADING) expect(viaAudit.final, `exact parity ${where}`).toBe(viaWizard);
+      // Exact parity everywhere: the page's floor is the pack's band-0 figure
+      // for the engagement type, which the wizard's own table never goes under.
+      expect(viaAudit.final, where).toBe(viaWizard);
     }
 
     for (const t of AUDIT_TXN) {
