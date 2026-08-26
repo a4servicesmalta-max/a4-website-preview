@@ -17,12 +17,17 @@ const AFTER_PROMO = new Date("2026-09-01T12:00:00Z");
 const at = (p: Partial<AccountingInput>, now = DURING_PROMO) => calcAccountingFee({ ...base, ...p }, now);
 
 describe("accounting fee engine", () => {
-  it("bills managed bookkeeping by entity and expenses, never by transaction volume", () => {
-    expect(at({ entity: "sole" })).toMatchObject({ entityLabel: "Self-employed", monthlyFull: SOLE });
-    expect(at({ entity: "company" })).toMatchObject({ entityLabel: "Company", monthlyFull: CO });
-    // The TRANSACTION band must not move it — expenses is the only driver.
+  it("bills managed bookkeeping by entity and expenses, with the volume uplift and extra accounts on their own lines", () => {
+    // Default fixture is the 21-60 band → +€10 uplift, one bank account.
+    expect(at({ entity: "sole" })).toMatchObject({ entityLabel: "Self-employed", monthlyFull: SOLE + 10 });
+    expect(at({ entity: "company" })).toMatchObject({ entityLabel: "Company", monthlyFull: CO + 10 });
+    // The two lowest bands add nothing, so "from €49" is a price the page produces.
     expect(at({ entity: "company", txn: "1-20" })).toMatchObject({ monthlyFull: CO });
-    expect(at({ entity: "company", txn: "1000+" })).toMatchObject({ monthlyFull: CO });
+    expect(at({ entity: "company", txn: "1000+" })).toMatchObject({ monthlyFull: CO + 140 });
+    // Each account beyond the first adds €25/mo — the wizard's identity (mt-2026-08-26c-volume).
+    expect(at({ entity: "company", txn: "1-20", banks: 3 })).toMatchObject({ monthlyFull: CO + 50 });
+    // The base line itself is untouched by either.
+    expect((at({ entity: "company", txn: "1000+", banks: 3 }) as { monthly: { k: string; v: number }[] }).monthly[0]).toEqual({ k: "Managed bookkeeping · Company", v: CO });
   });
 
   it("refers the sectors we do not price instantly", () => {
@@ -33,31 +38,31 @@ describe("accounting fee engine", () => {
     const std = at({ vatreg: "art10" }) as { monthlyFull: number };
     const high = at({ vatreg: "art10", sector: "regulated" }) as { monthlyFull: number };
     // The €49 bookkeeping line is flat; the VAT line takes the ×1.45.
-    expect(std.monthlyFull).toBe(CO + 45);
-    expect(high.monthlyFull).toBe(CO + Math.round(45 * 1.45));
+    expect(std.monthlyFull).toBe(CO + 10 + 45);
+    expect(high.monthlyFull).toBe(CO + 10 + Math.round(45 * 1.45));
     // Payroll no longer takes the multiplier (mt-2026-08-17-corrections,
     // finding A3): a restaurant's payslips are the same work as a shop's.
     const payStd = at({ head: 3 }) as { monthlyFull: number };
     const payHigh = at({ head: 3, sector: "regulated" }) as { monthlyFull: number };
-    expect(payStd.monthlyFull).toBe(CO + 36);
+    expect(payStd.monthlyFull).toBe(CO + 10 + 36);
     expect(payHigh.monthlyFull).toBe(payStd.monthlyFull);
   });
 
   it("prices payroll at a flat €12/head — the total never falls as the team grows", () => {
     // mt-2026-08-26b-payroll: one rate, n × 12. A single rate cannot cliff.
-    expect(at({ head: 3 })).toMatchObject({ monthlyFull: CO + 36 });
-    expect(at({ head: 10 })).toMatchObject({ monthlyFull: CO + 120 });
-    expect(at({ head: 11 })).toMatchObject({ monthlyFull: CO + 132 });
-    expect(at({ head: 20 })).toMatchObject({ monthlyFull: CO + 240 });
+    expect(at({ head: 3 })).toMatchObject({ monthlyFull: CO + 10 + 36 });
+    expect(at({ head: 10 })).toMatchObject({ monthlyFull: CO + 10 + 120 });
+    expect(at({ head: 11 })).toMatchObject({ monthlyFull: CO + 10 + 132 });
+    expect(at({ head: 20 })).toMatchObject({ monthlyFull: CO + 10 + 240 });
   });
 
   it("distinguishes the three VAT articles instead of charging art. 10 for all", () => {
     const a10 = at({ vatreg: "art10" }) as { monthlyFull: number };
     const a12 = at({ vatreg: "art12" }) as { monthlyFull: number };
     const a11 = at({ vatreg: "art11" }) as { monthlyFull: number };
-    expect(a10.monthlyFull).toBe(CO + 45); // art. 10 band price
-    expect(a12.monthlyFull).toBe(CO + Math.round(45 * 0.6));
-    expect(a11.monthlyFull).toBe(CO + Math.round(145 / 12));
+    expect(a10.monthlyFull).toBe(CO + 10 + 45); // art. 10 band price
+    expect(a12.monthlyFull).toBe(CO + 10 + Math.round(45 * 0.6));
+    expect(a11.monthlyFull).toBe(CO + 10 + Math.round(145 / 12));
   });
 
   it("charges catch-up at the monthly rate per month, with no cap", () => {

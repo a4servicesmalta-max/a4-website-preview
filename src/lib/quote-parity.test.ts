@@ -21,13 +21,24 @@
 
 import { describe, it, expect } from "vitest";
 import { buildQuote, REVENUE_BANDS } from "./quotation";
+import { evaluateA4Items, type A4Item, type A4Risk } from "./websiteQuotation";
 import { calcAuditFee, type AuditInput } from "./audit-fee";
 import { calcAccountingFee, type AccountingInput } from "./accounting-fee";
 import {
   SECTORS, TXN_BANDS, RISK_TIERS, AUDIT_YEARLY, taxReturnYearly,
   BOOKKEEPING_MANAGED_MONTHLY, EXPENSE_BANDS, EXPENSE_BAND_CEILINGS, VAT_MONTHLY, PAYROLL_PER_HEAD, sectorTier,
-  catchUpAmount, bandForMonthlyExpenses, type TxnBand,
+  catchUpAmount, bandForMonthlyExpenses, fullMonthlyBookkeeping, type TxnBand, type ExpenseBand,
 } from "@/data/a4QuotePack";
+
+/** Promo is withdrawn; a fixed date keeps that true whatever the clock says. */
+const AT = new Date("2026-09-01T12:00:00Z");
+/** The /quote builder's answers for a company the wizard would also price. */
+const quoteFor = (o: { sector?: string; txn?: TxnBand; banks?: number; expenses?: ExpenseBand; entity?: "sole" | "company"; services?: ("accounts" | "audit" | "vat" | "mbr" | "payroll")[]; catchUpMonths?: number }) =>
+  buildQuote({
+    company: "T", industry: "x", sector: o.sector ?? "shop", txn: o.txn ?? "1-20", banks: o.banks ?? 1,
+    services: o.services ?? ["accounts"], entity: o.entity ?? "company", expenses: o.expenses ?? "0-10k",
+    catchUpMonths: o.catchUpMonths, startMonth: "2026-09",
+  });
 
 /** Every sector × every volume band — the whole input space, not a sample. */
 const COMBOS: { sector: string; band: TxnBand }[] = SECTORS.flatMap((s) =>
@@ -51,24 +62,25 @@ describe("quote parity across every surface", () => {
     expect(PRICEABLE.length).toBeGreaterThan(0);
   });
 
-  it("gives the same bookkeeping price on /quote and /accounting-services, at every band", () => {
-    // The whole expenses × entity space, not just the entry band — that is
-    // where a drift between two surfaces would actually hide.
+  it("gives the same bookkeeping price on /quote and /accounting-services, at every band, volume and account count", () => {
+    // The whole expenses × entity × volume × banks space, not just the entry
+    // band — that is where a drift between two surfaces would actually hide.
+    // /accounting-services used to leave the volume uplift off its monthly
+    // line (while charging it on catch-up); both now read fullMonthlyBookkeeping.
     for (const entity of ["sole", "company"] as const) {
-      for (const band of EXPENSE_BANDS) {
-        const fromAccountingPage = calcAccountingFee(accounting({ entity, expenses: band.id }));
+      for (const band of EXPENSE_BANDS) for (const txn of TXN_BANDS) for (const banks of [1, 2, 5]) {
+        const fromAccountingPage = calcAccountingFee(accounting({ entity, expenses: band.id, txn: txn.id, banks }));
         if (fromAccountingPage.refer) throw new Error("unpriceable");
-        const bookLine = fromAccountingPage.monthly.find((l) => l.k.startsWith("Managed bookkeeping"))?.v ?? 0;
-
-        const fromQuotePage = buildQuote({
-          company: "T", industry: "Other", revenueBand: "100k-500k",
+        const fromQuote = buildQuote({
+          company: "T", industry: "Other", sector: "shop", txn: txn.id, banks,
           services: ["accounts"], entity, expenses: band.id, startMonth: "2026-09",
         });
-        const quoteLine = (fromQuotePage.lines.find((l) => l.id === "accounts")?.annualEur ?? 0) / 12;
-
-        const want = BOOKKEEPING_MANAGED_MONTHLY[entity][band.id];
-        expect(`${entity}/${band.id} accounting=${bookLine}`).toBe(`${entity}/${band.id} accounting=${want}`);
-        expect(`${entity}/${band.id} quote=${Math.round(quoteLine)}`).toBe(`${entity}/${band.id} quote=${want}`);
+        const want = fullMonthlyBookkeeping(entity, band.id, txn.id, banks)!;
+        const where = `${entity}/${band.id}/${txn.id}/${banks}b`;
+        expect(fromAccountingPage.monthlyFull, `accounting page at ${where}`).toBe(want);
+        expect((fromQuote.lines.find((l) => l.id === "accounts")?.annualEur ?? 0) / 12, `/quote at ${where}`).toBe(want);
+        // And the base line on the accounting page is still the bare band rate.
+        expect(fromAccountingPage.monthly[0].v, `base at ${where}`).toBe(BOOKKEEPING_MANAGED_MONTHLY[entity][band.id]);
       }
     }
   });
@@ -97,7 +109,7 @@ describe("quote parity across every surface", () => {
     const seen = new Set<number>();
     for (const b of REVENUE_BANDS) {
       const q = buildQuote({
-        company: "T", industry: "Other", revenueBand: b.id,
+        company: "T", industry: "Other", revenueBand: b.id, sector: "shop", txn: "1-20", banks: 1,
         services: ["accounts"], entity: "company", expenses: "0-10k", startMonth: "2026-09",
       });
       seen.add((q.lines.find((l) => l.id === "accounts")?.annualEur ?? 0) / 12);
@@ -107,7 +119,7 @@ describe("quote parity across every surface", () => {
 
   it("charges catch-up at the same rate on /quote as the pack does", () => {
     const q = buildQuote({
-      company: "T", industry: "Other", revenueBand: "1m-5m",
+      company: "T", industry: "Other", sector: "shop", txn: "1-20", banks: 1,
       services: ["accounts"], entity: "company", expenses: "0-10k", catchUpMonths: 12, startMonth: "2026-09",
     });
     const catchup = q.lines.find((l) => l.id === "catchup");
@@ -120,7 +132,7 @@ describe("quote parity across every surface", () => {
     // One release of tolerance so an in-flight POST from a cached page does
     // not silently price zero catch-up. 1 year → 12 months × €49 (entry band).
     const q = buildQuote({
-      company: "T", industry: "Other", revenueBand: "100k-500k",
+      company: "T", industry: "Other", revenueBand: "100k-500k", sector: "shop", txn: "1-20", banks: 1,
       services: ["accounts"], entity: "company", expenses: "0-10k",
       overdueYears: 1, startMonth: "2026-09",
     });
@@ -139,6 +151,55 @@ describe("quote parity across every surface", () => {
     expect(q.lines.find((l) => l.id === "catchup")).toBeUndefined();
     expect(q.lines.find((l) => l.id === "accounts")?.display).toBe("On request");
     expect(q.annualTotalEur).toBe(0);
+  });
+
+  it("prices the same basket on /quote as the homepage wizard, across the whole sector × volume × spend space", () => {
+    // /quote used to scale the audit by an annual-revenue multiplier of its own
+    // and pin VAT to the 21-60 band; the same company got a different figure
+    // here and on the homepage. Both now read the pack through the same
+    // drivers, so every priceable combination must agree to the euro.
+    const risks: Record<string, A4Risk> = { standard: "standard", elevated: "elevated", high: "high" };
+    for (const sector of SECTORS) {
+      const tier = sectorTier(sector.id);
+      if (RISK_TIERS[tier].multiplier == null) continue;
+      for (const txn of TXN_BANDS) for (const expenses of EXPENSE_BANDS) for (const banks of [1, 3]) {
+        for (const entity of ["sole", "company"] as const) {
+          const q = quoteFor({ sector: sector.id, txn: txn.id, banks, expenses: expenses.id, entity, services: ["accounts", "vat"], catchUpMonths: 4 });
+          const items: A4Item[] = [
+            { service: "bookkeeping-managed", entity, expenses: expenses.id, txn: txn.id, banks },
+            { service: "vat", txn: txn.id, vatreg: "art10" },
+            { service: "catchup", months: 4, entity, expenses: expenses.id, txn: txn.id, banks },
+          ];
+          const w = evaluateA4Items(items, risks[tier], AT);
+          const where = `${sector.id}/${txn.id}/${expenses.id}/${banks}b/${entity}`;
+          expect(q.monthlyTotalEur, `monthly at ${where}`).toBe(w.monthly);
+          expect(q.lines.find((l) => l.id === "catchup")?.annualEur, `catch-up at ${where}`).toBe(w.catchup);
+          expect(q.lines.find((l) => l.id === "accounts")?.annualEur, `books at ${where}`).toBe(fullMonthlyBookkeeping(entity, expenses.id, txn.id, banks)! * 12);
+        }
+        // The audit is a company-only basket on the wizard side (independence bars it beside the books).
+        const qa = quoteFor({ sector: sector.id, txn: txn.id, expenses: expenses.id, services: ["audit"] });
+        const wa = evaluateA4Items([{ service: "audit", txn: txn.id }], risks[tier], AT);
+        expect(qa.annualTotalEur, `audit at ${sector.id}/${txn.id}`).toBe(wa.yearly);
+      }
+    }
+  });
+
+  it("quotes VAT and the audit 'On request' rather than at the cheapest tier when the sector or volume is missing", () => {
+    for (const missing of [{ sector: undefined }, { txn: undefined }, { sector: "other" }] as const) {
+      const q = buildQuote({ company: "T", industry: "x", sector: "shop", txn: "21-60", banks: 1, services: ["audit", "vat"], entity: "company", startMonth: "2026-09", ...missing });
+      expect(q.lines.map((l) => l.display)).toEqual(["On request", "On request"]);
+      expect(q.annualTotalEur + q.monthlyTotalEur).toBe(0);
+      expect(q.hasOnRequestLines).toBe(true);
+    }
+  });
+
+  it("keeps the revenue band inert — it no longer moves any price on /quote", () => {
+    const seen = new Set<string>();
+    for (const b of REVENUE_BANDS) {
+      const q = buildQuote({ company: "T", industry: "x", revenueBand: b.id, sector: "regulated", txn: "1000+", banks: 2, services: ["accounts", "audit", "vat"], entity: "company", expenses: "500k+", catchUpMonths: 3, startMonth: "2026-09" });
+      seen.add(JSON.stringify([q.monthlyTotalEur, q.annualTotalEur]));
+    }
+    expect(seen.size).toBe(1);
   });
 
   it("refuses to auto-price a referral sector on the surfaces that ask for one", () => {

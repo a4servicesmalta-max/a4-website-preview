@@ -80,7 +80,7 @@ export function AccountingEstimator() {
    * this surface now does the same.
    */
   const [s, setS] = useState<AccountingInput>({
-    sector: "shop", txn: "21-60", entity: "company", expenses: "", head: 2, vatreg: "art10", behind: "0",
+    sector: "shop", txn: "21-60", banks: 1, entity: "company", expenses: "", head: 2, vatreg: "art10", behind: "0",
     startMonth: "",
   });
   const set = (patch: Partial<AccountingInput>) => setS((a) => ({ ...a, ...patch }));
@@ -152,6 +152,7 @@ export function AccountingEstimator() {
     answers: [
       { k: "Sector", v: labelOf(SECTORS, s.sector) },
       { k: "Transactions / month", v: labelOf(TXN, s.txn) },
+      { k: "Bank accounts", v: String(s.banks ?? 1) },
       // `labelOf` falls back to the FIRST option when the id is empty, which
       // would report "Up to €10,000" for a question nobody answered. Say so.
       { k: "Monthly expenses", v: s.expenses ? labelOf(EXPENSES, s.expenses) : "not given" },
@@ -239,11 +240,22 @@ export function AccountingEstimator() {
                 <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
                   <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>About how many transactions a month?</div>
                   <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 }}>
-                    It sets your VAT and tax-return fees. The bookkeeping price is set by your monthly
-                    spend instead — that is the next question.
+                    The count, not the amount. It sets your VAT fee, and busy volumes add to the
+                    bookkeeping fee — the base price is set by your monthly spend, the next question.
                   </div>
                   <div style={{ marginTop: 10 }}>
                     <Pills items={TXN} value={s.txn} set={(id) => set({ txn: id as TxnBand })} />
+                  </div>
+                </div>
+                <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>How many bank accounts?</div>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 }}>
+                    Every account is reconciled separately. The first is included; each one after adds €25 a month to the bookkeeping fee.
+                  </div>
+                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16 }}>
+                    <label htmlFor="ae-banks" className="sr-only" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Bank accounts</label>
+                    <input id="ae-banks" type="range" min={1} max={8} step={1} value={s.banks ?? 1} onChange={(e) => set({ banks: +e.target.value })} style={sliderStyle} />
+                    <span style={readoutStyle}>{(s.banks ?? 1) === 1 ? "One account" : `${s.banks} accounts`}</span>
                   </div>
                 </div>
               </>

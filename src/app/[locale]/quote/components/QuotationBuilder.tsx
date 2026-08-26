@@ -5,20 +5,22 @@ import { Button, Container, Icon, Reveal, SectionHead } from "@/components/a4-la
 import {
   buildQuote,
   euro,
-  QUOTE_INDUSTRIES,
+  QUOTE_MAX_BANKS,
   QUOTE_SERVICE_CATALOG,
-  REVENUE_BANDS,
   type QuoteServiceId,
-  type RevenueBandId,
 } from "@/lib/quotation";
 import { catchUpMonthsFrom, ongoingStartMonth } from "@/lib/accounting-fee";
 import { flagsForServiceSelection, independenceNotice } from "@/lib/independence";
 import {
   EXPENSE_BANDS,
+  EXTRA_BANK_PER_MONTH,
   MANAGED_ENTITY_OPTIONS,
   PRICING_GOV_NOTE,
+  SECTORS,
+  TXN_BANDS,
   type ExpenseBand,
   type ManagedEntity,
+  type TxnBand,
 } from "@/data/a4QuotePack";
 
 const panel: React.CSSProperties = {
@@ -73,8 +75,17 @@ function download(b64: string, name: string) {
 export function QuotationBuilder() {
   const [company, setCompany] = useState("");
   const [regNo, setRegNo] = useState("");
-  const [industry, setIndustry] = useState<string>(QUOTE_INDUSTRIES[5]);
-  const [revenueBand, setRevenueBand] = useState<RevenueBandId>("100k-500k");
+  /**
+   * The wizard's three drivers, asked here with the same options so /quote
+   * can never put the same company in a different tier or band than the
+   * homepage or vacei.com. Sector and volume ship EMPTY for the same reason
+   * `expenses` does: a pre-selected answer is a price for a question nobody
+   * answered, and the PDF outlives the page.
+   */
+  const [sector, setSector] = useState<string>("");
+  const [txn, setTxn] = useState<TxnBand | "">("");
+  const [banks, setBanks] = useState(1);
+  const industry = SECTORS.find((x) => x.id === sector)?.label ?? "";
   const [entity, setEntity] = useState<ManagedEntity>("company");
   /**
    * Monthly expenses — the bookkeeping price driver.
@@ -138,7 +149,9 @@ export function QuotationBuilder() {
             company: company || "Your company",
             regNo,
             industry,
-            revenueBand,
+            sector: sector || undefined,
+            txn: txn || undefined,
+            banks,
             services: [...services],
             entity,
             // "" is "not answered" — pass undefined so `buildQuote` takes its
@@ -147,7 +160,7 @@ export function QuotationBuilder() {
             catchUpMonths,
             startMonth,
           }),
-    [conflict, company, regNo, industry, revenueBand, services, entity, expenses, catchUpMonths, startMonth]
+    [conflict, company, regNo, industry, sector, txn, banks, services, entity, expenses, catchUpMonths, startMonth]
   );
 
   /**
@@ -230,13 +243,18 @@ export function QuotationBuilder() {
     // ask the one question instead of issuing a half-priced PDF.
     if (services.has("accounts") && !expenses)
       return setError("Tell us roughly what you spend a month — it is what sets the bookkeeping price, and we do not assume a band.");
+    // Same rule for the other two drivers: sector sets the risk tier on VAT
+    // and the audit, the transaction band prices them and the bookkeeping
+    // uplift. Guessing either would be a quote for a company we have not met.
+    if ((services.has("accounts") || services.has("audit") || services.has("vat")) && (!sector || !txn))
+      return setError("Tell us what the company does and roughly how many transactions it has a month — they set the VAT, audit and bookkeeping prices, and we do not assume them.");
     setBusy(true);
     try {
       const res = await fetch("/api/quotation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name, email, company, regNo, industry, revenueBand,
+          name, email, company, regNo, industry, sector, txn, banks,
           services: [...services], entity, expenses, catchUpMonths,
           // The PDF prints "Bookkeeping starts X; N earlier months quoted
           // separately", so X must be the first ONGOING month. The field the
@@ -296,22 +314,53 @@ export function QuotationBuilder() {
                 <input value={regNo} onChange={(e) => priced(setRegNo)(e.target.value)} placeholder="C 12345" style={field} />
               </div>
               <div>
-                <span style={label}>Industry</span>
-                <select value={industry} onChange={(e) => priced(setIndustry)(e.target.value)} style={{ ...field, cursor: "pointer" }}>
-                  {QUOTE_INDUSTRIES.map((i) => (
-                    <option key={i}>{i}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <span style={label}>Annual revenue</span>
-                <select value={revenueBand} onChange={(e) => priced(setRevenueBand)(e.target.value as RevenueBandId)} style={{ ...field, cursor: "pointer" }}>
-                  {REVENUE_BANDS.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.label}
+                <span style={label}>What the company does *</span>
+                <select value={sector} onChange={(e) => priced(setSector)(e.target.value)} style={{ ...field, cursor: "pointer" }}>
+                  {/* Unselected by default — see `expenses` below. */}
+                  <option value="">Select the closest match…</option>
+                  {SECTORS.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.label}
                     </option>
                   ))}
                 </select>
+                {!sector && (
+                  <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
+                    Sets the risk tier on VAT and the audit — the same list every A4 calculator uses.
+                  </span>
+                )}
+              </div>
+              <div>
+                <span style={label}>Transactions a month *</span>
+                <select value={txn} onChange={(e) => priced(setTxn)(e.target.value as TxnBand | "")} style={{ ...field, cursor: "pointer" }}>
+                  <option value="">Select a volume…</option>
+                  {TXN_BANDS.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.label} — {b.hint}
+                    </option>
+                  ))}
+                </select>
+                {!txn && (
+                  <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
+                    The count, not the amount. Prices VAT and the audit, and adds to the bookkeeping fee at busy volumes.
+                  </span>
+                )}
+              </div>
+              <div>
+                <span style={label}>Bank accounts</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={QUOTE_MAX_BANKS}
+                  step={1}
+                  value={banks}
+                  onChange={(e) => priced(setBanks)(Math.min(QUOTE_MAX_BANKS, Math.max(1, Math.floor(Number(e.target.value) || 1))))}
+                  style={field}
+                  aria-label="How many bank accounts do you have?"
+                />
+                <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
+                  Every account is reconciled separately. The first is included; each one after adds €{EXTRA_BANK_PER_MONTH} a month to the bookkeeping fee.
+                </span>
               </div>
               <div>
                 <span style={label}>Whose books *</span>

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pushToPortal } from "@/lib/portal";
-import { buildQuote, REVENUE_BANDS, type QuoteInput, type QuoteServiceId } from "@/lib/quotation";
+import { buildQuote, QUOTE_MAX_BANKS, REVENUE_BANDS, type QuoteInput, type QuoteServiceId } from "@/lib/quotation";
 import { renderQuotationPdf } from "@/lib/quotation-pdf";
 import { INDEPENDENCE_CONFLICT, independenceRoute } from "@/lib/independence";
-import { EXPENSE_BANDS, type ExpenseBand } from "@/data/a4QuotePack";
+import { EXPENSE_BANDS, SECTORS, TXN_BANDS, type ExpenseBand, type TxnBand } from "@/data/a4QuotePack";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -18,7 +18,13 @@ export async function POST(req: NextRequest) {
     const company = String(b.company || "").slice(0, 160);
     const regNo = String(b.regNo || "").slice(0, 40);
     const industry = String(b.industry || "").slice(0, 80);
-    const revenueBand = REVENUE_BANDS.some((r) => r.id === b.revenueBand) ? b.revenueBand : "100k-500k";
+    // Retired driver: accepted from an in-flight POST, never defaulted, never priced on.
+    const revenueBand = REVENUE_BANDS.some((r) => r.id === b.revenueBand) ? b.revenueBand : undefined;
+    // The wizard's drivers. Unknown → undefined → the line prices "On request"
+    // in `buildQuote`; the builder itself refuses to submit without them.
+    const sector = SECTORS.some((x) => x.id === b.sector) ? String(b.sector) : undefined;
+    const txn = TXN_BANDS.some((t) => t.id === b.txn) ? (b.txn as TxnBand) : undefined;
+    const banks = Math.min(QUOTE_MAX_BANKS, Math.max(1, Math.floor(Number(b.banks) || 1)));
     const entity = b.entity === "sole" ? "sole" : "company";
     const services = (Array.isArray(b.services) ? b.services : []).filter((s: string) =>
       VALID_SERVICES.includes(s as QuoteServiceId)
@@ -62,7 +68,7 @@ export async function POST(req: NextRequest) {
     const expenses = EXPENSE_BANDS.some((x) => x.id === b.expenses)
       ? (b.expenses as ExpenseBand)
       : undefined;
-    const input: QuoteInput = { company, regNo, industry, revenueBand, services, entity, expenses, catchUpMonths, startMonth };
+    const input: QuoteInput = { company, regNo, industry, sector, txn, banks, revenueBand, services, entity, expenses, catchUpMonths, startMonth };
     const quote = buildQuote(input);
 
     // Lead is captured regardless of what the visitor does with the PDF.

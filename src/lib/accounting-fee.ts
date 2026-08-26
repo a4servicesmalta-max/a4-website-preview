@@ -17,7 +17,7 @@ import {
   TXN_BANDS, RISK_TIERS, VAT_MONTHLY, VAT_RULES,
   PAYROLL_PER_HEAD, payrollFee, payrollFeeLabel, LAUNCH_PROMO, isPromoActive, roundEur, sectorTier,
   MANAGED_ENTITY_LABELS, MANAGED_ENTITY_OPTIONS, EXPENSE_BANDS,
-  catchUpAmount, catchUpLabel, managedMonthly,
+  catchUpAmount, catchUpLabel, managedMonthly, BOOKKEEPING_VOLUME_UPLIFT, EXTRA_BANK_PER_MONTH, extraBanksMonthly,
   type TxnBand, type RiskTier, type ManagedEntity, type ExpenseBand,
 } from "@/data/a4QuotePack";
 
@@ -78,6 +78,14 @@ export type AccountingInput = {
    * The engine withholds the whole quote until this is a real band.
    */
   expenses: ExpenseBand | "";
+  /**
+   * Bank accounts to reconcile, 1..8. Each beyond the first adds
+   * EXTRA_BANK_PER_MONTH to the books — the same identity the wizard, /quote
+   * and vacei.com price on. Optional on the wire (an older caller sends none)
+   * and defaults to ONE, which is the floor, not a guess downward: the page
+   * asks the question, so a visitor with more accounts has said so.
+   */
+  banks?: number;
   head: number;
   vatreg: VatRegId;
   /** Whole months of backlog, as a string id from BEHIND. */
@@ -148,6 +156,16 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   const bookRate = bookRateEarly;
   const expenses = s.expenses as ExpenseBand;
   monthly.push({ k: `Managed bookkeeping · ${entityLabel}`, v: bookRate });
+  // mt-2026-08-26c-volume: the transaction band and the account count move the
+  // bookkeeping fee too, as separate lines so the base rate stays legible.
+  // This page asks both, so it prices both — it used to add the uplift to the
+  // catch-up line only, which quoted a busier company a monthly figure below
+  // the one the homepage wizard gave for the same answers.
+  const banks = Math.min(8, Math.max(1, Math.floor(Number(s.banks) || 1)));
+  const uplift = BOOKKEEPING_VOLUME_UPLIFT[s.txn] ?? 0;
+  if (uplift > 0) monthly.push({ k: "Bookkeeping · volume uplift", v: uplift });
+  const banksExtra = extraBanksMonthly(banks);
+  if (banksExtra > 0) monthly.push({ k: `Bank accounts · ${banks - 1} × €${EXTRA_BANK_PER_MONTH} beyond the first`, v: banksExtra });
 
   if (s.head > 0) {
     // Marginal tiers, NOT risk-multiplied (findings A2 + A3) — and the label
@@ -174,11 +192,10 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   const months = parseInt(s.behind, 10) || 0;
   if (months > 0) {
     const promoNow = isPromoActive(now);
-    // Volume identity: this widget asks the transaction band but not the
-    // account count — quoted at the single-account floor; the full quote
-    // prices the exact count.
-    const k = catchUpLabel(months, entity, expenses, s.txn, 1, promoNow);
-    const v = catchUpAmount(months, entity, expenses, s.txn, 1, promoNow);
+    // Same volume identity as the monthly lines above — a backdated month
+    // bills at the full live rate.
+    const k = catchUpLabel(months, entity, expenses, s.txn, banks, promoNow);
+    const v = catchUpAmount(months, entity, expenses, s.txn, banks, promoNow);
     // Both are non-null here — bookRate above already proved the band — but the
     // guard keeps the null contract explicit rather than asserting it away.
     if (k != null && v != null) oneOff.push({ k, v });

@@ -12,9 +12,10 @@ import { trackConversion } from "@/lib/analytics";
 // The figures below are the Vacei figures, verbatim. If Vacei pricing changes,
 // change it there first and mirror it here.
 //
-// CURRENT PACK: mt-2026-08-14-volume (see A4_QUOTE_PACK_VERSION). Bookkeeping
-// is priced by ENTITY × MONTHLY EXPENSES across nine bands — it is not flat,
-// and copy reading these figures must say "from", never "flat".
+// CURRENT PACK: see A4_QUOTE_PACK_VERSION (mt-2026-08-26c-volume at the time of
+// writing). Bookkeeping is priced by ENTITY × MONTHLY EXPENSES across nine bands,
+// plus a transaction-band uplift and €25/mo per extra bank account — it is not
+// flat, and copy reading these figures must say "from", never "flat".
 //
 // History: the superseded mt-2026-08-14-managed pack removed the software-only
 // route this wizard used to open with ("Only software" / "Software +
