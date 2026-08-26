@@ -247,7 +247,9 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     annual += fee;
     lines.push({
       id: "catchup",
-      name: catchUpLabel(catchUpMonths, entity, input.expenses) ?? "Catch-up",
+      // No transaction/account questions on this builder — the label quotes
+      // the low-volume single-account floor; the full quote prices both.
+      name: catchUpLabel(catchUpMonths, entity, input.expenses, "1-20", 1) ?? "Catch-up",
       hint: "One-off: earlier months brought up to date before the monthly cycle starts. Charged at the same monthly rate — no catch-up premium, no cap.",
       display: `${euro(fee)} one-off`,
       annualEur: fee,

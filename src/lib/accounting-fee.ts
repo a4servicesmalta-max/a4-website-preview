@@ -174,8 +174,11 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   const months = parseInt(s.behind, 10) || 0;
   if (months > 0) {
     const promoNow = isPromoActive(now);
-    const k = catchUpLabel(months, entity, expenses, promoNow);
-    const v = catchUpAmount(months, entity, expenses, promoNow);
+    // Volume identity: this widget asks the transaction band but not the
+    // account count — quoted at the single-account floor; the full quote
+    // prices the exact count.
+    const k = catchUpLabel(months, entity, expenses, s.txn, 1, promoNow);
+    const v = catchUpAmount(months, entity, expenses, s.txn, 1, promoNow);
     // Both are non-null here — bookRate above already proved the band — but the
     // guard keeps the null contract explicit rather than asserting it away.
     if (k != null && v != null) oneOff.push({ k, v });

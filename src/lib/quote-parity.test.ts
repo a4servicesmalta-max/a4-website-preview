@@ -24,7 +24,7 @@ import { buildQuote, REVENUE_BANDS } from "./quotation";
 import { calcAuditFee, type AuditInput } from "./audit-fee";
 import { calcAccountingFee, type AccountingInput } from "./accounting-fee";
 import {
-  SECTORS, TXN_BANDS, RISK_TIERS, AUDIT_YEARLY, TAX_RETURN_YEARLY,
+  SECTORS, TXN_BANDS, RISK_TIERS, AUDIT_YEARLY, taxReturnYearly,
   BOOKKEEPING_MANAGED_MONTHLY, EXPENSE_BANDS, EXPENSE_BAND_CEILINGS, VAT_MONTHLY, PAYROLL_PER_HEAD, sectorTier,
   catchUpAmount, bandForMonthlyExpenses, type TxnBand,
 } from "@/data/a4QuotePack";
@@ -111,7 +111,7 @@ describe("quote parity across every surface", () => {
       services: ["accounts"], entity: "company", expenses: "0-10k", catchUpMonths: 12, startMonth: "2026-09",
     });
     const catchup = q.lines.find((l) => l.id === "catchup");
-    expect(catchup?.annualEur).toBe(catchUpAmount(12, "company", "0-10k"));
+    expect(catchup?.annualEur).toBe(catchUpAmount(12, "company", "0-10k", "1-20", 1));
     expect(catchup?.annualEur).toBe(588);
     expect(catchup?.name).toBe("Catch-up: 12 months x EUR 49 = EUR 588");
   });
@@ -164,7 +164,8 @@ describe("quote parity across every surface", () => {
       fs.readFile("src/components/a4-landing/LandingQuoteCalculator.tsx", "utf8"),
     );
     expect(src).toContain("assure: AUDIT_YEARLY");
-    expect(src).toContain("taxret: TAX_RETURN_YEARLY");
+    // The taxret table is gone — the wizard reads the formula helper.
+    expect(src).toContain("taxReturnYearly(");
     expect(src).toContain("vat: VAT_MONTHLY");
     // No inline band table anywhere in the file.
     expect(src).not.toMatch(/"1-20":\s*\d+/);
@@ -184,7 +185,11 @@ describe("quote parity across every surface", () => {
 
   it("pins the figures every surface is quoting, so a silent edit is visible", () => {
     expect(AUDIT_YEARLY).toEqual({ "0": 600, "1-20": 750, "21-60": 995, "61-150": 1395, "151-400": 1950, "401-1000": 2700, "1000+": 3650 });
-    expect(TAX_RETURN_YEARLY).toEqual({ "0": 140, "1-20": 220, "21-60": 260, "61-150": 335, "151-400": 450, "401-1000": 610, "1000+": 830 });
+    // mt-2026-08-26c-volume: the tax return is the formula, not a table.
+    // Worked example pinned in all three repos: company 10-25k → 69 × 4.8 = 331.
+    expect(taxReturnYearly("company", "10-25k")).toBe(331);
+    expect(taxReturnYearly("sole", "0-10k")).toBe(115);
+    expect(taxReturnYearly("company", "500k+")).toBe(2635);
     expect(BOOKKEEPING_MANAGED_MONTHLY).toEqual({
       sole: { "0-10k": 24, "10-25k": 39, "25-50k": 59, "50-100k": 89, "100-200k": 129, "200-300k": 179, "300-400k": 229, "400-500k": 279, "500k+": 339 },
       company: { "0-10k": 49, "10-25k": 69, "25-50k": 99, "50-100k": 149, "100-200k": 219, "200-300k": 299, "300-400k": 379, "400-500k": 459, "500k+": 549 },

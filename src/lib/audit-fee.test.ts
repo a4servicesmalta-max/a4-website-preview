@@ -45,7 +45,7 @@ describe("audit fee engine", () => {
     // 830 FLAT — mt-2026-08-26-taxret took the risk multiplier off it, so the
     // audit calculator and the bookkeeping calculator quote the same return.
     const r = at({ sector: "regulated", txn: "1000+", size: "big", pay: "21+", vat: "yes", banks: "4+", taxret: "yes" });
-    expect(r).toMatchObject({ payAdd: 450, vatAdd: 150, bankAdd: 250, taxAdd: 830, fee: 7355 });
+    expect(r).toMatchObject({ payAdd: 450, vatAdd: 150, bankAdd: 250, taxAdd: 235, fee: 6760 });
   });
 
   it("passes the full 20% planning saving on for audited prior-year statements", () => {

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, TAX_RETURN_YEARLY, VAT_MONTHLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, EXPENSE_BANDS, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, BOOKKEEPING_VOLUME_UPLIFT, extraBanksMonthly, taxReturnYearly, VAT_MONTHLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, MANAGED_ENTITY_OPTIONS, MANAGED_ENTITY_LABELS, EXPENSE_BANDS, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, ONBOARDING_UNPRICED_NOTE, LAUNCH_PROMO, catchUpAmount, catchUpLabel, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 import { independenceFlags, independenceNotice } from "@/lib/independence";
 import { catchUpMonthsFrom, formatStartMonth, nextMonth, ongoingStartMonth } from "@/lib/accounting-fee";
@@ -68,7 +68,8 @@ const QSIZE: [string, string, string][] = [
 // Bookkeeping is no longer volume-banded, so `book` is gone from this table.
 const QT: Record<string, Record<string, number>> = {
   vat: VAT_MONTHLY,
-  taxret: TAX_RETURN_YEARLY,
+  // `taxret` is gone: the annual tax return follows the SPEND band since
+  // mt-2026-08-26c-volume — see `taxReturnYearly`.
   assure: AUDIT_YEARLY,
 };
 /* QPAY (the flat whole-book tier alias) is gone with `payrollRate`: payroll is
@@ -83,6 +84,8 @@ export type QState = {
   step: number;
   sector: string;
   txn: string;
+  /** Bank accounts to reconcile — 1..8; each beyond the first adds EUR 25/mo. */
+  banks: number;
   /** Whose books these are — with `expenses`, what sets the bookkeeping price. */
   entity: ManagedEntity;
   /**
@@ -151,7 +154,7 @@ export type QState = {
  * is visible on a step the visitor passes through.
  */
 export const Q_INIT: QState = {
-  step: 0, sector: "shop", txn: "21-60", entity: "company", expenses: "", cap: "1500", head: 2, behind: "0",
+  step: 0, sector: "shop", txn: "21-60", banks: 1, entity: "company", expenses: "", cap: "1500", head: 2, behind: "0",
   startMonth: "", vatreg: "art10", size: "small",
   book: "managed", pay: "none", vat: "none", taxret: "none", assure: "none", regoff: "none",
 };
@@ -241,6 +244,12 @@ export function qCalc(q: QState, now: Date = new Date()) {
       e: MANAGED_ENTITY_LABELS[entity] + " — you send the paperwork, we keep the books",
       v: bookRate,
     });
+    // mt-2026-08-26c-volume: volume and bank accounts move the bookkeeping
+    // fee, each as its own line so the arithmetic stays reproducible.
+    const uplift = BOOKKEEPING_VOLUME_UPLIFT[q.txn as TxnBand] ?? 0;
+    if (uplift > 0) mo.push({ n: "Bookkeeping — volume uplift", e: "your transaction volume adds to the bookkeeping work", v: uplift });
+    const banksAmt = extraBanksMonthly(q.banks || 1);
+    if (banksAmt > 0) mo.push({ n: "Additional bank accounts", e: ((q.banks || 1) - 1) + " x EUR 25 beyond the first", v: banksAmt });
   }
   if (q.pay === "we" && q.head > 0) {
     // Marginal tiers, NOT risk-multiplied (findings A2 + A3). The label is the
@@ -260,8 +269,15 @@ export function qCalc(q: QState, now: Date = new Date()) {
       if (q.vatreg === "unsure") notes.push(["info", "We have priced you as fully VAT registered, the most common case. If the register says otherwise the price drops — we tell you before you commit."]);
     }
   }
-  // NOT × rm since pack mt-2026-08-26-taxret — see TAX_RETURN_YEARLY.
-  if (q.taxret === "we") yr.push({ n: "Annual tax return", e: "from the closed ledger, with schedules", v: QT.taxret[q.txn] });
+  // mt-2026-08-26c-volume: priced from the SPEND band (base rate x 4.8),
+  // never from transactions and never x rm.
+  if (q.taxret === "we") {
+    const trFee = taxReturnYearly(entity, q.expenses as ExpenseBand);
+    if (trFee == null) {
+      return { refer: false as const, conflict: false, noExpenses: true, notes, mo: [] as Line[], yr: [] as Line[], one: [] as Line[], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false };
+    }
+    yr.push({ n: "Annual tax return", e: "from the closed ledger, with schedules", v: trFee });
+  }
   if (q.assure === "we") {
     const bigVol = QT_BIG_VOL.indexOf(q.txn) !== -1;
     const review = qAuditIsReview(q);
@@ -308,8 +324,8 @@ export function qCalc(q: QState, now: Date = new Date()) {
   const months = +q.behind;
   // Proved a real band by the `noExpenses` guard above whenever the books are
   // ours; an audit-only basket has no catch-up line to price.
-  const catchUpName = q.expenses === "" ? null : catchUpLabel(months, entity, q.expenses, isPromoActive(now));
-  const catchUpFee = q.expenses === "" ? null : catchUpAmount(months, entity, q.expenses, isPromoActive(now));
+  const catchUpName = q.expenses === "" ? null : catchUpLabel(months, entity, q.expenses, q.txn as TxnBand, q.banks || 1, isPromoActive(now));
+  const catchUpFee = q.expenses === "" ? null : catchUpAmount(months, entity, q.expenses, q.txn as TxnBand, q.banks || 1, isPromoActive(now));
   if (months > 0 && wantsBooks && catchUpName != null && catchUpFee != null) {
     one.push({
       n: catchUpName,
@@ -381,16 +397,16 @@ export function qItems(q: QState): A4Item[] {
   // built below. Narrowed once here rather than asserted at each use.
   const expenses = q.expenses as ExpenseBand;
 
-  if (has("Bookkeeping")) items.push({ service: "bookkeeping-managed", entity, expenses });
+  if (has("Bookkeeping")) items.push({ service: "bookkeeping-managed", entity, expenses, txn, banks: q.banks || 1 });
   if (has("Payroll")) items.push({ service: "payroll", heads: q.head });
   if (has("VAT returns")) items.push({ service: "vat", txn, vatreg: q.vatreg === "art12" ? "art12" : "art10" });
   if (has("VAT declaration")) items.push({ service: "vat", txn, vatreg: "art11" });
-  if (has("Annual tax return")) items.push({ service: "taxret", txn });
+  if (has("Annual tax return")) items.push({ service: "taxret", entity, expenses });
   if (has(ASSURE_AUDIT_LABEL) || has(ASSURE_REVIEW_LABEL)) items.push({ service: "audit", txn, ...(qAuditIsReview(q) ? { review: true as const } : {}) });
   if (has("Registered office")) items.push({ service: "registered-office" });
   if (has("MBR annual return fee")) items.push({ service: "mbr", capital: q.cap || "1500" });
   // Catch-up is keyed on the answer, not on the (now dynamic) line label.
-  if (q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity, expenses });
+  if (q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity, expenses, txn, banks: q.banks || 1 });
   // Onboarding carries NO figure, but it IS part of the basket — the backend
   // reads `hasUnpricedOnboarding` off the items to add "onboarding is not
   // included in the figures below" to the quotation description. Omitting it
@@ -536,7 +552,7 @@ export function LandingQuoteCalculator() {
   const startBehind = +q.behind || 0;
   const catchUpEuro = q.expenses === "" || startBehind <= 0
     ? null
-    : catchUpAmount(startBehind, q.entity === "sole" ? "sole" : "company", q.expenses, isPromoActive());
+    : catchUpAmount(startBehind, q.entity === "sole" ? "sole" : "company", q.expenses, q.txn as TxnBand, q.banks || 1, isPromoActive());
 
   const pill = (on: boolean) => ({ on });
   const opts = (list: [string, string, string][], key: keyof QState): Opt[] =>
@@ -546,7 +562,7 @@ export function LandingQuoteCalculator() {
     ["What does the company do?", "Some sectors carry heavier checks on our side. That is what moves the price — not the bookkeeping.", () => opts(QSECT.map((s) => [s[0], s[1], ""] as [string, string, string]), "sector")],
     ["Are these a company's books, or your own?", "It sets the bookkeeping price together with your monthly spend, which we ask next: from €" + BOOKKEEPING_FROM + " a month if you are self-employed, from €" + BOOKKEEPING_COMPANY + " for a company." + (q.entity === "company" ? " Then tell us the company's issued share capital." : ""), () => MANAGED_ENTITY_OPTIONS.map((o) => ({ key: o.id, label: o.label, sub: o.sub, pick: () => setQ({ entity: o.id }), on: q.entity === o.id }))],
     ["About how much do you spend a month?", "Your monthly expenses are the money that leaves the business in a typical month — supplier bills, wages, rent, software, everything you spend. Exclude VAT, loan repayments, and transfers between your own accounts. New or seasonal business? Use your average over the last three months. It is what sets your bookkeeping price." + (bandRate == null || bandLabel == null ? " Pick a band and the figure appears here — we do not assume one for you." : " " + bandLabel + " works out at €" + bandRate + " a month for " + (q.entity === "sole" ? "a self-employed person" : "a company") + "."), () => EXPENSE_BANDS.map((b) => ({ key: b.id, label: b.label, sub: b.hint, pick: () => setQ({ expenses: b.id }), on: q.expenses === b.id }))],
-    ["About how many transactions a month?", "A different question from your spend above: this one counts DOCUMENTS AND LINES — each invoice, receipt and bank line. A rough number is fine. It sets your VAT, tax-return and audit fees; it does not move the bookkeeping price.", () => opts(QTXN, "txn")],
+    ["About how many transactions a month?", "A different question from your spend above: this one counts DOCUMENTS AND LINES — each invoice, receipt and bank line. A rough number is fine. Busy bands add to the bookkeeping fee — the two lowest add nothing — and the count also sets your VAT and audit fees. Then tell us how many bank accounts we reconcile.", () => opts(QTXN, "txn")],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person.", null],
     ["From which month do you need us?", "Pick the earliest month that still needs doing. Anything before this month is catch-up, charged at the same monthly rate — no premium, no cap — and the monthly fee runs from now on. One question, because the month you pick already tells us how far back to go.", null],
     ["Are you registered for VAT?", "Different registrations carry very different filing loads. Not sure? Pick the last option and we check the register for you.", () => QVATREG.map(([k, label, sub]) => ({ key: k, label, sub: sub || "", pick: () => setQ({ vatreg: k, vat: k === "none" ? "none" : "we" }), on: q.vatreg === k }))],
@@ -562,6 +578,7 @@ export function LandingQuoteCalculator() {
   // Indices track STEP_META above; "Monthly spend" was inserted at 2 and
   // pushed everything after it down by one.
   const isEntity = step === 1;
+  const isVol = step === 3;
   const isNum = step === 4;
   const isStart = step === 5;
   const isSvc = step === 8;
@@ -799,6 +816,17 @@ export function LandingQuoteCalculator() {
                       Pick a month before we can price this.
                     </div>
                   )}
+                </div>
+              )}
+
+              {isVol && (
+                <div style={{ marginTop: 10, border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
+                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Bank accounts</div>
+                  <div style={{ marginTop: 2, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>Every account is reconciled separately. The first is included; each one after adds €25 a month to the bookkeeping fee.</div>
+                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16 }}>
+                    <input type="range" min={1} max={8} step={1} value={q.banks || 1} onChange={(e) => setQ({ banks: +e.target.value })} aria-label="Bank accounts" style={{ flex: 1, accentColor: "var(--a4-primary)", cursor: "pointer" }} />
+                    <span style={{ minWidth: 92, textAlign: "right", fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" }}>{(q.banks || 1) + ((q.banks || 1) === 1 ? " account" : " accounts")}</span>
+                  </div>
                 </div>
               )}
 
