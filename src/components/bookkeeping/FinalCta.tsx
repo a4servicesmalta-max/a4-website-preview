@@ -3,7 +3,8 @@
 import React from "react";
 import { ArrowRight, Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { CALENDLY_DEMO_URL, CLIENT_ONBOARDING_URL } from "@/lib/external-links";
+import LocalizedLink from "@/components/common/LocalizedLink";
+import { BOOK_A_CALL_PATH, CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 
 export default function FinalCta() {
   const { t } = useTranslation("services");
@@ -23,15 +24,10 @@ export default function FinalCta() {
             {t("bookkeeping.finalCta.btnPrimary")}
             <ArrowRight size={16} />
           </a>
-          <a
-            href={CALENDLY_DEMO_URL}
-            className="btn-cta-ghost"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <LocalizedLink href={BOOK_A_CALL_PATH} className="btn-cta-ghost">
             <Play size={16} fill="currentColor" aria-hidden />
             {t("bookkeeping.finalCta.btnGhost")}
-          </a>
+          </LocalizedLink>
         </div>
         <p className="cta-sub">
           {t("bookkeeping.finalCta.eyebrow")}

@@ -33,6 +33,7 @@ export type ConversionSource =
   | "audit-estimator"
   | "accounting-estimator"
   | "contact"
+  | "book-a-call"
   | "fs-review";
 
 type Gtag = (...args: unknown[]) => void;
