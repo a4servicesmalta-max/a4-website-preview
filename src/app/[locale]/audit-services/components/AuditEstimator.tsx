@@ -75,7 +75,7 @@ const QUESTIONS: { key: AnswerKey; title: string; help: string; items: Opt[] }[]
   { key: "pay", title: "Anyone on the payroll?", help: "Payroll means employer filings and payroll testing during the audit.", items: PAYROLL },
   { key: "vat", title: "Registered for VAT?", help: "VAT registration adds return reconciliations to the audit scope.", items: VAT },
   { key: "banks", title: "How many bank accounts?", help: "Every account is confirmed and reconciled — more accounts, more confirmations.", items: BANKS },
-  { key: "taxret", title: "Need the annual tax return as well?", help: `Prepared from the audited figures, so nothing is rebuilt twice. From €${TAX_RETURN_FROM} a year, set by transaction volume.`, items: TAX_RETURN },
+  { key: "taxret", title: "Need the annual tax return as well?", help: `Prepared from the audited figures, so nothing is rebuilt twice. From €${TAX_RETURN_FROM} a year, set by your monthly spend — priced exactly in the final quote.`, items: TAX_RETURN },
 ];
 const LAST = QUESTIONS.length; // the fee step
 

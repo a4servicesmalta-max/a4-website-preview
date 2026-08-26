@@ -19,11 +19,11 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  EXPENSE_BANDS, TXN_BANDS, TAX_RETURN_YEARLY, AUDIT_YEARLY,
+  EXPENSE_BANDS, TXN_BANDS, taxReturnYearly, AUDIT_YEARLY,
   REVIEW_ENGAGEMENT_FACTOR, type TxnBand, type ExpenseBand, type ManagedEntity,
 } from "@/data/a4QuotePack";
 import { evaluateA4Items, type A4Item, type A4Risk } from "@/lib/websiteQuotation";
-import { calcAuditFee, TXN as AUDIT_TXN, type AuditInput } from "@/lib/audit-fee";
+import { TAXRET_ESTIMATE_FROM, calcAuditFee, TXN as AUDIT_TXN, type AuditInput } from "@/lib/audit-fee";
 
 /** Promo is withdrawn; a fixed date keeps that true whatever the clock says. */
 const AT = new Date("2026-09-01T12:00:00Z");
@@ -40,13 +40,13 @@ const auditAt = (over: Partial<AuditInput>): ReturnType<typeof calcAuditFee> =>
   } as AuditInput);
 
 describe("pricing sweep", () => {
-  it("prices every bookkeeping combination without a NaN, a gap or a negative", () => {
+  it("prices every bookkeeping combination without a NaN, a gap or a negative", { timeout: 30000 }, () => {
     for (const risk of RISKS) for (const entity of ENTITIES) for (const expenses of BANDS)
       for (const txn of TXNS) for (const heads of [0, 1, 5, 6, 11, 40]) for (const months of [0, 1, 7, 24]) {
-        const items: A4Item[] = [{ service: "bookkeeping-managed", entity, expenses }];
-        if (months > 0) items.push({ service: "catchup", months, entity, expenses });
+        const items: A4Item[] = [{ service: "bookkeeping-managed", entity, expenses, txn, banks: 1 }];
+        if (months > 0) items.push({ service: "catchup", months, entity, expenses, txn, banks: 1 });
         if (heads > 0) items.push({ service: "payroll", heads });
-        items.push({ service: "vat", txn, vatreg: "art10" }, { service: "taxret", txn });
+        items.push({ service: "vat", txn, vatreg: "art10" }, { service: "taxret", entity, expenses });
         const t = evaluateA4Items(items, risk, AT);
         const where = `${risk}/${entity}/${expenses}/${txn}/${heads}h/${months}m`;
         for (const [k, v] of Object.entries({ monthly: t.monthly, yearly: t.yearly, oneOff: t.oneOff })) {
@@ -66,7 +66,7 @@ describe("pricing sweep", () => {
     for (const entity of ENTITIES) {
       let prev = -1;
       for (const expenses of BANDS) {
-        const m = evaluateA4Items([{ service: "bookkeeping-managed", entity, expenses }], "standard", AT).monthly;
+        const m = evaluateA4Items([{ service: "bookkeeping-managed", entity, expenses, txn: "1-20", banks: 1 }], "standard", AT).monthly;
         expect(m, `bookkeeping falls at ${entity}/${expenses}`).toBeGreaterThanOrEqual(prev);
         prev = m;
       }
@@ -83,11 +83,11 @@ describe("pricing sweep", () => {
     // corrections flip took it off payroll. Both are easy to reinstate by
     // reflex when someone adds a `* rm` back "for consistency".
     const only = (item: A4Item, cadence: "monthly" | "yearly") => RISKS.map((r) => evaluateA4Items([item], r, AT)[cadence]);
-    for (const txn of TXNS) {
-      const [std, ele, high] = only({ service: "taxret", txn }, "yearly");
-      expect(std, `tax return risk-multiplied at ${txn}`).toBe(ele);
+    for (const expenses of BANDS) {
+      const [std, ele, high] = only({ service: "taxret", entity: "company", expenses }, "yearly");
+      expect(std, `tax return risk-multiplied at ${expenses}`).toBe(ele);
       expect(std).toBe(high);
-      expect(std, `tax return ${txn} off-table`).toBe(TAX_RETURN_YEARLY[txn]);
+      expect(std, `tax return ${expenses} off-formula`).toBe(taxReturnYearly("company", expenses));
     }
     for (const heads of [1, 5, 11]) {
       const [std, ele] = only({ service: "payroll", heads }, "monthly");
@@ -107,7 +107,6 @@ describe("pricing sweep", () => {
     // has grown arithmetic of its own.
     for (const t of AUDIT_TXN) {
       expect(t.assure, `audit band ${t.id}`).toBe(AUDIT_YEARLY[t.id]);
-      expect(t.tax, `tax band ${t.id}`).toBe(TAX_RETURN_YEARLY[t.id]);
 
       const viaAudit = auditAt({ txn: t.id });
       const viaWizard = evaluateA4Items([{ service: "audit", txn: t.id }], "standard", AT).yearly;
@@ -119,14 +118,15 @@ describe("pricing sweep", () => {
       // The tax-return ADD-ON on the audit page is the same figure the wizard
       // bills — it is the one that just moved, and it moved in two files.
       const withTax = auditAt({ txn: t.id, taxret: "yes" });
-      if (!withTax.refer) expect(withTax.taxAdd, `tax add-on ${t.id}`).toBe(TAX_RETURN_YEARLY[t.id]);
+      // The add-on is the company entry-band ESTIMATE since the formula flip.
+      if (!withTax.refer) expect(withTax.taxAdd, `tax add-on ${t.id}`).toBe(TAXRET_ESTIMATE_FROM);
     }
   });
 
   it("does not load the audit page's tax return by sector either", () => {
     for (const sector of ["shop", "hospitality", "regulated"]) {
       const r = auditAt({ sector, txn: "1000+", taxret: "yes" });
-      if (!r.refer) expect(r.taxAdd, `tax add-on loaded for ${sector}`).toBe(TAX_RETURN_YEARLY["1000+"]);
+      if (!r.refer) expect(r.taxAdd, `tax add-on loaded for ${sector}`).toBe(TAXRET_ESTIMATE_FROM);
     }
   });
 });

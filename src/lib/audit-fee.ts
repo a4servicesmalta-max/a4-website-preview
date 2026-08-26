@@ -10,7 +10,7 @@
  */
 
 import {
-  AUDIT_YEARLY, TAX_RETURN_YEARLY, TXN_BANDS, RISK_TIERS, REVIEW_ENGAGEMENT_FACTOR, AUDIT_PRE_TRADING,
+  AUDIT_YEARLY, taxReturnYearly, TXN_BANDS, RISK_TIERS, REVIEW_ENGAGEMENT_FACTOR, AUDIT_PRE_TRADING,
   type TxnBand,
 } from "@/data/a4QuotePack";
 
@@ -39,12 +39,19 @@ export const TIERS: Record<TierId, { label: string; mult: number; refer?: boolea
  * tax-return add-on. Both come straight from the price pack; never hardcode a
  * fee here or the page will drift from what the firm actually charges.
  */
-export const TXN: { id: TxnBand; label: string; assure: number; tax: number }[] = TXN_BANDS.map((b) => ({
+export const TXN: { id: TxnBand; label: string; assure: number }[] = TXN_BANDS.map((b) => ({
   id: b.id,
   label: b.label,
   assure: AUDIT_YEARLY[b.id],
-  tax: TAX_RETURN_YEARLY[b.id],
 }));
+
+/**
+ * The tax-return add-on ESTIMATE this estimator shows — the company entry-band
+ * formula figure (mt-2026-08-26c-volume prices the return from the SPEND band,
+ * which this estimator does not ask). A floor, labelled "from"; the final
+ * quote prices the client's own band.
+ */
+export const TAXRET_ESTIMATE_FROM = taxReturnYearly("company", "0-10k") ?? 0;
 
 export const SIZES = [
   { id: "small", label: "Small", sub: "under €93k turnover" },
@@ -162,7 +169,7 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   // NOT × tier.mult since pack mt-2026-08-26-taxret. The audit itself still
   // carries the sector loading; the tax return no longer does, so the audit
   // calculator and the bookkeeping calculator quote the same return.
-  const taxAdd = s.taxret === "yes" ? Math.round(txn.tax) : 0;
+  const taxAdd = s.taxret === "yes" ? TAXRET_ESTIMATE_FROM : 0;
 
   // ⚠ NO €50 ROUNDING (owner, 2026-08-26: "ensure that the audit calculator
   // actually matches the bookkeeping calculator").

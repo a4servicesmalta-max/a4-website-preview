@@ -23,6 +23,7 @@ import {
   INCORPORATION_MGA_NOTE,
   LAUNCH_PROMO,
   catchUpLabel,
+  EXTRA_BANK_PER_MONTH,
   isPromoActive,
   managedMonthly,
   PRICING_VAT_NOTE,
@@ -56,6 +57,9 @@ const PR_SERVICES = [
  * VAT and audit are both priced off volume, not filing frequency or turnover.
  */
 const PR_VOLUME_BANDS = ["1-20", "21-60", "61-150", "151-400"] as const;
+/** The bookkeeping tab asks the FULL band ladder — volume prices the fee now. */
+const BOOK_TXN_BANDS = ["0", "1-20", "21-60", "61-150", "151-400", "401-1000", "1000+"] as const;
+const BOOK_TXN_LABELS = ["None yet", "Up to 20", "20 to 60", "60 to 150", "150 to 400", "400 to 1,000", "1,000+"];
 const PR_VOLUME_LABELS = ["Up to 20", "20 to 60", "60 to 150", "150 to 400"];
 
 /**
@@ -545,6 +549,14 @@ function PricingCalc() {
   // `startOk` passed on an answer nobody gave and the visitor could send
   // without ever seeing the field.
   const [startMonth, setStartMonth] = useState<string>("");
+  /**
+   * mt-2026-08-26c-volume: the transaction band and account count now price
+   * the bookkeeping fee (volume uplift + EUR 25/mo per extra account) and are
+   * REQUIRED on the wire. Defaults mirror the vacei wizard: the 20-60 band
+   * and a single account — a mid default, not the cheapest.
+   */
+  const [bookTxnIdx, setBookTxnIdx] = useState(1); // BOOK_TXN_BANDS index — '21-60'
+  const [bookBanks, setBookBanks] = useState(1);
   const [vatVol, setVatVol] = useState(1);
   const [turn, setTurn] = useState(1);
   const [incShareholders, setIncShareholders] = useState(1);
@@ -591,9 +603,12 @@ function PricingCalc() {
   if (svc === "accounting") {
     // No band → no basket. An empty basket is what keeps `canSend` false, so
     // nothing can be submitted at a band the visitor never chose.
+    const bookTxn = BOOK_TXN_BANDS[bookTxnIdx];
     items = expenses == null ? [] : [
-      { service: "bookkeeping-managed", entity, expenses },
-      ...(catchUpMonths > 0 ? [{ service: "catchup" as const, months: catchUpMonths, entity, expenses }] : []),
+      { service: "bookkeeping-managed", entity, expenses, txn: bookTxn, banks: bookBanks },
+      ...(catchUpMonths > 0
+        ? [{ service: "catchup" as const, months: catchUpMonths, entity, expenses, txn: bookTxn, banks: bookBanks }]
+        : []),
     ];
   } else if (svc === "vat") {
     items = [{ service: "vat", txn: PR_VOLUME_BANDS[vatVol], vatreg: "art10" }];
@@ -776,6 +791,36 @@ function PricingCalc() {
                 </div>
 
                 <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
+                  <div className="a4-font-body text-[14px] font-semibold text-white">
+                    About how many transactions a month?
+                  </div>
+                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
+                    The count, not the amount. Busy bands add to the bookkeeping fee — the two lowest add nothing.
+                  </p>
+                  <PrChip items={BOOK_TXN_LABELS} value={bookTxnIdx} set={setBookTxnIdx} cols={4} />
+                  <div className="a4-font-body text-[14px] font-semibold text-white mt-[16px]">Bank accounts</div>
+                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
+                    Every account is reconciled separately. The first is included; each one after adds €{EXTRA_BANK_PER_MONTH} a month.
+                  </p>
+                  <div className="flex items-center gap-4 mt-[10px]">
+                    <input
+                      type="range"
+                      min={1}
+                      max={8}
+                      step={1}
+                      value={bookBanks}
+                      onChange={(e) => setBookBanks(+e.target.value)}
+                      aria-label="Bank accounts"
+                      className="flex-1"
+                      style={{ accentColor: "var(--a4-primary)", cursor: "pointer" }}
+                    />
+                    <span className="a4-font-body text-[14px] font-semibold text-white tabular-nums min-w-[92px] text-right">
+                      {bookBanks} {bookBanks === 1 ? "account" : "accounts"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
                   <label htmlFor="pr-start" className="a4-font-body text-[14px] font-semibold text-white block">
                     From which month do you need us?
                   </label>
@@ -807,7 +852,7 @@ function PricingCalc() {
                        picked — the second question this tab used to ask. */
                     <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
                       {catchUpMonths} {catchUpMonths === 1 ? "month" : "months"} of catch-up, charged once at the same monthly rate. Then ongoing from this month.
-                      {expenses == null ? "" : ` ${catchUpLabel(catchUpMonths, entity, expenses, isPromoActive())}`}
+                      {expenses == null ? "" : ` ${catchUpLabel(catchUpMonths, entity, expenses, BOOK_TXN_BANDS[bookTxnIdx], bookBanks, isPromoActive())}`}
                     </p>
                   ) : (
                     <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px]">

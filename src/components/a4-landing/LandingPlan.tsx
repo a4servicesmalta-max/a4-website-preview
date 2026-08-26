@@ -186,12 +186,14 @@ export function lpCalc(s: LPState, now: Date = new Date()): LPQuote {
 
   // One-off, at the same monthly rate, never capped — and inside the promo
   // window the quarter comes off at this line, in the label (finding C3).
-  const catchUp = s.catchUpMonths > 0 ? (catchUpAmount(s.catchUpMonths, packEntity, expenses, promoApplied) ?? 0) : 0;
+  // This widget asks neither the transaction band nor the account count —
+  // quoted at the low-volume single-account floor; the full quote prices both.
+  const catchUp = s.catchUpMonths > 0 ? (catchUpAmount(s.catchUpMonths, packEntity, expenses, "1-20", 1, promoApplied) ?? 0) : 0;
 
   return {
     priced: true, reason: "ok", base, lines,
     grossMonthly, monthly, annualFee, catchUp,
-    catchUpLabel: s.catchUpMonths > 0 ? catchUpLabel(s.catchUpMonths, packEntity, expenses, promoApplied) : null,
+    catchUpLabel: s.catchUpMonths > 0 ? catchUpLabel(s.catchUpMonths, packEntity, expenses, "1-20", 1, promoApplied) : null,
     promoApplied, independence, selectedAnnual,
   };
 }

@@ -60,8 +60,15 @@
  * mt-2026-08-26b-payroll (owner ruling 2026-08-26, same day as the taxret
  * cut): payroll is a FLAT €12/head/mo — the 32/29/25 marginal ladder is
  * collapsed to one rate, still not risk-multiplied.
+ *
+ * mt-2026-08-26c-volume (owner rulings 2026-08-26 evening, third flip that
+ * day): volume moves the bookkeeping fee, not the tax return — bookkeeping =
+ * spend-band base + transaction-band uplift + €25/mo per extra bank account;
+ * the annual tax return becomes round(base band rate × 12 ÷ 2.5); the
+ * bookkeeping/catchup wire items carry txn + banks, taxret carries
+ * entity + expenses.
  */
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-26b-payroll";
+export const A4_QUOTE_PACK_VERSION = "mt-2026-08-26c-volume";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -92,8 +99,8 @@ export type RiskTier = "standard" | "elevated" | "high" | "refer";
  * fallback here — an unpriced line is the intended output.
  *
  * The managed bookkeeping price is deliberately NOT uplifted by this
- * multiplier: €24 / €49 are flat. The multiplier still applies to VAT, tax
- * returns, audit, review and payroll.
+ * multiplier: €24 / €49 are flat. The multiplier applies to VAT and audit/review
+ * only — payroll (A3) and the tax return (mt-2026-08-26-taxret) are flat.
  */
 export const RISK_TIERS: Record<RiskTier, { label: string; multiplier: number | null }> = {
   standard: { label: "Standard", multiplier: 1.0 },
@@ -309,10 +316,15 @@ export function catchUpAmount(
   months: number,
   entity: ManagedEntity,
   expenses: ExpenseBand,
+  /** mt-2026-08-26c-volume: a backdated month bills at the FULL live monthly
+   *  (base + volume uplift + bank surcharge), so the volume identity travels
+   *  with the catch-up. */
+  txn: TxnBand,
+  banks: number,
   /** Pass `isPromoActive(now)` — catch-up joins the launch promo (finding C3). */
   promoNow = false
 ): number | null {
-  const rate = managedMonthly(entity, expenses);
+  const rate = fullMonthlyBookkeeping(entity, expenses, txn, banks);
   if (rate == null) return null;
   const m = Math.max(0, Math.floor(Number(months) || 0));
   const full = m * rate;
@@ -335,11 +347,14 @@ export function catchUpLabel(
   months: number,
   entity: ManagedEntity,
   expenses: ExpenseBand,
+  /** Same volume identity as catchUpAmount — the label IS the arithmetic. */
+  txn: TxnBand,
+  banks: number,
   /** Pass `isPromoActive(now)` — inside the promo the discount is written INTO
    *  the label so the line still reproduces from its own text (finding C3). */
   promoNow = false
 ): string | null {
-  const rate = managedMonthly(entity, expenses);
+  const rate = fullMonthlyBookkeeping(entity, expenses, txn, banks);
   if (rate == null) return null;
   const m = Math.max(0, Math.floor(Number(months) || 0));
   const full = m * rate;
@@ -380,16 +395,59 @@ export const VAT_MONTHLY: Record<TxnBand, number> = {
  * as AUDIT_YEARLY, band for band, so the combined audit + tax-return quote
  * stays coherent. Entry bands held; reductions deepen with volume.
  */
-export const TAX_RETURN_YEARLY: Record<TxnBand, number> = {
-  // Pre-trading company: still a return to file, just a much smaller one.
-  "0": 140, //      was 175
-  "1-20": 220, //   was 275
-  "21-60": 260, //  was 325
-  "61-150": 335, // was 420
-  "151-400": 450, //   was 560
-  "401-1000": 610, //  was 760
-  "1000+": 830, //     was 1040
+/* `TAX_RETURN_YEARLY` (the transaction-band table) is DELETED at
+ * mt-2026-08-26c-volume: the annual tax return no longer follows transaction
+ * volume. It is `round(base managed monthly rate × TAXRET_FACTOR)` — the
+ * owner formula of 2026-08-26 (monthly × 12 ÷ 2.5), priced from the SPEND
+ * band and never risk-multiplied. Worked example, pinned in all three repos:
+ * company 10-25k → 69 × 4.8 = 331.2 → €331.
+ */
+export const TAXRET_FACTOR = 4.8;
+
+/** Annual tax-return fee — round(base band rate × 4.8), or null without a
+ *  priceable entity/band (never default down). */
+export function taxReturnYearly(entity: ManagedEntity, expenses: ExpenseBand): number | null {
+  const rate = managedMonthly(entity, expenses);
+  return rate == null ? null : Math.round(rate * TAXRET_FACTOR);
+}
+
+/**
+ * Monthly BOOKKEEPING uplift by transaction band (mt-2026-08-26c-volume):
+ * volume moves the bookkeeping fee itself, on top of the spend-band base
+ * rate. The two lowest bands are €0 so the "from €24 / €49" entry promise
+ * survives. Never risk-multiplied.
+ */
+export const BOOKKEEPING_VOLUME_UPLIFT: Record<TxnBand, number> = {
+  "0": 0,
+  "1-20": 0,
+  "21-60": 10,
+  "61-150": 25,
+  "151-400": 50,
+  "401-1000": 90,
+  "1000+": 140,
 };
+
+/** Each bank account beyond the first, €/mo on the bookkeeping side. */
+export const EXTRA_BANK_PER_MONTH = 25;
+
+/** The bank-account surcharge for a whole book — (accounts − 1) × €25. */
+export function extraBanksMonthly(banks: number): number {
+  return Math.max(0, (banks || 1) - 1) * EXTRA_BANK_PER_MONTH;
+}
+
+/** The FULL live monthly bookkeeping — base + volume uplift + bank surcharge.
+ *  This is also the rate a backdated (catch-up) month bills at. */
+export function fullMonthlyBookkeeping(
+  entity: ManagedEntity,
+  expenses: ExpenseBand,
+  txn: TxnBand,
+  banks: number
+): number | null {
+  const rate = managedMonthly(entity, expenses);
+  const uplift = BOOKKEEPING_VOLUME_UPLIFT[txn];
+  if (rate == null || uplift == null) return null;
+  return rate + uplift + extraBanksMonthly(banks);
+}
 
 /**
  * Statutory audit — €/yr by transaction band, × risk.
@@ -630,7 +688,9 @@ export const REVIEW_FROM = roundEur(AUDIT_FROM * REVIEW_ENGAGEMENT_FACTOR);
 /** VAT returns floor (art. 10 monthly band). */
 export const VAT_FROM = fromPrice(VAT_MONTHLY);
 /** Annual tax return floor. */
-export const TAX_RETURN_FROM = TAX_RETURN_YEARLY["1-20"];
+/** The honest "from" for tax-return copy — sole trader at the entry band
+ *  (24 × 4.8 = 115). Company entry is €235. */
+export const TAX_RETURN_FROM = Math.round(24 * TAXRET_FACTOR);
 /** Company formation floor — one shareholder, one director, filed with the MBR. */
 export const INCORPORATION_FROM = INCORPORATION.base;
 

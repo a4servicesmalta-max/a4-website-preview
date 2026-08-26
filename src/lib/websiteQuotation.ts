@@ -23,7 +23,9 @@ import {
   REGISTERED_OFFICE_YEARLY,
   REVIEW_ENGAGEMENT_FACTOR,
   RISK_TIERS,
-  TAX_RETURN_YEARLY,
+  BOOKKEEPING_VOLUME_UPLIFT,
+  extraBanksMonthly,
+  taxReturnYearly,
   VAT_MONTHLY,
   VAT_RULES,
   catchUpAmount,
@@ -82,20 +84,37 @@ export type A4Item =
    * silent coercion. A missing or unrecognised band drops the item, which
    * sends the basket down the lead path.
    */
-  | { service: "bookkeeping-managed"; entity: ManagedEntity; expenses: ExpenseBand }
+  | {
+      service: "bookkeeping-managed";
+      entity: ManagedEntity;
+      expenses: ExpenseBand;
+      /** mt-2026-08-26c-volume: REQUIRED — the transaction band adds the
+       *  volume uplift and the account count adds EUR 25/mo beyond the first.
+       *  Missing either drops the item -> lead path, never default down. */
+      txn: TxnBand;
+      banks: number;
+    }
   | { service: "vat"; txn: TxnBand; vatreg: "art10" | "art11" | "art12" }
-  | { service: "taxret"; txn: TxnBand }
+  /** mt-2026-08-26c-volume: priced from the SPEND band (base rate x 4.8). */
+  | { service: "taxret"; entity: ManagedEntity; expenses: ExpenseBand }
   | { service: "audit"; txn: TxnBand; review?: true }
   | { service: "payroll"; heads: number }
   | { service: "mbr"; capital: CapitalBand }
   | { service: "registered-office" }
   | { service: "onboarding" }
   /**
-   * Backdated months, at the client's OWN monthly rate — so it carries the
-   * same `expenses` band as the bookkeeping item beside it. A backdated month
-   * must cost what a live month costs for that client.
+   * Backdated months, at the client's OWN FULL monthly rate — so it carries
+   * the same `expenses`/`txn`/`banks` identity as the bookkeeping item beside
+   * it. A backdated month must cost what a live month costs for that client.
    */
-  | { service: "catchup"; months: number; entity: ManagedEntity; expenses: ExpenseBand };
+  | {
+      service: "catchup";
+      months: number;
+      entity: ManagedEntity;
+      expenses: ExpenseBand;
+      txn: TxnBand;
+      banks: number;
+    };
 
 /**
  * `YYYY-MM` — the first month in scope. REQUIRED on every submitted quote.
@@ -207,10 +226,13 @@ const isIntWithin = (n: unknown, min: number, max: number): boolean =>
 
 type PricedItem = QuoteLineItem & { registry?: number };
 
-/** Price one item. Returns null when the item cannot be priced (never throws).
+/** Price one item into its LINES. Returns null when the item cannot be
+ *  priced (never throws). Bookkeeping emits up to three lines since
+ *  mt-2026-08-26c-volume (base, volume uplift, bank accounts) so the
+ *  arithmetic stays reproducible; everything else emits one.
  *  `promoNow` reaches only the catch-up arm — the one line whose promo
  *  discount is written into the line itself (finding C3). */
-function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem | null {
+function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem[] | null {
   const tier = RISK_TIERS[risk];
   const rm = RISK_UPLIFTED.has(item.service) ? (tier.multiplier ?? 1) : 1;
   const mo = (label: string, amount: number): PricedItem => ({ label, amount: roundEur(amount), cadence: "monthly" });
@@ -224,53 +246,62 @@ function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem | 
 
   switch (item.service) {
     case "bookkeeping-managed": {
-      // null on a missing or unrecognised expenses band. Dropping the item
-      // nulls the quote to the lead path, which is the contracted behaviour —
-      // it must NEVER fall back to the cheapest band.
+      // null on a missing or unrecognised band, transaction band or account
+      // count. Dropping the item makes the reprice disagree -> lead path, the
+      // contracted behaviour — it must NEVER fall back to the cheapest value.
       const price = managedMonthly(item.entity, item.expenses);
-      if (price == null) return null;
-      return mo(`Managed bookkeeping — ${MANAGED_ENTITY_LABELS[item.entity]}`, price);
+      const uplift = BOOKKEEPING_VOLUME_UPLIFT[item.txn];
+      if (price == null || uplift == null) return null;
+      if (!isIntWithin(item.banks, 1, 100)) return null;
+      const banksAmt = extraBanksMonthly(item.banks);
+      const lines = [mo(`Managed bookkeeping — ${MANAGED_ENTITY_LABELS[item.entity]}`, price)];
+      if (uplift > 0) lines.push(mo("Bookkeeping — volume uplift", uplift));
+      if (banksAmt > 0) lines.push(mo("Additional bank accounts", banksAmt));
+      return lines;
     }
     case "vat": {
       if (item.vatreg === "art11") {
         // Small-exempt: one flat yearly declaration, not a monthly return.
-        return yr("VAT declaration (art. 11)", VAT_RULES.art11FlatYearly * rm);
+        return [yr("VAT declaration (art. 11)", VAT_RULES.art11FlatYearly * rm)];
       }
       const band = VAT_MONTHLY[item.txn];
       if (band == null) return null;
       const factor = item.vatreg === "art12" ? VAT_RULES.art12Factor : 1;
-      return mo("VAT returns", band * factor * rm);
+      return [mo("VAT returns", band * factor * rm)];
     }
     case "taxret": {
-      // NOT × rm since pack mt-2026-08-26-taxret — the backend's own evaluator
-      // stopped multiplying it in the same flip, and this function exists to
-      // agree with that one to within €1/1%.
-      const price = TAX_RETURN_YEARLY[item.txn];
-      return price == null ? null : yr("Annual tax return", price);
+      // mt-2026-08-26c-volume: round(base band rate x 4.8), from the SPEND
+      // band — never from transactions and never x rm. The backend's own
+      // evaluator prices the same formula, and this function exists to agree
+      // with it to within EUR 1 / 1%.
+      const price = taxReturnYearly(item.entity, item.expenses);
+      return price == null ? null : [yr("Annual tax return", price)];
     }
     case "audit": {
       const price = AUDIT_YEARLY[item.txn];
       if (price == null) return null;
-      return yr(
-        item.review ? "Review engagement (if applicable)" : "Financial audit (if applicable)",
-        price * (item.review ? REVIEW_ENGAGEMENT_FACTOR : 1) * rm
-      );
+      return [
+        yr(
+          item.review ? "Review engagement (if applicable)" : "Financial audit (if applicable)",
+          price * (item.review ? REVIEW_ENGAGEMENT_FACTOR : 1) * rm
+        ),
+      ];
     }
     case "payroll": {
       // Whole people only, and within the range the server will accept.
       // Marginal tiers, NOT risk-multiplied (findings A2 + A3).
       if (!isIntWithin(item.heads, A4_LIMITS.heads.min, A4_LIMITS.heads.max)) return null;
-      return mo("Payroll", payrollFee(item.heads));
+      return [mo("Payroll", payrollFee(item.heads))];
     }
     case "mbr": {
       const registry = MBR_ANNUAL_RETURN.registryFeeByCapital[item.capital];
       if (registry == null) return null;
       // Our fee plus the registry fee. The registry slice is government money
       // at cost, so it is tracked separately and never discounted.
-      return yr("Annual return — filed with the MBR", MBR_ANNUAL_RETURN.ourFee + registry, registry);
+      return [yr("Annual return — filed with the MBR", MBR_ANNUAL_RETURN.ourFee + registry, registry)];
     }
     case "registered-office":
-      return yr("Registered office", REGISTERED_OFFICE_YEARLY);
+      return [yr("Registered office", REGISTERED_OFFICE_YEARLY)];
     case "onboarding":
       // UNPRICED by design (pack mt-2026-08-14-managed). It emits no line at
       // all rather than a €0 line, so it can never be read as "included, free".
@@ -285,10 +316,11 @@ function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem | 
       // discount written into the label (finding C3). The label is fixed by
       // the wire contract and compared literally downstream. Both go null on
       // an unknown band — same lead-path rule as the bookkeeping item.
-      const label = catchUpLabel(m, item.entity, item.expenses, promoNow);
-      const amount = catchUpAmount(m, item.entity, item.expenses, promoNow);
+      if (!isIntWithin(item.banks, 1, 100)) return null;
+      const label = catchUpLabel(m, item.entity, item.expenses, item.txn, item.banks, promoNow);
+      const amount = catchUpAmount(m, item.entity, item.expenses, item.txn, item.banks, promoNow);
       if (label == null || amount == null) return null;
-      return one(label, amount);
+      return [one(label, amount)];
     }
     default:
       // A stale cached page sending a retired item (`software`,
@@ -314,9 +346,9 @@ export function evaluateA4Items(
   // a copy edit able to silently change a submitted total.
   const promoNow = isPromoActive(now);
   const pairs = items
-    .map((item) => ({ item, line: priceItem(item, risk, promoNow) }))
-    .filter((p): p is { item: A4Item; line: PricedItem } => p.line != null);
-  const priced = pairs.map((p) => p.line);
+    .map((item) => ({ item, lines: priceItem(item, risk, promoNow) }))
+    .filter((p): p is { item: A4Item; lines: PricedItem[] } => p.lines != null);
+  const priced = pairs.flatMap((p) => p.lines);
 
   const sum = (c: QuoteCadence) => priced.filter((l) => l.cadence === c).reduce((s, l) => s + l.amount, 0);
   const grossMonthly = sum("monthly");
@@ -325,7 +357,7 @@ export function evaluateA4Items(
   const registryPassThrough = priced.reduce((s, l) => s + (l.registry ?? 0), 0);
   const catchup = pairs
     .filter((p) => p.item.service === "catchup")
-    .reduce((s, p) => s + p.line.amount, 0);
+    .reduce((s, p) => s + p.lines.reduce((t, l) => t + l.amount, 0), 0);
 
   const promoApplied = isPromoActive(now) && grossMonthly + grossYearly > 0;
   const keep = 1 - LAUNCH_PROMO.pct;

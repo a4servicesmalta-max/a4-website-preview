@@ -61,26 +61,27 @@ describe("accounting fee engine", () => {
   });
 
   it("charges catch-up at the monthly rate per month, with no cap", () => {
-    // 24 months at €49 = €1,176 outside the promo. The retired €240/yr cap
-    // would have said €480.
-    expect((at({ behind: "24" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).toBe(24 * CO);
+    // The full monthly rate includes the volume uplift (default txn 21-60 →
+    // +€10): 24 months at €59 = €1,416 outside the promo. The retired
+    // €240/yr cap would have said €480.
+    expect((at({ behind: "24" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).toBe(24 * (CO + 10));
     expect((at({ behind: "24" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).not.toBe(480);
-    expect((at({ behind: "24", entity: "sole" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).toBe(24 * SOLE);
+    expect((at({ behind: "24", entity: "sole" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).toBe(24 * (SOLE + 10));
     expect((at({ behind: "0" }) as { oneOffFull: number }).oneOffFull).toBe(0);
     // Inside the promo window the quarter comes off AT THE LINE (finding C3).
-    expect((at({ behind: "24" }) as { oneOffFull: number }).oneOffFull).toBe(Math.round(24 * CO * 0.75));
+    expect((at({ behind: "24" }) as { oneOffFull: number }).oneOffFull).toBe(Math.round(24 * (CO + 10) * 0.75));
   });
 
   it("labels the catch-up line in the contracted form", () => {
     // Outside the promo: the plain contracted form.
     const off = at({ behind: "12" }, AFTER_PROMO) as { oneOff: { k: string; v: number }[] };
-    expect(off.oneOff[0].k).toBe("Catch-up: 12 months x EUR 49 = EUR 588");
-    expect(off.oneOff[0].v).toBe(588);
+    expect(off.oneOff[0].k).toBe("Catch-up: 12 months x EUR 59 = EUR 708");
+    expect(off.oneOff[0].v).toBe(708);
     // Inside it: the discount is written INTO the label (finding C3), so the
     // line still reproduces from its own text, and the amount matches.
     const on = at({ behind: "12" }) as { oneOff: { k: string; v: number }[] };
-    expect(on.oneOff[0].k).toBe("Catch-up: 12 months x EUR 49 = EUR 588, less 25% launch promo = EUR 441");
-    expect(on.oneOff[0].v).toBe(441);
+    expect(on.oneOff[0].k).toBe("Catch-up: 12 months x EUR 59 = EUR 708, less 25% launch promo = EUR 531");
+    expect(on.oneOff[0].v).toBe(531);
   });
 
   it("carries the catch-up promo inside the line — net and full one-off totals stay equal", () => {
@@ -90,7 +91,7 @@ describe("accounting fee engine", () => {
     const during = at({ behind: "12" }) as { oneOffFull: number; oneOffNet: number; discountPct: number };
     expect(during.discountPct).toBe(LAUNCH_PROMO.pct);
     expect(during.oneOffNet).toBe(during.oneOffFull);
-    expect(during.oneOffFull).toBe(441);
+    expect(during.oneOffFull).toBe(531);
   });
 
   it("applies the launch discount to the monthly while it runs, and drops it afterwards", () => {
@@ -200,8 +201,8 @@ describe("the price breakdown shown equals the price breakdown sent", () => {
     expect(q.discountPct).toBe(LAUNCH_PROMO.pct);
     const oneOff = quoteBreakdown(q).filter((l) => l.v.includes("one-off"));
     expect(oneOff).toHaveLength(1);
-    expect(oneOff[0].k).toContain("less 25% launch promo = EUR 441");
-    expect(oneOff[0].v).toBe("€441 one-off");
+    expect(oneOff[0].k).toContain("less 25% launch promo = EUR 531");
+    expect(oneOff[0].v).toBe("€531 one-off");
   });
 
   it("differs across the promo boundary by exactly the promo, label included", () => {
@@ -209,8 +210,8 @@ describe("the price breakdown shown equals the price breakdown sent", () => {
     const off = calcAccountingFee(withCatchUp, AFTER_PROMO);
     if (on.refer || off.refer) throw new Error("unpriceable");
     const oneOffOf = (q: typeof on) => quoteBreakdown(q).filter((l) => l.v.includes("one-off"));
-    expect(oneOffOf(off)[0].v).toBe("€588 one-off");
-    expect(oneOffOf(on)[0].v).toBe("€441 one-off");
+    expect(oneOffOf(off)[0].v).toBe("€708 one-off");
+    expect(oneOffOf(on)[0].v).toBe("€531 one-off");
   });
 
   it("is the same list the panel renders and the payload sends", () => {
