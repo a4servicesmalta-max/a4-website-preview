@@ -5,23 +5,6 @@
  * reference that ties the two together.
  */
 
-/**
- * Where "Create my account" sends the client.
- *
- * books.vacei.com/signup — verified live 2026-08-02.
- *
- * ⚠ The `plan` query parameter is GONE. It used to preselect one of the
- * software tiers (bookkeeper | senior | manager | cfo) in the Books signup
- * plan picker; that picker is being removed in the Books lane and those tiers
- * no longer exist in pack mt-2026-08-14-managed. Sending a stale `plan` would
- * either be ignored or, worse, land the client on a plan A4 does not sell.
- * The service is settled on the quote, not at signup.
- *
- * Do NOT point this at books.a4.com.mt/register: that host 307s to
- * books.vacei.com and /register is a 404 there.
- */
-export const BOOKS_SIGNUP_URL =
-  process.env.NEXT_PUBLIC_BOOKS_SIGNUP_URL || "https://books.vacei.com/signup";
 
 export type QuoteLineOut = { k: string; v: string };
 
@@ -97,20 +80,3 @@ export function quoteToText(q: QuotePayload, c: QuoteContact, ref: string): stri
   return out.join("\n");
 }
 
-/**
- * Where to send a client who wants an account straight away.
- *
- * The quote itself is already recorded server-side (portal + email) before this
- * runs — these parameters only prefill the signup form and carry the reference,
- * so nothing is lost if the Books app ignores them.
- *
- * Contract for the Books side: `ref` matches the portal record; `email`,
- * `name` and `company` prefill the form. No `plan` — see BOOKS_SIGNUP_URL.
- */
-export function booksSignupUrl(q: QuotePayload, c: QuoteContact, ref: string): string {
-  const p = new URLSearchParams({ ref, source: `a4-${q.page}` });
-  if (c.email) p.set("email", c.email);
-  if (c.name) p.set("name", c.name);
-  if (c.company) p.set("company", c.company);
-  return `${BOOKS_SIGNUP_URL}?${p.toString()}`;
-}

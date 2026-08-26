@@ -12,8 +12,9 @@ import {
 } from "@/data/a4QuotePack";
 import { catchUpMonthsFrom } from "@/lib/accounting-fee";
 import { INDEPENDENCE_BOOKKEEPING, flagsForServiceSelection, type IndependenceFlags } from "@/lib/independence";
-// Confirm whose books + add-ons → live monthly price → two exits:
-// (1) Create account & request services, (2) Book a 15-min call.
+// Confirm whose books + add-ons → live monthly price → two exits, both of
+// which start a CONVERSATION: (1) request a proposal, (2) book a 15-min call.
+// A4 is not self-serve — we meet the client, then we open the account.
 
 
 // One managed price per entity — see src/data/a4ManagedOffer.ts. The

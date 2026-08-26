@@ -32,7 +32,7 @@ export function ServicePortalBand({ serviceName }: { serviceName: string }) {
               className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4 max-w-[420px]"
               style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}
             >
-              Create an account, request {serviceName.toLowerCase()}, and receive your quote — then track every
+              Talk to us about {serviceName.toLowerCase()} and we open your account &mdash; then track every
               deliverable, deadline and document in the same secure workspace.
             </p>
             <div className="mt-7">

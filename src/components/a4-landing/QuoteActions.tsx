@@ -3,12 +3,26 @@
 import React, { useState } from "react";
 import { Button, Icon } from "@/components/a4-landing/Primitives";
 import {
-  quoteRef, quoteToText, booksSignupUrl,
+  quoteRef, quoteToText,
   type QuotePayload, type QuoteContact,
 } from "@/lib/quote-handoff";
-import { BOOKS_BRAND_NAME } from "@/lib/site-config";
 
-export type Intent = "proposal" | "consultation" | "account";
+/**
+ * ⚠ THE "account" INTENT IS GONE, AND MUST NOT COME BACK (owner, 2026-08-26).
+ *
+ * A4 is not self-serve. It used to record the quote and then hand the visitor
+ * to Vacei Books to set a password — i.e. it opened an accounting relationship
+ * for a stranger before anyone had spoken to them. A4 Services Limited is a
+ * subject person under Malta AML law, so customer due diligence has to precede
+ * acting for a client; a signup link gets that order backwards.
+ *
+ * The sequence now: we meet the client, WE open the account, we send it to
+ * them to activate, and they complete KYC in the portal. So a finished quote
+ * has exactly two exits, both of which start a conversation rather than an
+ * account. `POST /auth/register` on Books answers 403 anyway, so a
+ * "Create my account" button could only ever have dead-ended.
+ */
+export type Intent = "proposal" | "consultation";
 
 const INTENT_COPY: Record<Intent, { title: string; cta: string; done: string; subject: string }> = {
   proposal: {
@@ -23,12 +37,6 @@ const INTENT_COPY: Record<Intent, { title: string; cta: string; done: string; su
     done: "Consultation requested",
     subject: "consultation booking",
   },
-  account: {
-    title: "Create your account",
-    cta: "Create my account",
-    done: "Account request received",
-    subject: "account signup",
-  },
 };
 
 /**
@@ -42,7 +50,8 @@ export function useQuoteActions(quote: () => QuotePayload) {
   const [contact, setContact] = useState<QuoteContact>({ name: "", company: "", email: "", phone: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState<{ ref: string; next?: string } | null>(null);
+  // No `next` any more: there is nowhere to send them but back to us.
+  const [done, setDone] = useState<{ ref: string } | null>(null);
 
   const start = (i: Intent, prefill?: Partial<QuoteContact>) => {
     setIntent(i);
@@ -94,7 +103,7 @@ export function useQuoteActions(quote: () => QuotePayload) {
         }),
       });
       if (!res.ok) throw new Error("request failed");
-      setDone({ ref, next: intent === "account" ? booksSignupUrl(q, contact, ref) : undefined });
+      setDone({ ref });
     } catch {
       setError("Something went wrong sending your request. Please try again, or email info@a4.com.mt.");
     } finally {
@@ -119,25 +128,16 @@ export function useQuoteActions(quote: () => QuotePayload) {
               Thanks, {contact.name.split(" ")[0]}. Your quote is with us — we&apos;ll be in touch within 1 business day at <strong style={{ color: "var(--a4-ink)" }}>{contact.email}</strong>.
             </p>
             <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 12 }}>Reference: {done.ref}</p>
-            {done.next && (
-              <>
-                <Button variant="primary" size="md" href={done.next} style={{ width: "100%", marginTop: 20 }}>
-                  Continue to {BOOKS_BRAND_NAME} <Icon name="arrow-right" size={16} color="#000" />
-                </Button>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.6, color: "var(--a4-stone)", marginTop: 10 }}>
-                  Set a password and you&apos;re in. Your quote is attached to reference {done.ref} — nothing to re-enter.
-                </p>
-              </>
-            )}
-            <Button variant="outline-light" size="md" onClick={() => setOpen(false)} style={{ width: "100%", marginTop: done.next ? 10 : 20 }}>Close</Button>
+            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.6, color: "var(--a4-stone)", marginTop: 10 }}>
+              After our call we open your account and send it over to activate &mdash; your quote stays attached to reference {done.ref}, so there is nothing to re-enter.
+            </p>
+            <Button variant="outline-light" size="md" onClick={() => setOpen(false)} style={{ width: "100%", marginTop: 20 }}>Close</Button>
           </div>
         ) : (
           <div>
             <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>{INTENT_COPY[intent].title}</div>
             <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.6, color: "var(--a4-mute)", margin: "6px 0 20px" }}>
-              {intent === "account"
-                ? `We record your quote, then take you straight to ${BOOKS_BRAND_NAME} to set a password. No obligation, cancel any time.`
-                : `We'll confirm scope and a fixed price (${quote().headline}). No obligation.`}
+              {`We'll confirm scope and a fixed price (${quote().headline}) on a short call. No obligation.`}
             </p>
             {([["name", "Your name", "text", "name"], ["company", "Company name", "text", "organization"], ["email", "Email address", "email", "email"], ["phone", "Phone (optional)", "tel", "tel"]] as const).map(([k, label, type, ac]) => (
               <div key={k} style={{ marginBottom: 13 }}>
