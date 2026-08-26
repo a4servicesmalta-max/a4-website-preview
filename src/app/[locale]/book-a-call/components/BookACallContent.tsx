@@ -132,6 +132,10 @@ export function BookACallContent() {
   }, []);
 
   useEffect(() => {
+    // Fetch-on-mount: every setState inside fetchSlots happens after the
+    // network await resolves, never synchronously in the effect body — the
+    // rule's static analysis just can't see across the await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchSlots();
   }, [fetchSlots]);
 
