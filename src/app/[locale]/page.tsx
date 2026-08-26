@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   const base = pageMetadata(
     "Accounting, Audit & Corporate Services in Malta",
-    "A4 Services Limited — licensed Malta accounting and audit firm. Managed bookkeeping from €24/mo self-employed and €49/mo for a company, plus VAT, payroll, audit and corporate services.",
+    "A4 Services Limited — licensed Malta accounting and audit firm. Managed bookkeeping from €68/mo self-employed and €96/mo for a company, including one bank account, plus VAT, payroll, audit and corporate services.",
   );
   // The default-locale homepage is served at the root ("/"), not "/en".
   const homeHref = (l: string) => (l === defaultLocale ? "/" : `/${l}`);
@@ -39,7 +39,7 @@ export default async function Home() {
     logo: "https://a4.com.mt/og-image.jpg",
     image: "https://a4.com.mt/og-image.jpg",
     description:
-      "Licensed Malta accounting and audit firm — accounting, statutory audit, tax, VAT, payroll, fractional CFO and managed bookkeeping from €24/mo self-employed, €49/mo for a company.",
+      "Licensed Malta accounting and audit firm — accounting, statutory audit, tax, VAT, payroll, fractional CFO and managed bookkeeping from €68/mo self-employed, €96/mo for a company, including one bank account.",
     priceRange: "€€",
     telephone: "+35627900007",
     email: "info@a4.com.mt",

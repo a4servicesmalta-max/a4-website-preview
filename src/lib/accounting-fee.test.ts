@@ -6,6 +6,12 @@ import { BOOKKEEPING_MANAGED_MONTHLY, LAUNCH_PROMO } from "@/data/a4QuotePack";
 // monthly expenses now, so these are a band rate, not a flat rate.
 const SOLE = BOOKKEEPING_MANAGED_MONTHLY.sole["0-10k"]; // 24
 const CO = BOOKKEEPING_MANAGED_MONTHLY.company["0-10k"]; // 49
+// mt-2026-08-26d-banks: every bank account is priced, the first included —
+// round(40 + 0.15 × (base + uplift)) each. The default fixture (company,
+// 21-60 → +10) carries one account at round(48.85) = 49, so its books are
+// 49 + 10 + 49 = €108/mo; at the lowest band the account is 47 (→ €96).
+const CO_MID = CO + 10 + 49; // 108 — the default fixture's full bookkeeping
+const SOLE_MID = SOLE + 10 + 45; // 79 — sole at 21-60, account round(45.1)
 
 const base: AccountingInput = {
   sector: "shop", txn: "21-60", entity: "company", expenses: "0-10k", head: 0, vatreg: "none", behind: "0",
@@ -17,15 +23,25 @@ const AFTER_PROMO = new Date("2026-09-01T12:00:00Z");
 const at = (p: Partial<AccountingInput>, now = DURING_PROMO) => calcAccountingFee({ ...base, ...p }, now);
 
 describe("accounting fee engine", () => {
-  it("bills managed bookkeeping by entity and expenses, with the volume uplift and extra accounts on their own lines", () => {
-    // Default fixture is the 21-60 band → +€10 uplift, one bank account.
-    expect(at({ entity: "sole" })).toMatchObject({ entityLabel: "Self-employed", monthlyFull: SOLE + 10 });
-    expect(at({ entity: "company" })).toMatchObject({ entityLabel: "Company", monthlyFull: CO + 10 });
-    // The two lowest bands add nothing, so "from €49" is a price the page produces.
-    expect(at({ entity: "company", txn: "1-20" })).toMatchObject({ monthlyFull: CO });
-    expect(at({ entity: "company", txn: "1000+" })).toMatchObject({ monthlyFull: CO + 140 });
-    // Each account beyond the first adds €25/mo — the wizard's identity (mt-2026-08-26c-volume).
-    expect(at({ entity: "company", txn: "1-20", banks: 3 })).toMatchObject({ monthlyFull: CO + 50 });
+  it("bills managed bookkeeping by entity and expenses, with the volume uplift and every bank account on their own lines", () => {
+    // Default fixture is the 21-60 band → +€10 uplift, one priced bank account.
+    expect(at({ entity: "sole" })).toMatchObject({ entityLabel: "Self-employed", monthlyFull: SOLE_MID });
+    expect(at({ entity: "company" })).toMatchObject({ entityLabel: "Company", monthlyFull: CO_MID });
+    // The two lowest bands add nothing, so "from €96" is a price the page produces.
+    expect(at({ entity: "company", txn: "1-20" })).toMatchObject({ monthlyFull: CO + 47 });
+    expect(at({ entity: "company", txn: "1-20" })).toMatchObject({ monthlyFull: 96 });
+    expect(at({ entity: "company", txn: "1000+" })).toMatchObject({ monthlyFull: CO + 140 + 68 }); // account round(68.35)
+    // Every account is priced, rounded per account THEN multiplied
+    // (mt-2026-08-26d-banks): 3 × 47 = 141, not round(3 × 47.35) = 142.
+    expect(at({ entity: "company", txn: "1-20", banks: 3 })).toMatchObject({ monthlyFull: CO + 141 });
+    // The owner's worked example: 10–25k at 21–60 → 79; 3 × €52 = 156; €235.
+    const worked = at({ entity: "company", expenses: "10-25k", txn: "21-60", banks: 3 }, AFTER_PROMO) as { monthlyFull: number; monthly: { k: string; v: number }[] };
+    expect(worked.monthlyFull).toBe(235);
+    expect(worked.monthly).toEqual([
+      { k: "Managed bookkeeping · Company", v: 69 },
+      { k: "Bookkeeping · volume uplift", v: 10 },
+      { k: "Bank accounts · 3 × €52", v: 156 },
+    ]);
     // The base line itself is untouched by either.
     expect((at({ entity: "company", txn: "1000+", banks: 3 }) as { monthly: { k: string; v: number }[] }).monthly[0]).toEqual({ k: "Managed bookkeeping · Company", v: CO });
   });
@@ -37,56 +53,59 @@ describe("accounting fee engine", () => {
   it("applies the sector risk multiplier to VAT but never to the books or the payroll", () => {
     const std = at({ vatreg: "art10" }) as { monthlyFull: number };
     const high = at({ vatreg: "art10", sector: "regulated" }) as { monthlyFull: number };
-    // The €49 bookkeeping line is flat; the VAT line takes the ×1.45.
-    expect(std.monthlyFull).toBe(CO + 10 + 45);
-    expect(high.monthlyFull).toBe(CO + 10 + Math.round(45 * 1.45));
+    // The bookkeeping lines are flat; the VAT line takes the ×1.45.
+    expect(std.monthlyFull).toBe(CO_MID + 45);
+    expect(high.monthlyFull).toBe(CO_MID + Math.round(45 * 1.45));
     // Payroll no longer takes the multiplier (mt-2026-08-17-corrections,
     // finding A3): a restaurant's payslips are the same work as a shop's.
     const payStd = at({ head: 3 }) as { monthlyFull: number };
     const payHigh = at({ head: 3, sector: "regulated" }) as { monthlyFull: number };
-    expect(payStd.monthlyFull).toBe(CO + 10 + 36);
+    expect(payStd.monthlyFull).toBe(CO_MID + 36);
     expect(payHigh.monthlyFull).toBe(payStd.monthlyFull);
   });
 
   it("prices payroll at a flat €12/head — the total never falls as the team grows", () => {
     // mt-2026-08-26b-payroll: one rate, n × 12. A single rate cannot cliff.
-    expect(at({ head: 3 })).toMatchObject({ monthlyFull: CO + 10 + 36 });
-    expect(at({ head: 10 })).toMatchObject({ monthlyFull: CO + 10 + 120 });
-    expect(at({ head: 11 })).toMatchObject({ monthlyFull: CO + 10 + 132 });
-    expect(at({ head: 20 })).toMatchObject({ monthlyFull: CO + 10 + 240 });
+    expect(at({ head: 3 })).toMatchObject({ monthlyFull: CO_MID + 36 });
+    expect(at({ head: 10 })).toMatchObject({ monthlyFull: CO_MID + 120 });
+    expect(at({ head: 11 })).toMatchObject({ monthlyFull: CO_MID + 132 });
+    expect(at({ head: 20 })).toMatchObject({ monthlyFull: CO_MID + 240 });
   });
 
   it("distinguishes the three VAT articles instead of charging art. 10 for all", () => {
     const a10 = at({ vatreg: "art10" }) as { monthlyFull: number };
     const a12 = at({ vatreg: "art12" }) as { monthlyFull: number };
     const a11 = at({ vatreg: "art11" }) as { monthlyFull: number };
-    expect(a10.monthlyFull).toBe(CO + 10 + 45); // art. 10 band price
-    expect(a12.monthlyFull).toBe(CO + 10 + Math.round(45 * 0.6));
-    expect(a11.monthlyFull).toBe(CO + 10 + Math.round(145 / 12));
+    expect(a10.monthlyFull).toBe(CO_MID + 45); // art. 10 band price
+    expect(a12.monthlyFull).toBe(CO_MID + Math.round(45 * 0.6));
+    expect(a11.monthlyFull).toBe(CO_MID + Math.round(145 / 12));
   });
 
   it("charges catch-up at the monthly rate per month, with no cap", () => {
-    // The full monthly rate includes the volume uplift (default txn 21-60 →
-    // +€10): 24 months at €59 = €1,416 outside the promo. The retired
-    // €240/yr cap would have said €480.
-    expect((at({ behind: "24" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).toBe(24 * (CO + 10));
+    // The full monthly rate includes the volume uplift and the bank account
+    // (default txn 21-60 → +€10, one account €49): 24 months at €108 =
+    // €2,592 outside the promo. The retired €240/yr cap would have said €480.
+    expect((at({ behind: "24" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).toBe(24 * CO_MID);
     expect((at({ behind: "24" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).not.toBe(480);
-    expect((at({ behind: "24", entity: "sole" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).toBe(24 * (SOLE + 10));
+    expect((at({ behind: "24", entity: "sole" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).toBe(24 * SOLE_MID);
     expect((at({ behind: "0" }) as { oneOffFull: number }).oneOffFull).toBe(0);
+    // Catch-up = months × the full monthly, accounts included: the worked
+    // example's €235 × 12.
+    expect((at({ expenses: "10-25k", banks: 3, behind: "12" }, AFTER_PROMO) as { oneOffFull: number }).oneOffFull).toBe(12 * 235);
     // Inside the promo window the quarter comes off AT THE LINE (finding C3).
-    expect((at({ behind: "24" }) as { oneOffFull: number }).oneOffFull).toBe(Math.round(24 * (CO + 10) * 0.75));
+    expect((at({ behind: "24" }) as { oneOffFull: number }).oneOffFull).toBe(Math.round(24 * CO_MID * 0.75));
   });
 
   it("labels the catch-up line in the contracted form", () => {
     // Outside the promo: the plain contracted form.
     const off = at({ behind: "12" }, AFTER_PROMO) as { oneOff: { k: string; v: number }[] };
-    expect(off.oneOff[0].k).toBe("Catch-up: 12 months x EUR 59 = EUR 708");
-    expect(off.oneOff[0].v).toBe(708);
+    expect(off.oneOff[0].k).toBe("Catch-up: 12 months x EUR 108 = EUR 1296");
+    expect(off.oneOff[0].v).toBe(1296);
     // Inside it: the discount is written INTO the label (finding C3), so the
     // line still reproduces from its own text, and the amount matches.
     const on = at({ behind: "12" }) as { oneOff: { k: string; v: number }[] };
-    expect(on.oneOff[0].k).toBe("Catch-up: 12 months x EUR 59 = EUR 708, less 25% launch promo = EUR 531");
-    expect(on.oneOff[0].v).toBe(531);
+    expect(on.oneOff[0].k).toBe("Catch-up: 12 months x EUR 108 = EUR 1296, less 25% launch promo = EUR 972");
+    expect(on.oneOff[0].v).toBe(972);
   });
 
   it("carries the catch-up promo inside the line — net and full one-off totals stay equal", () => {
@@ -96,7 +115,7 @@ describe("accounting fee engine", () => {
     const during = at({ behind: "12" }) as { oneOffFull: number; oneOffNet: number; discountPct: number };
     expect(during.discountPct).toBe(LAUNCH_PROMO.pct);
     expect(during.oneOffNet).toBe(during.oneOffFull);
-    expect(during.oneOffFull).toBe(531);
+    expect(during.oneOffFull).toBe(972);
   });
 
   it("applies the launch discount to the monthly while it runs, and drops it afterwards", () => {
@@ -197,17 +216,18 @@ describe("the price breakdown shown equals the price breakdown sent", () => {
   const withCatchUp = { ...base, entity: "company" as const, expenses: "0-10k" as const, behind: "12" };
 
   it("shows the discounted catch-up in the breakdown, with the discount in its label", () => {
-    // Since mt-2026-08-17-corrections (finding C3) the €441 IS the billed
-    // figure — screen, payload and backend all carry it, and the label says
-    // exactly how it was computed. (Before the corrections a €441 on screen
-    // next to €588 in the email was a defect; now a bare €588 would be one.)
+    // Since mt-2026-08-17-corrections (finding C3) the discounted €972 IS the
+    // billed figure — screen, payload and backend all carry it, and the label
+    // says exactly how it was computed. (Before the corrections a discounted
+    // figure on screen next to the full one in the email was a defect; now a
+    // bare full figure would be one.)
     const q = calcAccountingFee(withCatchUp, DURING_PROMO);
     if (q.refer) throw new Error("unpriceable");
     expect(q.discountPct).toBe(LAUNCH_PROMO.pct);
     const oneOff = quoteBreakdown(q).filter((l) => l.v.includes("one-off"));
     expect(oneOff).toHaveLength(1);
-    expect(oneOff[0].k).toContain("less 25% launch promo = EUR 531");
-    expect(oneOff[0].v).toBe("€531 one-off");
+    expect(oneOff[0].k).toContain("less 25% launch promo = EUR 972");
+    expect(oneOff[0].v).toBe("€972 one-off");
   });
 
   it("differs across the promo boundary by exactly the promo, label included", () => {
@@ -215,8 +235,8 @@ describe("the price breakdown shown equals the price breakdown sent", () => {
     const off = calcAccountingFee(withCatchUp, AFTER_PROMO);
     if (on.refer || off.refer) throw new Error("unpriceable");
     const oneOffOf = (q: typeof on) => quoteBreakdown(q).filter((l) => l.v.includes("one-off"));
-    expect(oneOffOf(off)[0].v).toBe("€708 one-off");
-    expect(oneOffOf(on)[0].v).toBe("€531 one-off");
+    expect(oneOffOf(off)[0].v).toBe("€1,296 one-off");
+    expect(oneOffOf(on)[0].v).toBe("€972 one-off");
   });
 
   it("is the same list the panel renders and the payload sends", () => {

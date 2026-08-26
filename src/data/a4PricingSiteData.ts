@@ -55,7 +55,7 @@ export const PRICING_COMMIT = [
 ];
 
 export const PRICING_HERO_CHIPS = [
-  `Managed bookkeeping from €${BOOKKEEPING_FROM}/mo self-employed · from €${BOOKKEEPING_COMPANY}/mo company`,
+  `Managed bookkeeping from €${BOOKKEEPING_FROM}/mo self-employed · from €${BOOKKEEPING_COMPANY}/mo company, incl. one bank account`,
   "No hidden fees",
   "Clear communication",
   "Tailored quotes for audit & complex work",

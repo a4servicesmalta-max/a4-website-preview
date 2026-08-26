@@ -24,7 +24,7 @@ import {
   REVIEW_ENGAGEMENT_FACTOR,
   RISK_TIERS,
   BOOKKEEPING_VOLUME_UPLIFT,
-  extraBanksMonthly,
+  bankAccountMonthly,
   taxReturnYearly,
   VAT_MONTHLY,
   VAT_RULES,
@@ -89,7 +89,7 @@ export type A4Item =
       entity: ManagedEntity;
       expenses: ExpenseBand;
       /** mt-2026-08-26c-volume: REQUIRED — the transaction band adds the
-       *  volume uplift and the account count adds EUR 25/mo beyond the first.
+       *  volume uplift and every bank account (the first included) adds its own fee.
        *  Missing either drops the item -> lead path, never default down. */
       txn: TxnBand;
       banks: number;
@@ -227,9 +227,10 @@ const isIntWithin = (n: unknown, min: number, max: number): boolean =>
 type PricedItem = QuoteLineItem & { registry?: number };
 
 /** Price one item into its LINES. Returns null when the item cannot be
- *  priced (never throws). Bookkeeping emits up to three lines since
- *  mt-2026-08-26c-volume (base, volume uplift, bank accounts) so the
- *  arithmetic stays reproducible; everything else emits one.
+ *  priced (never throws). Bookkeeping emits two or three lines since
+ *  mt-2026-08-26d-banks (base, volume uplift when non-zero, and ALWAYS a
+ *  bank-accounts line — every account is priced, the first included) so
+ *  the arithmetic stays reproducible; everything else emits one.
  *  `promoNow` reaches only the catch-up arm — the one line whose promo
  *  discount is written into the line itself (finding C3). */
 function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem[] | null {
@@ -251,12 +252,13 @@ function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem[] 
       // contracted behaviour — it must NEVER fall back to the cheapest value.
       const price = managedMonthly(item.entity, item.expenses);
       const uplift = BOOKKEEPING_VOLUME_UPLIFT[item.txn];
-      if (price == null || uplift == null) return null;
+      const perAccount = bankAccountMonthly(item.entity, item.expenses, item.txn);
+      if (price == null || uplift == null || perAccount == null) return null;
       if (!isIntWithin(item.banks, 1, 100)) return null;
-      const banksAmt = extraBanksMonthly(item.banks);
       const lines = [mo(`Managed bookkeeping — ${MANAGED_ENTITY_LABELS[item.entity]}`, price)];
       if (uplift > 0) lines.push(mo("Bookkeeping — volume uplift", uplift));
-      if (banksAmt > 0) lines.push(mo("Additional bank accounts", banksAmt));
+      // Rounded per account, THEN multiplied — the label IS the arithmetic.
+      lines.push(mo(`Bank accounts · ${item.banks} × €${perAccount}`, item.banks * perAccount));
       return lines;
     }
     case "vat": {

@@ -7,7 +7,7 @@ import {
   VAT_MONTHLY, VAT_RULES, TAX_RETURN_FROM,
   PAYROLL_ENTRY_RATE, payrollFee, PRICING_VAT_NOTE,
   LAUNCH_PROMO, isPromoActive,
-  catchUpAmount, catchUpLabel, managedMonthly, EXPENSE_BANDS,
+  catchUpAmount, catchUpLabel, fullMonthlyBookkeeping, EXPENSE_BANDS,
   type ManagedEntity, type ExpenseBand,
 } from "@/data/a4QuotePack";
 import { catchUpMonthsFrom } from "@/lib/accounting-fee";
@@ -154,7 +154,11 @@ export function lpCalc(s: LPState, now: Date = new Date()): LPQuote {
   // M8: NO `?? plan.price`. An unknown or missing band defaults DOWN to the
   // entry band, which the pack docblock forbids in the strongest terms —
   // defaulting down loses money and is invisible. Null means unpriced.
-  const base = s.expenses === "" ? null : managedMonthly(packEntity, s.expenses);
+  // mt-2026-08-26d-banks: this widget asks neither the transaction band nor
+  // the account count, so it quotes the low-volume ONE-account figure — and
+  // that one account is priced, so `base` here is the all-in monthly (spend
+  // band + one bank account), the same number the "from" headlines carry.
+  const base = s.expenses === "" ? null : fullMonthlyBookkeeping(packEntity, s.expenses, "1-20", 1);
   if (base == null) {
     return {
       priced: false, reason: "no-expenses", base: null, lines: [],
@@ -300,8 +304,9 @@ export function LandingPlan() {
   };
 
   type Addon = { id: string; label: string; sub: string; on: boolean; set: (v: boolean) => void; fee: string; stepper?: boolean; freq?: boolean; emps?: boolean };
-  // "Bank reconciliation · €15/account" is gone: reconciling every account IS
-  // managed bookkeeping, so it is not a separate charge.
+  // "Bank reconciliation · €15/account" is gone: this widget prices one bank
+  // account inside the monthly figure; further accounts are priced by the
+  // full quote (€40/mo plus 15% of the bookkeeping fee, each).
   const monthlyAddons = ([
     { id: "vat", label: "VAT returns", sub: `Every return filed with the CFR · art. 11 small-exempt is €${VAT_RULES.art11FlatYearly}/yr instead`, on: vat, set: (v: boolean) => patch({ vat: v }), fee: `€${LP_VAT[vatFreq].fee} / mo`, freq: true },
     isCompany && { id: "pay", label: "Payroll", sub: `FS5 submissions & payslips · flat €${PAYROLL_ENTRY_RATE}/head/mo, any team size`, on: payroll, set: (v: boolean) => patch({ payroll: v }), fee: `€${PAYROLL_ENTRY_RATE} / head / mo`, emps: true },

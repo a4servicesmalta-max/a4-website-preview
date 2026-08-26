@@ -532,11 +532,12 @@ export default function BookkeepingContent({ relatedBlogs = [] }: { relatedBlogs
                       <td className="py-5 px-5 text-center font-bold text-primary-blue text-xs">Full Service</td>
                       {/*
                         A "Starting" column, so this is the entry band only.
-                        NOT "€24–49/mo": that read as the full-service range and
-                        invented a €49 ceiling the ladder does not have. Under
-                        pack mt-2026-08-14-volume bookkeeping is priced by monthly
-                        expenses across nine bands and runs up to €339 self-employed
-                        / €549 for a company — see BOOKKEEPING_SOLE_TOP and
+                        NOT "€68–96/mo": that would read as the full-service
+                        range and invent a ceiling the ladder does not have. Under
+                        pack mt-2026-08-26d-banks bookkeeping is priced by monthly
+                        expenses across nine bands plus volume plus every bank
+                        account; with one account it runs up to €430 self-employed
+                        / €671 for a company — see BOOKKEEPING_SOLE_TOP and
                         BOOKKEEPING_COMPANY_TOP in src/data/a4QuotePack.ts.
                       */}
                       <td className="py-5 px-5 text-right font-bold text-primary-blue">From €{BOOKKEEPING_FROM}/mo</td>
