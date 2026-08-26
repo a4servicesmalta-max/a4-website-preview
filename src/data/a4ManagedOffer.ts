@@ -11,16 +11,19 @@
  * and by what the business spends each month (nine bands).
  *
  * Copy conventions every surface reading this file must follow:
- *   - "from €24/mo self-employed · from €49/mo company" — both prices, never
- *     one alone, and ALWAYS with "from"
+ *   - "from €68/mo self-employed · from €96/mo company" — both prices, never
+ *     one alone, and ALWAYS with "from". Since mt-2026-08-26d-banks these are
+ *     ALL-IN floors: entry band, lowest volume, ONE bank account (which is
+ *     priced like every other — no copy may say the first account is free).
+ *     The base rates alone (€24 / €49) are BOOKKEEPING_BASE_FROM / _COMPANY
  *   - the "from" is mandatory as of pack mt-2026-08-14-volume. These are the
  *     ENTRY expenses band, the cheapest of nine; the old rule said the
- *     opposite ("never 'from €24' — there are exactly two prices") because
+ *     opposite ("never 'from €X' — there are exactly two prices") because
  *     bookkeeping used to be flat. It is not flat any more, and dropping the
  *     "from" understates what most clients will actually pay.
  *   - never "flat", and never "the price does not move with your volume" —
- *     it moves with monthly expenses (though never with transaction volume,
- *     which is a different question and prices different services)
+ *     it moves with monthly expenses, with transaction volume and with the
+ *     number of bank accounts
  *   - "All fees exclude VAT" wherever a total is shown  → PRICING_VAT_NOTE
  */
 
@@ -38,10 +41,11 @@ export type ManagedOfferTier = {
   id: ManagedEntity;
   name: string;
   /**
-   * ENTRY-BAND monthly price — a "from", not a flat rate. Under pack
-   * mt-2026-08-14-volume the real price is set by monthly expenses across nine
-   * bands; this is the cheapest of them, so every surface showing it must say
-   * "from". A backdated month costs whatever the client's own band costs.
+   * ENTRY-BAND monthly price INCLUDING ONE BANK ACCOUNT — a "from", not a
+   * flat rate. The real price is set by monthly expenses across nine bands,
+   * transaction volume and the account count; this is the cheapest of them,
+   * so every surface showing it must say "from". A backdated month costs
+   * whatever the client's own full monthly costs.
    */
   price: number;
   tagline: string;

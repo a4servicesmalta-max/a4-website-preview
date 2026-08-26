@@ -63,12 +63,25 @@
  *
  * mt-2026-08-26c-volume (owner rulings 2026-08-26 evening, third flip that
  * day): volume moves the bookkeeping fee, not the tax return — bookkeeping =
- * spend-band base + transaction-band uplift + €25/mo per extra bank account;
+ * spend-band base + transaction-band uplift + €25/mo per extra bank account
+ * (superseded at 26d — every account is priced, see below);
  * the annual tax return becomes round(base band rate × 12 ÷ 2.5); the
  * bookkeeping/catchup wire items carry txn + banks, taxret carries
  * entity + expenses.
+ *
+ * mt-2026-08-26d-banks (owner ruling 2026-08-26, later that evening): bank
+ * accounts are priced PER ACCOUNT, EVERY account including the first —
+ * perAccount = round(40 + 0.15 × (base + uplift)); banksFee = banks ×
+ * perAccount; full monthly = base + uplift + banksFee. Round per account THEN
+ * multiply. Catch-up stays months × full monthly. The annual tax return does
+ * NOT move (round(base × 4.8), no uplift, no banks). The retired
+ * EXTRA_BANK_PER_MONTH (€25 beyond the first) is gone. Consequence for the
+ * entry price: self-employed €24 → €68, company €49 → €96 (one account,
+ * lowest volume). Worked example, pinned in every consumer: company 10–25k at
+ * 21–60 txn → 79; per account 52; three accounts €156; full monthly €235.
+ * Revert path: scope BANK_ACCOUNT to extra accounts only.
  */
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-26c-volume";
+export const A4_QUOTE_PACK_VERSION = "mt-2026-08-26d-banks";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -99,7 +112,7 @@ export type RiskTier = "standard" | "elevated" | "high" | "refer";
  * fallback here — an unpriced line is the intended output.
  *
  * The managed bookkeeping price is deliberately NOT uplifted by this
- * multiplier: €24 / €49 are flat. The multiplier applies to VAT and audit/review
+ * multiplier: the €24 / €49 base rates are flat. The multiplier applies to VAT and audit/review
  * only — payroll (A3) and the tax return (mt-2026-08-26-taxret) are flat.
  */
 export const RISK_TIERS: Record<RiskTier, { label: string; multiplier: number | null }> = {
@@ -239,8 +252,8 @@ export const EXPENSE_BANDS: { id: ExpenseBand; label: string; hint: string }[] =
  * `500k+` is a REAL priced band with a real number, not a "talk to us". Every
  * band prices instantly; there is no unpriceable arm left in bookkeeping.
  *
- * The entry price is unchanged at €24 / €49, so the launch promise still holds
- * and no existing quote is invalidated.
+ * The BASE entry rates are €24 / €49; the advertised floor adds the one bank
+ * account every book carries (€68 / €96, mt-2026-08-26d-banks).
  */
 export const BOOKKEEPING_MANAGED_MONTHLY: Record<ManagedEntity, Record<ExpenseBand, number>> = {
   sole: {
@@ -414,8 +427,8 @@ export function taxReturnYearly(entity: ManagedEntity, expenses: ExpenseBand): n
 /**
  * Monthly BOOKKEEPING uplift by transaction band (mt-2026-08-26c-volume):
  * volume moves the bookkeeping fee itself, on top of the spend-band base
- * rate. The two lowest bands are €0 so the "from €24 / €49" entry promise
- * survives. Never risk-multiplied.
+ * rate. The two lowest bands are €0 so the entry promise (base €24 / €49,
+ * all-in €68 / €96 with one bank account) survives. Never risk-multiplied.
  */
 export const BOOKKEEPING_VOLUME_UPLIFT: Record<TxnBand, number> = {
   "0": 0,
@@ -427,15 +440,40 @@ export const BOOKKEEPING_VOLUME_UPLIFT: Record<TxnBand, number> = {
   "1000+": 140,
 };
 
-/** Each bank account beyond the first, €/mo on the bookkeeping side. */
-export const EXTRA_BANK_PER_MONTH = 25;
+/**
+ * Bank accounts — mt-2026-08-26d-banks. EVERY account is priced, the first
+ * included: each one costs €40/mo plus 15% of the bookkeeping fee (base +
+ * volume uplift), rounded PER ACCOUNT before multiplying by the count.
+ *
+ *   company 10–25k, 21–60 txn: base 69 + uplift 10 = 79
+ *   per account = round(40 + 0.15 × 79) = round(51.85) = 52
+ *   three accounts = 3 × 52 = 156 → full monthly 79 + 156 = 235
+ *
+ * The rounding order matters and is pinned: company 0–10k, three accounts is
+ * 3 × round(47.35) = 141, not round(3 × 47.35) = 142.
+ */
+export const BANK_ACCOUNT = { baseMonthly: 40, pctOfBookkeeping: 0.15 } as const;
 
-/** The bank-account surcharge for a whole book — (accounts − 1) × €25. */
-export function extraBanksMonthly(banks: number): number {
-  return Math.max(0, (banks || 1) - 1) * EXTRA_BANK_PER_MONTH;
+/** One bank account's monthly fee for this book — round(40 + 0.15 × (base +
+ *  uplift)). `null` when the entity/band/volume is unpriceable (never default
+ *  down). */
+export function bankAccountMonthly(entity: ManagedEntity, expenses: ExpenseBand, txn: TxnBand): number | null {
+  const rate = managedMonthly(entity, expenses);
+  const uplift = BOOKKEEPING_VOLUME_UPLIFT[txn];
+  if (rate == null || uplift == null) return null;
+  return Math.round(BANK_ACCOUNT.baseMonthly + BANK_ACCOUNT.pctOfBookkeeping * (rate + uplift));
 }
 
-/** The FULL live monthly bookkeeping — base + volume uplift + bank surcharge.
+/** The bank-account fee for a whole book — accounts × per-account fee. A
+ *  missing count is ONE (the floor the question defaults to, not a guess
+ *  downward). */
+export function banksMonthly(entity: ManagedEntity, expenses: ExpenseBand, txn: TxnBand, banks: number): number | null {
+  const per = bankAccountMonthly(entity, expenses, txn);
+  if (per == null) return null;
+  return Math.max(1, Math.floor(Number(banks) || 1)) * per;
+}
+
+/** The FULL live monthly bookkeeping — base + volume uplift + bank accounts.
  *  This is also the rate a backdated (catch-up) month bills at. */
 export function fullMonthlyBookkeeping(
   entity: ManagedEntity,
@@ -445,8 +483,9 @@ export function fullMonthlyBookkeeping(
 ): number | null {
   const rate = managedMonthly(entity, expenses);
   const uplift = BOOKKEEPING_VOLUME_UPLIFT[txn];
-  if (rate == null || uplift == null) return null;
-  return rate + uplift + extraBanksMonthly(banks);
+  const banksFee = banksMonthly(entity, expenses, txn, banks);
+  if (rate == null || uplift == null || banksFee == null) return null;
+  return rate + uplift + banksFee;
 }
 
 /**
@@ -486,10 +525,11 @@ export const VAT_RULES = {
  * band — both of which the managed offer retires. There is no "you keep the
  * books, we check them" product any more: A4 keeps the books.
  *
- * EXTRA_BANK_MONTHLY is gone for the same reason. The managed price is FLAT;
- * charging per bank account on top contradicts the word "flat", and that line
- * had no wire item so it silently pushed the on-screen total away from the
- * total the backend reprices.
+ * EXTRA_BANK_MONTHLY went at the same time, because it had no wire item and
+ * so silently pushed the on-screen total away from the total the backend
+ * reprices. Bank accounts came back as a PRICED, wire-carried line at
+ * mt-2026-08-26c-volume (extra accounts) and mt-2026-08-26d-banks (every
+ * account) — see BANK_ACCOUNT / banksMonthly above.
  */
 
 /**
@@ -661,19 +701,39 @@ export const PAYROLL_ENTRY_RATE = PAYROLL_PER_HEAD[0].rate; // €12/head, flat
 export const PAYROLL_BEST_RATE = PAYROLL_PER_HEAD[PAYROLL_PER_HEAD.length - 1].rate; // €12/head, same
 
 /**
- * Managed bookkeeping ENTRY-BAND floors — the honest "from €X/mo" headline.
- *
- * Under mt-2026-08-14-volume these are genuine "from" prices: the entry
- * expenses band (up to €10,000/mo), the cheapest rung of nine. Copy reading
- * them MUST say "from", never "flat" and never "the price does not move with
- * your volume" — it does now, it moves with monthly expenses.
+ * Managed bookkeeping BASE entry-band rates — the spend-band rate before the
+ * volume uplift and before any bank account. Only for copy that is explicitly
+ * talking about the base rate; the headline "from €X/mo" is BOOKKEEPING_FROM /
+ * BOOKKEEPING_COMPANY below, which include the one bank account every book
+ * carries (mt-2026-08-26d-banks).
  */
-export const BOOKKEEPING_FROM = BOOKKEEPING_MANAGED_MONTHLY.sole["0-10k"];
-/** Managed bookkeeping for a limited company, entry band. Also a "from". */
-export const BOOKKEEPING_COMPANY = BOOKKEEPING_MANAGED_MONTHLY.company["0-10k"];
-/** Top of the published bookkeeping range — the ceiling both entities top out at. */
-export const BOOKKEEPING_SOLE_TOP = BOOKKEEPING_MANAGED_MONTHLY.sole["500k+"];
-export const BOOKKEEPING_COMPANY_TOP = BOOKKEEPING_MANAGED_MONTHLY.company["500k+"];
+export const BOOKKEEPING_BASE_FROM = BOOKKEEPING_MANAGED_MONTHLY.sole["0-10k"]; // 24
+export const BOOKKEEPING_BASE_COMPANY = BOOKKEEPING_MANAGED_MONTHLY.company["0-10k"]; // 49
+
+/** The all-in fee at a base rate with the lowest volume and ONE bank account —
+ *  base + round(40 + 0.15 × base). Inline so the type is `number`. */
+const allInOneAccount = (base: number): number =>
+  base + Math.round(BANK_ACCOUNT.baseMonthly + BANK_ACCOUNT.pctOfBookkeeping * base);
+
+/**
+ * Managed bookkeeping ALL-IN floors — the honest "from €X/mo" headline:
+ * entry expenses band, lowest volume (uplift €0), one bank account.
+ *
+ *   self-employed 24 + round(43.6)  = €68
+ *   company       49 + round(47.35) = €96
+ *
+ * Copy reading them MUST say "from" (nine spend bands, volume and further
+ * accounts all move it) and may add "including one bank account". No copy may
+ * claim the first account is included free — it is priced like every other.
+ */
+export const BOOKKEEPING_FROM = allInOneAccount(BOOKKEEPING_BASE_FROM); // 68
+/** Managed bookkeeping for a limited company, all-in floor. Also a "from". */
+export const BOOKKEEPING_COMPANY = allInOneAccount(BOOKKEEPING_BASE_COMPANY); // 96
+/** Top of the published bookkeeping range, on the same all-in basis as the
+ *  floors: top spend band, LOWEST volume, ONE bank account —
+ *  339 + round(90.85) = €430 · 549 + round(122.35) = €671. */
+export const BOOKKEEPING_SOLE_TOP = allInOneAccount(BOOKKEEPING_MANAGED_MONTHLY.sole["500k+"]); // 430
+export const BOOKKEEPING_COMPANY_TOP = allInOneAccount(BOOKKEEPING_MANAGED_MONTHLY.company["500k+"]); // 671
 /**
  * Statutory audit floor for a company that actually TRADES — the "from €750/yr"
  * headline. Deliberately the "1-20" band, not the table minimum: the "0" band

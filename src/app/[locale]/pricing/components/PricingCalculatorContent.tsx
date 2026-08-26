@@ -23,7 +23,7 @@ import {
   INCORPORATION_MGA_NOTE,
   LAUNCH_PROMO,
   catchUpLabel,
-  EXTRA_BANK_PER_MONTH,
+  BANK_ACCOUNT,
   isPromoActive,
   managedMonthly,
   PRICING_VAT_NOTE,
@@ -447,7 +447,7 @@ function PricingStartingTiers() {
             className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4"
             style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}
           >
-            We keep your books, priced on what you spend each month: from {prEuro(BOOKKEEPING_FROM)}/mo if you are self-employed, from {prEuro(BOOKKEEPING_COMPANY)}/mo for a company, up to {prEuro(BOOKKEEPING_COMPANY_TOP)}/mo at the top band. Nine bands, every one priced instantly — and there is no software-only plan, a qualified accountant is on the file either way. VAT, audit, tax and company formation are priced separately below, on your transaction volume. {MANAGED_CATCHUP_NOTE}
+            We keep your books, priced on what you spend each month: from {prEuro(BOOKKEEPING_FROM)}/mo if you are self-employed, from {prEuro(BOOKKEEPING_COMPANY)}/mo for a company, up to {prEuro(BOOKKEEPING_COMPANY_TOP)}/mo at the top band — each including one bank account. Nine bands, every one priced instantly — and there is no software-only plan, a qualified accountant is on the file either way. VAT, audit, tax and company formation are priced separately below, on your transaction volume. {MANAGED_CATCHUP_NOTE}
           </p>
           {isPromoActive() && (
             <p className="a4-font-body text-[13px] font-semibold text-[var(--a4-primary-bright)] mt-3">
@@ -800,7 +800,7 @@ function PricingCalc() {
                   <PrChip items={BOOK_TXN_LABELS} value={bookTxnIdx} set={setBookTxnIdx} cols={4} />
                   <div className="a4-font-body text-[14px] font-semibold text-white mt-[16px]">Bank accounts</div>
                   <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    Every account is reconciled separately. The first is included; each one after adds €{EXTRA_BANK_PER_MONTH} a month.
+                    Every account is reconciled separately and every account is priced, the first included: €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee, each.
                   </p>
                   <div className="flex items-center gap-4 mt-[10px]">
                     <input

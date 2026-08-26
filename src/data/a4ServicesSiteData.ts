@@ -2,9 +2,11 @@
 
 /*
  * Bookkeeping figures come from the quote pack, never hand-typed. Under pack
- * mt-2026-08-14-volume the price is set by MONTHLY EXPENSES across nine bands,
- * so €24 / €49 are the entry band — a "from", not a flat fee. Copy here must
- * say "from" and must never claim the price does not move with volume.
+ * mt-2026-08-26d-banks the price is set by MONTHLY EXPENSES across nine
+ * bands, plus transaction volume, plus a fee for EVERY bank account — so
+ * €68 / €96 are the entry band with one account: a "from", not a flat fee.
+ * Copy here must say "from" and must never claim the price does not move
+ * with volume or that the first account is free.
  */
 import {
   BOOKKEEPING_COMPANY,
@@ -94,9 +96,9 @@ export const A4_SERVICES_DATA: Record<ServiceKey, A4SiteService> = {
     cards: [
       { icon: "scan-line", t: "Document capture & OCR", s: "Invoices and receipts uploaded to your portal are read, extracted and posted automatically — coded consistently and VAT-ready, with the source document attached to every entry." },
       { icon: "refresh-cw", t: "Bank reconciliations", s: "Every bank, EMI and card account reconciled to the ledger each month — differences investigated, not carried forward." },
-      { icon: "badge-check", t: "Reviewed, at a published price", s: `A qualified accountant reviews the postings and passes the necessary journals every period — on a monthly fee set by what you spend each month (from €${BOOKKEEPING_FROM} self-employed, from €${BOOKKEEPING_COMPANY} for a company) through Xero, QuickBooks or Sage.` },
+      { icon: "badge-check", t: "Reviewed, at a published price", s: `A qualified accountant reviews the postings and passes the necessary journals every period — on a monthly fee set by what you spend each month (from €${BOOKKEEPING_FROM} self-employed, from €${BOOKKEEPING_COMPANY} for a company, including one bank account) through Xero, QuickBooks or Sage.` },
     ],
-    included: ["Document capture & OCR posting", "Monthly bank reconciliations", "VAT-ready transaction coding", "Xero, QuickBooks & Sage expertise", "Accountant review & journals", `From €${BOOKKEEPING_FROM} self-employed, €${BOOKKEEPING_COMPANY} company — set by monthly expenses`],
+    included: ["Document capture & OCR posting", "Monthly bank reconciliations", "VAT-ready transaction coding", "Xero, QuickBooks & Sage expertise", "Accountant review & journals", `From €${BOOKKEEPING_FROM} self-employed, €${BOOKKEEPING_COMPANY} company — set by monthly expenses, one bank account included`],
     who: "Businesses that want their books done properly without doing them — and never want a VAT inspection, audit or due-diligence review to find a backlog.",
     related: ["accounting-finance", "audit-readiness", "tax-compliance"],
   },
@@ -507,7 +509,7 @@ export const A4_SERVICE_DETAILS: Partial<Record<ServiceKey, ServiceDetailBlock>>
       ["Scope", "Document capture and posting, transaction coding, bank reconciliations and ledger maintenance."],
       ["Process", "Automation handles the processing; a qualified accountant reviews every period before close."],
       ["Deliverables", "Reconciled, VAT-ready ledgers in Xero, QuickBooks or Sage, with source documents attached to entries."],
-      ["Pricing", `A monthly fee set by what your business spends each month, across nine bands: from €${BOOKKEEPING_FROM} self-employed (up to €${BOOKKEEPING_SOLE_TOP}), from €${BOOKKEEPING_COMPANY} for a company (up to €${BOOKKEEPING_COMPANY_TOP}). Months we go back and do cost the same as a month going forward.`],
+      ["Pricing", `A monthly fee set by what your business spends each month, across nine bands: from €${BOOKKEEPING_FROM} self-employed (up to €${BOOKKEEPING_SOLE_TOP}), from €${BOOKKEEPING_COMPANY} for a company (up to €${BOOKKEEPING_COMPANY_TOP}) — each including one bank account; every further account is priced. Months we go back and do cost the same as a month going forward.`],
       ["Independence", "If we keep your books we cannot also be your auditor — independence rules do not allow the same firm to do both. We introduce you to an independent audit firm where a statutory audit is needed."],
     ],
   },

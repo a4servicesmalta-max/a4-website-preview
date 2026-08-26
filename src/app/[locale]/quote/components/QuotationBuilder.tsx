@@ -13,7 +13,7 @@ import { catchUpMonthsFrom, ongoingStartMonth } from "@/lib/accounting-fee";
 import { flagsForServiceSelection, independenceNotice } from "@/lib/independence";
 import {
   EXPENSE_BANDS,
-  EXTRA_BANK_PER_MONTH,
+  BANK_ACCOUNT,
   MANAGED_ENTITY_OPTIONS,
   PRICING_GOV_NOTE,
   SECTORS,
@@ -360,7 +360,7 @@ export function QuotationBuilder() {
                   aria-label="How many bank accounts do you have?"
                 />
                 <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                  Every account is reconciled separately. The first is included; each one after adds €{EXTRA_BANK_PER_MONTH} a month to the bookkeeping fee.
+                  Every account is reconciled separately and every account is priced, the first included: €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee, each.
                 </span>
               </div>
               <div>

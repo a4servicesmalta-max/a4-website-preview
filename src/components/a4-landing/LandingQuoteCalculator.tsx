@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, BOOKKEEPING_VOLUME_UPLIFT, BOOKKEEPING_MANAGED_MONTHLY, extraBanksMonthly, EXTRA_BANK_PER_MONTH, taxReturnYearly, VAT_MONTHLY, VAT_RULES, REVIEW_ENGAGEMENT_FACTOR, REGISTERED_OFFICE_YEARLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXPENSE_BANDS, LAUNCH_PROMO, catchUpAmount, catchUpLabel, fullMonthlyBookkeeping, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, BOOKKEEPING_VOLUME_UPLIFT, BOOKKEEPING_MANAGED_MONTHLY, bankAccountMonthly, BANK_ACCOUNT, taxReturnYearly, VAT_MONTHLY, VAT_RULES, REVIEW_ENGAGEMENT_FACTOR, REGISTERED_OFFICE_YEARLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXPENSE_BANDS, LAUNCH_PROMO, catchUpAmount, catchUpLabel, fullMonthlyBookkeeping, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 import { independenceFlags } from "@/lib/independence";
 import { catchUpMonthsFrom, formatStartMonth, ongoingStartMonth } from "@/lib/accounting-fee";
@@ -17,8 +17,9 @@ import { trackConversion } from "@/lib/analytics";
 //
 // Every figure is read from the pack (A4_QUOTE_PACK_VERSION) — the same tables
 // vacei.com and the portal backend carry. Bookkeeping is priced by ENTITY ×
-// MONTHLY EXPENSES across nine bands, plus a transaction-band uplift and
-// €25/mo per extra bank account.
+// MONTHLY EXPENSES across nine bands, plus a transaction-band uplift and a
+// per-account bank fee — every account, the first included, at €40/mo plus
+// 15% of the bookkeeping fee (mt-2026-08-26d-banks).
 
 const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["shop", "Shop, trade or services", "standard"],
@@ -79,7 +80,7 @@ export type QState = {
   step: number;
   sector: string;
   txn: string;
-  /** Bank accounts to reconcile — 1..8; each beyond the first adds EUR 25/mo. */
+  /** Bank accounts to reconcile — 1..8; every one is priced, the first included (EUR 40 + 15% of the bookkeeping fee, each). */
   banks: number;
   /** Self-employed or a company — with `expenses`, what sets the bookkeeping price. */
   entity: ManagedEntity;
@@ -186,8 +187,8 @@ export function qCalc(q: QState, now: Date = new Date()): Calc {
     mo.push({ n: "Bookkeeping", e: (entity === "sole" ? "self-employed" : "company") + ", " + bandLabel.toLowerCase() + " a month of expenses — you upload, we keep the books, an accountant approves every entry", v: rate });
     const up = BOOKKEEPING_VOLUME_UPLIFT[q.txn as TxnBand] ?? 0;
     if (up > 0) mo.push({ n: "Bookkeeping — volume uplift", e: "your transaction volume adds to the bookkeeping work", v: up });
-    const bf = extraBanksMonthly(nBanks);
-    if (bf > 0) mo.push({ n: "Additional bank accounts", e: (nBanks - 1) + " × €" + EXTRA_BANK_PER_MONTH + " beyond the first — each account reconciled separately", v: bf });
+    const per = bankAccountMonthly(entity, band as ExpenseBand, q.txn as TxnBand) ?? 0;
+    mo.push({ n: "Bank accounts", e: nBanks + " × €" + per + " — every account reconciled separately, each at €" + BANK_ACCOUNT.baseMonthly + " plus " + Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100) + "% of the bookkeeping fee", v: nBanks * per });
   }
   if (q.pay === "we" && q.head > 0) {
     // Marginal tiers, NO risk multiplier. The label spells out the exact sum.
@@ -356,6 +357,13 @@ const Q_INPUT: React.CSSProperties = {
   fontFamily: "var(--a4-font-body)", fontSize: 13,
 };
 
+/** A labelled lead-form field — visible label above the input, an example
+ *  value as the placeholder (vacei's form, not placeholder-as-label). */
+const Q_FIELD: React.CSSProperties = { flex: "1 1 170px", minWidth: 0, display: "flex", flexDirection: "column", gap: 4 };
+const Q_FIELD_LABEL: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 600, color: "var(--a4-ink)" };
+const Q_FIELD_OPT: React.CSSProperties = { fontWeight: 400, color: "var(--a4-mute)" };
+const Q_FIELD_INPUT: React.CSSProperties = { ...Q_INPUT, flex: "none", width: "100%" };
+
 /** Off-screen honeypot — a real visitor never sees it, a bot fills it in. */
 const Q_HONEYPOT: React.CSSProperties = {
   position: "absolute", left: -9999, top: "auto", width: 1, height: 1, opacity: 0, pointerEvents: "none",
@@ -426,7 +434,7 @@ export function LandingQuoteCalculator() {
   const STEP_META: [string, string, (() => Opt[]) | null, string?][] = [
     ["What do you spend a month?", "Entity and monthly spend set the base bookkeeping fee. Pick the band a typical month falls in — a rough figure is fine.", expOpts, "Your monthly expenses are the money that leaves the business in a typical month — supplier bills, wages, rent, software, everything you spend. Exclude VAT, loan repayments, and transfers between your own accounts. New or seasonal business? Use your average over the last three months. We confirm the figure before anything is agreed."],
     ["What does the company do?", "Some sectors carry heavier checks on our side. That moves the VAT and audit prices — never the bookkeeping fee you have already seen.", () => opts(QSECT.map((s) => [s[0], s[1], ""] as [string, string, string]), "sector")],
-    ["About how many transactions a month?", "The COUNT, not the amount. Busy bands add to the bookkeeping fee — the two lowest add nothing — and the count also sets the VAT and audit prices.", () => opts(QTXN, "txn"), "One €40,000 supplier payment is a single transaction; forty €1,000 receipts are forty. Bank accounts below add €" + EXTRA_BANK_PER_MONTH + " a month each beyond the first; share capital changes only the MBR registry fee."],
+    ["About how many transactions a month?", "The COUNT, not the amount. Busy bands add to the bookkeeping fee — the two lowest add nothing — and the count also sets the VAT and audit prices.", () => opts(QTXN, "txn"), "One €40,000 supplier payment is a single transaction; forty €1,000 receipts are forty. Every bank account below is priced — €" + BANK_ACCOUNT.baseMonthly + " a month plus " + Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100) + "% of the bookkeeping fee, each; share capital changes only the MBR registry fee."],
     ["How many people on the payroll?", "Count directors who take a salary. Payroll is priced per person, on its own line.", null],
     ["From which month do you need us?", "Pick the earliest month that still needs doing — months before it are catch-up, charged once at your own rate.", null, "That one month also tells us how far back to go: everything before it is catch-up at the same rate as a live month, charged once, and the monthly fee runs from now on. We need it before we can issue the quote."],
     ["Are you registered for VAT?", "Different registrations carry very different filing loads. Not sure? Pick the last option and we check the register for you.", () => QVATREG.map(([k, label, sub]) => ({ key: k, label, sub: sub || "", pick: () => setQ({ vatreg: k, vat: k === "none" ? "none" : "we" }), on: q.vatreg === k }))],
@@ -544,10 +552,13 @@ export function LandingQuoteCalculator() {
   const oneHas = priced && r.oneTot > 0;
   const panelNote = r.conflict
     ? "We cannot give assurance on books we keep ourselves. Tell us which of the two is ours and every figure fills in."
-    : r.noStart
-      ? "Running total, updating as you answer. Pick the month you need us from and we can add the catch-up months and issue the quote."
-      : r.noExpenses
-        ? "Your monthly spend sets the bookkeeping fee. Pick a band and every figure fills in — we will not quote you the cheapest one and correct it later."
+    // Same priority as vacei's panel: the spend band is the FIRST thing a
+    // visitor is missing (step 1 has neither answer yet), so its sentence
+    // wins over the start-month one.
+    : r.noExpenses
+      ? "Your monthly spend sets the bookkeeping fee. Pick a band and every figure fills in — we will not quote you the cheapest one and correct it later."
+      : r.noStart
+        ? "Running total, updating as you answer. Pick the month you need us from and we can add the catch-up months and issue the quote."
         : r.refer
           ? "We price most sectors on the spot. Yours needs a short call with a director first — usually the same day."
           : "Updates as you answer. Nothing is gated behind an email. An accountant reviews the quotation before it is issued. All fees exclude VAT.";
@@ -693,7 +704,7 @@ export function LandingQuoteCalculator() {
               {isVol && (
                 <div style={BOX}>
                   <div style={SUB_LABEL}>Bank accounts</div>
-                  <div style={SUB_HELP}>Every account is reconciled separately. The first is included; each one after adds €{EXTRA_BANK_PER_MONTH} a month to the bookkeeping fee.</div>
+                  <div style={SUB_HELP}>Every account is reconciled separately and every account is priced, the first included: €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee, each.</div>
                   <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16 }}>
                     <input type="range" min={1} max={8} step={1} value={q.banks || 1} onChange={(e) => setQ({ banks: +e.target.value })} aria-label="Bank accounts" style={{ flex: 1, accentColor: "var(--a4-primary)", cursor: "pointer" }} />
                     <span style={{ minWidth: 92, textAlign: "right", fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" }}>{(q.banks || 1) + ((q.banks || 1) === 1 ? " account" : " accounts")}</span>
@@ -812,9 +823,18 @@ export function LandingQuoteCalculator() {
                   ) : (
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-light)" }}>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <input value={name} onChange={(e) => setName(e.target.value)} aria-label="Your name" placeholder="Your name" autoComplete="name" style={Q_INPUT} />
-                        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" aria-label="Email" placeholder="Email" autoComplete="email" style={Q_INPUT} />
-                        <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" aria-label="Phone (optional)" placeholder="Phone (optional)" autoComplete="tel" style={Q_INPUT} />
+                        <label style={Q_FIELD}>
+                          <span style={Q_FIELD_LABEL}>Your name</span>
+                          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Borg" autoComplete="name" style={Q_FIELD_INPUT} />
+                        </label>
+                        <label style={Q_FIELD}>
+                          <span style={Q_FIELD_LABEL}>Email</span>
+                          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="jane@borgtrading.mt" autoComplete="email" style={Q_FIELD_INPUT} />
+                        </label>
+                        <label style={Q_FIELD}>
+                          <span style={Q_FIELD_LABEL}>Phone <span style={Q_FIELD_OPT}>optional</span></span>
+                          <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+356 …" autoComplete="tel" style={Q_FIELD_INPUT} />
+                        </label>
                       </div>
                       <input value={hp} onChange={(e) => setHp(e.target.value)} name="company_website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={Q_HONEYPOT} />
                       <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>

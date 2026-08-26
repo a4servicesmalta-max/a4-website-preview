@@ -27,8 +27,12 @@ import { calcAccountingFee, type AccountingInput } from "./accounting-fee";
 import {
   SECTORS, TXN_BANDS, RISK_TIERS, AUDIT_YEARLY, taxReturnYearly,
   BOOKKEEPING_MANAGED_MONTHLY, EXPENSE_BANDS, EXPENSE_BAND_CEILINGS, VAT_MONTHLY, PAYROLL_PER_HEAD, sectorTier,
-  catchUpAmount, bandForMonthlyExpenses, fullMonthlyBookkeeping, type TxnBand, type ExpenseBand,
+  catchUpAmount, bandForMonthlyExpenses, fullMonthlyBookkeeping, bankAccountMonthly, banksMonthly,
+  BANK_ACCOUNT, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, BOOKKEEPING_BASE_FROM, BOOKKEEPING_BASE_COMPANY,
+  BOOKKEEPING_SOLE_TOP, BOOKKEEPING_COMPANY_TOP, A4_QUOTE_PACK_VERSION,
+  type TxnBand, type ExpenseBand,
 } from "@/data/a4QuotePack";
+import { qCalc, qItems, qRisk, Q_INIT, QSTEP_QUOTE, type QState } from "@/components/a4-landing/LandingQuoteCalculator";
 
 /** Promo is withdrawn; a fixed date keeps that true whatever the clock says. */
 const AT = new Date("2026-09-01T12:00:00Z");
@@ -87,7 +91,7 @@ describe("quote parity across every surface", () => {
 
   it("refuses to price the books on either surface when the band is unknown", () => {
     // Never the cheapest band. /accounting-services refers it; /quote puts it
-    // on request. Neither invents €24 or €49.
+    // on request. Neither invents €68 or €96.
     const bad = "not-a-band" as (typeof EXPENSE_BANDS)[number]["id"];
     // M10: the reason is the BAND, not the sector — the two outcomes are
     // distinct now, and each carries its own copy.
@@ -114,7 +118,10 @@ describe("quote parity across every surface", () => {
       });
       seen.add((q.lines.find((l) => l.id === "accounts")?.annualEur ?? 0) / 12);
     }
-    expect([...seen]).toEqual([BOOKKEEPING_MANAGED_MONTHLY.company["0-10k"]]);
+    // 26d: the entry figure carries its one priced bank account — €96, the
+    // published company floor.
+    expect([...seen]).toEqual([BOOKKEEPING_COMPANY]);
+    expect([...seen]).toEqual([96]);
   });
 
   it("charges catch-up at the same rate on /quote as the pack does", () => {
@@ -124,19 +131,80 @@ describe("quote parity across every surface", () => {
     });
     const catchup = q.lines.find((l) => l.id === "catchup");
     expect(catchup?.annualEur).toBe(catchUpAmount(12, "company", "0-10k", "1-20", 1));
-    expect(catchup?.annualEur).toBe(588);
-    expect(catchup?.name).toBe("Catch-up: 12 months x EUR 49 = EUR 588");
+    expect(catchup?.annualEur).toBe(1152);
+    expect(catchup?.name).toBe("Catch-up: 12 months x EUR 96 = EUR 1152");
   });
 
   it("still accepts the retired overdueYears input as whole years of months", () => {
     // One release of tolerance so an in-flight POST from a cached page does
-    // not silently price zero catch-up. 1 year → 12 months × €49 (entry band).
+    // not silently price zero catch-up. 1 year → 12 months × €96 (entry band, one account).
     const q = buildQuote({
       company: "T", industry: "Other", revenueBand: "100k-500k", sector: "shop", txn: "1-20", banks: 1,
       services: ["accounts"], entity: "company", expenses: "0-10k",
       overdueYears: 1, startMonth: "2026-09",
     });
-    expect(q.lines.find((l) => l.id === "catchup")?.annualEur).toBe(588);
+    expect(q.lines.find((l) => l.id === "catchup")?.annualEur).toBe(1152);
+  });
+
+  it("prices the owner's worked example identically on /quote, the homepage wizard and /accounting-services (mt-2026-08-26d-banks)", () => {
+    // Company, €10–25k a month, 21–60 transactions, THREE bank accounts:
+    // base 69 + uplift 10 = 79; per account round(40 + 0.15 × 79) = 52;
+    // 3 × 52 = 156; full monthly €235. Catch-up = months × 235.
+    expect(bankAccountMonthly("company", "10-25k", "21-60")).toBe(52);
+    expect(banksMonthly("company", "10-25k", "21-60", 3)).toBe(156);
+    expect(fullMonthlyBookkeeping("company", "10-25k", "21-60", 3)).toBe(235);
+
+    const fromQuote = quoteFor({ txn: "21-60", banks: 3, expenses: "10-25k", entity: "company", catchUpMonths: 6 });
+    expect((fromQuote.lines.find((l) => l.id === "accounts")?.annualEur ?? 0) / 12).toBe(235);
+    expect(fromQuote.lines.find((l) => l.id === "catchup")?.annualEur).toBe(6 * 235);
+    expect(fromQuote.lines.find((l) => l.id === "catchup")?.name).toBe("Catch-up: 6 months x EUR 235 = EUR 1410");
+
+    const fromAccountingPage = calcAccountingFee(accounting({ txn: "21-60", banks: 3, expenses: "10-25k", behind: "6" }), AT);
+    if (fromAccountingPage.refer) throw new Error("unpriceable");
+    expect(fromAccountingPage.monthlyFull).toBe(235);
+    expect(fromAccountingPage.monthly).toEqual([
+      { k: "Managed bookkeeping · Company", v: 69 },
+      { k: "Bookkeeping · volume uplift", v: 10 },
+      { k: "Bank accounts · 3 × €52", v: 156 },
+    ]);
+    expect(fromAccountingPage.oneOffFull).toBe(6 * 235);
+
+    const wizard: QState = { ...Q_INIT, step: QSTEP_QUOTE, txn: "21-60", banks: 3, expenses: "10-25k", startMonth: "2026-09", behind: "6", taxret: "none", annret: "none" };
+    const fromWizard = qCalc(wizard, AT);
+    if (fromWizard.refer) throw new Error("unpriceable");
+    expect(fromWizard.grossMo).toBe(235);
+    expect(fromWizard.mo.find((l) => l.n === "Bank accounts")?.v).toBe(156);
+    expect(fromWizard.mo.find((l) => l.n === "Bank accounts")?.e).toContain("3 × €52");
+    expect(fromWizard.oneTot).toBe(6 * 235);
+    const engine = evaluateA4Items(qItems(wizard), qRisk(wizard), AT);
+    expect(engine.grossMonthly).toBe(235);
+    expect(engine.grossOneOff).toBe(6 * 235);
+
+    // …and the annual tax return does not move with any of it: round(69 × 4.8) = 331.
+    expect(taxReturnYearly("company", "10-25k")).toBe(331);
+    expect(evaluateA4Items([{ service: "taxret", entity: "company", expenses: "10-25k" }, ...qItems(wizard)], "standard", AT).grossYearly).toBe(331);
+  });
+
+  it("prices one bank account into the published floors — from €68 self-employed, €96 company", () => {
+    // Every account is priced, the first included, so the "from" headline is
+    // base + round(40 + 0.15 × base): 24 + 44 = 68, 49 + 47 = 96.
+    expect(BANK_ACCOUNT).toEqual({ baseMonthly: 40, pctOfBookkeeping: 0.15 });
+    expect([BOOKKEEPING_BASE_FROM, BOOKKEEPING_BASE_COMPANY]).toEqual([24, 49]);
+    expect([BOOKKEEPING_FROM, BOOKKEEPING_COMPANY]).toEqual([68, 96]);
+    expect(BOOKKEEPING_FROM).toBe(fullMonthlyBookkeeping("sole", "0-10k", "1-20", 1));
+    expect(BOOKKEEPING_COMPANY).toBe(fullMonthlyBookkeeping("company", "0-10k", "1-20", 1));
+    // Tops on the same basis: top spend band, lowest volume, one account.
+    expect([BOOKKEEPING_SOLE_TOP, BOOKKEEPING_COMPANY_TOP]).toEqual([430, 671]);
+    expect(BOOKKEEPING_COMPANY_TOP).toBe(fullMonthlyBookkeeping("company", "500k+", "1-20", 1));
+    // The floors are prices every surface actually produces.
+    expect(quoteFor({ entity: "sole" }).monthlyTotalEur).toBe(68);
+    expect(quoteFor({ entity: "company" }).monthlyTotalEur).toBe(96);
+    const page = calcAccountingFee(accounting({ entity: "sole", txn: "1-20" }), AT);
+    if (page.refer) throw new Error("unpriceable");
+    expect(page.monthlyFull).toBe(68);
+    // Rounding is per account, THEN × count: company 0–10k × 3 = 3 × 47 = 141, not 142.
+    expect(banksMonthly("company", "0-10k", "1-20", 3)).toBe(141);
+    expect(A4_QUOTE_PACK_VERSION).toBe("mt-2026-08-26d-banks");
   });
 
   it("drops the catch-up line, rather than guessing a rate, when no band came with it", () => {
