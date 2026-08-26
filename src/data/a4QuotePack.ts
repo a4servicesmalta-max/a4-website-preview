@@ -56,8 +56,12 @@
  * (17 Aug): marginal un-multiplied payroll (A2+A3), VAT nil-return floor €19
  * (A4), company 400-500k 449→459 (C1), catch-up joins the launch promo at its
  * own line (C3), incorporation promo on recurring lines (B1).
+ *
+ * mt-2026-08-26b-payroll (owner ruling 2026-08-26, same day as the taxret
+ * cut): payroll is a FLAT €12/head/mo — the 32/29/25 marginal ladder is
+ * collapsed to one rate, still not risk-multiplied.
  */
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-26-taxret";
+export const A4_QUOTE_PACK_VERSION = "mt-2026-08-26b-payroll";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -431,17 +435,16 @@ export const VAT_RULES = {
  */
 
 /**
- * Payroll — €/head/mo, MARGINAL tiers since mt-2026-08-17-corrections
- * (finding A2): the first five heads bill at €32, the next five at €29,
- * everyone after at €25, so the total never FALLS as headcount grows (the
- * retired flat tiers priced 11 people at €275 vs €290 for 10). And it is no
- * longer risk-multiplied (finding A3) — AML sector risk is priced on VAT, the
- * tax return and the audit, where the extra checking actually happens.
+ * Payroll — ONE FLAT €12/head/mo since mt-2026-08-26b-payroll (owner ruling
+ * 2026-08-26): the 32/29/25 marginal ladder is collapsed to one rate, so the
+ * marginal walk degenerates to n × 12 and the headcount cliff the ladder was
+ * built to avoid cannot arise. Still not risk-multiplied (finding A3 stands)
+ * — AML sector risk is priced on VAT, the tax return and the audit, where
+ * the extra checking actually happens. The ladder SHAPE stays so payrollFee
+ * and payrollFeeLabel keep working unchanged.
  */
 export const PAYROLL_PER_HEAD: { upTo: number | null; rate: number }[] = [
-  { upTo: 5, rate: 32 },
-  { upTo: 10, rate: 29 },
-  { upTo: null, rate: 25 },
+  { upTo: null, rate: 12 },
 ];
 
 /** The MARGINAL payroll fee for a whole book — €/mo. */
@@ -594,10 +597,10 @@ export function fromPrice(table: Record<TxnBand, number>): number {
    corrections removed, so any caller still doing `heads * rate` must fail to
    compile and be moved to `payrollFee`. */
 
-/** Entry payroll rate (small teams) — the honest "from" for payroll copy. */
-export const PAYROLL_ENTRY_RATE = PAYROLL_PER_HEAD[0].rate; // €32/head, up to five
-/** Best payroll rate at scale. */
-export const PAYROLL_BEST_RATE = PAYROLL_PER_HEAD[PAYROLL_PER_HEAD.length - 1].rate; // €25/head
+/** The payroll rate — flat, so "entry" and "best" are the same €12 and copy
+ *  no longer needs a "from". Both names survive for their call sites. */
+export const PAYROLL_ENTRY_RATE = PAYROLL_PER_HEAD[0].rate; // €12/head, flat
+export const PAYROLL_BEST_RATE = PAYROLL_PER_HEAD[PAYROLL_PER_HEAD.length - 1].rate; // €12/head, same
 
 /**
  * Managed bookkeeping ENTRY-BAND floors — the honest "from €X/mo" headline.

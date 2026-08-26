@@ -101,17 +101,18 @@ describe("per-item pricing", () => {
     expect(gross([{ service: "audit", txn: "21-60" }], "high").yearly).toBe(1443);
   });
 
-  it("bills payroll on MARGINAL tiers — the total never falls as the team grows", () => {
-    // mt-2026-08-17-corrections (finding A2): 5 × €32 + next 5 × €29 + rest × €25.
-    expect(gross([{ service: "payroll", heads: 3 }]).monthly).toBe(96); // 3 × 32
-    expect(gross([{ service: "payroll", heads: 5 }]).monthly).toBe(160); // 5 × 32
-    expect(gross([{ service: "payroll", heads: 8 }]).monthly).toBe(247); // 5×32 + 3×29, not 8×29
-    expect(gross([{ service: "payroll", heads: 10 }]).monthly).toBe(305);
-    // The flat tiers priced 11 people BELOW 10 (290 → 275). Never again.
-    expect(gross([{ service: "payroll", heads: 11 }]).monthly).toBe(330);
-    expect(gross([{ service: "payroll", heads: 20 }]).monthly).toBe(555);
-    // And no risk multiplier on payroll any more (finding A3).
-    expect(gross([{ service: "payroll", heads: 5 }], "high").monthly).toBe(160);
+  it("bills payroll at a flat €12/head — the total never falls as the team grows", () => {
+    // mt-2026-08-26b-payroll: one rate, n × 12; the marginal walk degenerates.
+    expect(gross([{ service: "payroll", heads: 3 }]).monthly).toBe(36); // 3 × 12
+    expect(gross([{ service: "payroll", heads: 5 }]).monthly).toBe(60);
+    expect(gross([{ service: "payroll", heads: 8 }]).monthly).toBe(96);
+    expect(gross([{ service: "payroll", heads: 10 }]).monthly).toBe(120);
+    // The retired flat TIERS priced 11 people BELOW 10 (290 → 275). A single
+    // rate cannot cliff. Never again.
+    expect(gross([{ service: "payroll", heads: 11 }]).monthly).toBe(132);
+    expect(gross([{ service: "payroll", heads: 20 }]).monthly).toBe(240);
+    // And no risk multiplier on payroll (finding A3).
+    expect(gross([{ service: "payroll", heads: 5 }], "high").monthly).toBe(60);
     expect(evaluateA4Items([{ service: "payroll", heads: 0 }], "standard", AFTER).lines).toEqual([]);
   });
 
@@ -364,7 +365,7 @@ describe("bookkeeping by monthly expenses (pack mt-2026-08-14-volume)", () => {
       { service: "registered-office" },
     ];
     const baseline = gross(others);
-    expect(baseline.monthly).toBe(45 + 96);
+    expect(baseline.monthly).toBe(45 + 36);
     expect(baseline.yearly).toBe(335 + 995 + 260 + 1200);
     // Adding bookkeeping at the TOP band moves only the bookkeeping line.
     const withTopBand = gross([
@@ -403,8 +404,8 @@ describe("server input bounds", () => {
   });
 
   it("prices the top of each range at the pack rate", () => {
-    // 500 heads: 5×32 + 5×29 + 490×25 = 160 + 145 + 12,250 (marginal tiers).
-    expect(gross([{ service: "payroll", heads: 500 }]).monthly).toBe(12_555);
+    // 500 heads × €12 flat = 6,000.
+    expect(gross([{ service: "payroll", heads: 500 }]).monthly).toBe(6_000);
     // 240 months = 20 years of a company's books at €49/mo, uncapped.
     expect(gross([{ service: "catchup", months: 240, entity: "company", expenses: "0-10k" }]).oneOff).toBe(240 * 49);
   });
@@ -485,9 +486,9 @@ describe("mixed basket, hand-computed", () => {
     const t = evaluateA4Items(items, "elevated", AFTER);
     // Monthly: bookkeeping 49 (flat, NO uplift)
     //        + VAT      69 × 1.2 = 82.8 → 83
-    //        + payroll  5×32 + 3×29 = 247 (marginal, NO uplift — A2+A3)
-    expect(t.grossMonthly).toBe(49 + 83 + 247);
-    expect(t.grossMonthly).toBe(379);
+    //        + payroll  8 × 12 = 96 (flat, NO uplift — A2+A3)
+    expect(t.grossMonthly).toBe(49 + 83 + 96);
+    expect(t.grossMonthly).toBe(228);
     // Yearly: tax return 335 (NOT × 1.2 since mt-2026-08-26-taxret), + MBR (50 + 210) = 260
     expect(t.grossYearly).toBe(335 + 260);
     expect(t.grossYearly).toBe(595);
@@ -502,7 +503,7 @@ describe("mixed basket, hand-computed", () => {
 
   it("applies the promo to the right slices", () => {
     const t = evaluateA4Items(items, "elevated", DURING);
-    expect(t.monthly).toBe(284); // 379 × 0.75 = 284.25 → 284
+    expect(t.monthly).toBe(171); // 228 × 0.75 = 171
     expect(t.yearly).toBe(499); // (595 − 210) × 0.75 = 288.75 → 289, + 210 = 499
     expect(t.oneOff).toBe(441); // catch-up discounted at its line (C3): 588 × 0.75
     expect(t.catchup).toBe(441);
@@ -578,7 +579,7 @@ describe("the submitted record", () => {
   it("stamps the pack version and currency the backend validates against", () => {
     const r = buildQuoteRecord({ name: "A", email: "a@b.com", items, serviceStartDate: START }, DURING);
     expect(r.pack).toBe(A4_QUOTE_PACK_VERSION);
-    expect(r.pack).toBe("mt-2026-08-26-taxret");
+    expect(r.pack).toBe("mt-2026-08-26b-payroll");
     expect(r.currency).toBe("EUR");
     expect(r.quotedAt).toBe(DURING.toISOString());
   });

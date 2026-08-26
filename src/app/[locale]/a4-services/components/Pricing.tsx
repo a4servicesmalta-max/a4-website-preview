@@ -11,7 +11,6 @@ import {
   VAT_FROM,
   TAX_RETURN_FROM,
   PAYROLL_ENTRY_RATE,
-  PAYROLL_BEST_RATE,
   payrollFee,
   PRICING_VAT_NOTE,
 } from "@/data/a4QuotePack";
@@ -159,7 +158,7 @@ export function Pricing() {
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--a4-stone)" }}>Optional add-ons</div>
                 {[
                   { label: "VAT returns", sub: "Every return prepared and filed with the CFR", on: vat, set: setVat, fee: `from €${VAT_FROM}/mo` },
-                  { label: "Payroll", sub: `FS5 submissions & payslips · €${PAYROLL_ENTRY_RATE}/head up to five, €${PAYROLL_BEST_RATE}/head at scale`, on: payroll, set: setPayroll, fee: `from €${PAYROLL_ENTRY_RATE}/head/mo`, emps: true },
+                  { label: "Payroll", sub: `FS5 submissions & payslips · flat €${PAYROLL_ENTRY_RATE}/head/mo, any team size`, on: payroll, set: setPayroll, fee: `€${PAYROLL_ENTRY_RATE}/head/mo`, emps: true },
                   { label: "Annual accounts & tax", sub: "Year-end financial statements & return", on: annual, set: setAnnual, fee: `from €${Math.round(TAX_RETURN_FROM / 12)}/mo` },
                 ].map((a) => (
                   <div key={a.label}>

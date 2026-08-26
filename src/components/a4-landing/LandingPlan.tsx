@@ -5,7 +5,7 @@ import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-la
 import { MANAGED_CAVEAT, MANAGED_CATCHUP_NOTE, MANAGED_SOLE, MANAGED_COMPANY } from "@/data/a4ManagedOffer";
 import {
   VAT_MONTHLY, VAT_RULES, TAX_RETURN_FROM,
-  PAYROLL_ENTRY_RATE, PAYROLL_BEST_RATE, payrollFee, PRICING_VAT_NOTE,
+  PAYROLL_ENTRY_RATE, payrollFee, PRICING_VAT_NOTE,
   LAUNCH_PROMO, isPromoActive,
   catchUpAmount, catchUpLabel, managedMonthly, EXPENSE_BANDS,
   type ManagedEntity, type ExpenseBand,
@@ -301,7 +301,7 @@ export function LandingPlan() {
   // managed bookkeeping, so it is not a separate charge.
   const monthlyAddons = ([
     { id: "vat", label: "VAT returns", sub: `Every return filed with the CFR · art. 11 small-exempt is €${VAT_RULES.art11FlatYearly}/yr instead`, on: vat, set: (v: boolean) => patch({ vat: v }), fee: `€${LP_VAT[vatFreq].fee} / mo`, freq: true },
-    isCompany && { id: "pay", label: "Payroll", sub: `FS5 submissions & payslips · €${PAYROLL_ENTRY_RATE}/head up to five, €${PAYROLL_BEST_RATE}/head at scale`, on: payroll, set: (v: boolean) => patch({ payroll: v }), fee: `from €${PAYROLL_ENTRY_RATE} / head / mo`, emps: true },
+    isCompany && { id: "pay", label: "Payroll", sub: `FS5 submissions & payslips · flat €${PAYROLL_ENTRY_RATE}/head/mo, any team size`, on: payroll, set: (v: boolean) => patch({ payroll: v }), fee: `€${PAYROLL_ENTRY_RATE} / head / mo`, emps: true },
   ] as (Addon | false)[]).filter((a): a is Addon => Boolean(a));
 
   const fieldLabel = { fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" };

@@ -39,17 +39,16 @@ describe("accounting fee engine", () => {
     // finding A3): a restaurant's payslips are the same work as a shop's.
     const payStd = at({ head: 3 }) as { monthlyFull: number };
     const payHigh = at({ head: 3, sector: "regulated" }) as { monthlyFull: number };
-    expect(payStd.monthlyFull).toBe(CO + 96);
+    expect(payStd.monthlyFull).toBe(CO + 36);
     expect(payHigh.monthlyFull).toBe(payStd.monthlyFull);
   });
 
-  it("prices payroll on MARGINAL tiers — the rate declines but the total never falls", () => {
-    // mt-2026-08-17-corrections (finding A2): first 5 × €32, next 5 × €29,
-    // then €25. The retired flat tiers priced 11 people below 10.
-    expect(at({ head: 3 })).toMatchObject({ monthlyFull: CO + 96 });
-    expect(at({ head: 10 })).toMatchObject({ monthlyFull: CO + 305 });
-    expect(at({ head: 11 })).toMatchObject({ monthlyFull: CO + 330 });
-    expect(at({ head: 20 })).toMatchObject({ monthlyFull: CO + 555 });
+  it("prices payroll at a flat €12/head — the total never falls as the team grows", () => {
+    // mt-2026-08-26b-payroll: one rate, n × 12. A single rate cannot cliff.
+    expect(at({ head: 3 })).toMatchObject({ monthlyFull: CO + 36 });
+    expect(at({ head: 10 })).toMatchObject({ monthlyFull: CO + 120 });
+    expect(at({ head: 11 })).toMatchObject({ monthlyFull: CO + 132 });
+    expect(at({ head: 20 })).toMatchObject({ monthlyFull: CO + 240 });
   });
 
   it("distinguishes the three VAT articles instead of charging art. 10 for all", () => {
