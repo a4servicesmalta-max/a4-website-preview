@@ -98,7 +98,7 @@ export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit F
             <br />with <span style={{ color: "var(--a4-primary-bright)" }}>A4</span>.
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: "clamp(16px,1.7vw,20px)", lineHeight: 1.6, maxWidth: 560, margin: "26px auto 0", textWrap: "pretty" }}>
-            A licensed Malta accounting &amp; audit firm — automation does the heavy lifting while our team keeps you compliant, organised and in control.
+            A licensed Malta accounting &amp; audit firm. <a href="https://vacei.com" target="_blank" rel="noopener noreferrer" style={{ color: "#fff", textDecoration: "underline", textUnderlineOffset: 3 }}>Vacei</a> is the software we build and run — it does the heavy lifting while our team keeps you compliant, organised and in control.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="/contact">Request information <Icon name="arrow-right" size={18} color="#000" /></Button>
