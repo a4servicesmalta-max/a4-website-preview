@@ -248,7 +248,7 @@ const Footer = () => {
             <div className="space-y-3 flex flex-col items-center text-center lg:items-start lg:text-left">
               <h3 className="text-text-dark font-bold text-base">{t('footer.contactUs')}</h3>
               <p className="text-sm text-gray max-w-md leading-relaxed">
-                Speak to the team — call, email or book a free 15-minute consultation.
+                Speak to the team — call, email or book a free 30-minute consultation.
               </p>
               <LocalizedLink
                 href="/contact"

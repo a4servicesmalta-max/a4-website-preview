@@ -1147,7 +1147,7 @@ function PricingComplex() {
               className="a4-font-body text-[var(--a4-mute)] mt-4 max-w-[440px]"
               style={{ fontSize: 17, lineHeight: 1.6, textWrap: "pretty" }}
             >
-              Some engagements need a human to scope properly. Book a free 15-minute call and we&apos;ll give you a clear,
+              Some engagements need a human to scope properly. Book a free 30-minute call and we&apos;ll give you a clear,
               fixed quote — no surprises.
             </p>
             <Button variant="dark" size="lg" href={href("/contact")} style={{ marginTop: 28 }}>

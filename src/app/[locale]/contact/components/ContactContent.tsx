@@ -210,7 +210,7 @@ const CONTACT_ITEMS = [
 export function ContactContent() {
   return (
     <div className="a4-site-page">
-      <PageHero eyebrow="Get in touch" title="Let's talk about your business" sub="Send us a message, call the team, or book a free 15-minute call. We usually reply within one business day." />
+      <PageHero eyebrow="Get in touch" title="Let's talk about your business" sub="Send us a message, call the team, or book a free 30-minute call. We usually reply within one business day." />
 
       <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,96px) 0" }}>
         <Container>
@@ -235,7 +235,7 @@ export function ContactContent() {
                 <div className="bg-black rounded-[var(--a4-r-lg)] py-[26px] px-6 mt-1">
                   <div className="flex items-center gap-[11px]">
                     <Icon name="calendar" size={20} color="var(--a4-primary-bright)" />
-                    <h3 className="a4-font-display font-medium text-[20px] text-white m-0">Book a free 15-minute call</h3>
+                    <h3 className="a4-font-display font-medium text-[20px] text-white m-0">Book a free 30-minute call</h3>
                   </div>
                   <p className="a4-font-body text-[14.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[10px] mb-[18px]">Prefer to talk it through? Grab a slot and we&apos;ll learn about your business — no obligation.</p>
                   <Button variant="primary" size="md" href={BOOK_A_CALL_PATH}>
