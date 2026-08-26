@@ -139,7 +139,7 @@ export function HowItWorks() {
 
 export function Why() {
   const items = [
-    { icon: "piggy-bank", t: "Low, transparent pricing", s: "From €24/month if you are self-employed, from €49/month for a company, set by your monthly expenses — we keep the books, with a qualified accountant on the file. There is no software-only plan, and your transaction volume never moves it. All fees exclude VAT." },
+    { icon: "piggy-bank", t: "Low, transparent pricing", s: "From €24/month if you are self-employed, from €49/month for a company, set by your monthly expenses — we keep the books, with a qualified accountant on the file. There is no software-only plan; busy transaction volumes and extra bank accounts add on top, itemised in your quote. All fees exclude VAT." },
     { icon: "layout-dashboard", t: "Everything in one portal", s: "Documents, reports and communication in a single secure workspace." },
     { icon: "refresh-cw", t: "Synced with your tools", s: "Works with Sage, QuickBooks and Xero — no double entry." },
     { icon: "shield-check", t: "Reviewed by professionals", s: "A licensed audit firm checks and finalises every set of books." },
