@@ -98,6 +98,17 @@ export function BookACallContent() {
   const [slotNotice, setSlotNotice] = useState<string | null>(null);
 
   const [f, setF] = useState({ name: "", email: "", company: "", phone: "" });
+  // `/book-a-call?quote=<ref>&email=<address>` — the quote flow hands over here:
+  // the email prefills the form and the reference rides along on the booking
+  // (same contract as vacei.com/book-a-demo).
+  const [quoteRef, setQuoteRef] = useState("");
+  useEffect(() => {
+    const here = new URLSearchParams(window.location.search || "");
+    const ref = (here.get("quote") || "").trim().slice(0, 80);
+    const email = (here.get("email") || "").trim().slice(0, 254);
+    if (ref) setQuoteRef(ref);
+    if (email) setF((prev) => (prev.email ? prev : { ...prev, email }));
+  }, []);
   // Honeypot — real visitors never see or fill this field.
   const [companyWebsite, setCompanyWebsite] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -195,6 +206,7 @@ export function BookACallContent() {
           phone: f.phone.trim(),
           source: "a4.com.mt",
           company_website: "",
+          ...(quoteRef ? { quoteRef } : {}),
           ...(captchaToken ? { captchaToken } : {}),
         }),
       });
