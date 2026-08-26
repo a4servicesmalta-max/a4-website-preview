@@ -748,12 +748,23 @@ function PricingCalc() {
                   <div className="a4-font-body text-[14px] font-semibold text-white">
                     About how much do you spend a month?
                   </div>
+                  {/* One line under the question; the definition sits behind a
+                      native disclosure — the paragraph-per-question density was
+                      this calculator's biggest legibility gap against the
+                      simplest competitor estimators (review of 26 Aug). */}
                   <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    The money that leaves the business in a typical month — supplier bills, wages, rent, software,
-                    everything you spend. Excludes VAT, loan repayments, and transfers between your own accounts.
-                    New or seasonal? Use your last three months&apos; average. It sets your bookkeeping price, not
-                    the transaction count the VAT and audit tabs ask for.
+                    The money that leaves the business in a typical month. It sets your bookkeeping price — a rough figure is fine.
                   </p>
+                  <details className="mt-[6px]">
+                    <summary className="a4-font-body text-[12px] font-semibold text-[var(--a4-primary)] cursor-pointer">
+                      What counts as spend?
+                    </summary>
+                    <p className="a4-font-body text-[12.5px] leading-[1.55] text-[var(--a4-stone)] mt-[6px]">
+                      Supplier bills, wages, rent, software — everything you spend. Excludes VAT, loan repayments,
+                      and transfers between your own accounts. New or seasonal? Use your last three months&apos;
+                      average. It is not the transaction count the VAT and audit tabs ask for.
+                    </p>
+                  </details>
                   {/* Nothing pre-selected: `expensesIdx` starts at -1, which
                       matches no chip, so every chip renders unpicked. */}
                   <PrChip items={PR_EXPENSE_LABELS} value={expensesIdx} set={setExpensesIdx} cols={3} />
@@ -769,7 +780,7 @@ function PricingCalc() {
                     From which month do you need us?
                   </label>
                   <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    Required. Pick the earliest month that still needs doing — everything before this month is catch-up, and the monthly fee runs from now on.
+                    Pick the earliest month that still needs doing — months before it are catch-up, charged once at the same rate.
                   </p>
                   <input
                     id="pr-start"
@@ -785,8 +796,11 @@ function PricingCalc() {
                     }}
                   />
                   {!startOk ? (
+                    /* Honest gate: the panel already prices from the band —
+                       the month only decides the catch-up line and unlocks
+                       the send. Do not claim the price is withheld. */
                     <p className="a4-font-body text-[12.5px] mt-[8px]" style={{ color: "#E8C08A" }}>
-                      Pick a month before we can price this.
+                      Everything above is already priced — pick the month and we can add any catch-up and send the quote.
                     </p>
                   ) : catchUpMonths > 0 ? (
                     /* The catch-up split, read back from the month just
@@ -1027,7 +1041,13 @@ function PricingCalc() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-center gap-[7px] mt-3">
+                {/* The differentiator, said out loud: competitor calculators
+                    end in an "estimated starting price" and a demo booking —
+                    this one ends in the invoiced figure (review of 26 Aug). */}
+                <p className="a4-font-body text-[12px] font-semibold text-[var(--a4-ink)] text-center mt-4">
+                  The price you see is the price we invoice — itemised, and never gated behind an email.
+                </p>
+                <div className="flex items-center justify-center gap-[7px] mt-2">
                   <Icon name="shield-check" size={13} color="var(--a4-stone)" />
                   <span className="a4-font-body text-[11.5px] text-[var(--a4-mute)]">
                     Fixed fee · service begins upon KYC approval
