@@ -19,7 +19,6 @@ import {
   BOOKKEEPING_COMPANY,
   BOOKKEEPING_FROM,
   MBR_ANNUAL_RETURN,
-  PAYROLL_BEST_RATE,
   PAYROLL_ENTRY_RATE,
   VAT_FROM,
   VAT_MONTHLY,
@@ -107,7 +106,7 @@ const BASELINES: Record<
   },
   payroll: {
     name: "Payroll processing",
-    hint: `€${PAYROLL_ENTRY_RATE}/head up to five, €${PAYROLL_BEST_RATE}/head at scale — quoted on headcount`,
+    hint: `flat €${PAYROLL_ENTRY_RATE}/head/mo, any team size — quoted on headcount`,
     type: "on-request",
     base: 0,
   },

@@ -63,13 +63,13 @@ describe("the canonical quote", () => {
     const after = qCalc(CANONICAL, PROMO_OFF);
     if (after.refer) throw new Error("unpriceable");
     expect(after.promoApplied).toBe(false);
-    // Bookkeeping 69 (company at the €10–25k default band) + payroll 2 × 32
-    // = 133/mo; MBR (our 50 + registry 100)/yr.
-    expect([after.moTot, after.yrTot]).toEqual([133, 150]);
-    // The assurance side, priced on its own: payroll 64/mo, review 547 + MBR 150.
+    // Bookkeeping 69 (company at the €10–25k default band) + payroll 2 × 12
+    // = 93/mo; MBR (our 50 + registry 100)/yr.
+    expect([after.moTot, after.yrTot]).toEqual([93, 150]);
+    // The assurance side, priced on its own: payroll 24/mo, review 547 + MBR 150.
     const assured = qCalc(ASSURED, PROMO_OFF);
     if (assured.refer) throw new Error("unpriceable");
-    expect([assured.moTot, assured.yrTot]).toEqual([64, 697]);
+    expect([assured.moTot, assured.yrTot]).toEqual([24, 697]);
   });
 
   it("defaults to a company's books and the €1,500 capital band", () => {
@@ -85,12 +85,12 @@ describe("the canonical quote", () => {
 
   it("holds the pinned totals", () => {
     if (r.refer) throw new Error("the canonical path must be priceable");
-    // List: bookkeeping 69 (company, €10–25k band) + payroll 2 × 32 = 133/mo;
+    // List: bookkeeping 69 (company, €10–25k band) + payroll 2 × 12 = 93/mo;
     // MBR (our 50 + registry 100) = 150/yr. Onboarding is UNPRICED.
-    expect(r.grossMo).toBe(133);
+    expect(r.grossMo).toBe(93);
     expect(r.grossYr).toBe(150);
     // As quoted, with the 25% launch discount and the registry fee exempt.
-    expect(r.moTot).toBe(100); // 133 × 0.75 = 99.75 → 100
+    expect(r.moTot).toBe(70); // 93 × 0.75 = 69.75 → 70
     expect(r.yrTot).toBe(138); // (150 − 100) × 0.75 = 37.5 → 38, + 100
     expect(r.oneTot).toBe(0); // nothing one-off: onboarding carries no number
   });
@@ -98,9 +98,9 @@ describe("the canonical quote", () => {
   it("holds the pinned totals on the assurance side too", () => {
     const a = qCalc(ASSURED, PROMO_ON);
     if (a.refer) throw new Error("the assurance path must be priceable");
-    expect(a.grossMo).toBe(64);
+    expect(a.grossMo).toBe(24);
     expect(a.grossYr).toBe(697); // review 547 + MBR 150
-    expect(a.moTot).toBe(48); // 64 × 0.75
+    expect(a.moTot).toBe(18); // 24 × 0.75
     expect(a.yrTot).toBe(548); // (697 − 100) × 0.75 = 447.75 → 448, + 100
     expect(line(a, "Review engagement (if applicable)")?.v).toBe(547);
   });
@@ -445,7 +445,7 @@ describe("what we show equals what we quote", () => {
   it("agrees with the engine line-for-line before any discount", () => {
     const engine = evaluateA4Items(items, qRisk(CANONICAL), PROMO_OFF);
     if (shown.refer) throw new Error("unpriceable");
-    expect(engine.grossMonthly).toBe(shown.grossMo); // 133
+    expect(engine.grossMonthly).toBe(shown.grossMo); // 93
     expect(engine.grossYearly).toBe(shown.grossYr);  // 150 — includes our €50 MBR fee
     expect(engine.grossOneOff).toBe(shown.oneTot);   // 0
   });
@@ -455,8 +455,8 @@ describe("what we show equals what we quote", () => {
     if (shown.refer) throw new Error("unpriceable");
     expect(engine.promoApplied).toBe(true);
     expect(LAUNCH_PROMO.pct).toBe(0.25);
-    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([100, 138, 0]);
-    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([100, 138, 0]);
+    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([70, 138, 0]);
+    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([70, 138, 0]);
     const yearOne = (m: number, y: number, o: number) => m * 12 + y + o;
     expect(yearOne(shown.moTot, shown.yrTot, shown.oneTot))
       .toBe(yearOne(engine.monthly, engine.yearly, engine.oneOff));
@@ -467,7 +467,7 @@ describe("what we show equals what we quote", () => {
     const engine = evaluateA4Items(qItems(ASSURED), qRisk(ASSURED), PROMO_ON);
     if (s.refer) throw new Error("unpriceable");
     expect([s.moTot, s.yrTot, s.oneTot]).toEqual([engine.monthly, engine.yearly, engine.oneOff]);
-    expect([engine.monthly, engine.yearly]).toEqual([48, 548]);
+    expect([engine.monthly, engine.yearly]).toEqual([18, 548]);
   });
 
   it("still agrees once the basket grows — canonical path plus VAT and catch-up", () => {

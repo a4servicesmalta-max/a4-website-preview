@@ -191,7 +191,7 @@ describe("quote parity across every surface", () => {
     });
     // "0" is €19 since mt-2026-08-17-corrections (finding A4): nil-return floor.
     expect(VAT_MONTHLY).toEqual({ "0": 19, "1-20": 29, "21-60": 45, "61-150": 69, "151-400": 99, "401-1000": 139, "1000+": 189 });
-    expect(PAYROLL_PER_HEAD.map((p) => p.rate)).toEqual([32, 29, 25]);
+    expect(PAYROLL_PER_HEAD.map((p) => p.rate)).toEqual([12]);
     expect(Object.values(RISK_TIERS).map((t) => t.multiplier)).toEqual([1.0, 1.2, 1.45, null]);
   });
 });
