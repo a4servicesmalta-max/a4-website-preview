@@ -3,7 +3,7 @@ import { calcAuditFee, feeLines, TXN, type AuditInput } from "./audit-fee";
 import { AUDIT_YEARLY, AUDIT_FROM, AUDIT_PRE_TRADING } from "@/data/a4QuotePack";
 
 const base: AuditInput = {
-  sector: "shop", txn: "21-60", size: "small", pay: "none", vat: "no", banks: "1",
+  sector: "shop", txn: "21-60", size: "small",
   taxret: "no", year: "2025", nyrs: "2", chg: "no", uploaded: false, doc: "fs",
 };
 const at = (p: Partial<AuditInput>) => calcAuditFee({ ...base, ...p });
@@ -40,12 +40,15 @@ describe("audit fee engine", () => {
     expect(at({ txn: "151-400" })).toMatchObject({ review: false, bigVol: true, fee: 1950 });
   });
 
-  it("stacks payroll, VAT, bank and sector-risk loadings", () => {
-    // (3650 + 450 + 250 + 150) × 1.45 = 6525 → €6,550, plus the tax return at
-    // 830 FLAT — mt-2026-08-26-taxret took the risk multiplier off it, so the
-    // audit calculator and the bookkeeping calculator quote the same return.
-    const r = at({ sector: "regulated", txn: "1000+", size: "big", pay: "21+", vat: "yes", banks: "4+", taxret: "yes" });
-    expect(r).toMatchObject({ payAdd: 450, vatAdd: 150, bankAdd: 250, taxAdd: 235, fee: 6760 });
+  it("applies the sector-risk loading to the audit only — no payroll, VAT or bank add-ons", () => {
+    // Owner ruling 2026-08-26: the pack has no audit add-ons, so neither does
+    // this page. 3650 × 1.45 = 5292.5 → €5,293 audit, plus the tax return at
+    // TAXRET_ESTIMATE_FROM FLAT — mt-2026-08-26-taxret took the risk multiplier
+    // off it, so the audit calculator and the bookkeeping calculator quote the
+    // same return.
+    const r = at({ sector: "regulated", txn: "1000+", size: "big", taxret: "yes" });
+    expect(r).toMatchObject({ taxAdd: 235, fee: 5293 + 235 });
+    expect(r).not.toHaveProperty("payAdd");
   });
 
   it("passes the full 20% planning saving on for audited prior-year statements", () => {
@@ -70,11 +73,8 @@ describe("audit fee engine", () => {
   });
 
   it("itemises every euro of the quote", () => {
-    const s = { ...base, sector: "regulated", txn: "1000+", size: "big", pay: "21+", vat: "yes", banks: "4+", taxret: "yes" };
+    const s = { ...base, sector: "regulated", txn: "1000+", size: "big", taxret: "yes" };
     const keys = feeLines(s, calcAuditFee(s)).map((l) => l.k);
-    expect(keys).toEqual([
-      "Sector risk", "Transactions", "Engagement",
-      "Payroll · 21 or more", "VAT registered", "Bank accounts · four or more", "Annual tax return",
-    ]);
+    expect(keys).toEqual(["Sector risk", "Transactions", "Engagement", "Annual tax return"]);
   });
 });
