@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { TrustBar } from "./HomeConversionSections";
 import { useReduceMotion } from "@/contexts/ReduceMotionContext";
 // Bookkeeping figures come from the quote pack. Under mt-2026-08-14-volume they
 // are the ENTRY band of nine, priced by monthly expenses — always shown as "from".
@@ -112,7 +111,6 @@ export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit F
               </span>
             ))}
           </div>
-          <TrustBar />
         </Reveal>
       </Container>
 

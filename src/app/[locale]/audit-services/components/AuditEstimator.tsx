@@ -284,7 +284,7 @@ export function AuditEstimator() {
   return (
     <section
       id="estimate"
-      style={{ background: "linear-gradient(180deg, #4f55f1 0%, #494fdf 50%, #3a40c4 100%)", padding: "clamp(56px,8vw,88px) 0 clamp(60px,8vw,96px)" }}
+      style={{ background: "#000", borderBottom: "1px solid var(--a4-hairline-dark)", padding: "clamp(56px,8vw,88px) 0 clamp(60px,8vw,96px)" }}
     >
       <Container>
         <div style={{ textAlign: "center" }}>
@@ -402,8 +402,8 @@ export function AuditEstimator() {
             </div>
 
             {/* fee panel */}
-            <div className="af-panel" style={{ background: "#000", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 90, textAlign: "left" }}>
-              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Estimated audit fee</div>
+            <div className="af-panel" style={{ background: "linear-gradient(180deg, #4f55f1 0%, #494fdf 50%, #3a40c4 100%)", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 90, textAlign: "left" }}>
+              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(255,255,255,.72)" }}>Estimated audit fee</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontVariantNumeric: "tabular-nums", fontSize: 38, letterSpacing: "-1.5px", lineHeight: 1 }}>{feeBig}</span>
                 {!q.refer && <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)" }}>/ year</span>}
@@ -416,7 +416,7 @@ export function AuditEstimator() {
                   </span>
                 ))}
               </div>
-              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "var(--a4-stone)", margin: "18px 0 0", paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)" }}>{feeNote}</p>
+              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "rgba(255,255,255,.72)", margin: "18px 0 0", paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)" }}>{feeNote}</p>
               <Button variant="primary" size="md" onClick={() => openModal("proposal")} style={{ width: "100%", marginTop: 18 }}>{ctaLabel} <Icon name="arrow-right" size={16} color="#000" /></Button>
               {/* Reachable from every question, not just the last one — and it
                   keeps the answers, so there is nothing to lose by trying it. */}

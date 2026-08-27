@@ -16,7 +16,7 @@ import {
 import FooterCtaStrip from './FooterCtaStrip'
 
 const Logo = '/assets/images/a4-logo-new.webp'
-const VaceiLogo = '/assets/images/Logo.png'
+const VaceiLogo = '/assets/images/vacei-logo-teal.png'
 
 const Footer = () => {
   const pathname = usePathname()

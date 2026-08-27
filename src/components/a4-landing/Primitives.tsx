@@ -158,6 +158,9 @@ export function Reveal({ children, delay = 0, style, className, as = "div" }: { 
     }
     const el = ref.current;
     if (!el) return;
+    // Anything already in the first viewport stays put — only content the
+    // visitor scrolls to gets the lift (mirrors vacei.com's reveal).
+    if (el.getBoundingClientRect().top < window.innerHeight * 0.95) return;
     // Begin from the pre-reveal state, then animate in when in view.
     setShown(false);
     const io = new IntersectionObserver(
@@ -169,7 +172,7 @@ export function Reveal({ children, delay = 0, style, className, as = "div" }: { 
           }
         });
       },
-      { threshold: 0.14 }
+      { threshold: 0.12 }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -183,13 +186,12 @@ export function Reveal({ children, delay = 0, style, className, as = "div" }: { 
       className={className}
       style={{
         ...style,
-        // Visible opacity floor: even mid-animation text stays readable,
-        // and reduced-motion renders fully opaque with no transform.
-        opacity: animate ? 0.35 : 1,
-        transform: animate ? "translateY(18px)" : "none",
+        // Reduced-motion renders fully opaque with no transform.
+        opacity: animate ? 0 : 1,
+        transform: animate ? "translateY(30px)" : "none",
         transition: reduceMotion
           ? "none"
-          : `opacity .6s ease ${delay}ms, transform .6s cubic-bezier(.2,.7,.2,1) ${delay}ms`,
+          : `opacity .7s ease ${delay}ms, transform .75s cubic-bezier(.22,.6,.2,1) ${delay}ms`,
       }}
     >
       {children}
