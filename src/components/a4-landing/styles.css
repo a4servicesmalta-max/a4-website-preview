@@ -105,6 +105,13 @@
   .lqc-panel { position: static !important; }
 }
 
+/* FAQ header column — sticky only while the two columns sit side by side.
+   The flex bases (320px + 520px + 64px gap) wrap below ~1000px of viewport;
+   stacked, a stuck header travels the whole section and paints over the list. */
+@media (min-width: 1000px) {
+  .a4-faq-aside { position: sticky; top: 96px; }
+}
+
 /* Sticky summary panels — release on tablet/mobile */
 @media (max-width: 820px) {
   .a4-sum { position: static !important; }
