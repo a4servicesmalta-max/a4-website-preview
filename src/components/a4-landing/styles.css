@@ -47,6 +47,17 @@
 .a4-landing-page ::selection { background: var(--a4-primary); color: #fff; }
 .a4-landing-page img { max-width: 100%; height: auto; }
 
+/* Audit is intentionally page-scoped: charcoal + lime, without changing the
+   blue identity used by the rest of the A4 site. */
+.a4-audit-page {
+  --a4-primary: #DDF72A;
+  --a4-primary-bright: #E7FA62;
+  --a4-primary-deep: #B7CC12;
+  --a4-on-primary: #171A16;
+}
+
+.a4-audit-page ::selection { background: #DDF72A; color: #171A16; }
+
 .hero-bg {
   position: absolute; inset: 0; pointer-events: none; overflow: hidden;
   background-image:

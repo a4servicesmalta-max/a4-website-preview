@@ -63,9 +63,9 @@ function AuditHero() {
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 620, margin: "24px auto 0", textWrap: "pretty" }}>
             Every company in Malta must file audited financial statements. As a licensed audit firm, A4 delivers a rigorous, independent, on-time audit — with a fixed fee agreed up front, <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;{AUDIT_PRE_TRADING}/year</strong>. Where a review engagement is enough, it is {Math.round(REVIEW_ENGAGEMENT_FACTOR * 100)}% of the audit fee.
           </p>
-          <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 10, marginTop: 24, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get your audit estimate <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href="#estimate">Book a consultation</Button>
+            <Button variant="outline-dark" size="lg" href="/book-a-call">Book a consultation</Button>
           </div>
           <div style={{ display: "flex", gap: "10px 28px", marginTop: 38, flexWrap: "wrap", justifyContent: "center" }}>
             {[["badge-check", "Licensed audit firm"], ["calendar-check", "On-time filing, guaranteed"], ["lock", "Fixed fee, no surprises"], ["folder-check", "Portal-based document collection"]].map(([ic, t]) => (
@@ -177,7 +177,7 @@ function AuditFAQ() {
           <Eyebrow>FAQ</Eyebrow>
           <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "var(--a4-ink)", fontSize: "clamp(32px,4vw,48px)", lineHeight: 1.05, letterSpacing: "-.02em", margin: "18px 0 0", textWrap: "balance" }}>Audit questions, answered</h2>
           <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 17, lineHeight: 1.55, color: "var(--a4-mute)", margin: "18px 0 28px", maxWidth: 340 }}>Still unsure? Book a free consultation and we&apos;ll talk it through.</p>
-          <Button variant="dark" size="md" href="#estimate">Book a consultation <Icon name="arrow-right" size={17} color="#fff" /></Button>
+          <Button variant="dark" size="md" href="/book-a-call">Book a consultation <Icon name="arrow-right" size={17} color="#fff" /></Button>
         </Reveal>
         <Reveal delay={100} style={{ flex: "1 1 520px", minWidth: 300 }}>
           <div style={{ borderTop: "1px solid var(--a4-hairline-light)" }}>
@@ -204,7 +204,7 @@ function AuditFAQ() {
 function AuditCTA() {
   return (
     <section style={{ background: "#000", padding: "clamp(72px,10vw,120px) 0", position: "relative", overflow: "hidden" }}>
-      <div aria-hidden="true" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "min(900px,90%)", height: 420, background: "radial-gradient(50% 50% at 50% 50%, rgba(73,79,223,.2), transparent 72%)", pointerEvents: "none" }} />
+      <div aria-hidden="true" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "min(900px,90%)", height: 420, background: "radial-gradient(50% 50% at 50% 50%, rgba(221,247,42,.16), transparent 72%)", pointerEvents: "none" }} />
       <Container style={{ position: "relative", textAlign: "center" }}>
         <Reveal>
           <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(34px,5vw,64px)", lineHeight: 1.02, letterSpacing: "-.025em", margin: "0 auto", maxWidth: 720, textWrap: "balance" }}>Get your fixed audit fee today</h2>
@@ -236,9 +236,9 @@ function AuditCTA() {
 
 export function AuditApp() {
   return (
-    <div>
+    <div className="a4-audit-page">
       {/* <AuditNav /> */}
-      <main>
+      <main id="main-content">
         <AuditHero />
         <WhyMalta />
         <AuditEstimator />

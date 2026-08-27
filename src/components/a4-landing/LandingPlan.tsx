@@ -13,7 +13,7 @@ import {
 import { catchUpMonthsFrom } from "@/lib/accounting-fee";
 import { INDEPENDENCE_BOOKKEEPING, flagsForServiceSelection, type IndependenceFlags } from "@/lib/independence";
 // Confirm whose books + add-ons → live monthly price → two exits, both of
-// which start a CONVERSATION: (1) request a proposal, (2) book a 15-min call.
+// which start a CONVERSATION: (1) request a proposal, (2) book a 30-minute call.
 // A4 is not self-serve — we meet the client, then we open the account.
 
 
@@ -263,7 +263,10 @@ export function LandingPlan() {
   const canBook = q.priced && startOk;
 
   const submit = async () => {
-    if (!form.name || !form.email) return;
+    if (!form.name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setSubmitError("Enter your name and a valid email address.");
+      return;
+    }
     setSubmitting(true); setSubmitError("");
     const ref = "A4-" + crypto.randomUUID().slice(0, 6).toUpperCase();
     try {
@@ -561,7 +564,7 @@ export function LandingPlan() {
                     quotes the monthly figure back at the visitor and the lead
                     email repeats it, so booking without one would confirm a
                     plan nobody priced. */}
-                <Button variant="outline-dark" size="md" onClick={() => { if (canBook) { setBooked(null); setModal(true); } }} style={{ width: "100%", opacity: canBook ? 1 : 0.55, pointerEvents: canBook ? "auto" : "none" }}><Icon name="calendar" size={16} color="#fff" /> Book a 15-min call</Button>
+                <Button variant="outline-dark" size="md" onClick={() => { if (canBook) { setBooked(null); setModal(true); } }} style={{ width: "100%", opacity: canBook ? 1 : 0.55, pointerEvents: canBook ? "auto" : "none" }}><Icon name="calendar" size={16} color="#fff" /> Request a 30-minute call</Button>
                 {!canBook && (
                   <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.5, color: "#E8C08A", textAlign: "center" }}>
                     {!q.priced ? "Pick your monthly spend above and this unlocks." : "Pick the month we should start from and this unlocks."}
@@ -580,28 +583,28 @@ export function LandingPlan() {
       {/* booking modal */}
       {modal && (
         <div onClick={(e) => { if (e.target === e.currentTarget) setModal(false); }} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,.45)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", width: "100%", maxWidth: 440, padding: 30, boxShadow: "0 32px 80px rgba(0,0,0,.25)" }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="books-call-title" style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", width: "100%", maxWidth: 440, padding: 30, boxShadow: "0 32px 80px rgba(0,0,0,.25)" }}>
             {booked ? (
               <div style={{ textAlign: "center", padding: "10px 0" }}>
                 <div style={{ width: 54, height: 54, borderRadius: 999, background: "rgba(0,168,126,.12)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}><Icon name="check" size={26} color="var(--a4-accent-teal)" stroke={2.5} /></div>
-                <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>You&apos;re booked in</div>
+                <div id="books-call-title" style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>Call request received</div>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, lineHeight: 1.6, color: "var(--a4-mute)", margin: "10px 0 0" }}>Thanks, {form.name.split(" ")[0]}. We&apos;ll confirm your 30-minute call by email at <strong style={{ color: "var(--a4-ink)" }}>{form.email}</strong> within 2 business hours.</div>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 14 }}>Reference: {booked} · {lpEuroOr(monthly)}/mo{annualFee > 0 ? ` + ${lpEuro(annualFee)}/yr` : ""}</div>
                 <Button variant="outline-light" size="md" onClick={() => setModal(false)} style={{ width: "100%", marginTop: 22 }}>Close</Button>
               </div>
             ) : (
               <div>
-                <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>Book your free 15-min call</div>
+                <div id="books-call-title" style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>Request your free 30-minute call</div>
                 <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-mute)", margin: "6px 0 22px" }}>We&apos;ll confirm your {lpEuroOr(monthly)}/mo{annualFee > 0 ? ` + ${lpEuro(annualFee)}/yr` : ""} plan and get you set up. No obligation.</div>
                 {([["name", "Your name", "text"], ["email", "Email address", "email"], ["phone", "Phone (optional)", "tel"]] as const).map(([k, label, type]) => (
                   <div key={k} style={{ marginBottom: 14 }}>
-                    <label style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--a4-mute)", marginBottom: 6 }}>{label}</label>
-                    <input type={type} value={form[k]} onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.value }))} style={{ width: "100%", background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "11px 14px", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 14, outline: "none" }} />
+                    <label htmlFor={`books-${k}`} style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--a4-mute)", marginBottom: 6 }}>{label}</label>
+                    <input id={`books-${k}`} name={k} type={type} autoComplete={k === "name" ? "name" : k === "email" ? "email" : "tel"} value={form[k]} onChange={(e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setSubmitError(""); }} style={{ width: "100%", background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "11px 14px", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 14, outline: "none" }} />
                   </div>
                 ))}
                 {submitError && <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--accent-danger)", marginBottom: 10 }}>{submitError}</div>}
                 <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-                  <Button variant="dark" size="md" onClick={submit} style={{ flex: 1, opacity: submitting ? 0.6 : 1, pointerEvents: submitting ? "none" : "auto" }}>{submitting ? "Sending…" : "Confirm call"} <Icon name="arrow-right" size={16} color="#fff" /></Button>
+                  <Button variant="dark" size="md" onClick={submit} style={{ flex: 1, opacity: submitting ? 0.6 : 1, pointerEvents: submitting ? "none" : "auto" }}>{submitting ? "Sending…" : "Send request"} <Icon name="arrow-right" size={16} color="#fff" /></Button>
                   <Button variant="outline-light" size="md" onClick={() => setModal(false)}>Cancel</Button>
                 </div>
               </div>
