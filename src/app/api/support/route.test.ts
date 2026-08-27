@@ -19,6 +19,7 @@ beforeEach(() => vi.clearAllMocks());
 it("drops a submission whose honeypot is filled, without telling the bot", async () => {
   const r = await POST(req({ name: "N", email: "a@b.com", issue: "hi", company_website: "http://spam" }));
   expect(r.status).toBe(200);
+  expect(await r.json()).toEqual({ ok: true, thread: true });
   expect(pushChatToPortal).not.toHaveBeenCalled();
   expect(pushLeadToPortal).not.toHaveBeenCalled();
 });
