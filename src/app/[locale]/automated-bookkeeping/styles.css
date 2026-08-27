@@ -38,8 +38,8 @@
     --a4-link:               #376cd5;
 
     /* ---- Type families -------------------------------------------------- */
-    --a4-font-display: "General Sans", "Aeonik Pro", "Inter Display", "Inter", system-ui, sans-serif;
-    --a4-font-body:    "Inter", system-ui, -apple-system, sans-serif;
+    --a4-font-display: var(--font-outfit), "Outfit", "Inter", system-ui, sans-serif;
+    --a4-font-body:    var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
 
     /* ---- Radii ---------------------------------------------------------- */
     --a4-r-md:   12px;

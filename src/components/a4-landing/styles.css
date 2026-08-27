@@ -27,8 +27,9 @@
     --a4-on-dark-mute: rgba(255, 255, 255, 0.72);
     --a4-accent-teal: #00a87e;
     --a4-link: #376cd5;
-    --a4-font-display: "General Sans", "Aeonik Pro", "Inter Display", "Inter", system-ui, sans-serif;
-    --a4-font-body: "Inter", system-ui, -apple-system, sans-serif;
+    /* Vacei typography — Outfit for display, Inter for body (mirrors vacei.com). */
+    --a4-font-display: var(--font-outfit), "Outfit", "Inter", system-ui, sans-serif;
+    --a4-font-body: var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
     --a4-r-sm: 8px;
     --a4-r-md: 12px;
     --a4-r-lg: 20px;
