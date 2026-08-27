@@ -13,6 +13,7 @@ import {
 } from "@/lib/audit-fee";
 import { AUDIT_PRE_TRADING, TAX_RETURN_FROM, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
 import { trackConversion } from "@/lib/analytics";
+import { validateAuditReviewFile } from "@/lib/review-file";
 
 type Opt = { id: string; label: string; sub?: string };
 
@@ -46,7 +47,7 @@ function Pills({ items, value, set }: { items: Opt[]; value: string; set: (id: s
               padding: "9px 16px", borderRadius: "var(--a4-r-md)",
               border: "1px solid " + (on ? "var(--a4-primary)" : "var(--a4-hairline-light)"),
               background: on ? "var(--a4-primary)" : "transparent",
-              color: on ? "#fff" : "var(--a4-body)",
+              color: on ? "#171A16" : "var(--a4-body)",
               fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600,
               cursor: "pointer", textAlign: "left",
               transition: "background .15s, color .15s, border-color .15s",
@@ -91,6 +92,7 @@ export function AuditEstimator() {
 
   // ---- Real FS review (same engine as /api/fs-gap-review) ----
   const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState("");
   const [drag, setDrag] = useState(false);
   const [contact, setContact] = useState({ email: "", name: "", company: "" });
   const [consent, setConsent] = useState(false);
@@ -139,6 +141,18 @@ export function AuditEstimator() {
 
   const submitDisabled = status === "loading" || !consent || !verified || !file;
 
+  const chooseFile = (candidate: File | null | undefined) => {
+    if (!candidate) return;
+    const error = validateAuditReviewFile(candidate);
+    if (error) {
+      setFile(null);
+      setFileError(error);
+      return;
+    }
+    setFileError("");
+    setFile(candidate);
+  };
+
   async function runReview() {
     if (submitDisabled || !file) return;
     setStatus("loading"); setFailure(null);
@@ -177,7 +191,7 @@ export function AuditEstimator() {
   }
 
   const resetReview = () => {
-    setFile(null); setData(null); setStatus("idle"); setFailure(null);
+    setFile(null); setFileError(""); setData(null); setStatus("idle"); setFailure(null);
     setConsent(false); setVerifiedToken(""); setVerifiedEmail(""); setCodeSent(false); setCode("");
   };
 
@@ -208,7 +222,8 @@ export function AuditEstimator() {
   const input: AuditInput = { ...answers, uploaded: !!data };
   const q = calcAuditFee(input);
   // A referral sector still needs a director, even if we quoted before.
-  const held = !q.refer && lock ? lock.fee : null;
+  const freshEngineFee = data?.quote?.fee ?? null;
+  const held = !q.refer ? freshEngineFee ?? lock?.fee ?? null : null;
   // The derived breakdown explains how q.final was built, so it must not sit
   // under a held figure it does not add up to.
   const lines = held === null ? feeLines(input, q) : [];
@@ -220,19 +235,23 @@ export function AuditEstimator() {
   const ctaLabel = q.refer ? "Request a call" : "Request a proposal";
   const feeNote = q.refer
     ? "We price most sectors instantly. This one needs a short conversation with a director before we put a number to it — usually the same day."
-    : held !== null
-      ? `This is the fee we quoted you on ${heldOn}, from the statements you sent. It stands for 30 days — answering the questions again will not change it. ${PRICING_VAT_NOTE}`
+    : freshEngineFee !== null
+      ? `This fee was priced from the statements you just sent. It is held for 30 days and the questionnaire cannot replace it. ${PRICING_VAT_NOTE}`
+      : held !== null
+        ? `This is the fee we quoted you on ${heldOn}, from the statements you sent. It stands for 30 days — answering the questions again will not change it. ${PRICING_VAT_NOTE}`
 
       : (q.review ? "You likely qualify for a review instead of a full audit — we confirm it against your figures. " : "") +
         `The fee is fixed after a short scoping call and never below €${AUDIT_PRE_TRADING}. ${PRICING_VAT_NOTE}`;
   const summary = q.refer
     ? "We price most sectors instantly, but this one needs a short conversation with a director before we put a number to it — usually the same day."
-    : held !== null
-      ? `Your fee is ${euro(held)} a year — the figure we gave you on ${heldOn} after reading your statements. We hold it for 30 days, so there is nothing to re-answer.`
+    : freshEngineFee !== null
+      ? `Your fee is ${euro(freshEngineFee)} a year, priced from the statements you just sent. We hold it for 30 days, so there is nothing to re-answer.`
+      : held !== null
+        ? `Your fee is ${euro(held)} a year — the figure we gave you on ${heldOn} after reading your statements. We hold it for 30 days, so there is nothing to re-answer.`
       : `So: a ${q.review ? "review engagement" : "full financial audit"} at ${euro(q.final)} a year${answers.taxret === "yes" ? ", tax return included" : ""}, fixed after one short scoping call. Documents are collected once, in the portal, and we file on time at the MBR.`;
   // Only the engine returns a fee read from the actual file; never invent one.
   // A held fee came from that same engine on an earlier visit, so it counts.
-  const engineFee = data?.quote?.fee ?? held;
+  const engineFee = held;
 
   // ---- Lead capture ----
   const [modal, setModal] = useState(false);
@@ -267,6 +286,7 @@ export function AuditEstimator() {
         }),
       });
       if (!res.ok) throw new Error("request failed");
+      trackConversion(intent === "proposal" ? "audit_proposal_submit" : "audit_consultation_submit");
       setDone(ref);
     } catch {
       setModalError("Something went wrong sending your request. Please try again or email info@a4.com.mt.");
@@ -277,9 +297,9 @@ export function AuditEstimator() {
 
   const modeBtn = (on: boolean): React.CSSProperties => ({
     height: 40, padding: "0 22px", borderRadius: "var(--a4-r-full)",
-    border: "1px solid " + (on ? "#fff" : "rgba(255,255,255,.32)"),
-    background: on ? "#fff" : "rgba(255,255,255,.12)",
-    color: on ? "var(--a4-primary)" : "#fff",
+    border: "1px solid " + (on ? "#DDF72A" : "rgba(255,255,255,.32)"),
+    background: on ? "#DDF72A" : "rgba(255,255,255,.12)",
+    color: on ? "#171A16" : "#fff",
     fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, cursor: "pointer",
     transition: "background .15s, color .15s",
   });
@@ -287,7 +307,7 @@ export function AuditEstimator() {
   return (
     <section
       id="estimate"
-      style={{ background: "linear-gradient(180deg, #4f55f1 0%, #494fdf 50%, #3a40c4 100%)", padding: "clamp(56px,8vw,88px) 0 clamp(60px,8vw,96px)" }}
+      style={{ background: "linear-gradient(180deg, #22271F 0%, #171A16 52%, #10130F 100%)", padding: "clamp(56px,8vw,88px) 0 clamp(60px,8vw,96px)" }}
     >
       <Container>
         <div style={{ textAlign: "center" }}>
@@ -325,8 +345,8 @@ export function AuditEstimator() {
                   >
                     <span style={{
                       width: 24, height: 24, borderRadius: "var(--a4-r-full)", display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "none",
-                      background: doneStep ? "rgba(255,255,255,.92)" : active ? "rgba(255,255,255,.26)" : "rgba(255,255,255,.1)",
-                      color: doneStep ? "var(--a4-primary)" : active ? "#fff" : "rgba(255,255,255,.6)",
+                      background: doneStep ? "#DDF72A" : active ? "rgba(255,255,255,.26)" : "rgba(255,255,255,.1)",
+                      color: doneStep ? "#171A16" : active ? "#fff" : "rgba(255,255,255,.6)",
                       fontSize: 10.5, fontWeight: 700, fontVariantNumeric: "tabular-nums", transition: "background .2s ease, color .2s ease",
                     }}>{"0" + (i + 1)}</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: active ? "#fff" : doneStep ? "rgba(255,255,255,.78)" : "rgba(255,255,255,.5)", transition: "color .2s ease" }}>{label}</span>
@@ -525,7 +545,7 @@ export function AuditEstimator() {
                   <div
                     onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
                     onDragLeave={() => setDrag(false)}
-                    onDrop={(e) => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); }}
+                    onDrop={(e) => { e.preventDefault(); setDrag(false); chooseFile(e.dataTransfer.files[0]); }}
                     onClick={() => inputRef.current?.click()}
                     style={{
                       marginTop: 18, cursor: "pointer", padding: "clamp(24px,4vw,34px)", textAlign: "center",
@@ -534,7 +554,7 @@ export function AuditEstimator() {
                       background: drag ? "var(--a4-surface-soft)" : "transparent", transition: "border-color .15s, background .15s",
                     }}
                   >
-                    <input ref={inputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: "none" }} onChange={(e) => { if (e.target.files?.[0]) setFile(e.target.files[0]); }} />
+                    <input ref={inputRef} name="financial_statements" type="file" accept=".pdf,.doc,.docx" style={{ display: "none" }} onChange={(e) => { chooseFile(e.target.files?.[0]); e.currentTarget.value = ""; }} />
                     <Icon name="upload-cloud" size={26} color="var(--a4-primary)" stroke={1.75} />
                     <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 600, color: "var(--a4-ink)", marginTop: 10 }}>Drop the file here or click to upload</div>
                     <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 6 }}>PDF or Word · confidential, processed in memory, never stored</div>
@@ -547,13 +567,13 @@ export function AuditEstimator() {
                       <button onClick={resetReview} style={{ background: "none", border: 0, cursor: "pointer", color: "var(--a4-mute)", fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600 }}>Change</button>
                     </div>
 
-                    <Field required type="email" placeholder="Work email" autoComplete="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
-                    <Field required placeholder="Your name" autoComplete="name" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
-                    <Field placeholder="Company (optional)" autoComplete="organization" value={contact.company} onChange={(e) => setContact({ ...contact, company: e.target.value })} />
+                    <Field required name="email" type="email" placeholder="Work email" autoComplete="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+                    <Field required name="name" placeholder="Your name" autoComplete="name" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
+                    <Field name="company" placeholder="Company (optional)" autoComplete="organization" value={contact.company} onChange={(e) => setContact({ ...contact, company: e.target.value })} />
 
                     <label style={{ display: "flex", flexDirection: "column", gap: 6, ...fieldLabel }}>
                       Anything else we should know?
-                      <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)}
+                      <textarea name="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)}
                         placeholder="Foreign income, related-party loans, a pending dispute — whatever helps us quote well."
                         style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid var(--a4-hairline-light)", background: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 400, color: "var(--a4-ink)", resize: "vertical" }} />
                     </label>
@@ -603,6 +623,7 @@ export function AuditEstimator() {
                     {status === "error" && failure && <ReviewFailureNotice failure={failure} />}
                   </div>
                 )}
+                {fileError && <p role="alert" style={{ color: "#c2303d", fontFamily: "var(--a4-font-body)", fontSize: 13.5, margin: "10px 0 0" }}>{fileError}</p>}
 
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "14px 0 0" }}>
                   The file is only used to review and scope the audit. Fixed after a short scoping call, never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}
@@ -633,8 +654,8 @@ export function AuditEstimator() {
                 </div>
                 {([["name", "Your name", "text"], ["company", "Company name", "text"], ["email", "Email address", "email"], ["phone", "Phone (optional)", "tel"]] as const).map(([k, label, type]) => (
                   <div key={k} style={{ marginBottom: 14 }}>
-                    <label style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--a4-mute)", marginBottom: 6 }}>{label}</label>
-                    <input type={type} value={form[k]} onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.value }))} style={{ width: "100%", background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "11px 14px", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 14, outline: "none" }} />
+                    <label htmlFor={`audit-${k}`} style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--a4-mute)", marginBottom: 6 }}>{label}</label>
+                    <input id={`audit-${k}`} name={k} type={type} autoComplete={k === "name" ? "name" : k === "company" ? "organization" : k === "email" ? "email" : "tel"} value={form[k]} onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.value }))} style={{ width: "100%", background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "11px 14px", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 14, outline: "none" }} />
                   </div>
                 ))}
                 {modalError && <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "#c2303d", marginBottom: 10 }}>{modalError}</div>}

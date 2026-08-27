@@ -789,6 +789,7 @@ export function LandingQuoteCalculator() {
                   </div>
                   <input
                     id="lqc-start"
+                    name="start_month"
                     type="month"
                     value={q.startMonth}
                     onChange={(e) => setQ({ startMonth: e.target.value, behind: String(catchUpMonthsFrom(e.target.value)) })}
@@ -948,8 +949,8 @@ export function LandingQuoteCalculator() {
                   ) : (
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-light)" }}>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <input value={name} onChange={(e) => setName(e.target.value)} aria-label="Your name" placeholder="Your name" autoComplete="name" style={Q_INPUT} />
-                        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" aria-label="Work email" placeholder="Work email" autoComplete="email" style={Q_INPUT} />
+                        <input name="name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Your name" placeholder="Your name" autoComplete="name" style={Q_INPUT} />
+                        <input name="email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" aria-label="Work email" placeholder="Work email" autoComplete="email" style={Q_INPUT} />
                       </div>
                       <input value={hp} onChange={(e) => setHp(e.target.value)} name="company_website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={Q_HONEYPOT} />
                       <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
