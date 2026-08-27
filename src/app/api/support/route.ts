@@ -91,15 +91,17 @@ export async function POST(req: NextRequest) {
       pageUrl: req.headers.get("referer") || undefined,
     });
 
-    // The chat thread carries the conversation but creates no lead, so the
-    // visitor shows up in the portal as an anonymous "Website visitor". File
-    // the lead separately — this is the row that carries their name and email.
+    // The portal records the WebsiteLead itself when the chat session opens
+    // (with this name and email), so only file one separately when the thread
+    // could not be opened — otherwise every chat would double-lead.
     // Non-fatal, exactly like the thread push above.
-    const leadWritten = await pushLeadToPortal({
-      name: name.trim(),
-      email: email.trim(),
-      message: issue.trim(),
-    });
+    const leadWritten = thread
+      ? true
+      : await pushLeadToPortal({
+          name: name.trim(),
+          email: email.trim(),
+          message: issue.trim(),
+        });
 
     // If the chat module could not be reached the conversation must still land
     // somewhere a human looks, so fall back to the Requests inbox.
@@ -148,7 +150,8 @@ ${transcript}
       );
     }
 
-    return NextResponse.json({ ok: true });
+    // `thread` lets the widget (and a live probe) tell a real Support-inbox thread from the fallback.
+    return NextResponse.json({ ok: true, thread: Boolean(thread) });
   } catch (error) {
     console.error("Support API error:", error);
     return NextResponse.json(
