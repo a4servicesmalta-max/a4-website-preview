@@ -360,7 +360,7 @@ export function QuotationBuilder() {
                   aria-label="How many bank accounts do you have?"
                 />
                 <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                  Every account is reconciled separately and every account is priced, the first included: €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee, each.
+                  Every account is reconciled separately. The first is included in the bookkeeping fee; each extra account is €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee.
                 </span>
               </div>
               <div>

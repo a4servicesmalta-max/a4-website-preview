@@ -800,7 +800,7 @@ function PricingCalc() {
                   <PrChip items={BOOK_TXN_LABELS} value={bookTxnIdx} set={setBookTxnIdx} cols={4} />
                   <div className="a4-font-body text-[14px] font-semibold text-white mt-[16px]">Bank accounts</div>
                   <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    Every account is reconciled separately and every account is priced, the first included: €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee, each.
+                    Every account is reconciled separately. The first is included in the bookkeeping fee; each extra account is €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee.
                   </p>
                   <div className="flex items-center gap-4 mt-[10px]">
                     <input

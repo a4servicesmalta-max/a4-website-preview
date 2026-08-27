@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Libre_Bodoni, Montserrat, Nunito } from "next/font/google";
+import { Inter, Libre_Bodoni, Montserrat, Nunito, Outfit } from "next/font/google";
 import "@fontsource/mona-sans";
 import "./globals.css";
 import "@/components/bookkeeping/bookkeeping.css";
@@ -30,10 +30,26 @@ const nunito = Nunito({
   display: "swap",
 });
 
+// The Vacei faces — Outfit for display, Inter for body — mirrored from
+// vacei.com so both sites read as one system.
+const outfit = Outfit({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-outfit",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 const siteUrl = getSiteUrl();
 const rootMeta = pageMetadata(
   "Accounting, Audit & Corporate Services in Malta",
-  "A4 Services Limited — a licensed Malta accounting and audit firm. Managed monthly bookkeeping from €68 including one bank account, plus VAT, payroll, audit and corporate services. Internationally capable via BOKS International.",
+  "A4 Services Limited — a licensed Malta accounting and audit firm. Managed monthly bookkeeping from €24 including one bank account, plus VAT, payroll, audit and corporate services. Internationally capable via BOKS International.",
 );
 
 export const metadata: Metadata = {
@@ -67,8 +83,10 @@ export default async function RootLayout({
   const lang = h.get(LOCALE_HEADER) ?? "en";
 
   return (
-    <html lang={lang} suppressHydrationWarning>
-      <body suppressHydrationWarning className={`antialiased ${bodoni.variable} ${montserrat.variable} ${nunito.variable}`}>
+    // Font variables live on <html> so :root-level tokens (--a4-font-*,
+    // --font-sans) can resolve them — on <body> they are invisible to :root.
+    <html lang={lang} suppressHydrationWarning className={`${bodoni.variable} ${montserrat.variable} ${nunito.variable} ${outfit.variable} ${inter.variable}`}>
+      <body suppressHydrationWarning className="antialiased">
         <Script
           id="clarity-script"
           strategy="afterInteractive"

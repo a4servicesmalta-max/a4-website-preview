@@ -15,13 +15,13 @@ tags:
 author: "Rana"
 keyTakeaways:
   - "Bookkeeping costs in Malta depend on more than company size, including transaction volume, VAT obligations, payroll requirements, and how involved the provider needs to be."
-  - "At A4, managed bookkeeping starts from €68 a month for a self-employed person and €96 a month for a company at up to €10,000 of monthly expenses, including one bank account, covering transaction recording, reconciliations, and basic maintenance."
-  - "As companies grow the fee follows monthly spend (up to €430 self-employed / €671 company above €500,000 a month, one account included), with transaction volume adding €0 to €140 and every bank account priced at €40 plus 15% of the bookkeeping fee; payroll and VAT are priced as separate lines."
+  - "At A4, managed bookkeeping starts from €24 a month for a self-employed person and €49 a month for a company at up to €10,000 of monthly expenses, including one bank account, covering transaction recording, reconciliations, and basic maintenance."
+  - "As companies grow the fee follows monthly spend (up to €339 self-employed / €549 company above €500,000 a month, one account included), with transaction volume adding €0 to €140 and each additional bank account priced at €40 plus 15% of the bookkeeping fee; payroll and VAT are priced as separate lines."
   - "Bookkeeping is the financial foundation of the business, not just a compliance task, affecting VAT submissions, management accounts, tax filings, cash flow visibility, and audits."
   - "Many Maltese businesses have shifted to cloud accounting platforms such as Xero and QuickBooks to streamline processes and improve access to real-time financial information."
 faq:
   - q: "How much does bookkeeping cost in Malta?"
-    a: "At A4, managed bookkeeping starts from €68 a month for a self-employed person and €96 a month for a company at up to €10,000 of monthly expenses, including one bank account, covering transaction recording, reconciliations, and basic financial maintenance. The fee rises with monthly spend to €430 (self-employed) or €671 (company) above €500,000 a month; transaction volume adds €0 to €140 a month, every bank account is priced at €40 plus 15% of the monthly bookkeeping fee (the first is part of the headline price), and payroll (€12 per person) and VAT returns (from €19 a month) are priced as separate lines. All fees exclude VAT."
+    a: "At A4, managed bookkeeping starts from €24 a month for a self-employed person and €49 a month for a company at up to €10,000 of monthly expenses, including one bank account, covering transaction recording, reconciliations, and basic financial maintenance. The fee rises with monthly spend to €339 (self-employed) or €549 (company) above €500,000 a month; transaction volume adds €0 to €140 a month, each additional bank account is priced at €40 plus 15% of the monthly bookkeeping fee (the first is included), and payroll (€12 per person) and VAT returns (from €19 a month) are priced as separate lines. All fees exclude VAT."
   - q: "What factors influence bookkeeping costs the most?"
     a: "Key factors include the number of monthly transactions, the volume of sales and purchase invoices, payroll requirements, VAT obligations, industry complexity, frequency of reporting, use of cloud accounting systems, and the level of advisory or operational support included."
   - q: "Is bookkeeping only needed for compliance?"
@@ -36,9 +36,9 @@ If you've recently started a business in Malta, one of the first questions that 
 
 The answer depends on the size of the business, transaction volume, VAT obligations, payroll requirements, and how involved the bookkeeping provider needs to be. In Malta, bookkeeping pricing can vary significantly depending on the complexity of the company and the level of ongoing support required.
 
-At A4, managed bookkeeping starts from €68 a month for a self-employed person and €96 a month for a company at up to €10,000 of monthly expenses, including one bank account. This covers transaction recording, reconciliations, and basic financial maintenance.
+At A4, managed bookkeeping starts from €24 a month for a self-employed person and €49 a month for a company at up to €10,000 of monthly expenses, including one bank account. This covers transaction recording, reconciliations, and basic financial maintenance.
 
-As companies grow, costs naturally increase. The fee follows monthly spend in nine bands, up to €430 (self-employed) or €671 (company) above €500,000 a month with one account. Transaction volume adds €0 to €140 a month on top, every bank account is priced at €40 plus 15% of the monthly bookkeeping fee — the first is already part of the headline price — and payroll (€12 per person a month) and VAT returns (from €19 a month) are priced as their own lines. Every figure comes from the same fee schedule as our [calculator](/pricing), and all fees exclude VAT.
+As companies grow, costs naturally increase. The fee follows monthly spend in nine bands, up to €339 (self-employed) or €549 (company) above €500,000 a month with one account. Transaction volume adds €0 to €140 a month on top, each additional bank account is priced at €40 plus 15% of the monthly bookkeeping fee — the first is included — and payroll (€12 per person a month) and VAT returns (from €19 a month) are priced as their own lines. Every figure comes from the same fee schedule as our [calculator](/pricing), and all fees exclude VAT.
 
 ![A bookkeeper in Malta reviewing invoices and reconciliations in a cloud accounting system](/assets/insights/bookkeeping-cost-1.jpg)
 
@@ -46,9 +46,9 @@ The table below summarises the indicative monthly ranges and what each tier typi
 
 | Business profile | Indicative monthly cost | Typically covers |
 | --- | --- | --- |
-| Self-employed, up to €10,000 monthly expenses | from €68 | Transaction recording, reconciliations, basic maintenance, one bank account |
-| Company, up to €10,000 monthly expenses | from €96 | Transaction recording, reconciliations, basic maintenance, one bank account |
-| Higher spend, volume and complexity | up to €430 / €671, plus €0 to €140 for volume; each bank account €40 + 15% of the bookkeeping fee | Larger invoice volumes, multiple bank accounts; payroll (€12 per person) and VAT returns (from €19) added as separate lines |
+| Self-employed, up to €10,000 monthly expenses | from €24 | Transaction recording, reconciliations, basic maintenance, one bank account |
+| Company, up to €10,000 monthly expenses | from €49 | Transaction recording, reconciliations, basic maintenance, one bank account |
+| Higher spend, volume and complexity | up to €339 / €549, plus €0 to €140 for volume; each additional bank account €40 + 15% of the bookkeeping fee | Larger invoice volumes, multiple bank accounts; payroll (€12 per person) and VAT returns (from €19) added as separate lines |
 
 One common misconception is that bookkeeping only exists for compliance purposes. In reality, bookkeeping forms the financial foundation of the business. Accurate records affect VAT submissions, management accounts, tax filings, cash flow visibility, audits, and overall decision-making.
 

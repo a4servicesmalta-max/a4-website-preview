@@ -269,7 +269,7 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     indicativeAnnualEur: monthly * 12 + annual,
     hasOnRequestLines: hasOnRequest,
     assumptions: [
-      `Sector: ${sectorRow?.label ?? input.industry ?? "—"} (${tierLabel} risk tier) · Transactions: ${txnLabel ? `${txnLabel} a month` : "not given"} · Bank accounts: ${banks}${input.expenses != null && txn != null && bankAccountMonthly(entity, input.expenses, txn) != null ? ` (each €${bankAccountMonthly(entity, input.expenses, txn)}/mo — €${BANK_ACCOUNT.baseMonthly} plus ${Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee, the first included)` : ""}.`,
+      `Sector: ${sectorRow?.label ?? input.industry ?? "—"} (${tierLabel} risk tier) · Transactions: ${txnLabel ? `${txnLabel} a month` : "not given"} · Bank accounts: ${banks}${input.expenses != null && txn != null && bankAccountMonthly(entity, input.expenses, txn) != null ? ` (the first included; each extra €${bankAccountMonthly(entity, input.expenses, txn)}/mo — €${BANK_ACCOUNT.baseMonthly} plus ${Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee)` : ""}.`,
       input.startMonth
         ? `Bookkeeping starts ${input.startMonth}${catchUpMonths > 0 ? `; ${catchUpMonths} earlier month${catchUpMonths === 1 ? "" : "s"} quoted separately above` : ""}.`
         : "Start month to be confirmed — it decides which months are catch-up.",

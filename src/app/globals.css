@@ -125,8 +125,8 @@
   --color-footer-hero-bg: var(--footer-hero-bg);
   --color-text-light-gray: var(--text-light-gray);
 
-  /* Set Mona Sans as the default sans font */
-  --font-sans: "Mona Sans", system-ui, sans-serif;
+  /* Default sans is Inter (the Vacei body face); Mona Sans stays as fallback. */
+  --font-sans: var(--font-inter), "Inter", "Mona Sans", system-ui, sans-serif;
 
   /* Custom breakpoint at 1200px */
   --breakpoint-1200: 1200px;

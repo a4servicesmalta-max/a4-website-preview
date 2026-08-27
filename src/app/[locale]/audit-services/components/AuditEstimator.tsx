@@ -304,7 +304,7 @@ export function AuditEstimator() {
   return (
     <section
       id="estimate"
-      style={{ background: "linear-gradient(180deg, #22271F 0%, #171A16 52%, #10130F 100%)", padding: "clamp(56px,8vw,88px) 0 clamp(60px,8vw,96px)" }}
+      style={{ background: "#000", borderBottom: "1px solid var(--a4-hairline-dark)", padding: "clamp(56px,8vw,88px) 0 clamp(60px,8vw,96px)" }}
     >
       <Container>
         <div style={{ textAlign: "center" }}>
@@ -313,7 +313,7 @@ export function AuditEstimator() {
             Your audit fee, in sixty seconds
           </h2>
           <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 15.5, lineHeight: 1.7, color: "rgba(255,255,255,.76)", margin: "14px auto 0", maxWidth: "56ch", textWrap: "pretty" }}>
-            Four quick questions — the fee builds as you answer. Or send last year&apos;s statements: we run a real compliance review on them and the planning saving comes off your fee.
+            Four quick questions — the fee builds as you answer. Or send last year&apos;s statements and we run a real compliance review on them.
           </p>
         </div>
 
@@ -371,14 +371,11 @@ export function AuditEstimator() {
                     <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
                     <Button variant="outline-light" size="md" onClick={() => openModal("consultation")}>Book a consultation</Button>
                   </div>
-                  {/* The upload lives INSIDE the questions now, not only as a
-                      mode toggle above them. `answers` and the review state are
-                      separate pieces of state, so opening the upload keeps
-                      every answer — which is what makes it safe to offer here,
-                      at the point the visitor is looking at a fee and can see
-                      what sending the file would take off it. */}
-                  <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", background: "var(--a4-surface-soft)" }}>
-                    {data || held !== null ? (
+                  {/* Upload-and-save upsell removed (owner 2026-08-27) — the
+                      box now only appears as confirmation once statements have
+                      actually been read or a held quote applies. */}
+                  {(data || held !== null) && (
+                    <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", background: "var(--a4-surface-soft)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
                         <Icon name="file-check-2" size={16} color="var(--a4-primary)" />
                         <span>
@@ -390,18 +387,8 @@ export function AuditEstimator() {
                           )}
                         </span>
                       </div>
-                    ) : (
-                      <>
-                        <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>Have last year&apos;s figures? Attach them and this fee comes down.</div>
-                        <div style={{ marginTop: 4, fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.55, color: "var(--a4-mute)" }}>
-                          Financial statements or management accounts, PDF or Word. We run a real disclosure, consistency and casting review on the file, send you the findings, and take the planning saving off the fee. Your answers here are kept.
-                        </div>
-                        <Button variant="outline-light" size="sm" onClick={() => setAmode("docs")} style={{ marginTop: 12 }}>
-                          <Icon name="upload-cloud" size={15} color="var(--a4-primary)" /> Upload last year&apos;s FS or management accounts
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "10px 0 0" }}>Fixed after a short scoping call. Never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}</p>
                 </div>
               ) : (
@@ -422,8 +409,8 @@ export function AuditEstimator() {
             </div>
 
             {/* fee panel */}
-            <div className="af-panel" style={{ background: "#000", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 90, textAlign: "left" }}>
-              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Estimated audit fee</div>
+            <div className="af-panel" style={{ background: "linear-gradient(180deg, #4f55f1 0%, #494fdf 50%, #3a40c4 100%)", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 90, textAlign: "left" }}>
+              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(255,255,255,.72)" }}>Estimated audit fee</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontVariantNumeric: "tabular-nums", fontSize: 38, letterSpacing: "-1.5px", lineHeight: 1 }}>{feeBig}</span>
                 {!q.refer && <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)" }}>/ year</span>}
@@ -436,15 +423,8 @@ export function AuditEstimator() {
                   </span>
                 ))}
               </div>
-              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "var(--a4-stone)", margin: "18px 0 0", paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)" }}>{feeNote}</p>
+              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "rgba(255,255,255,.72)", margin: "18px 0 0", paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)" }}>{feeNote}</p>
               <Button variant="primary" size="md" onClick={() => openModal("proposal")} style={{ width: "100%", marginTop: 18 }}>{ctaLabel} <Icon name="arrow-right" size={16} color="#000" /></Button>
-              {/* Reachable from every question, not just the last one — and it
-                  keeps the answers, so there is nothing to lose by trying it. */}
-              {!data && held === null && (
-                <button type="button" onClick={() => setAmode("docs")} style={{ width: "100%", marginTop: 10, height: 38, borderRadius: "var(--a4-r-full)", border: "1px solid rgba(255,255,255,.28)", background: "transparent", color: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
-                  Upload last year&apos;s FS instead — the fee drops
-                </button>
-              )}
             </div>
           </div>
         ) : (
