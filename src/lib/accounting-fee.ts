@@ -79,9 +79,10 @@ export type AccountingInput = {
    */
   expenses: ExpenseBand | "";
   /**
-   * Bank accounts to reconcile, 1..8. EVERY account is priced, the first
-   * included — bankAccountMonthly() each (mt-2026-08-26d-banks) — the same
-   * identity the wizard, /quote and vacei.com price on. Optional on the wire (an older caller sends none)
+   * Bank accounts to reconcile, 1..8. The FIRST is included in the
+   * bookkeeping fee; each EXTRA account is bankAccountMonthly()
+   * (mt-2026-08-27-entry) — the same identity the wizard, /quote and
+   * vacei.com price on. Optional on the wire (an older caller sends none)
    * and defaults to ONE, which is the floor, not a guess downward: the page
    * asks the question, so a visitor with more accounts has said so.
    */
@@ -164,9 +165,11 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   const banks = Math.min(8, Math.max(1, Math.floor(Number(s.banks) || 1)));
   const uplift = BOOKKEEPING_VOLUME_UPLIFT[s.txn] ?? 0;
   if (uplift > 0) monthly.push({ k: "Bookkeeping · volume uplift", v: uplift });
-  // Rounded per account, THEN multiplied — the label is the arithmetic.
+  // Rounded per account, THEN multiplied — the label is the arithmetic. The
+  // FIRST account is included in the bookkeeping fee (mt-2026-08-27-entry),
+  // so the line prices only the extras and is absent at one account.
   const perAccount = bankAccountMonthly(entity, expenses, s.txn) ?? 0;
-  monthly.push({ k: `Bank accounts · ${banks} × €${perAccount}`, v: banks * perAccount });
+  if (banks > 1) monthly.push({ k: `Additional bank accounts · ${banks - 1} × €${perAccount}`, v: (banks - 1) * perAccount });
 
   if (s.head > 0) {
     // Marginal tiers, NOT risk-multiplied (findings A2 + A3) — and the label

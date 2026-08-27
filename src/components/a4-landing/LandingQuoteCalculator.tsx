@@ -18,8 +18,8 @@ import { trackConversion } from "@/lib/analytics";
 // Every figure is read from the pack (A4_QUOTE_PACK_VERSION) — the same tables
 // vacei.com and the portal backend carry. Bookkeeping is priced by ENTITY ×
 // MONTHLY EXPENSES across nine bands, plus a transaction-band uplift and a
-// per-account bank fee — every account, the first included, at €40/mo plus
-// 15% of the bookkeeping fee (mt-2026-08-26d-banks).
+// per-account bank fee for accounts BEYOND the first — the first is included
+// in the fee — at €40/mo plus 15% of the bookkeeping fee (mt-2026-08-27-entry).
 
 const QSECT: [string, string, keyof typeof QTIERS][] = [
   ["shop", "Shop, trade or services", "standard"],
@@ -80,7 +80,7 @@ export type QState = {
   step: number;
   sector: string;
   txn: string;
-  /** Bank accounts to reconcile — 1..8; every one is priced, the first included (EUR 40 + 15% of the bookkeeping fee, each). */
+  /** Bank accounts to reconcile — 1..8; the first is included in the bookkeeping fee, each extra is EUR 40 + 15% of the bookkeeping fee (mt-2026-08-27-entry). */
   banks: number;
   /** Self-employed or a company — with `expenses`, what sets the bookkeeping price. */
   entity: ManagedEntity;
@@ -187,8 +187,10 @@ export function qCalc(q: QState, now: Date = new Date()): Calc {
     mo.push({ n: "Bookkeeping", e: (entity === "sole" ? "self-employed" : "company") + ", " + bandLabel.toLowerCase() + " a month of expenses — you upload, we keep the books, an accountant approves every entry", v: rate });
     const up = BOOKKEEPING_VOLUME_UPLIFT[q.txn as TxnBand] ?? 0;
     if (up > 0) mo.push({ n: "Bookkeeping — volume uplift", e: "your transaction volume adds to the bookkeeping work", v: up });
+    // mt-2026-08-27-entry: the first account is included in the bookkeeping
+    // fee; the line prices only the extras and is absent at one account.
     const per = bankAccountMonthly(entity, band as ExpenseBand, q.txn as TxnBand) ?? 0;
-    mo.push({ n: "Bank accounts", e: nBanks + " × €" + per + " — every account reconciled separately, each at €" + BANK_ACCOUNT.baseMonthly + " plus " + Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100) + "% of the bookkeeping fee", v: nBanks * per });
+    if (nBanks > 1) mo.push({ n: "Additional bank accounts", e: (nBanks - 1) + " × €" + per + " — the first account is included; each extra is €" + BANK_ACCOUNT.baseMonthly + " plus " + Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100) + "% of the bookkeeping fee, reconciled separately", v: (nBanks - 1) * per });
   }
   if (q.pay === "we" && q.head > 0) {
     // Marginal tiers, NO risk multiplier. The label spells out the exact sum.
@@ -457,8 +459,8 @@ export function LandingQuoteCalculator() {
   // PICKED — and "from the entry price" until one is.
   const entityOpts: Opt[] = QENTITY.map(([k, label]) => {
     const atBand = q.expenses === "" ? null : managedMonthly(k, q.expenses);
-    // Unpicked: the ALL-IN entry floor (one bank account included), €68/€96 —
-    // the same figure vacei's entity pills show, never the bare base rate.
+    // Unpicked: the entry floor (one bank account included in the fee),
+    // €24/€49 — the same figure vacei's entity pills show.
     return { key: k, label, sub: atBand != null ? "base €" + atBand + " / month" : "from €" + (k === "sole" ? BOOKKEEPING_FROM : BOOKKEEPING_COMPANY) + " / month", pick: () => setQ({ entity: k }), on: entity === k };
   });
   const expEcho = bandRate != null
@@ -706,7 +708,7 @@ export function LandingQuoteCalculator() {
               {isVol && (
                 <div style={BOX}>
                   <div style={SUB_LABEL}>Bank accounts</div>
-                  <div style={SUB_HELP}>Every account is reconciled separately and every account is priced, the first included: €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee, each.</div>
+                  <div style={SUB_HELP}>Every account is reconciled separately. The first is included in the bookkeeping fee; each extra account is €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee.</div>
                   <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16 }}>
                     <input type="range" min={1} max={8} step={1} value={q.banks || 1} onChange={(e) => setQ({ banks: +e.target.value })} aria-label="Bank accounts" style={{ flex: 1, accentColor: "var(--a4-primary)", cursor: "pointer" }} />
                     <span style={{ minWidth: 92, textAlign: "right", fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" }}>{(q.banks || 1) + ((q.banks || 1) === 1 ? " account" : " accounts")}</span>

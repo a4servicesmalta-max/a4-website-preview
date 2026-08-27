@@ -11,11 +11,12 @@
  * and by what the business spends each month (nine bands).
  *
  * Copy conventions every surface reading this file must follow:
- *   - "from €68/mo self-employed · from €96/mo company" — both prices, never
- *     one alone, and ALWAYS with "from". Since mt-2026-08-26d-banks these are
- *     ALL-IN floors: entry band, lowest volume, ONE bank account (which is
- *     priced like every other — no copy may say the first account is free).
- *     The base rates alone (€24 / €49) are BOOKKEEPING_BASE_FROM / _COMPANY
+ *   - "from €24/mo self-employed · from €49/mo company" — both prices, never
+ *     one alone, and ALWAYS with "from". Since mt-2026-08-27-entry these are
+ *     the entry-band rates WITH the one bank account included (the owner's
+ *     2026-08-27 ruling reversed 26d's every-account pricing for the first
+ *     account; additional accounts are still €40 + 15% of the bookkeeping
+ *     fee, each). BOOKKEEPING_BASE_FROM / _COMPANY carry the same figures.
  *   - the "from" is mandatory as of pack mt-2026-08-14-volume. These are the
  *     ENTRY expenses band, the cheapest of nine; the old rule said the
  *     opposite ("never 'from €X' — there are exactly two prices") because
@@ -41,11 +42,11 @@ export type ManagedOfferTier = {
   id: ManagedEntity;
   name: string;
   /**
-   * ENTRY-BAND monthly price INCLUDING ONE BANK ACCOUNT — a "from", not a
+   * ENTRY-BAND monthly price, the one bank account included — a "from", not a
    * flat rate. The real price is set by monthly expenses across nine bands,
-   * transaction volume and the account count; this is the cheapest of them,
-   * so every surface showing it must say "from". A backdated month costs
-   * whatever the client's own full monthly costs.
+   * transaction volume and additional bank accounts; this is the cheapest of
+   * them, so every surface showing it must say "from". A backdated month
+   * costs whatever the client's own full monthly costs.
    */
   price: number;
   tagline: string;
