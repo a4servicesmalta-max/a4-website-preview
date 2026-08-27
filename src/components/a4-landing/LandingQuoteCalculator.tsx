@@ -905,6 +905,9 @@ export function LandingQuoteCalculator() {
 
         <Reveal delay={140}>
           <p style={{ margin: "28px auto 0", textAlign: "center", fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-on-dark-mute)" }}>The price appears instantly — nothing is gated behind an email. All fees exclude VAT.</p>
+          {/* Same line, same wording, on the vacei.com homepage (index.html) — the
+              two homepages reference the audit landing page identically. */}
+          <p style={{ margin: "10px auto 0", textAlign: "center", fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-on-dark-mute)" }}>Need a statutory audit? <a href="/audit-services" style={{ color: "#fff", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 3 }}>Get a financial audit quote</a> — four questions price it instantly on the audit page.</p>
         </Reveal>
       </Container>
 
