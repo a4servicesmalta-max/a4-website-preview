@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { AUDIT_YEARLY, BOOKKEEPING_VOLUME_UPLIFT, BOOKKEEPING_MANAGED_MONTHLY, bankAccountMonthly, BANK_ACCOUNT, taxReturnYearly, VAT_MONTHLY, VAT_RULES, REVIEW_ENGAGEMENT_FACTOR, REGISTERED_OFFICE_YEARLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXPENSE_BANDS, LAUNCH_PROMO, catchUpAmount, catchUpLabel, fullMonthlyBookkeeping, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, BOOKKEEPING_VOLUME_UPLIFT, BOOKKEEPING_MANAGED_MONTHLY, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, bankAccountMonthly, BANK_ACCOUNT, taxReturnYearly, VAT_MONTHLY, VAT_RULES, REVIEW_ENGAGEMENT_FACTOR, REGISTERED_OFFICE_YEARLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXPENSE_BANDS, LAUNCH_PROMO, catchUpAmount, catchUpLabel, fullMonthlyBookkeeping, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 import { independenceFlags } from "@/lib/independence";
 import { catchUpMonthsFrom, formatStartMonth, ongoingStartMonth } from "@/lib/accounting-fee";
@@ -457,7 +457,9 @@ export function LandingQuoteCalculator() {
   // PICKED — and "from the entry price" until one is.
   const entityOpts: Opt[] = QENTITY.map(([k, label]) => {
     const atBand = q.expenses === "" ? null : managedMonthly(k, q.expenses);
-    return { key: k, label, sub: atBand != null ? "base €" + atBand + " / month" : "from €" + BOOKKEEPING_MANAGED_MONTHLY[k]["0-10k"] + " / month", pick: () => setQ({ entity: k }), on: entity === k };
+    // Unpicked: the ALL-IN entry floor (one bank account included), €68/€96 —
+    // the same figure vacei's entity pills show, never the bare base rate.
+    return { key: k, label, sub: atBand != null ? "base €" + atBand + " / month" : "from €" + (k === "sole" ? BOOKKEEPING_FROM : BOOKKEEPING_COMPANY) + " / month", pick: () => setQ({ entity: k }), on: entity === k };
   });
   const expEcho = bandRate != null
     ? "Your base bookkeeping is €" + bandRate + " a month at that spend, as a " + (entity === "sole" ? "self-employed person" : "company") + ". Switch the entity above if that is wrong."
