@@ -119,10 +119,12 @@ export function ComplianceJourney() {
       if (!clusterEls.length) return;
 
       // Framing: how large the world is drawn, and where the focused node sits.
+      // Divisors are the visible world size in design units — smaller = larger
+      // artwork (owner 2026-08-27: the nodes read too small at /1500).
       const scale = narrow
-        ? Math.min(vp.clientWidth / 760, vp.clientHeight / 1700)
-        : Math.min(vp.clientWidth / 1500, vp.clientHeight / 950);
-      const anchorX = narrow ? vp.clientWidth * 0.5 : vp.clientWidth * 0.63;
+        ? Math.min(vp.clientWidth / 660, vp.clientHeight / 1480)
+        : Math.min(vp.clientWidth / 1180, vp.clientHeight / 780);
+      const anchorX = narrow ? vp.clientWidth * 0.5 : vp.clientWidth * 0.65;
       const anchorY = narrow ? vp.clientHeight * 0.28 : vp.clientHeight * 0.5;
 
       // Place every cluster for a given camera-x. Each carries its own

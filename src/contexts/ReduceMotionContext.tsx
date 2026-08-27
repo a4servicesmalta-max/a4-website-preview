@@ -101,6 +101,25 @@ export function useReduceMotion() {
   return useContext(ReduceMotionContext);
 }
 
+/**
+ * The REAL `prefers-reduced-motion` media query, nothing else.
+ * `useReduceMotion()` above also returns true for every phone-width window and
+ * all of Safari/iOS — right for heavy effects, wrong for cheap signature
+ * animations (hero typewriter, scroll-zoom video) that should only stop when
+ * the visitor's OS explicitly asks for reduced motion.
+ */
+export function usePrefersReducedMotion() {
+  const [prefers, setPrefers] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPrefers(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+  return prefers;
+}
+
 export function usePerformance() {
   return useContext(PerformanceContext);
 }
