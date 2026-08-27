@@ -9,7 +9,7 @@ import { INDEPENDENCE_BOOKKEEPING } from "@/lib/independence";
 // Books at €39/mo SOFTWARE ONLY, which is exactly the SME tier the owner
 // removed on 2026-08-13. Prices live in src/data/a4QuotePack.ts.
 const PLAN_LINES = [
-  "Unlimited documents — no per-document fees",
+  "Priced by your monthly volume — no per-document fees",
   "We code and post every document",
   "Bank reconciled monthly, not guessed",
   "Reports and Excel export",
@@ -60,9 +60,10 @@ export function A4BooksPromo() {
             >
               You send us the paperwork and we keep the books: every document
               coded, the bank reconciled, and figures you can rely on each month.
-              from €{BOOKKEEPING_FROM} a month if you are self-employed,
+              From €{BOOKKEEPING_FROM} a month if you are self-employed,
               from €{BOOKKEEPING_COMPANY} for a company, including one bank
-              account — no per-document fees, no hourly meters.
+              account. The fee follows your monthly volume — no per-document
+              fees, no hourly meters.
             </p>
             <p
               className="a4-font-body"
@@ -105,9 +106,9 @@ export function A4BooksPromo() {
               }}
             >
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                {/* "from" is load-bearing: €68 is the entry expenses band with one
-                    bank account, not a flat rate. Nine bands, volume and further
-                    accounts all move it (mt-2026-08-26d-banks). */}
+                {/* "from" is load-bearing: €24 is the entry expenses band (one
+                    bank account included), not a flat rate. Nine bands, volume
+                    and additional accounts all move it (mt-2026-08-27-entry). */}
                 <span className="a4-font-body" style={{ fontSize: 15, color: "var(--a4-on-dark-mute)" }}>
                   from
                 </span>

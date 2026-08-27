@@ -227,10 +227,11 @@ const isIntWithin = (n: unknown, min: number, max: number): boolean =>
 type PricedItem = QuoteLineItem & { registry?: number };
 
 /** Price one item into its LINES. Returns null when the item cannot be
- *  priced (never throws). Bookkeeping emits two or three lines since
- *  mt-2026-08-26d-banks (base, volume uplift when non-zero, and ALWAYS a
- *  bank-accounts line — every account is priced, the first included) so
- *  the arithmetic stays reproducible; everything else emits one.
+ *  priced (never throws). Bookkeeping emits one to three lines since
+ *  mt-2026-08-27-entry (base, volume uplift when non-zero, and an
+ *  additional-accounts line only when there is more than one account — the
+ *  first is included in the fee) so the arithmetic stays reproducible;
+ *  everything else emits one.
  *  `promoNow` reaches only the catch-up arm — the one line whose promo
  *  discount is written into the line itself (finding C3). */
 function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem[] | null {
@@ -258,7 +259,8 @@ function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem[] 
       const lines = [mo(`Managed bookkeeping — ${MANAGED_ENTITY_LABELS[item.entity]}`, price)];
       if (uplift > 0) lines.push(mo("Bookkeeping — volume uplift", uplift));
       // Rounded per account, THEN multiplied — the label IS the arithmetic.
-      lines.push(mo(`Bank accounts · ${item.banks} × €${perAccount}`, item.banks * perAccount));
+      // The first account is included (mt-2026-08-27-entry): extras only.
+      if (item.banks > 1) lines.push(mo(`Additional bank accounts · ${item.banks - 1} × €${perAccount}`, (item.banks - 1) * perAccount));
       return lines;
     }
     case "vat": {

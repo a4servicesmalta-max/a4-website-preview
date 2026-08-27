@@ -2,9 +2,10 @@
 
 /*
  * Bookkeeping figures come from the quote pack, never hand-typed. Under pack
- * mt-2026-08-26d-banks the price is set by MONTHLY EXPENSES across nine
- * bands, plus transaction volume, plus a fee for EVERY bank account — so
- * €68 / €96 are the entry band with one account: a "from", not a flat fee.
+ * mt-2026-08-27-entry the price is set by MONTHLY EXPENSES across nine
+ * bands, plus transaction volume, plus a fee for each bank account BEYOND
+ * the first (the first is included) — so €24 / €49 are the entry band with
+ * one account: a "from", not a flat fee.
  * Copy here must say "from" and must never claim the price does not move
  * with volume or that the first account is free.
  */
