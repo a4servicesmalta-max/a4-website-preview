@@ -25,19 +25,26 @@ describe("paid landing page message contracts", () => {
     expect(auditParts.match(/href="\/book-a-call"/g)).toHaveLength(2);
   });
 
-  it("keeps the audit landing page on the approved charcoal and lime palette", () => {
+  it("keeps the audit landing page on the merged palette — lime accents on the black estimator, blue fee panel", () => {
+    // The 27-Aug design pass (a4-website-preview #41, deployed) made the
+    // estimator section black with a BLUE fee panel; this branch's lime/charcoal
+    // accents survive on the controls. The blue hexes are therefore allowed
+    // again, but only on the fee panel.
     expect(auditParts).toContain('className="a4-audit-page"');
     expect(auditEstimator).toContain("#DDF72A");
     expect(auditEstimator).toContain("#171A16");
-    expect(auditEstimator).not.toMatch(/#4f55f1|#494fdf|#3a40c4/i);
+    expect(auditEstimator).toContain('background: "#000"');
+    expect(auditEstimator).toContain('className="af-panel" style={{ background: "linear-gradient(180deg, #4f55f1 0%, #494fdf 50%, #3a40c4 100%)"');
   });
 
   it("matches paid bookkeeping and audit price messages to the quote pack", () => {
     expect(bookkeepingLanding).toContain("BOOKKEEPING_FROM");
     expect(bookkeepingLanding).toContain("BOOKKEEPING_COMPANY");
     expect(bookkeepingLanding).toContain("including one bank account");
-    expect(bookkeepingPage).toContain("from €68/month self-employed, €96/month for a company, including one bank account");
-    expect(quotePack).toContain("Math.max(1, Math.floor(Number(banks) || 1)) * per");
+    // mt-2026-08-27-entry: the entry floors are €24/€49 with the first bank
+    // account included; extras price at (banks − 1) × perAccount.
+    expect(bookkeepingPage).toContain("from €24/month self-employed, €49/month for a company, including one bank account");
+    expect(quotePack).toContain("(Math.max(1, Math.floor(Number(banks) || 1)) - 1) * per");
     expect(auditEstimator).toContain("From €${TAX_RETURN_FROM} a year");
   });
 
