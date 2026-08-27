@@ -68,7 +68,9 @@ export function FAQ() {
   return (
     <section style={{ background: "var(--a4-canvas-light)", padding: "clamp(64px,9vw,104px) 0" }}>
       <Container style={{ display: "flex", gap: 64, flexWrap: "wrap", alignItems: "flex-start" }}>
-        <Reveal style={{ flex: "1 1 320px", minWidth: 280, position: "sticky", top: 96 }}>
+        {/* Sticky only where the columns sit side by side — stacked on mobile,
+            a stuck header travels the whole section and paints over the list. */}
+        <Reveal className="a4-faq-aside" style={{ flex: "1 1 320px", minWidth: 280 }}>
           <Eyebrow>FAQ</Eyebrow>
           <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "var(--a4-ink)", fontSize: "clamp(32px,4vw,48px)", lineHeight: 1.05, letterSpacing: "-.02em", margin: "18px 0 0", textWrap: "balance" }}>
             Frequently asked questions
