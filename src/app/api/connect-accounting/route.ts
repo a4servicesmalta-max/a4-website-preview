@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { isVerified } from "@/lib/email-verify";
+import { checkVerified } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
 
 export const runtime = "nodejs";
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
     if (!LABEL[provider]) return NextResponse.json({ error: "Choose your accounting software." }, { status: 400 });
     if (consent !== true && consent !== "true") return NextResponse.json({ error: "Consent is required." }, { status: 400 });
-    if (!isVerified(email, verifiedToken)) return NextResponse.json({ error: "Please confirm your email first." }, { status: 401 });
+    if (!(await checkVerified(email, verifiedToken))) return NextResponse.json({ error: "Please confirm your email first." }, { status: 401 });
 
     const label = LABEL[provider];
     await pushToPortal({

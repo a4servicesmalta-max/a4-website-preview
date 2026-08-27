@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/email-verify", () => ({ isVerified: vi.fn(() => true) }));
+vi.mock("@/lib/portal-verify", () => ({ checkVerified: vi.fn(async () => true), sendAuditQuoteEmail: vi.fn(async () => false) }));
 vi.mock("@/lib/portal", () => ({ pushToPortal: vi.fn(async () => {}) }));
 vi.mock("@/lib/fs-review-engine", () => ({ engineFetch: vi.fn() }));
 vi.mock("@/lib/ai-review", () => ({ augmentWithAiCommentary: vi.fn(async (d: unknown) => d) }));
 
-import { isVerified } from "@/lib/email-verify";
+import { checkVerified, sendAuditQuoteEmail } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
 import { engineFetch } from "@/lib/fs-review-engine";
 import { augmentWithAiCommentary } from "@/lib/ai-review";
@@ -33,7 +33,7 @@ const engineOkBody = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  (isVerified as any).mockReturnValue(true);
+  (checkVerified as any).mockResolvedValue(true);
   process.env.A4_FSREVIEW_URL = "https://engine.test";
 });
 
@@ -95,4 +95,40 @@ it("skips the AI step entirely when the engine call fails, and still pushes to t
   expect(augmentWithAiCommentary).not.toHaveBeenCalled();
   expect(pushToPortal).toHaveBeenCalledTimes(1);
   expect(res.status).toBe(502);
+});
+
+describe("backend email verification gate + quote email", () => {
+  it("401s (fail closed) when the backend check does not confirm the token", async () => {
+    (checkVerified as any).mockResolvedValue(false);
+    const res = await POST(form(baseFields()));
+    expect(res.status).toBe(401);
+    expect(engineFetch).not.toHaveBeenCalled();
+  });
+
+  it("emails the quote via the backend and reports emailed:true", async () => {
+    (engineFetch as any).mockResolvedValue(new Response(JSON.stringify(engineOkBody), { status: 200 }));
+    (sendAuditQuoteEmail as any).mockResolvedValue(true);
+    const res = await POST(form({ ...baseFields(), name: "Ann" }));
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.emailed).toBe(true);
+    expect(sendAuditQuoteEmail).toHaveBeenCalledWith({ email: "a@b.com", verifiedToken: "ok", name: "Ann", fee: 900, docKind: "audited_fs" });
+    expect(JSON.stringify(body)).not.toContain("secret-internal-basis");
+  });
+
+  it("still returns 200 with emailed:false when the quote email fails", async () => {
+    (engineFetch as any).mockResolvedValue(new Response(JSON.stringify(engineOkBody), { status: 200 }));
+    (sendAuditQuoteEmail as any).mockResolvedValue(false);
+    const res = await POST(form(baseFields()));
+    expect(res.status).toBe(200);
+    expect((await res.json()).emailed).toBe(false);
+  });
+
+  it("does not email when the engine returned no priced quote", async () => {
+    (engineFetch as any).mockResolvedValue(new Response(JSON.stringify({ ...engineOkBody, quote: null }), { status: 200 }));
+    const res = await POST(form(baseFields()));
+    expect(res.status).toBe(200);
+    expect(sendAuditQuoteEmail).not.toHaveBeenCalled();
+    expect((await res.json()).emailed).toBe(false);
+  });
 });

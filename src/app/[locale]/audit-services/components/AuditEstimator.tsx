@@ -433,6 +433,11 @@ export function AuditEstimator() {
                       <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.6, color: "var(--a4-stone)", margin: "12px 0 0" }}>
                         Read from the {data.quote?.docKind === "management_accounts" ? "management accounts" : "statements"} you sent{answers.year === "multi" ? `, per year — ${labelOf(NYRS, answers.nyrs).toLowerCase()} to audit` : ""}. Fixed after one short scoping call. Excludes VAT.
                       </p>
+                      {data.emailed && (
+                        <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.6, color: "var(--a4-stone)", margin: "8px 0 0" }}>
+                          We&apos;ve emailed this quote to {contact.email}, with a link to book your scoping call.
+                        </p>
+                      )}
                     </>
                   ) : (
                     <>

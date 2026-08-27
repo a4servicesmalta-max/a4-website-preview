@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { isVerified } from "@/lib/email-verify";
+import { checkVerified, sendAuditQuoteEmail } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
 import { pushLeadToPortal } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
     if (consent !== "true") return NextResponse.json({ error: "Consent is required to process the file." }, { status: 400 });
     // Gate the AI engine behind a confirmed email — never spend a review on an unverified address.
-    if (!isVerified(email, verifiedToken)) {
+    if (!(await checkVerified(email, verifiedToken))) {
       return NextResponse.json({ error: "Please confirm your email before running the review." }, { status: 401 });
     }
 
@@ -156,11 +156,17 @@ export async function POST(req: NextRequest) {
     // company cannot be quoted two different fees by the same site — and
     // cannot shop the tool by declining to upload. Bound to the verified
     // email, which we already hold at this point.
-    const res = NextResponse.json(clientPayload);
-    if (fullQuote && typeof fullQuote.fee === "number" && fullQuote.fee > 0) {
+    const priced = !!fullQuote && typeof fullQuote.fee === "number" && fullQuote.fee > 0;
+    // The backend emails the prospect their quote (with a booking link). Best
+    // effort: a mail failure never fails the review the client is waiting on.
+    const emailed = priced
+      ? await sendAuditQuoteEmail({ email, verifiedToken, name, fee: fullQuote!.fee, docKind: fullQuote!.docKind })
+      : false;
+    const res = NextResponse.json({ ...clientPayload, emailed });
+    if (priced) {
       res.cookies.set(
         LOCK_COOKIE,
-        issueQuoteLock(fullQuote.fee, "audit", email),
+        issueQuoteLock(fullQuote!.fee, "audit", email),
         lockCookieOptions(),
       );
     }

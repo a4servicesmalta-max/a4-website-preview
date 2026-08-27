@@ -11,7 +11,7 @@ import crypto from "crypto";
  * until it produces the cheapest number.
  *
  * Identity, in the order it is trusted (owner decision, 2026-08-25):
- *   1. VERIFIED EMAIL. The upload path already gates on `isVerified`, so this
+ *   1. VERIFIED EMAIL. The upload path already gates on `checkVerified`, so this
  *      is a real, confirmed address, and it survives a new device.
  *   2. SIGNED COOKIE. Covers the literal case in the brief — a new tab shares
  *      cookies with the tab that produced the quote — and covers a visitor who
@@ -27,7 +27,7 @@ import crypto from "crypto";
  * The lock is a signed token, not a database row: the payload carries the fee
  * and rides in the cookie, so a client can present it but cannot edit it — the
  * HMAC is recomputed server-side on every read. Same construction as
- * `email-verify.ts`; the two are deliberately the same shape.
+ * the old `email-verify.ts`; the two are deliberately the same shape.
  */
 
 /** 30 days — the owner's chosen validity, and a normal Malta sales cycle. */
