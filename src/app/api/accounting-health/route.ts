@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { isVerified } from "@/lib/email-verify";
+import { checkVerified } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
 import { pushLeadToPortal } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     if (!tbFile && !glFile) return NextResponse.json({ error: "Upload a trial balance and/or general ledger." }, { status: 400 });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
     if (consent !== "true") return NextResponse.json({ error: "Consent is required to process the files." }, { status: 400 });
-    if (!isVerified(email, verifiedToken)) return NextResponse.json({ error: "Please confirm your email before running the review." }, { status: 401 });
+    if (!(await checkVerified(email, verifiedToken))) return NextResponse.json({ error: "Please confirm your email before running the review." }, { status: 401 });
     if (tbFile && !okType(tbFile, TB_TYPES)) return NextResponse.json({ error: "Trial balance must be CSV, Excel or PDF." }, { status: 400 });
     if (glFile && !okType(glFile, GL_TYPES)) return NextResponse.json({ error: "General ledger must be CSV or Excel." }, { status: 400 });
     if ((tbFile?.size || 0) > 20 * 1024 * 1024 || (glFile?.size || 0) > 20 * 1024 * 1024)
