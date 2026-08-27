@@ -3,14 +3,17 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
-import { useReduceMotion } from "@/contexts/ReduceMotionContext";
+import { usePrefersReducedMotion } from "@/contexts/ReduceMotionContext";
 // Bookkeeping figures come from the quote pack. Under mt-2026-08-14-volume they
 // are the ENTRY band of nine, priced by monthly expenses — always shown as "from".
 import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
 
 /** Typewriter cycle for the hero — types/deletes each word with a caret. Static under reduced motion. */
 function TypeCycle({ words, fallback }: { words: string[]; fallback: string }) {
-  const reduceMotion = useReduceMotion();
+  // Real prefers-reduced-motion only — the broad useReduceMotion() heuristic
+  // (any window under 768px, all of Safari) froze the typewriter on setups
+  // where every other scroll animation still ran.
+  const reduceMotion = usePrefersReducedMotion();
   const [text, setText] = useState(words[0]);
   const stateRef = useRef({ word: 0, len: words[0].length, deleting: false });
 

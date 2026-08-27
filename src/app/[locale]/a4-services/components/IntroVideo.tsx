@@ -3,7 +3,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Container, Eyebrow, Reveal } from "@/components/a4-landing/Primitives";
-import { useReduceMotion } from "@/contexts/ReduceMotionContext";
+import { usePrefersReducedMotion } from "@/contexts/ReduceMotionContext";
 
 const VIDEO_SRC = "/assets/videos/a4-advantages.mp4";
 const POSTER_SRC = "/assets/videos/a4-advantages-poster.jpg";
@@ -17,7 +17,9 @@ const POSTER_SRC = "/assets/videos/a4-advantages-poster.jpg";
  * same video unmuted, time-synced and with native controls.
  */
 export function IntroVideo() {
-  const reduceMotion = useReduceMotion();
+  // Real prefers-reduced-motion only (see TypeCycle) — the scroll-zoom is a
+  // cheap rAF transform and should run on phones and Safari too.
+  const reduceMotion = usePrefersReducedMotion();
   const cardRef = useRef(null);
   const innerRef = useRef(null);
   const videoRef = useRef(null);
