@@ -63,6 +63,9 @@ function AuditHero() {
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 620, margin: "24px auto 0", textWrap: "pretty" }}>
             Every company in Malta must file audited financial statements. As a licensed audit firm, A4 delivers a rigorous, independent, on-time audit — with a fixed fee agreed up front, <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;{AUDIT_PRE_TRADING}/year</strong>. Where a review engagement is enough, it is {Math.round(REVIEW_ENGAGEMENT_FACTOR * 100)}% of the audit fee.
           </p>
+          <p style={{ fontFamily: "var(--a4-font-body)", color: "#fff", fontSize: 17, fontWeight: 500, lineHeight: 1.55, maxWidth: 620, margin: "18px auto 0", textWrap: "pretty" }}>
+            The machines do the volume. <span style={{ color: "var(--a4-primary-bright)" }}>Our auditors do the judgement, the risk and the sign-off.</span>
+          </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="#estimate">Get your audit estimate <Icon name="arrow-right" size={18} color="#000" /></Button>
             <Button variant="outline-dark" size="lg" href="#estimate">Book a consultation</Button>
@@ -99,6 +102,36 @@ function WhyMalta() {
               <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 15, lineHeight: 1.55, color: "var(--a4-mute)", margin: "9px 0 0", textWrap: "pretty" }}>{p.s}</p>
             </Reveal>
           ))}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+/** AI-native positioning band — audit rebuilt around AI, licensed auditors on the judgement and the opinion. */
+function AuditManifesto() {
+  return (
+    <section style={{ background: "#000", padding: "clamp(64px,9vw,104px) 0" }}>
+      <Container>
+        <div style={{ textAlign: "center" }}>
+          <Reveal>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14 }}>
+              <span style={{ width: 28, height: 1, background: "var(--a4-hairline-strong)" }} />
+              <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-on-dark-mute)" }}>Built AI-native</span>
+              <span style={{ width: 28, height: 1, background: "var(--a4-hairline-strong)" }} />
+            </div>
+            <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(32px,4.4vw,58px)", lineHeight: 1.1, letterSpacing: "-.02em", margin: "24px auto 0", maxWidth: 780, textWrap: "balance" }}>
+              We&rsquo;re not adding AI to audit.<br /><span style={{ color: "var(--a4-primary-bright)" }}>We&rsquo;re rebuilding it.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={120}>
+            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: "clamp(16px,1.7vw,19px)", lineHeight: 1.65, color: "var(--a4-on-dark-mute)", margin: "26px auto 0", maxWidth: 680, textWrap: "pretty" }}>
+              Audit is the last layer of finance nobody rebuilt — decades-old methods, brilliant people buried in repetitive work, fees billed by the hour. A4 works the other way around. The machines do the volume: collecting evidence, reconciling, documenting, analysing every transaction. Our licensed auditors do the judgement, the risk, the call and the hard conversations — and they sign the opinion.
+            </p>
+            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: "clamp(16px,1.7vw,19px)", lineHeight: 1.65, color: "var(--a4-on-dark)", margin: "18px auto 0", maxWidth: 680, textWrap: "pretty" }}>
+              AI agents check every transaction in real time. Licensed auditors own the judgement and the sign-off. <strong style={{ color: "#fff", fontWeight: 600 }}>Faster closes, deeper assurance, no year-end surprises</strong> — at a fixed fee agreed up front.
+            </p>
+          </Reveal>
         </div>
       </Container>
     </section>
@@ -242,6 +275,7 @@ export function AuditApp() {
         <AuditHero />
         <WhyMalta />
         <AuditEstimator />
+        <AuditManifesto />
         <AuditServices />
         <AuditProcess />
         <AuditFAQ />
