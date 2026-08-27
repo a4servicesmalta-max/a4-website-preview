@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
     // pushed to the portal and no email is sent — but answer 200 so the bot
     // learns nothing about why it failed.
     if (typeof company_website === "string" && company_website.trim()) {
-      return NextResponse.json({ ok: true });
+      // Same shape as a real success, so the response reveals nothing.
+      return NextResponse.json({ ok: true, thread: true });
     }
 
     if (!name || typeof name !== "string" || !name.trim()) {
