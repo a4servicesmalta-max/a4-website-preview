@@ -124,7 +124,18 @@
     "botErrorSend": "No pudimos enviar su solicitud. Inténtelo de nuevo o escriba a info@a4.com.mt.",
     "submitErrorFailed": "Error al enviar.",
     "startNewChat": "Nuevo chat",
-    "inputPlaceholder": "Escriba un mensaje…"
+    "inputPlaceholder": "Escriba un mensaje…",
+    "botSessionLive": "Está conectado. Si hay alguien de nuestro equipo disponible, le responderá aquí mismo; si no, le contestaremos por correo.",
+    "botResumed": "Bienvenido de nuevo: esta es su conversación hasta ahora.",
+    "botSessionEnded": "Esta conversación se ha cerrado. Inicie un chat nuevo y continuamos desde ahí.",
+    "botMessageFailed": "No se pudo enviar ese mensaje. Inténtelo de nuevo.",
+    "statusLive": "Hay alguien atendiéndole",
+    "statusOffline": "Le responderemos por correo",
+    "staffFallbackName": "Equipo de soporte",
+    "sendAria": "Enviar mensaje",
+    "botAskContact": "Está conectado con el equipo: ya ha sido avisado y responderá aquí mismo. Para poder contactarle si abandona la página, puede dejarnos su nombre y correo electrónico (opcional).",
+    "botAskEmailOptional": "¡Gracias! ¿Y un correo electrónico, por si se corta la conexión? (opcional)",
+    "botIdentityThanks": "Perfecto, anotado: podremos contactarle si se corta la conexión. ¿En qué más podemos ayudarle?"
   },
   "cookieConsent": {
     "title": "Usamos cookies",

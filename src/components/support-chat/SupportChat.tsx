@@ -41,15 +41,12 @@ export default function SupportChat() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {chatOpen && (
-          <ChatModal
-            open={chatOpen}
-            onClose={closeChat}
-            onRestart={restartChat}
-          />
-        )}
-      </AnimatePresence>
+      {/*
+        Always mounted. The chat is a real conversation now: unmounting on close
+        would throw away the thread the visitor is halfway through. ChatModal
+        renders nothing (and runs its own exit animation) while `open` is false.
+      */}
+      <ChatModal open={chatOpen} onClose={closeChat} onRestart={restartChat} />
     </>
   );
 }
