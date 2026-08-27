@@ -17,7 +17,7 @@ import {
   TXN_BANDS, RISK_TIERS, VAT_MONTHLY, VAT_RULES,
   PAYROLL_PER_HEAD, payrollFee, payrollFeeLabel, LAUNCH_PROMO, isPromoActive, roundEur, sectorTier,
   MANAGED_ENTITY_LABELS, MANAGED_ENTITY_OPTIONS, EXPENSE_BANDS,
-  catchUpAmount, catchUpLabel, managedMonthly, BOOKKEEPING_VOLUME_UPLIFT, EXTRA_BANK_PER_MONTH, extraBanksMonthly,
+  catchUpAmount, catchUpLabel, managedMonthly, BOOKKEEPING_VOLUME_UPLIFT, bankAccountMonthly,
   type TxnBand, type RiskTier, type ManagedEntity, type ExpenseBand,
 } from "@/data/a4QuotePack";
 
@@ -79,9 +79,9 @@ export type AccountingInput = {
    */
   expenses: ExpenseBand | "";
   /**
-   * Bank accounts to reconcile, 1..8. Each beyond the first adds
-   * EXTRA_BANK_PER_MONTH to the books — the same identity the wizard, /quote
-   * and vacei.com price on. Optional on the wire (an older caller sends none)
+   * Bank accounts to reconcile, 1..8. EVERY account is priced, the first
+   * included — bankAccountMonthly() each (mt-2026-08-26d-banks) — the same
+   * identity the wizard, /quote and vacei.com price on. Optional on the wire (an older caller sends none)
    * and defaults to ONE, which is the floor, not a guess downward: the page
    * asks the question, so a visitor with more accounts has said so.
    */
@@ -164,8 +164,9 @@ export function calcAccountingFee(s: AccountingInput, now: Date = new Date()): A
   const banks = Math.min(8, Math.max(1, Math.floor(Number(s.banks) || 1)));
   const uplift = BOOKKEEPING_VOLUME_UPLIFT[s.txn] ?? 0;
   if (uplift > 0) monthly.push({ k: "Bookkeeping · volume uplift", v: uplift });
-  const banksExtra = extraBanksMonthly(banks);
-  if (banksExtra > 0) monthly.push({ k: `Bank accounts · ${banks - 1} × €${EXTRA_BANK_PER_MONTH} beyond the first`, v: banksExtra });
+  // Rounded per account, THEN multiplied — the label is the arithmetic.
+  const perAccount = bankAccountMonthly(entity, expenses, s.txn) ?? 0;
+  monthly.push({ k: `Bank accounts · ${banks} × €${perAccount}`, v: banks * perAccount });
 
   if (s.head > 0) {
     // Marginal tiers, NOT risk-multiplied (findings A2 + A3) — and the label

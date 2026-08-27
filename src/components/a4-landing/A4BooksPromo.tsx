@@ -61,8 +61,8 @@ export function A4BooksPromo() {
               You send us the paperwork and we keep the books: every document
               coded, the bank reconciled, and figures you can rely on each month.
               from €{BOOKKEEPING_FROM} a month if you are self-employed,
-              from €{BOOKKEEPING_COMPANY} for a company — no per-document
-              fees, no hourly meters.
+              from €{BOOKKEEPING_COMPANY} for a company, including one bank
+              account — no per-document fees, no hourly meters.
             </p>
             <p
               className="a4-font-body"
@@ -105,8 +105,9 @@ export function A4BooksPromo() {
               }}
             >
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                {/* "from" is load-bearing: €24 is the entry expenses band, not a
-                    flat rate. Nine bands price bookkeeping under the volume pack. */}
+                {/* "from" is load-bearing: €68 is the entry expenses band with one
+                    bank account, not a flat rate. Nine bands, volume and further
+                    accounts all move it (mt-2026-08-26d-banks). */}
                 <span className="a4-font-body" style={{ fontSize: 15, color: "var(--a4-on-dark-mute)" }}>
                   from
                 </span>

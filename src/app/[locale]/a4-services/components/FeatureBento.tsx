@@ -9,8 +9,9 @@ import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
 // "filed faster" confirmation tile). Light band, on-brand cobalt/teal.
 //
 // The pricing tile shows "from" prices: bookkeeping is set by monthly expenses
-// across nine bands under pack mt-2026-08-14-volume, so €24/€49 are the entry
-// band, not a flat fee. Figures come from src/data/a4QuotePack.ts.
+// across nine bands, plus volume and every bank account (pack
+// mt-2026-08-26d-banks), so €68/€96 are the entry band with one account, not
+// a flat fee. Figures come from src/data/a4QuotePack.ts.
 
 export function FBChart() {
   // simple rising area sparkline (data-viz UI element)

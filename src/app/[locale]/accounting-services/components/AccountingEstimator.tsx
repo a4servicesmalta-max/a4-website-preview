@@ -80,7 +80,7 @@ export function AccountingEstimator() {
    * this surface now does the same.
    */
   const [s, setS] = useState<AccountingInput>({
-    sector: "shop", txn: "21-60", banks: 1, entity: "company", expenses: "", head: 2, vatreg: "art10", behind: "0",
+    sector: "shop", txn: "1-20", banks: 1, entity: "company", expenses: "", head: 2, vatreg: "art10", behind: "0",
     startMonth: "",
   });
   const set = (patch: Partial<AccountingInput>) => setS((a) => ({ ...a, ...patch }));
@@ -250,7 +250,7 @@ export function AccountingEstimator() {
                 <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "14px 16px" }}>
                   <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-ink)" }}>How many bank accounts?</div>
                   <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 }}>
-                    Every account is reconciled separately. The first is included; each one after adds €25 a month to the bookkeeping fee.
+                    Every account is reconciled separately and every account is priced, the first included: €40 a month plus 15% of the bookkeeping fee, each.
                   </div>
                   <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16 }}>
                     <label htmlFor="ae-banks" className="sr-only" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Bank accounts</label>

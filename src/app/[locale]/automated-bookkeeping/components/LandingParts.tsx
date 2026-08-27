@@ -9,6 +9,7 @@ import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
 // and PortalMockup from the main app.
 
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
+import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
 
 // export function LandingNav() {
 //   const [open, setOpen] = useState(false);
@@ -56,7 +57,7 @@ export function LandingHero({ accent = "#494fdf" }) {
             <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-on-dark-mute)" }}>Malta accounting &amp; audit firm</span>
           </div>
           <h1 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(44px,6vw,80px)", lineHeight: 1.0, letterSpacing: "-.03em", margin: "20px 0 0", textWrap: "balance" }}>
-            Bookkeeping<br />from <span style={{ color: "var(--a4-primary-bright)" }}>€24</span>/month.
+            Bookkeeping<br />from <span style={{ color: "var(--a4-primary-bright)" }}>€{BOOKKEEPING_FROM}</span>/month.
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 480, margin: "24px 0 0", textWrap: "pretty" }}>
             <strong style={{ color: "#fff", fontWeight: 600 }}>A4 Services is a licensed accounting &amp; audit firm in Malta.</strong> Upload your invoices and receipts to your A4 portal — it syncs with Sage, QuickBooks and Xero, automation does the heavy lifting, and our licensed audit firm reviews everything. Clean books — without the price tag.
@@ -139,7 +140,7 @@ export function HowItWorks() {
 
 export function Why() {
   const items = [
-    { icon: "piggy-bank", t: "Low, transparent pricing", s: "From €24/month if you are self-employed, from €49/month for a company, set by your monthly expenses — we keep the books, with a qualified accountant on the file. There is no software-only plan; busy transaction volumes and extra bank accounts add on top, itemised in your quote. All fees exclude VAT." },
+    { icon: "piggy-bank", t: "Low, transparent pricing", s: `From €${BOOKKEEPING_FROM}/month if you are self-employed, from €${BOOKKEEPING_COMPANY}/month for a company, including one bank account, set by your monthly expenses — we keep the books, with a qualified accountant on the file. There is no software-only plan; busy transaction volumes add on top, and every bank account is priced (€40 a month plus 15% of the bookkeeping fee, each), itemised in your quote. All fees exclude VAT.` },
     { icon: "layout-dashboard", t: "Everything in one portal", s: "Documents, reports and communication in a single secure workspace." },
     { icon: "refresh-cw", t: "Synced with your tools", s: "Works with Sage, QuickBooks and Xero — no double entry." },
     { icon: "shield-check", t: "Reviewed by professionals", s: "A licensed audit firm checks and finalises every set of books." },
@@ -216,7 +217,7 @@ export function FinalCTA() {
           <div aria-hidden="true" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "90%", height: 360, background: "radial-gradient(50% 50% at 50% 50%, rgba(73,79,223,.22), transparent 72%)", pointerEvents: "none" }} />
           <div style={{ position: "relative" }}>
             <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(32px,4.6vw,58px)", lineHeight: 1.04, letterSpacing: "-.025em", margin: 0, textWrap: "balance", maxWidth: 700, marginInline: "auto" }}>
-              Ready for clean books from €24/month?
+              Ready for clean books from €{BOOKKEEPING_FROM}/month?
             </h2>
             <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 18, lineHeight: 1.6, color: "var(--a4-on-dark-mute)", margin: "20px auto 0", maxWidth: 540, textWrap: "pretty" }}>
               Create your account and request services in minutes — or book a quick call and we&apos;ll set everything up with you.

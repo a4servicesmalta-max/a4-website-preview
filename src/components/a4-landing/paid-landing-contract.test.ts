@@ -33,10 +33,11 @@ describe("paid landing page message contracts", () => {
   });
 
   it("matches paid bookkeeping and audit price messages to the quote pack", () => {
-    expect(bookkeepingLanding).toContain("€24");
-    expect(bookkeepingLanding).toContain("€49");
-    expect(bookkeepingPage).toContain("from €24/month self-employed, €49/month for a company");
-    expect(quotePack).toContain("Math.max(0, (banks || 1) - 1) * EXTRA_BANK_PER_MONTH");
+    expect(bookkeepingLanding).toContain("BOOKKEEPING_FROM");
+    expect(bookkeepingLanding).toContain("BOOKKEEPING_COMPANY");
+    expect(bookkeepingLanding).toContain("including one bank account");
+    expect(bookkeepingPage).toContain("from €68/month self-employed, €96/month for a company, including one bank account");
+    expect(quotePack).toContain("Math.max(1, Math.floor(Number(banks) || 1)) * per");
     expect(auditEstimator).toContain("From €${TAX_RETURN_FROM} a year");
   });
 

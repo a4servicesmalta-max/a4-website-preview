@@ -24,7 +24,8 @@ import {
   AUDIT_YEARLY,
   BOOKKEEPING_COMPANY,
   BOOKKEEPING_FROM,
-  EXTRA_BANK_PER_MONTH,
+  BANK_ACCOUNT,
+  bankAccountMonthly,
   MBR_ANNUAL_RETURN,
   PAYROLL_ENTRY_RATE,
   RISK_TIERS,
@@ -87,7 +88,7 @@ const BASELINES: Record<
   // baseline; `entity` and `expenses` set the real figure.
   accounts: {
     name: "Managed bookkeeping",
-    hint: `We keep the books: documents coded, bank reconciled, monthly figures — from €${BOOKKEEPING_COMPANY}/mo for a company, from €${BOOKKEEPING_FROM}/mo self-employed, set by your monthly expenses`,
+    hint: `We keep the books: documents coded, bank reconciled, monthly figures — from €${BOOKKEEPING_COMPANY}/mo for a company, from €${BOOKKEEPING_FROM}/mo self-employed, including one bank account, set by your monthly expenses`,
     type: "monthly",
     base: BOOKKEEPING_COMPANY,
   },
@@ -95,7 +96,7 @@ const BASELINES: Record<
   // below the advertised "from €750/year".
   audit: {
     name: "Statutory audit",
-    hint: `GAPSME/IFRS, signed by a licensed audit firm — from €${AUDIT_FROM}/yr`,
+    hint: `GAPSME/IFRS, signed by a licensed audit firm — from €${AUDIT_FROM}/yr. Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here.`,
     type: "annual",
     base: AUDIT_YEARLY["21-60"],
   },
@@ -131,7 +132,7 @@ export type QuoteInput = {
   sector?: string;
   /** Transactions a month; prices VAT, the audit and the bookkeeping uplift. */
   txn?: TxnBand;
-  /** Bank accounts to reconcile, 1..QUOTE_MAX_BANKS; each beyond the first adds to the books. */
+  /** Bank accounts to reconcile, 1..QUOTE_MAX_BANKS; every one is priced, the first included. */
   banks?: number;
   /** Retired driver — accepted, ignored. */
   revenueBand?: RevenueBandId;
@@ -268,7 +269,7 @@ export function buildQuote(input: QuoteInput): QuoteResult {
     indicativeAnnualEur: monthly * 12 + annual,
     hasOnRequestLines: hasOnRequest,
     assumptions: [
-      `Sector: ${sectorRow?.label ?? input.industry ?? "—"} (${tierLabel} risk tier) · Transactions: ${txnLabel ? `${txnLabel} a month` : "not given"} · Bank accounts: ${banks}${banks > 1 ? ` (each beyond the first adds €${EXTRA_BANK_PER_MONTH}/mo to the books)` : ""}.`,
+      `Sector: ${sectorRow?.label ?? input.industry ?? "—"} (${tierLabel} risk tier) · Transactions: ${txnLabel ? `${txnLabel} a month` : "not given"} · Bank accounts: ${banks}${input.expenses != null && txn != null && bankAccountMonthly(entity, input.expenses, txn) != null ? ` (each €${bankAccountMonthly(entity, input.expenses, txn)}/mo — €${BANK_ACCOUNT.baseMonthly} plus ${Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee, the first included)` : ""}.`,
       input.startMonth
         ? `Bookkeeping starts ${input.startMonth}${catchUpMonths > 0 ? `; ${catchUpMonths} earlier month${catchUpMonths === 1 ? "" : "s"} quoted separately above` : ""}.`
         : "Start month to be confirmed — it decides which months are catch-up.",
