@@ -11,10 +11,10 @@ import { describe, it, expect } from "vitest";
 import { lpCalc, LP_INIT, LP_ANNUAL_ITEMS, type LPState } from "./LandingPlan";
 import { BOOKKEEPING_MANAGED_MONTHLY, LAUNCH_PROMO, VAT_MONTHLY, fullMonthlyBookkeeping } from "@/data/a4QuotePack";
 
-// mt-2026-08-26d-banks: this page asks neither volume nor account count, so
-// it quotes the low-volume ONE-account figure — and that account is priced,
-// so the company 10–25k figure is 69 + round(40 + 0.15 × 69) = 69 + 50 = 119.
-const CO_10_25K = fullMonthlyBookkeeping("company", "10-25k", "1-20", 1)!; // 119
+// mt-2026-08-27-entry: this page asks neither volume nor account count, so
+// it quotes the low-volume ONE-account figure — and the first account is
+// INCLUDED, so the company 10–25k figure is the bare base, €69.
+const CO_10_25K = fullMonthlyBookkeeping("company", "10-25k", "1-20", 1)!; // 69
 
 /** The promo expires by DATA, so every total here must pin its clock. */
 const PROMO_ON = new Date("2026-08-07T00:00:00.000Z");
@@ -40,8 +40,8 @@ describe("B1 — the band is not pre-answered", () => {
   it("prices instantly once it is", () => {
     const r = lpCalc(ANSWERED, PROMO_OFF);
     expect(r.priced).toBe(true);
-    expect(r.base).toBe(CO_10_25K); // 119 = 69 + one bank account 50
-    expect(r.base).toBe(119);
+    expect(r.base).toBe(CO_10_25K); // 69 — the one bank account is included
+    expect(r.base).toBe(69);
   });
 });
 
@@ -54,7 +54,7 @@ describe("M8 — the forbidden entry-band fallback is gone", () => {
     expect(r.priced).toBe(false);
     expect(r.base).toBeNull();
     expect(r.base).not.toBe(BOOKKEEPING_MANAGED_MONTHLY.company["0-10k"]); // 49
-    expect(r.base).not.toBe(96); // nor the all-in entry figure
+    expect(r.base).not.toBe(49); // the entry figure — base IS all-in since mt-2026-08-27-entry
   });
 
   it("moves with the band, for both entities", () => {
@@ -73,7 +73,7 @@ describe("M9 — the launch promo applies here too", () => {
     const off = lpCalc(ANSWERED, PROMO_OFF);
     expect(on.promoApplied).toBe(true);
     expect(off.promoApplied).toBe(false);
-    // 119 bookkeeping (69 + one account) + 45 VAT (the "mid" 21-60 band) = 164 gross.
+    // 69 bookkeeping (its one account included) + 45 VAT (the "mid" 21-60 band) = 114 gross.
     expect(off.grossMonthly).toBe(CO_10_25K + VAT_MONTHLY["21-60"]);
     expect(on.grossMonthly).toBe(off.grossMonthly);
     expect(on.monthly).toBe(Math.round(off.grossMonthly! * (1 - LAUNCH_PROMO.pct)));
@@ -85,9 +85,9 @@ describe("M9 — the launch promo applies here too", () => {
   it("discounts the catch-up at its own line inside the promo window (finding C3)", () => {
     const on = lpCalc({ ...ANSWERED, catchUpMonths: 12 }, PROMO_ON);
     const off = lpCalc({ ...ANSWERED, catchUpMonths: 12 }, PROMO_OFF);
-    expect(off.catchUp).toBe(12 * 119);
-    expect(on.catchUp).toBe(Math.round(12 * 119 * 0.75));
-    expect(on.catchUpLabel).toContain("less 25% launch promo = EUR 1071");
+    expect(off.catchUp).toBe(12 * 69);
+    expect(on.catchUp).toBe(Math.round(12 * 69 * 0.75));
+    expect(on.catchUpLabel).toContain("less 25% launch promo = EUR 621");
   });
 });
 

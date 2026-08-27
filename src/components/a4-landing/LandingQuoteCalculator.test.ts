@@ -72,10 +72,10 @@ describe("the canonical quote", () => {
     const after = qCalc(CANONICAL, PROMO_OFF);
     if (after.refer) throw new Error("unpriceable");
     expect(after.promoApplied).toBe(false);
-    // Bookkeeping 69 + volume uplift 10 (21-60 band) + one bank account
-    // round(40 + 0.15 × 79) = 52 + payroll 2 × 12 = 155/mo; MBR (our 50 +
-    // registry 100)/yr.
-    expect([after.moTot, after.yrTot]).toEqual([155, 150]);
+    // Bookkeeping 69 + volume uplift 10 (21-60 band) + payroll 2 × 12 =
+    // 103/mo — the one bank account is included (mt-2026-08-27-entry); MBR
+    // (our 50 + registry 100)/yr.
+    expect([after.moTot, after.yrTot]).toEqual([103, 150]);
     // The assurance side, priced on its own: payroll 24/mo, review 547 + MBR 150.
     const assured = qCalc(ASSURED, PROMO_OFF);
     if (assured.refer) throw new Error("unpriceable");
@@ -103,13 +103,13 @@ describe("the canonical quote", () => {
 
   it("holds the pinned totals", () => {
     if (r.refer) throw new Error("the canonical path must be priceable");
-    // List: bookkeeping 69 + uplift 10 (21-60) + one bank account 52 +
-    // payroll 2 × 12 = 155/mo; MBR (our 50 + registry 100) = 150/yr.
+    // List: bookkeeping 69 + uplift 10 (21-60) + payroll 2 × 12 = 103/mo
+    // (the one bank account is included); MBR (our 50 + registry 100) = 150/yr.
     // Onboarding is UNPRICED.
-    expect(r.grossMo).toBe(155);
+    expect(r.grossMo).toBe(103);
     expect(r.grossYr).toBe(150);
     // As quoted, with the 25% launch discount and the registry fee exempt.
-    expect(r.moTot).toBe(116); // 155 × 0.75 = 116.25 → 116
+    expect(r.moTot).toBe(77); // 103 × 0.75 = 77.25 → 77
     expect(r.yrTot).toBe(138); // (150 − 100) × 0.75 = 37.5 → 38, + 100
     expect(r.oneTot).toBe(0); // nothing one-off: onboarding carries no number
   });
@@ -132,10 +132,15 @@ describe("the canonical quote", () => {
 
   it("bills the MBR annual return at our fee plus the registry fee, under vacei's line name", () => {
     if (r.refer) throw new Error("unpriceable");
-    // mt-2026-08-26d-banks: the one account is priced, on its own line — 1 × €52.
-    expect(line(r, "Additional bank accounts")).toBeUndefined(); // the 26c name is gone
-    expect(line(r, "Bank accounts")?.v).toBe(52);
-    expect(line(r, "Bank accounts")?.e).toContain("1 × €52");
+    // mt-2026-08-27-entry: the first account is INCLUDED — at one account
+    // there is no bank line at all, under either name.
+    expect(line(r, "Bank accounts")).toBeUndefined(); // the 26d name is gone
+    expect(line(r, "Additional bank accounts")).toBeUndefined(); // one account prices nothing
+    // Extras appear under the new name: 2 extra × €52 at the canonical band.
+    const three = qCalc({ ...CANONICAL, banks: 3 }, PROMO_ON);
+    if (three.refer) throw new Error("unpriceable");
+    expect(line(three, "Additional bank accounts")?.v).toBe(104);
+    expect(line(three, "Additional bank accounts")?.e).toContain("2 × €52");
     expect(line(r, "MBR annual return fee")).toBeUndefined(); // the old a4 name is gone
     expect(line(r, MBR_LINE)?.v)
       .toBe(MBR_ANNUAL_RETURN.ourFee + MBR_ANNUAL_RETURN.registryFeeByCapital["1500"]);
@@ -262,28 +267,28 @@ describe("catch-up", () => {
   it("charges the same monthly rate per earlier month, uncapped", () => {
     const r = qCalc({ ...CANONICAL, behind: "24" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(r.oneTot).toBe(24 * 131); // 3,144 (69 base + 10 uplift + 52 for the bank account) — the retired cap would have said 480
+    expect(r.oneTot).toBe(24 * 79); // 1,896 (69 base + 10 uplift; the one account included) — the retired cap would have said 480
     expect(r.oneTot).not.toBe(480);
   });
 
   it("uses the exact contracted label", () => {
     const r = qCalc({ ...CANONICAL, behind: "12" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(line(r, "Catch-up: 12 months x EUR 131 = EUR 1572")?.v).toBe(1572);
+    expect(line(r, "Catch-up: 12 months x EUR 79 = EUR 948")?.v).toBe(948);
     // Non-null: "10-25k" is a real band, so the pack always has a label for it.
-    expect(line(r, catchUpLabel(12, "company", "10-25k", "21-60", 1)!)?.v).toBe(1572);
-    // The owner's worked example, three accounts: 79 + 3 × 52 = 235 a month.
+    expect(line(r, catchUpLabel(12, "company", "10-25k", "21-60", 1)!)?.v).toBe(948);
+    // The owner's worked example, three accounts: 79 + 2 extra × 52 = 183 a month.
     const three = qCalc({ ...CANONICAL, banks: 3, behind: "12" }, PROMO_OFF);
     if (three.refer) throw new Error("unpriceable");
-    expect(line(three, "Bank accounts")?.v).toBe(156);
-    expect(line(three, "Catch-up: 12 months x EUR 235 = EUR 2820")?.v).toBe(2820);
-    expect(three.grossMo).toBe(235 + 24); // + payroll 2 × 12
+    expect(line(three, "Additional bank accounts")?.v).toBe(104);
+    expect(line(three, "Catch-up: 12 months x EUR 183 = EUR 2196")?.v).toBe(2196);
+    expect(three.grossMo).toBe(183 + 24); // + payroll 2 × 12
   });
 
   it("follows the entity, like the monthly price does", () => {
     const r = qCalc({ ...CANONICAL, entity: "sole", behind: "12" }, PROMO_OFF);
     if (r.refer) throw new Error("unpriceable");
-    expect(r.oneTot).toBe(12 * 96); // sole 39 + 10 uplift + account round(47.35) = 47 at the €10–25k band
+    expect(r.oneTot).toBe(12 * 49); // sole 39 + 10 uplift at the €10–25k band, its one account included
   });
 
   it("is discounted at its own line inside the promo window (finding C3)", () => {
@@ -386,7 +391,7 @@ describe("the basket we submit", () => {
     const shown = qCalc(everything);
     if (shown.refer) throw new Error("unpriceable");
     const shownNames = [...shown.mo, ...shown.yr, ...shown.one].map((l) => l.n);
-    expect(shownNames).toContain("Bank accounts");
+    expect(shownNames).toContain("Additional bank accounts");
     expect(evaluateA4Items(qItems(everything), qRisk(everything), PROMO_OFF).lines)
       .toHaveLength(shownNames.length);
   });
@@ -533,8 +538,8 @@ describe("what we show equals what we quote", () => {
     if (shown.refer) throw new Error("unpriceable");
     expect(engine.promoApplied).toBe(true);
     expect(LAUNCH_PROMO.pct).toBe(0.25);
-    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([116, 138, 0]);
-    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([116, 138, 0]);
+    expect([engine.monthly, engine.yearly, engine.oneOff]).toEqual([77, 138, 0]);
+    expect([shown.moTot, shown.yrTot, shown.oneTot]).toEqual([77, 138, 0]);
     const yearOne = (m: number, y: number, o: number) => m * 12 + y + o;
     expect(yearOne(shown.moTot, shown.yrTot, shown.oneTot))
       .toBe(yearOne(engine.monthly, engine.yearly, engine.oneOff));
@@ -554,8 +559,8 @@ describe("what we show equals what we quote", () => {
     const engine = evaluateA4Items(qItems(bigger), qRisk(bigger), PROMO_ON);
     if (s.refer) throw new Error("unpriceable");
     expect([s.moTot, s.yrTot, s.oneTot]).toEqual([engine.monthly, engine.yearly, engine.oneOff]);
-    // 12 x 131 (69 base + 10 uplift + 52 bank account) = 1572, less the 25% promo at the line (C3) = 1179.
-    expect(s.oneTot).toBe(1179);
+    // 12 x 79 (69 base + 10 uplift; the one account included) = 948, less the 25% promo at the line (C3) = 711.
+    expect(s.oneTot).toBe(711);
   });
 
   it("agrees on vacei's own defaults once the two required answers are given", () => {
@@ -564,10 +569,11 @@ describe("what we show equals what we quote", () => {
     const q: QState = { ...DEFAULT_PATH, expenses: "10-25k", startMonth: "2026-09" };
     const s = qCalc(q, PROMO_OFF);
     if (s.refer) throw new Error("unpriceable");
-    // 26d: the one bank account is a priced line of its own — 69 + round(50.35) = 119.
-    expect(s.mo.map((l) => l.n)).toEqual(["Bookkeeping", "Bank accounts"]);
+    // mt-2026-08-27-entry: the one bank account is included, so the monthly
+    // is the bare band rate — €69, one line.
+    expect(s.mo.map((l) => l.n)).toEqual(["Bookkeeping"]);
     expect(s.yr.map((l) => l.n)).toEqual(["Annual tax return", MBR_LINE]);
-    expect([s.moTot, s.yrTot]).toEqual([69 + 50, 331 + 150]);
+    expect([s.moTot, s.yrTot]).toEqual([69, 331 + 150]);
     const engine = evaluateA4Items(qItems(q), qRisk(q), PROMO_OFF);
     expect([s.moTot, s.yrTot, s.oneTot]).toEqual([engine.monthly, engine.yearly, engine.oneOff]);
   });
@@ -749,7 +755,7 @@ describe("nothing about the price is pre-answered", () => {
     // priced and only the catch-up one-off is still to come.
     const r = qCalc({ ...CANONICAL, startMonth: "" }, PROMO_OFF);
     expect(r.noStart).toBe(true);
-    expect(r.moTot).toBe(155);
+    expect(r.moTot).toBe(103);
     // `startOk` is the wizard's own send gate; an empty month must fail it.
     const startOk = (v: string) => /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
     expect(startOk(Q_INIT.startMonth)).toBe(false);
