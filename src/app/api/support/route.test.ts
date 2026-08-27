@@ -23,9 +23,19 @@ it("drops a submission whose honeypot is filled, without telling the bot", async
   expect(pushLeadToPortal).not.toHaveBeenCalled();
 });
 
-it("creates the website lead with the captured name and email", async () => {
+it("opens the support thread with the captured name and email, and lets the portal file the lead", async () => {
   const r = await POST(req({ name: " Jane ", email: " jane@x.com ", issue: " help ", company_website: "" }));
   expect(r.status).toBe(200);
+  expect(pushChatToPortal).toHaveBeenCalledWith(
+    expect.objectContaining({ name: "Jane", email: "jane@x.com", message: "help" })
+  );
+  // The chat session already records the WebsiteLead — a second one would double-lead.
+  expect(pushLeadToPortal).not.toHaveBeenCalled();
+});
+
+it("files the lead itself only when the support thread could not be opened", async () => {
+  vi.mocked(pushChatToPortal).mockResolvedValueOnce(null);
+  const r = await POST(req({ name: "Jane", email: "jane@x.com", issue: "help", company_website: "" }));
+  expect(r.status).toBe(200);
   expect(pushLeadToPortal).toHaveBeenCalledWith({ name: "Jane", email: "jane@x.com", message: "help" });
-  expect(pushChatToPortal).toHaveBeenCalled();
 });
