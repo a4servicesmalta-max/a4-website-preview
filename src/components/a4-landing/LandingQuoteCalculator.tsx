@@ -635,7 +635,7 @@ export function LandingQuoteCalculator() {
   const strike: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontVariantNumeric: "tabular-nums", fontSize: 12.5, color: "var(--a4-mute)", textDecoration: "line-through" };
 
   return (
-    <section id="pricing" style={{ background: "linear-gradient(180deg, #16181f 0%, #101116 100%)", padding: "clamp(64px,9vw,104px) 0" }}>
+    <section id="pricing" style={{ background: "linear-gradient(180deg, #16181f 0%, #101116 100%)", padding: "clamp(64px,9vw,104px) 0", scrollMarginTop: 96 }}>
       <Container>
         <Reveal><SectionHead
           dark
