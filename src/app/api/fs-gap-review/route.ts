@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { checkVerified, sendAuditQuoteEmail } from "@/lib/portal-verify";
+import { attachFsToLead, checkVerified, sendAuditQuoteEmail } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
 import { pushLeadToPortal } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
@@ -85,6 +85,16 @@ export async function POST(req: NextRequest) {
         (scoping ? `\n\nScoping notes:\n${scoping}` : ""),
       sourceDetail: "fs-review",
     });
+
+    // Keep the document with the enquiry (owner 2026-08-28). Fired here, right
+    // after the lead exists and BEFORE the engine call we are about to await,
+    // so the upload is already on its way while the review runs. Deliberately
+    // not awaited: the visitor's review must never wait on — or fail because
+    // of — storage. The backend attaches it to the lead just written.
+    const attaching = leadWritten
+      ? attachFsToLead({ email, verifiedToken, file })
+      : Promise.resolve(false);
+    void attaching.catch(() => false);
 
     // A thrown engine call must not skip the error path and lose the response
     // shape — the outer catch returns a 500 with no `leadCaptured` signal.
