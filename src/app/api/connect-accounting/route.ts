@@ -2,17 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { checkVerified } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
+import { renderA4Email, type EmailRow } from "@/lib/email-shell";
 
 export const runtime = "nodejs";
 
 const LABEL: Record<string, string> = { sage: "Sage", quickbooks: "QuickBooks", xero: "Xero" };
 
-function emailLead(subject: string, text: string, replyTo?: string) {
+/** Staff notification. `text` stays the text part; `rows` paint the same values on the A4 shell. */
+function emailLead(subject: string, text: string, replyTo: string | undefined, rows: EmailRow[]) {
   const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
   const to = process.env.CONTACT_TO_EMAIL || user;
   if (!host || !user || !pass || !to) return Promise.resolve();
   const t = nodemailer.createTransport({ host, port: Number(process.env.SMTP_PORT) || 587, secure: process.env.SMTP_SECURE === "true", auth: { user, pass } });
-  return t.sendMail({ from: `"A4 Website" <${process.env.SMTP_FROM || user}>`, to, replyTo, subject, text });
+  const { html } = renderA4Email({
+    eyebrow: "Website · connect accounting",
+    headline: subject,
+    intro: "A visitor asked A4 to connect their accounting software and run an accounting-health review.",
+    rows,
+    cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+    signoff: "Automated notification from a4.com.mt",
+  });
+  return t.sendMail({ from: `"A4 Website" <${process.env.SMTP_FROM || user}>`, to, replyTo, subject, text, html });
 }
 
 export async function POST(req: NextRequest) {
@@ -37,6 +47,13 @@ export async function POST(req: NextRequest) {
       `Connect ${label} request — ${name || email}`,
       `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nSoftware: ${label}\nAction: initiate secure connection + run accounting-health review.`,
       email,
+      [
+        { label: "Name", value: name },
+        { label: "Company", value: company },
+        { label: "Email", value: email },
+        { label: "Software", value: label },
+        { label: "Action", value: "Initiate secure connection + run accounting-health review." },
+      ],
     ).catch(() => {});
     return NextResponse.json({ ok: true });
   } catch (e) {

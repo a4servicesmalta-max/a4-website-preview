@@ -4,6 +4,7 @@ import { checkVerified } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
 import { pushLeadToPortal } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
+import { renderA4Email, type EmailRow } from "@/lib/email-shell";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -11,12 +12,21 @@ export const maxDuration = 120;
 const TB_TYPES = [".csv", ".xlsx", ".xlsm", ".pdf"];
 const GL_TYPES = [".csv", ".xlsx", ".xlsm"];
 
-function emailLead(subject: string, text: string, replyTo?: string) {
+/** Staff notification. `text` stays the text part; `rows` paint the same values on the A4 shell. */
+function emailLead(subject: string, text: string, replyTo: string | undefined, rows: EmailRow[]) {
   const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
   const to = process.env.CONTACT_TO_EMAIL || user;
   if (!host || !user || !pass || !to) return Promise.resolve();
   const t = nodemailer.createTransport({ host, port: Number(process.env.SMTP_PORT) || 587, secure: process.env.SMTP_SECURE === "true", auth: { user, pass } });
-  return t.sendMail({ from: `"A4 Website" <${process.env.SMTP_FROM || user}>`, to, replyTo, subject, text });
+  const { html } = renderA4Email({
+    eyebrow: "Website · accounting health",
+    headline: subject,
+    intro: "A visitor uploaded their books for an AI accounting-health review.",
+    rows,
+    cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+    signoff: "Automated notification from a4.com.mt",
+  });
+  return t.sendMail({ from: `"A4 Website" <${process.env.SMTP_FROM || user}>`, to, replyTo, subject, text, html });
 }
 
 function okType(file: File, allowed: string[]) {
@@ -79,6 +89,14 @@ export async function POST(req: NextRequest) {
           `Accounting-health request — ${name || email}`,
           `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nTB: ${tbFile?.name || "-"}\nGL: ${glFile?.name || "-"}\nEngine status: ${engine.status}`,
           email,
+          [
+            { label: "Name", value: name },
+            { label: "Company", value: company },
+            { label: "Email", value: email },
+            { label: "TB", value: tbFile?.name || "-" },
+            { label: "GL", value: glFile?.name || "-" },
+            { label: "Engine status", value: String(engine.status) },
+          ],
         ).catch(() => {});
         if (engine.status === 422) {
           const detail = await engine.json().catch(() => ({}));
@@ -106,6 +124,14 @@ export async function POST(req: NextRequest) {
       `Trial-balance review request — ${name || email}`,
       `Name: ${name}\nCompany: ${company}\nEmail: ${email}\nTB: ${tbFile.name}\nGL: ${glFile?.name || "- (not used)"}\nEngine status: ${engine.status}`,
       email,
+      [
+        { label: "Name", value: name },
+        { label: "Company", value: company },
+        { label: "Email", value: email },
+        { label: "TB", value: tbFile.name },
+        { label: "GL", value: glFile?.name || "- (not used)" },
+        { label: "Engine status", value: String(engine.status) },
+      ],
     ).catch(() => {});
     if (!engine.ok) {
       const detail = await engine.json().catch(() => ({}));

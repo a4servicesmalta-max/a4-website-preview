@@ -6,6 +6,7 @@ import { pushLeadToPortal } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
 import { augmentWithAiCommentary } from "@/lib/ai-review";
 import { issueQuoteLock, LOCK_COOKIE, lockCookieOptions } from "@/lib/quote-lock";
+import { renderA4Email, type EmailRow } from "@/lib/email-shell";
 import type { ReviewResponse } from "./types";
 
 export const runtime = "nodejs";
@@ -14,12 +15,21 @@ export const maxDuration = 120;
 const FS_TYPES = [".pdf", ".doc", ".docx"];
 const TB_TYPES = [".pdf", ".csv", ".xlsx", ".xlsm"];
 
-function emailLead(subject: string, text: string, replyTo?: string) {
+/** Staff notification. `text` stays the text part; `rows` paint the same values on the A4 shell. */
+function emailLead(subject: string, text: string, replyTo: string | undefined, rows: EmailRow[]) {
   const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
   const to = process.env.CONTACT_TO_EMAIL || user;
   if (!host || !user || !pass || !to) return Promise.resolve();
   const t = nodemailer.createTransport({ host, port: Number(process.env.SMTP_PORT) || 587, secure: process.env.SMTP_SECURE === "true", auth: { user, pass } });
-  return t.sendMail({ from: `"A4 Website" <${process.env.SMTP_FROM || user}>`, to, replyTo, subject, text });
+  const { html } = renderA4Email({
+    eyebrow: "Website · FS review",
+    headline: subject,
+    intro: "A visitor uploaded a document for the AI financial-statements / trial-balance review.",
+    rows,
+    cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+    signoff: "Automated notification from a4.com.mt",
+  });
+  return t.sendMail({ from: `"A4 Website" <${process.env.SMTP_FROM || user}>`, to, replyTo, subject, text, html });
 }
 
 export async function POST(req: NextRequest) {
@@ -121,6 +131,22 @@ export async function POST(req: NextRequest) {
         (scoping ? `\n\nScoping notes from the estimator:\n${scoping}` : "") +
         quoteText,
       email,
+      [
+        { label: "Name", value: name },
+        { label: "Company", value: company },
+        { label: "Email", value: email },
+        { label: "Kind", value: kind },
+        { label: "File", value: file.name },
+        { label: "Engine status", value: String(engine.status) },
+        { label: "Shown to client", value: revenueBand ? `€${quotedFee}/yr (quotation figures, ${revenueBand} band)` : "" },
+        { label: "Scoping notes", value: scoping },
+        {
+          label: "Quote (internal)",
+          value: fullQuote
+            ? `€${fullQuote.fee} (${fullQuote.docKind}, basis: ${fullQuote.basis})\nDo not share fee basis with client.\nDetail: ${JSON.stringify(fullQuote.detail)}`
+            : "",
+        },
+      ],
     ).catch(() => {});
 
     await pushToPortal({
