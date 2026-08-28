@@ -51,7 +51,7 @@ describe("renderA4Email — content + escaping", () => {
   it("escapes every user-provided string in the HTML", () => {
     const { html } = full();
     expect(html).not.toContain("<script>");
-    expect(html).toContain("Dear Jane &lt;script&gt;,");
+    expect(html).toContain("Dear Jane,"); // first token only; the injected tail never reaches the greeting
     expect(html).toContain("Thanks for writing to us &amp; welcome.");
     expect(html).toContain("Second paragraph<br>with a line break.");
     expect(html).toContain("We reply &lt;soon&gt;");
@@ -98,7 +98,7 @@ describe("renderA4Email — content + escaping", () => {
   it("produces a plain-text twin with the headline, greeting, blocks and links", () => {
     const { text } = full();
     expect(text).toContain("We've received your message");
-    expect(text).toContain("Dear Jane <script>,");
+    expect(text).toContain("Dear Jane,");
     expect(text).toContain("Thanks for writing to us & welcome.");
     expect(text).toContain("Your accounting health score: 72/100 Good");
     expect(text).toContain("- We read it");
