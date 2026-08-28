@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
 import { pushChatToPortal } from "@/lib/portal-chat";
 import { pushLeadToPortal } from "@/lib/portal-lead";
+import { renderA4Email } from "@/lib/email-shell";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -115,6 +116,19 @@ export async function POST(req: NextRequest) {
     try {
       const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
       if (toAddress) {
+        const staff = renderA4Email({
+          eyebrow: "Website · support chat",
+          headline: "Website support request",
+          intro: ["Support request from the website chat.", issue.trim()],
+          rows: [
+            { label: "Name", value: name.trim() },
+            { label: "Email", value: email.trim() },
+            { label: "Session", value: sessionToken },
+            { label: "Transcript", value: transcript },
+          ],
+          cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+          signoff: "Automated notification from a4.com.mt",
+        });
         await getTransport().sendMail({
           from: `"A4 Website Support" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to: toAddress,
@@ -134,6 +148,7 @@ ${issue.trim()}
 ${transcript}
 --- End transcript ---
           `.trim(),
+          html: staff.html,
         });
         emailSent = true;
       }

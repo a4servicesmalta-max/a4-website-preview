@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
 import { pushLeadToPortal, pageUrlOf } from "@/lib/portal-lead";
 import { flagsForServiceSelection } from "@/lib/independence";
+import { renderA4Email } from "@/lib/email-shell";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -104,28 +105,48 @@ export async function POST(req: NextRequest) {
     try {
       const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
       if (toAddress) {
+        const staff = renderA4Email({
+          eyebrow: "Website · contact",
+          headline: subject || `New contact from ${name || "A4 website"}`,
+          intro: message,
+          rows: [
+            { label: "Name", value: name || "N/A" },
+            { label: "Email", value: email },
+            { label: "Phone", value: phone || "N/A" },
+            { label: "Subject", value: subject || "" },
+            { label: "Context", value: context || "General contact" },
+            ...(Array.isArray(services) && services.length ? [{ label: "Services", value: services.join(", ") }] : []),
+          ],
+          cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+          signoff: "Automated notification from a4.com.mt",
+        });
         await getTransport().sendMail({
           from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to: toAddress,
           subject: subject || `New contact from ${name || "A4 website"}`,
           replyTo: email,
-          text: `
-Name: ${name || "N/A"}
-Email: ${email}
-Phone: ${phone || "N/A"}
-Context: ${context || "General contact"}
-
-Message:
-${message}
-          `.trim(),
+          text: staff.text,
+          html: staff.html,
         });
 
         // Confirmation to the sender — without it they have no proof the message landed.
+        const visitor = renderA4Email({
+          headline: "We've received your message",
+          firstName: name || "there",
+          intro: [
+            "Thank you for contacting A4 Services. Your message has landed with the team and a real person will read it.",
+            "What happens next: we review what you sent and reply within one working day — usually sooner. If it needs a conversation, we'll suggest a time.",
+          ],
+          cta: { label: "Book a call", url: "https://a4.com.mt/book-a-call" },
+          cta2: { label: "Free accounting health check", url: "https://a4.com.mt/accounting-health-check" },
+          reason: "You received this because you submitted the contact form on a4.com.mt.",
+        });
         await getTransport().sendMail({
           from: `"A4" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to: email,
           subject: "Message received - A4",
-          text: `Hi ${name || "there"},\n\nThank you for contacting A4. We have received your message and will get back to you within 24 hours.\n\nBest regards,\nThe A4 Team`,
+          text: visitor.text,
+          html: visitor.html,
         });
       }
     } catch (emailErr) {

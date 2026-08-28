@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
 import { pushLeadToPortal, pageUrlOf } from "@/lib/portal-lead";
 import { flagsForServiceSelection } from "@/lib/independence";
+import { renderA4Email } from "@/lib/email-shell";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -198,40 +199,33 @@ export async function POST(req: NextRequest) {
 
     const textBody = lines.join("\n");
 
-    const htmlBody = `
-      <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:14px; color:#111827;">
-        <h2 style="font-size:18px; margin:0 0 12px 0;">${subjectLine}</h2>
-        <p style="margin:0 0 4px 0;"><strong>Name:</strong> ${name}</p>
-        <p style="margin:0 0 12px 0;"><strong>Email:</strong> ${email}</p>
-        <p style="margin:0 0 6px 0;"><strong>Message</strong></p>
-        <p style="white-space:pre-line; margin:0 0 12px 0;">${message || "(no message provided)"}</p>
-        ${meta
-        ? `<div style="margin-top:8px;">
-                 <p style="margin:0 0 6px 0;"><strong>Additional details</strong></p>
-                 <ul style="margin:0 0 0 16px; padding:0;">
-                   ${meta.service ? `<li><strong>Service:</strong> ${meta.service}</li>` : ""}
-                   ${meta.companyStage ? `<li><strong>Company Stage:</strong> ${meta.companyStage}</li>` : ""}
-                   ${meta.companyName ? `<li><strong>Company Name:</strong> ${meta.companyName}</li>` : ""}
-                   ${meta.jurisdiction ? `<li><strong>Jurisdiction:</strong> ${meta.jurisdiction}</li>` : ""}
-                   ${meta.documentStatus ? `<li><strong>Document Status:</strong> ${meta.documentStatus}</li>` : ""}
-                   ${meta.communicationChannel ? `<li><strong>Communication Channel:</strong> ${meta.communicationChannel}</li>` : ""}
-                   ${meta.phone ? `<li><strong>Phone:</strong> ${meta.phone}</li>` : ""}
-                   ${meta.updateCadence ? `<li><strong>Update Cadence:</strong> ${meta.updateCadence}</li>` : ""}
-                 </ul>
-                 ${meta.serviceDetails
-          ? `<p style="margin:8px 0 4px 0;"><strong>Service Details (raw JSON)</strong></p>
-                        <pre style="background:#f9fafb; padding:8px 10px; border-radius:6px; font-size:12px; white-space:pre-wrap;">${JSON.stringify(
-            meta.serviceDetails,
-            null,
-            2,
-          )}</pre>`
-          : ""
-        }
-               </div>`
-        : ""
-      }
-      </div>
-    `;
+    // Staff copy on the branded A4 shell; the plain `textBody` above stays the
+    // text part. Every value is escaped by the renderer.
+    const str = (v: unknown) => (v == null ? "" : typeof v === "string" ? v : String(v));
+    const htmlBody = renderA4Email({
+      eyebrow: "Website · quote",
+      headline: subjectLine,
+      intro: message || "(no message provided)",
+      rows: [
+        { label: "Name", value: name },
+        { label: "Email", value: email },
+        { label: "Phone", value: str(meta?.phone) },
+        { label: "Service", value: str(meta?.service) },
+        { label: "Services", value: Array.isArray(meta?.services) ? meta.services.join(", ") : str(meta?.services) },
+        { label: "Company", value: str(meta?.companyName) },
+        { label: "Company stage", value: str(meta?.companyStage) },
+        { label: "Jurisdiction", value: str(meta?.jurisdiction) },
+        { label: "Employees", value: str(meta?.employees) },
+        { label: "Turnover", value: str(meta?.turnover) },
+        { label: "Documents", value: str(meta?.documentStatus) },
+        { label: "Channel", value: str(meta?.communicationChannel) },
+        { label: "Update cadence", value: str(meta?.updateCadence) },
+        { label: "Service details", value: meta?.serviceDetails ? JSON.stringify(meta.serviceDetails, null, 2) : "" },
+        { label: "Attachments", value: attachments.length ? attachments.map((a) => a.filename).join(", ") : "" },
+      ],
+      cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+      signoff: "Automated notification from a4.com.mt",
+    }).html;
 
     // Emails are best-effort — a missing/broken SMTP config must never cause a 5xx.
     try {
@@ -257,14 +251,17 @@ export async function POST(req: NextRequest) {
         // Send the auto-responder confirmation email to the user
         const autoReplySubject = "Quote Request Received - A4";
         const autoReplyText = `Hi ${name},\n\nThank you for reaching out to us.\n\nWe have received your quote request and our team will review the details. We will get back to you within 24 hours.\n\nBest regards,\nThe A4 Team`;
-        const autoReplyHtml = `
-      <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:14px; color:#111827;">
-        <p>Hi ${name},</p>
-        <p>Thank you for reaching out to us.</p>
-        <p>We have received your quote request and our team will review the details. We will get back to you within 24 hours.</p>
-        <p>Best regards,<br/>The A4 Team</p>
-      </div>
-    `;
+        const autoReplyHtml = renderA4Email({
+          headline: "We've received your quote request",
+          firstName: name,
+          intro: [
+            "Thank you for reaching out to A4 Services.",
+            "We have received your quote request and our team will review the details. We will get back to you within 24 hours.",
+          ],
+          cta: { label: "Book a call", url: "https://a4.com.mt/book-a-call" },
+          cta2: { label: "Free accounting health check", url: "https://a4.com.mt/accounting-health-check" },
+          reason: "You received this because you requested a quote on a4.com.mt.",
+        }).html;
 
         await transport.sendMail({
           from: fromAddress,
