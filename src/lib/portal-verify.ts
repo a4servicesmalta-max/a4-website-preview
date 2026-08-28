@@ -43,6 +43,45 @@ export async function checkVerified(email: string, verifiedToken: string): Promi
   return r.ok && r.data.verified === true;
 }
 
+/**
+ * Send the reviewed document to the portal so it is stored and attached to the
+ * lead this upload just created (owner 2026-08-28).
+ *
+ * MULTIPART, so it cannot use `postBackend` (which is JSON-only). Best-effort
+ * by construction: the visitor already has their review on screen, and a
+ * storage failure must never turn a successful review into an error. The
+ * backend authorises on the SAME verification token and only attaches to a
+ * lead for that address created in the last half hour.
+ */
+export async function attachFsToLead(input: {
+  email: string;
+  verifiedToken: string;
+  file: File;
+}): Promise<boolean> {
+  if (!QUOTE_API_BASE || !input.email || !input.verifiedToken) return false;
+  try {
+    const form = new FormData();
+    form.append("file", input.file, input.file.name);
+    form.append("email", input.email);
+    form.append("verifiedToken", input.verifiedToken);
+    const res = await fetch(`${QUOTE_API_BASE}/public/audit-fs-attachment`, {
+      method: "POST",
+      headers: { Origin: A4_ORIGIN },
+      body: form,
+      // Uploading a 20 MB file needs more room than an 8s JSON round trip.
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!res.ok) {
+      console.warn("portal audit-fs-attachment rejected:", res.status);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("portal audit-fs-attachment errored:", err);
+    return false;
+  }
+}
+
 /** Best-effort prospect quote email; returns whether the backend sent it. */
 export async function sendAuditQuoteEmail(input: {
   email: string;
