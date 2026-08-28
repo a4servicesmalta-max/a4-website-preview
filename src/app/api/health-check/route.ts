@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
+import { renderA4Email } from "@/lib/email-shell";
 
 function getTransport() {
   const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
@@ -26,17 +27,51 @@ export async function POST(req: NextRequest) {
 
     if (transport && to) {
       try {
+        const findings = (Array.isArray(breakdown) ? breakdown : [])
+          .map((r: { dimension?: string; finding?: string }) => `${r?.dimension ?? ""}: ${r?.finding ?? ""}`)
+          .filter((s: string) => s.trim() !== ":");
+        const figure = { label: "Your accounting health score", value: `${score}/100`, unit: String(band ?? "") };
+
+        const staff = renderA4Email({
+          eyebrow: "Website · health check",
+          headline: `Accounting health check — ${name || email}`,
+          intro: `${name || email} completed the accounting health quiz.`,
+          figure,
+          rows: [
+            { label: "Name", value: String(name ?? "") },
+            { label: "Company", value: String(company ?? "") },
+            { label: "Email", value: String(email) },
+          ],
+          checklist: findings.length ? { title: "Findings", items: findings } : undefined,
+          cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+          signoff: "Automated notification from a4.com.mt",
+        });
         await transport.sendMail({
           from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to, replyTo: email,
           subject: `Accounting health check — ${name || email} (${score}/100, ${band})`,
           text: `Name: ${name}\nCompany: ${company}\nEmail: ${email}\n\n${summary}`,
+          html: staff.html,
+        });
+
+        const visitor = renderA4Email({
+          headline: "Your accounting health check result",
+          firstName: name || "there",
+          intro: [
+            "Here is your accounting health check result, with what we noticed in each area.",
+            "Want a real review of your numbers? Reply to this email or book a call and we'll walk through it together.",
+          ],
+          figure,
+          checklist: findings.length ? { title: "What we found", items: findings } : undefined,
+          cta: { label: "Book a call", url: "https://a4.com.mt/en/book-a-call" },
+          reason: "You received this because you ran the accounting health check on a4.com.mt.",
         });
         await transport.sendMail({
           from: `"A4 Services" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to: email,
           subject: `Your accounting health check — ${score}/100 (${band})`,
-          text: `Hi ${name || ""},\n\nHere is your accounting health check result.\n\n${summary}\n\nWant a real review of your numbers? Reply or book a call: https://a4.com.mt/en/book-a-call\n\n— A4 Services`,
+          text: visitor.text,
+          html: visitor.html,
         });
       } catch (mailErr) {
         console.error("health-check email failed (lead already pushed):", mailErr);
