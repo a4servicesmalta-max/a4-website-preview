@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button, Icon, Container } from "@/components/a4-landing/Primitives";
 import { Field, primaryBtn, outlineBtn } from "@/app/[locale]/accounting-health-check/components/Field";
-import { FindingsList } from "@/app/[locale]/accounting-health-check/components/FindingsList";
 import { ReviewFailureNotice } from "@/app/[locale]/accounting-health-check/components/ReviewFailureNotice";
 import { NETWORK_FAILURE, readReviewFailure, type ReviewFailure } from "@/lib/review-failure";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
@@ -352,7 +351,7 @@ export function AuditEstimator() {
                             ? "Priced from the statements you sent us — the fee above is the one we quoted you."
                             : "Your statements have been read, and the planning saving is already off the fee above."}
                           {data && (
-                            <> <button type="button" onClick={() => setAmode("docs")} style={{ background: "none", border: 0, padding: 0, color: "var(--a4-primary)", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>See the findings</button></>
+                            <> <button type="button" onClick={() => setAmode("docs")} style={{ background: "none", border: 0, padding: 0, color: "var(--a4-primary)", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>See your quote</button></>
                           )}
                         </span>
                       </div>
@@ -407,10 +406,6 @@ export function AuditEstimator() {
                   </span>
                   <button onClick={resetReview} style={{ background: "none", border: 0, cursor: "pointer", color: "var(--a4-mute)", fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>New</button>
                 </div>
-                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)", marginTop: 10 }}>
-                  {data.stats.checks_run} checks · {data.stats.checks_passed} passed · {data.stats.checks_failed} flagged
-                </div>
-
                 <div style={{ background: "#000", borderRadius: "var(--a4-r-lg)", padding: "clamp(20px,3vw,26px)", color: "#fff", marginTop: 16 }}>
                   {engineFee !== null ? (
                     <>
@@ -439,16 +434,12 @@ export function AuditEstimator() {
                   )}
                 </div>
 
-                {data.aiCommentary && (
-                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.6, color: "var(--a4-body)", margin: "16px 0 0", padding: "12px 14px", background: "var(--a4-surface-soft)", borderRadius: 8, textWrap: "pretty" }}>
-                    {data.aiCommentary}
-                  </p>
-                )}
-                <div style={{ marginTop: 16 }}><FindingsList findings={data.findings} /></div>
-
-                {/* Report downloads removed (owner 2026-08-28): the findings are
-                    read here and the conversation continues with us — the next
-                    step is a proposal or a call, not a file. */}
+                {/* Findings, AI commentary, check counts and report downloads are all
+                    deliberately NOT rendered here (owner 2026-08-28): this page sells the
+                    audit, so the visitor gets the fee and nothing else. The engine still
+                    runs the full review — the findings travel with the lead and we walk
+                    the client through them on the scoping call. /accounting-health-check
+                    remains the page whose product IS the findings. */}
                 <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid var(--a4-hairline-light)", display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
                   <Button variant="outline-light" size="md" href={BOOK_A_CALL_PATH}>Book a call</Button>
@@ -459,7 +450,7 @@ export function AuditEstimator() {
               <div>
                 <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 21, letterSpacing: "-.015em", color: "var(--a4-ink)", margin: 0 }}>Send the numbers</h3>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, lineHeight: 1.6, color: "var(--a4-mute)", margin: "8px 0 0", textWrap: "pretty" }}>
-                  Upload last year&apos;s financial statements or management accounts. We run a real disclosure, consistency and casting review on the file and come back with the findings — and the planning saving comes off your audit fee.
+                  Upload last year&apos;s financial statements or management accounts. We run a real disclosure, consistency and casting review on the file, price the audit from it, and take the planning saving off your fee. We go through what we found on the scoping call.
                 </p>
                 {/* The way back. Nothing here clears an answer, so a visitor who
                     opened this from the fee step returns to exactly what they
