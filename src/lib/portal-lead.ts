@@ -35,6 +35,7 @@
 
 import { QUOTE_API_BASE } from "@/lib/websiteQuotation";
 import { independenceLeadNote, type IndependenceFlags } from "@/lib/independence";
+import { attributionFromRequest, type Attribution } from "@/lib/firstTouch";
 
 /** Origin the portal maps to the A4 property; it reads this header, never the body. */
 const A4_ORIGIN = "https://a4.com.mt";
@@ -66,12 +67,32 @@ type LeadInput = {
    * exists and has been verified end to end.
    */
   independence?: IndependenceFlags;
+  /**
+   * Which ad campaign brought this visitor, read from the first-touch cookie
+   * (lib/firstTouch.ts). Undefined for organic traffic.
+   *
+   * This is the ONLY campaign signal an a4.com.mt lead can carry: the push
+   * below happens server-side, so the browser URL where `utm_*` and `gclid`
+   * live is not visible here. Without it every lead from this site reaches the
+   * portal unattributed and paid campaigns pointed at a4.com.mt show spend
+   * against no leads.
+   */
+  provenance?: Attribution;
 };
 
 /** The page a request came from, for attribution. Referer is what we have. */
 export function pageUrlOf(req: { headers: { get(name: string): string | null } }): string | undefined {
   return req.headers.get("referer") || undefined;
 }
+
+/**
+ * The campaign attribution for a request, from the first-touch cookie.
+ *
+ * Re-exported here so a route handler needs one import to push a lead with
+ * everything it should carry, and so there is one obvious thing to pass when
+ * the next form is added.
+ */
+export const provenanceOf = attributionFromRequest;
 
 export async function pushLeadToPortal(input: LeadInput): Promise<boolean> {
   const base = QUOTE_API_BASE;
@@ -99,6 +120,10 @@ export async function pushLeadToPortal(input: LeadInput): Promise<boolean> {
           ...(messageBody ? { message: messageBody } : {}),
           source: input.source ?? "contact",
           ...(input.sourceDetail ? { sourceDetail: input.sourceDetail } : {}),
+          // The portal's websiteProvenanceSchema is optional throughout and
+          // strips unknown keys, so sending nothing (organic) is fine and
+          // sending this can never turn a good lead into a 400.
+          ...(input.provenance ? { provenance: input.provenance } : {}),
           // Forward-compatible: stripped by today's intake schema, persisted
           // once the backend lane lands the field on WebsiteLead.
           ...(input.independence

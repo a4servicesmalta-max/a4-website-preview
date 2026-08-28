@@ -6,6 +6,7 @@ import "./globals.css";
 import "@/components/bookkeeping/bookkeeping.css";
 import { headers } from "next/headers";
 import GoogleTags from "@/components/common/GoogleTags";
+import FirstTouchAttribution from "@/components/common/FirstTouchAttribution";
 import { LOCALE_HEADER } from "@/lib/i18n-config";
 import { getSiteUrl } from "@/lib/site-url";
 import { DEFAULT_DESCRIPTION, pageMetadata } from "@/lib/page-metadata";
@@ -97,6 +98,11 @@ export default async function RootLayout({
         {/* GA4 + Google Ads, Consent Mode v2 denied by default. Renders nothing
             until NEXT_PUBLIC_GA4_ID / NEXT_PUBLIC_GADS_ID are set. */}
         <GoogleTags />
+        {/* Records which campaign brought this visitor, in a first-party cookie
+            the lead routes read on submit. Renders nothing, and unlike the tags
+            above it is NOT gated on measurement IDs — the portal needs the
+            attribution whether or not GA is configured. */}
+        <FirstTouchAttribution />
         {children}
       </body>
     </html>
