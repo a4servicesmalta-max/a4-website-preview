@@ -12,23 +12,12 @@ import {
   calcAuditFee, auditFloor, feeLines, euro, type AuditInput,
 } from "@/lib/audit-fee";
 import { AUDIT_PRE_TRADING, TAX_RETURN_FROM, PRICING_VAT_NOTE } from "@/data/a4QuotePack";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 import { trackConversion } from "@/lib/analytics";
 
 type Opt = { id: string; label: string; sub?: string };
 
 const labelOf = (list: Opt[], id: string) => (list.find((o) => o.id === id) ?? list[0]).label;
-
-function download(b64: string, filename: string, mime: string) {
-  const bin = atob(b64);
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  const url = URL.createObjectURL(new Blob([u8], { type: mime }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-}
 
 function Pills({ items, value, set }: { items: Opt[]; value: string; set: (id: string) => void }) {
   return (
@@ -431,7 +420,7 @@ export function AuditEstimator() {
                         <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)" }}>/ year</span>
                       </div>
                       <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.6, color: "var(--a4-stone)", margin: "12px 0 0" }}>
-                        Read from the {data.quote?.docKind === "management_accounts" ? "management accounts" : "statements"} you sent{answers.year === "multi" ? `, per year — ${labelOf(NYRS, answers.nyrs).toLowerCase()} to audit` : ""}. Fixed after one short scoping call. Excludes VAT.
+                        Read from the {data.quote?.docKind === "management_accounts" ? "management accounts" : "statements"} you sent{answers.year === "multi" ? `, per year — ${labelOf(NYRS, answers.nyrs).toLowerCase()} to audit` : ""}. Fixed after one short scoping call. Excludes VAT and the annual tax return.
                       </p>
                       {data.emailed && (
                         <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.6, color: "var(--a4-stone)", margin: "8px 0 0" }}>
@@ -457,12 +446,12 @@ export function AuditEstimator() {
                 )}
                 <div style={{ marginTop: 16 }}><FindingsList findings={data.findings} /></div>
 
+                {/* Report downloads removed (owner 2026-08-28): the findings are
+                    read here and the conversation continues with us — the next
+                    step is a proposal or a call, not a file. */}
                 <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid var(--a4-hairline-light)", display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button type="button" style={primaryBtn()} onClick={() => download(data.reportBase64, data.reportName, "application/pdf")}>⬇ Download report (PDF)</button>
-                  {data.annotatedDocxBase64 && (
-                    <button type="button" style={outlineBtn} onClick={() => download(data.annotatedDocxBase64!, data.annotatedName || "review.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}>⬇ Annotated Word</button>
-                  )}
                   <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
+                  <Button variant="outline-light" size="md" href={BOOK_A_CALL_PATH}>Book a call</Button>
                 </div>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "12px 0 0" }}>Indicative pre-check, not a substitute for audit. Fixed after a short scoping call, never below the pre-trading figure of our scale (€{AUDIT_PRE_TRADING} for a full audit, €{auditFloor(true)} for a review). {PRICING_VAT_NOTE}</p>
               </div>
