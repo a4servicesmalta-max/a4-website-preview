@@ -73,7 +73,7 @@ export type A4EmailInput = {
   /** Uppercase chip in the band, e.g. "Website · contact". */
   eyebrow?: string;
   headline: string;
-  /** Renders "Dear <firstName>," — omitted entirely when absent (staff mails). */
+  /** Renders "Dear <first name>," (first token only — a full name reads as a mail merge) — omitted when absent (staff mails). */
   firstName?: string;
   /** One paragraph, or several. A single string splits on blank lines. */
   intro: string | string[];
@@ -307,9 +307,10 @@ function renderHtml(input: A4EmailInput): string {
                   <td align="right" style="vertical-align:middle;"><span style="display:inline-block; padding:5px 12px; border-radius:999px; background-color:${ACCENT_SOFT}; border:1px solid ${ACCENT_SOFT_BORDER}; font-family:${F}; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:600; color:${ACCENT_STRONG};">${escapeHtml(input.eyebrow)}</span></td>`
     : "";
 
-  const greeting = input.firstName
+  const firstName = firstNameOf(input.firstName);
+  const greeting = firstName
     ? `
-              <p class="v-body" style="margin:14px 0 0; font-size:15px; line-height:1.65; color:${BODY};">Dear ${escapeHtml(input.firstName)},</p>`
+              <p class="v-body" style="margin:14px 0 0; font-size:15px; line-height:1.65; color:${BODY};">Dear ${escapeHtml(firstName)},</p>`
     : "";
 
   return `<!DOCTYPE html>
@@ -421,8 +422,8 @@ function renderText(input: A4EmailInput): string {
   const blank = () => out.push("");
   out.push(input.headline.trim());
   blank();
-  if (input.firstName) {
-    out.push(`Dear ${input.firstName.trim()},`);
+  if (firstNameOf(input.firstName)) {
+    out.push(`Dear ${firstNameOf(input.firstName)},`);
     blank();
   }
   for (const p of introParagraphs(input.intro)) {
@@ -520,4 +521,10 @@ export function a4EmailAttachments(): A4EmailAttachment[] {
   }
   cachedAttachments = list;
   return list;
+}
+
+/** First token of a name; '' for blank or an email local part. */
+function firstNameOf(name?: string): string {
+  const first = (name ?? '').trim().split(/\s+/)[0] ?? '';
+  return first && !first.includes('@') ? first : '';
 }
