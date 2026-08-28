@@ -21,6 +21,7 @@ import {
   writeStoredSession,
   type ChatServerMessage,
 } from "@/lib/chatSession";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 
 /**
  * `bot` is scripted local copy (the opening three questions and status lines);
@@ -54,6 +55,14 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
   const [issue, setIssue] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [staffJoined, setStaffJoined] = useState(false);
+  /**
+   * Nobody has picked the conversation up yet. Purely time-based — there is no
+   * presence signal to read — and it never hides the thread: the visitor can
+   * keep typing, and it disappears the moment a staff message arrives.
+   */
+  const [noReplyYet, setNoReplyYet] = useState(false);
+  const [offlineEmail, setOfflineEmail] = useState("");
+  const [offlineEmailSent, setOfflineEmailSent] = useState(false);
   /**
    * Live-first identity capture: the thread opens BEFORE we know who the
    * visitor is; name/email are asked conversationally inside the live thread
@@ -350,6 +359,35 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
     [token, identityStage, say, t]
   );
 
+  /**
+   * Out-of-hours safety net: if no member of staff has said anything within
+   * NO_REPLY_AFTER_MS of the thread going live, offer the two things that work
+   * when the desk is empty — leave an email, or book a call. Cleared as soon as
+   * staff reply (the poll flips `staffJoined`).
+   */
+  const NO_REPLY_AFTER_MS = 150_000; // 2.5 minutes
+  useEffect(() => {
+    if (step !== "live" || staffJoined) {
+      setNoReplyYet(false);
+      return;
+    }
+    const timer = setTimeout(() => setNoReplyYet(true), NO_REPLY_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [step, staffJoined]);
+
+  /** The offline card's email capture — same identity patch the thread uses. */
+  const submitOfflineEmail = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const email = offlineEmail.trim();
+      if (!token || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+      void patchChatIdentity(token, { email });
+      setIdentityStage("done");
+      setOfflineEmailSent(true);
+    },
+    [token, offlineEmail]
+  );
+
   /** Live step: every further message goes to the thread, not to /api/support. */
   const sendLiveMessage = useCallback(
     async (content: string) => {
@@ -544,6 +582,51 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
           {botTyping && (
             <div className="flex justify-start">
               <TypingIndicator className="text-gray-500" />
+            </div>
+          )}
+
+          {/* Nobody at the desk — leave an email, or book a call. */}
+          {noReplyYet && (
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left">
+              <div className="text-[13px] font-semibold text-[#111111]">
+                No one is at the desk right now.
+              </div>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-gray-600">
+                {identityStage === "done" || offlineEmailSent
+                  ? "We have your details — we'll reply here and by email as soon as we're back. If it's easier, book a time and we'll call you."
+                  : "Leave your email and we'll come back to you, or book a time and we'll call you."}
+              </p>
+
+              {identityStage !== "done" && !offlineEmailSent && (
+                <form onSubmit={submitOfflineEmail} className="mt-3 flex gap-2">
+                  <input
+                    type="email"
+                    value={offlineEmail}
+                    onChange={(e) => setOfflineEmail(e.target.value)}
+                    placeholder="you@company.com.mt"
+                    aria-label="Your email address"
+                    className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-[13px] text-[#111111] outline-none focus:border-gray-500"
+                  />
+                  <button
+                    type="submit"
+                    className="shrink-0 rounded-lg bg-[#111111] px-3 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#222222]"
+                  >
+                    Send
+                  </button>
+                </form>
+              )}
+              {offlineEmailSent && (
+                <div className="mt-2 text-[12.5px] font-semibold text-[#111111]">
+                  Thanks — we&apos;ll email you back.
+                </div>
+              )}
+
+              <a
+                href={BOOK_A_CALL_PATH}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-[12.5px] font-semibold text-[#111111] transition-colors hover:border-gray-500"
+              >
+                Book a meeting →
+              </a>
             </div>
           )}
         </div>
