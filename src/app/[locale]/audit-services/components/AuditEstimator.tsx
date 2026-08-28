@@ -508,7 +508,7 @@ export function AuditEstimator() {
                     <input ref={inputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: "none" }} onChange={(e) => { if (e.target.files?.[0]) setFile(e.target.files[0]); }} />
                     <Icon name="upload-cloud" size={26} color="var(--a4-primary)" stroke={1.75} />
                     <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 600, color: "var(--a4-ink)", marginTop: 10 }}>Drop the file here or click to upload</div>
-                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 6 }}>PDF or Word · confidential, processed in memory, never stored</div>
+                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 6 }}>PDF or Word · confidential, kept securely with your enquiry</div>
                   </div>
                 ) : (
                   <div style={{ display: "grid", gap: 14, marginTop: 18 }}>
@@ -565,7 +565,7 @@ export function AuditEstimator() {
 
                     <label style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, display: "flex", gap: 9, alignItems: "flex-start", color: "var(--a4-charcoal)", lineHeight: 1.5 }}>
                       <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: "var(--a4-primary)", width: 16, height: 16 }} />
-                      I understand my file is processed — including by AI models — to generate this review, and is not stored.
+                      I understand my file is processed — including by AI models — to generate this review, and is kept securely with my enquiry. Ask us at any time and we will delete it.
                     </label>
 
                     <button type="button" disabled={submitDisabled} onClick={runReview} style={primaryBtn(submitDisabled)}>

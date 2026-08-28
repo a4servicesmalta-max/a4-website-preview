@@ -223,7 +223,7 @@ export function DeepReview({
           <span style={{ fontSize: 14.5, fontWeight: 600, color: file ? "var(--a4-primary)" : "var(--a4-ink)" }}>
             {file ? file.name : "Click to upload your trial balance"}
           </span>
-          <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>CSV, Excel or PDF · processed in memory, never stored</span>
+          <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>CSV, Excel or PDF · kept securely with your enquiry</span>
         </label>
       )}
 
@@ -240,7 +240,7 @@ export function DeepReview({
           <span style={{ fontSize: 14.5, fontWeight: 600, color: file ? "var(--a4-primary)" : "var(--a4-ink)" }}>
             {file ? file.name : "Click to upload your management accounts or financial statements"}
           </span>
-          <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>PDF, Word or Excel — management accounts or financial statements · processed in memory, never stored</span>
+          <span style={{ fontSize: 12.5, color: "var(--a4-mute)" }}>PDF, Word or Excel — management accounts or financial statements · kept securely with your enquiry</span>
         </label>
       )}
 
@@ -312,7 +312,7 @@ export function DeepReview({
 
       <label style={{ fontSize: 13.5, display: "flex", gap: 9, alignItems: "flex-start", color: "var(--a4-body)", lineHeight: 1.5 }}>
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required style={{ marginTop: 3, accentColor: "var(--a4-primary)", width: 16, height: 16 }} />
-        I understand my file is processed to generate this review and is not stored.
+        I understand my file is processed to generate this review and is kept securely with my enquiry. Ask us at any time and we will delete it.
       </label>
 
       <button type="submit" disabled={submitDisabled} style={primaryBtn(submitDisabled)}>
