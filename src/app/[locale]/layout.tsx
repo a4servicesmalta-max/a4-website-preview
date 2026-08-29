@@ -9,6 +9,7 @@ import { SmoothScroll } from "@/components/common/SmoothScroll";
 // import MainGifLoaderGate from "@/components/common/MainGifLoaderGate";
 import ScrollToTopButton from "@/components/common/ScrollToTopButton";
 import CookieConsentBanner from "@/components/common/CookieConsentBanner";
+import PresenceBeacon from "@/components/common/PresenceBeacon";
 import FloatingActionDock from "@/components/common/FloatingActionDock";
 import SupportChat from "@/components/support-chat/SupportChat";
 import { ReduceMotionProvider } from "@/contexts/ReduceMotionContext";
@@ -78,6 +79,7 @@ export default async function LocaleLayout({
                 <FloatingActionDock />
                 {/* <CustomCursor /> */}
                 <CookieConsentBanner />
+                <PresenceBeacon />
               </SmoothScroll>
             {/* </MainGifLoaderGate> */}
           </ScrollProvider>
