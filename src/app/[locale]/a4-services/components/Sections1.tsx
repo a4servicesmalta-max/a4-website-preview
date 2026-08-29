@@ -103,7 +103,12 @@ export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit F
             A licensed Malta accounting &amp; audit firm. <a href="https://vacei.com" target="_blank" rel="noopener noreferrer" style={{ color: "#fff", textDecoration: "underline", textUnderlineOffset: 3 }}>Vacei</a> is the software we build and run — <strong style={{ color: "#fff", fontWeight: 600 }}>the machines do the volume, our accountants and auditors do the judgement</strong>, the risk and the call.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
-            <Button variant="primary" size="lg" href="/contact">Request information <Icon name="arrow-right" size={18} color="#000" /></Button>
+            {/* The instant quotation is the strongest thing this page offers —
+                a real price in seconds, no form first (owner 2026-08-29). It
+                jumps to the homepage calculator (#pricing), so the other two
+                CTAs step down to outline and the hero keeps ONE primary. */}
+            <Button variant="primary" size="lg" href="#pricing">Get instant quotation <Icon name="arrow-right" size={18} color="#000" /></Button>
+            <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
             <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
           </div>
           <div style={{ display: "flex", gap: "6px 22px", marginTop: 22, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
