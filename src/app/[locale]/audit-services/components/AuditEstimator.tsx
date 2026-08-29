@@ -252,6 +252,9 @@ export function AuditEstimator() {
         }),
       });
       if (!res.ok) throw new Error("request failed");
+      // The backend accepted the request. Only here — a non-2xx lands on the
+      // throw above, so we never report a conversion the firm did not receive.
+      trackConversion(intent === "proposal" ? "audit_proposal_submit" : "audit_consultation_submit");
       setDone(ref);
     } catch {
       setModalError("Something went wrong sending your request. Please try again or email info@a4.com.mt.");
