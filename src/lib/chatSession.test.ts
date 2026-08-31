@@ -286,3 +286,46 @@ describe("extractIdentity — conservative parsing of a free-text reply", () => 
     expect(extractIdentity("see https://example.com for context")).toEqual({});
   });
 });
+
+describe("postChatMessage — the ack id primes the duplicate-suppression set", () => {
+  beforeEach(() => {
+    globalThis.fetch = vi.fn() as unknown as typeof fetch;
+  });
+
+  it("returns messageId when the backend answers with the documented contract", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      envelope({ messageId: "m1", sentAt: "2026-08-03T10:00:01.000Z" }, 201)
+    );
+    const res = await postChatMessage("tok", "hello");
+    expect(res).toEqual({ ok: true, data: { messageId: "m1", sentAt: "2026-08-03T10:00:01.000Z" } });
+  });
+
+  it("THE DUPLICATE BUG: normalises a backend that answers with `id` instead of `messageId`", async () => {
+    // The deployed backend returned VisitorFacingMessage ({ id, role, content,
+    // sentAt }) for a while. Reading only `messageId` made the ack undefined,
+    // the poll-dedupe set never primed, and every sent message re-rendered on
+    // the next poll tick — the double-bubble screenshot of 2026-08-31.
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      envelope(
+        { id: "m2", role: "visitor", content: "hello", sentAt: "2026-08-03T10:00:02.000Z" },
+        201
+      )
+    );
+    const res = await postChatMessage("tok", "hello");
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.data.messageId).toBe("m2");
+  });
+
+  it("prefers messageId over id when both are present, and never fabricates one", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      envelope({ messageId: "m3", id: "m3", sentAt: "2026-08-03T10:00:03.000Z" }, 201)
+    );
+    const both = await postChatMessage("tok", "x");
+    expect(both.ok && both.data.messageId).toBe("m3");
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(envelope({}, 201));
+    const neither = await postChatMessage("tok", "x");
+    expect(neither.ok).toBe(true);
+    if (neither.ok) expect(neither.data.messageId).toBe("");
+  });
+});
