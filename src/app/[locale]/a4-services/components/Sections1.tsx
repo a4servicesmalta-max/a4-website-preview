@@ -7,6 +7,7 @@ import { usePrefersReducedMotion } from "@/contexts/ReduceMotionContext";
 // Bookkeeping figures come from the quote pack. Under mt-2026-08-14-volume they
 // are the ENTRY band of nine, priced by monthly expenses — always shown as "from".
 import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 
 /** Typewriter cycle for the hero — types/deletes each word with a caret. Static under reduced motion. */
 function TypeCycle({ words, fallback }: { words: string[]; fallback: string }) {
@@ -109,7 +110,7 @@ export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit F
                 CTAs step down to outline and the hero keeps ONE primary. */}
             <Button variant="primary" size="lg" href="#pricing">Get instant quotation <Icon name="arrow-right" size={18} color="#000" /></Button>
             <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
-            <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
+            <Button variant="outline-dark" size="lg" href={BOOK_A_CALL_PATH}>Book a consultation</Button>
           </div>
           <div style={{ display: "flex", gap: "6px 22px", marginTop: 22, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
             {["Quotes within 24 hours", `Managed bookkeeping from €${BOOKKEEPING_FROM}/mo self-employed, from €${BOOKKEEPING_COMPANY}/mo company`, "Free accounting health check"].map((fact, i) => (

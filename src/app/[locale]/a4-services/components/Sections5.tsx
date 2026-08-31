@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
 import { getNextComplianceDeadline, formatComplianceDate } from "@/lib/compliance-deadlines";
 import { SUPPORT_RESPONSE_LABEL } from "@/lib/site-config";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 
 export function ContactCTA() {
   return (
@@ -21,7 +22,7 @@ export function ContactCTA() {
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 38, flexWrap: "wrap", justifyContent: "center" }}>
             <Button variant="primary" size="lg" href="/contact">Request information <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
+            <Button variant="outline-dark" size="lg" href={BOOK_A_CALL_PATH}>Book a consultation</Button>
           </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 9, marginTop: 30, background: "rgba(255,255,255,.05)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-full)", padding: "8px 16px" }}>
             <span style={{ position: "relative", display: "inline-flex", width: 8, height: 8 }}>
