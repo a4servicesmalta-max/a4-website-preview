@@ -342,11 +342,24 @@ export async function postChatMessage(
   token: string,
   content: string
 ): Promise<ChatResult<{ messageId: string; sentAt: string }>> {
-  return request(`${CHAT_API_BASE}/public/chat/sessions/${encodeURIComponent(token)}/messages`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content: content.slice(0, 4000), company_website: "" }),
-  });
+  const res = await request<{ messageId?: string; id?: string; sentAt?: string }>(
+    `${CHAT_API_BASE}/public/chat/sessions/${encodeURIComponent(token)}/messages`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: content.slice(0, 4000), company_website: "" }),
+    }
+  );
+  if (!res.ok) return res;
+  // Accept BOTH spellings of the ack id. The contract says `messageId`, but the
+  // deployed backend answered with `id` only for a while — and this id is what
+  // primes the poll-dedupe set, so losing it meant every sent message was
+  // re-rendered by the next poll (the duplicate-bubble bug, 2026-08-31).
+  const messageId = res.data?.messageId || res.data?.id || "";
+  return {
+    ok: true,
+    data: { messageId, sentAt: res.data?.sentAt || new Date().toISOString() },
+  };
 }
 
 export async function fetchChatMessages(
