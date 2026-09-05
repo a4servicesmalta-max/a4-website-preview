@@ -31,6 +31,9 @@ vi.mock("@/lib/portal", () => ({ pushToPortal: vi.fn(async () => {}) }));
 vi.mock("@/lib/portal-lead", () => ({
   pushLeadToPortal: vi.fn(async () => true),
   pageUrlOf: vi.fn(() => "https://a4.com.mt/quote"),
+  // Campaign attribution from the first-touch cookie. Mocked as "organic" —
+  // these tests are about independence routing, not attribution.
+  provenanceOf: vi.fn(() => undefined),
 }));
 vi.mock("nodemailer", () => ({ default: { createTransport: vi.fn(() => ({ sendMail: vi.fn(async () => {}) })) } }));
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { attachFsToLead, checkVerified, sendAuditQuoteEmail } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
-import { pushLeadToPortal } from "@/lib/portal-lead";
+import { pushLeadToPortal, provenanceOf } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
 import { augmentWithAiCommentary } from "@/lib/ai-review";
 import { issueQuoteLock, LOCK_COOKIE, lockCookieOptions } from "@/lib/quote-lock";
@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
         (revenueBand ? `\nShown to client: €${quotedFee}/yr (${revenueBand} band)` : "") +
         (scoping ? `\n\nScoping notes:\n${scoping}` : ""),
       sourceDetail: "fs-review",
+      provenance: provenanceOf(req),
     });
 
     // Keep the document with the enquiry (owner 2026-08-28). Fired here, right
