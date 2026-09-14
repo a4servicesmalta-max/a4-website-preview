@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
 import { pushChatToPortal } from "@/lib/portal-chat";
-import { pushLeadToPortal } from "@/lib/portal-lead";
+import { pushLeadToPortal, provenanceOf } from "@/lib/portal-lead";
 import { renderA4Email } from "@/lib/email-shell";
 
 function getTransport() {
@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
           name: name.trim(),
           email: email.trim(),
           message: issue.trim(),
+          provenance: provenanceOf(req),
         });
 
     // If the chat module could not be reached the conversation must still land

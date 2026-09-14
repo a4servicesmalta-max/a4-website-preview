@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
-import { pushLeadToPortal, pageUrlOf } from "@/lib/portal-lead";
+import { pushLeadToPortal, pageUrlOf, provenanceOf } from "@/lib/portal-lead";
 import { flagsForServiceSelection } from "@/lib/independence";
 import { renderA4Email } from "@/lib/email-shell";
 
@@ -146,6 +146,7 @@ export async function POST(req: NextRequest) {
       ].filter(Boolean).join("\n"),
       sourceDetail: "quote",
       pageUrl: pageUrlOf(req),
+      provenance: provenanceOf(req),
       independence,
     });
 
