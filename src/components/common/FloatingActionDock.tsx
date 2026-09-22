@@ -256,7 +256,7 @@ export default function FloatingActionDock() {
           </span>
           <span className="flex-1 text-[13px] font-semibold leading-tight text-white">
             <span className="sm:hidden">Book a call</span>
-            <span className="hidden sm:inline">Book a free 15-min call</span>
+            <span className="hidden sm:inline">Book a free 30-min call</span>
           </span>
           <motion.span
             className="h-[3px] w-8 rounded-full bg-white/30"

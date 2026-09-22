@@ -252,7 +252,7 @@ export function LandingApp() {
   return (
     <div>
       {/* <LandingNav /> */}
-      <main>
+      <main id="main-content">
         <LandingHero />
         <HealthCheckPromo />
         <Integrations />

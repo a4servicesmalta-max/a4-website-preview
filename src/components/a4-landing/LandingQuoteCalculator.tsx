@@ -739,6 +739,7 @@ export function LandingQuoteCalculator() {
                   <label htmlFor="lqc-start" style={SUB_LABEL}>Earliest month that still needs doing</label>
                   <input
                     id="lqc-start"
+                    name="start_month"
                     type="month"
                     value={q.startMonth}
                     onChange={(e) => setQ({ startMonth: e.target.value, behind: String(catchUpMonthsFrom(e.target.value)) })}
@@ -829,15 +830,15 @@ export function LandingQuoteCalculator() {
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <label style={Q_FIELD}>
                           <span style={Q_FIELD_LABEL}>Your name</span>
-                          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Borg" autoComplete="name" style={Q_FIELD_INPUT} />
+                          <input name="name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Your name" placeholder="Jane Borg" autoComplete="name" style={Q_FIELD_INPUT} />
                         </label>
                         <label style={Q_FIELD}>
                           <span style={Q_FIELD_LABEL}>Email</span>
-                          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="jane@borgtrading.mt" autoComplete="email" style={Q_FIELD_INPUT} />
+                          <input name="email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" aria-label="Work email" placeholder="jane@borgtrading.mt" autoComplete="email" style={Q_FIELD_INPUT} />
                         </label>
                         <label style={Q_FIELD}>
                           <span style={Q_FIELD_LABEL}>Phone <span style={Q_FIELD_OPT}>optional</span></span>
-                          <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+356 …" autoComplete="tel" style={Q_FIELD_INPUT} />
+                          <input name="phone" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" aria-label="Phone" placeholder="+356 …" autoComplete="tel" style={Q_FIELD_INPUT} />
                         </label>
                       </div>
                       <input value={hp} onChange={(e) => setHp(e.target.value)} name="company_website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={Q_HONEYPOT} />
