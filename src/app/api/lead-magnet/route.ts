@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { buildComplianceCalendarIcs } from "@/lib/compliance-calendar";
 import { pushToPortal } from "@/lib/portal";
+import { renderA4Email } from "@/lib/email-shell";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -38,12 +39,24 @@ export async function POST(req: NextRequest) {
 
     if (transport && toAddress) {
       try {
+        const staff = renderA4Email({
+          eyebrow: "Website · lead magnet",
+          headline: "Lead magnet download — Malta compliance calendar 2026",
+          intro: "A visitor downloaded the Malta compliance deadline calendar 2026.",
+          rows: [
+            { label: "Email", value: email },
+            { label: "Magnet", value: "Malta compliance deadline calendar 2026" },
+          ],
+          cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+          signoff: "Automated notification from a4.com.mt",
+        });
         await transport.sendMail({
           from: `"A4 Website" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to: toAddress,
           subject: "Lead magnet download — Malta compliance calendar 2026",
           replyTo: email,
           text: `Email: ${email}\nMagnet: Malta compliance deadline calendar 2026`,
+          html: staff.html,
         });
       } catch (mailErr) {
         console.error("lead-magnet email failed (lead already pushed):", mailErr);

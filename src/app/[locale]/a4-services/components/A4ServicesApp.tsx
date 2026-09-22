@@ -5,7 +5,7 @@ import React from "react";
 import { LandingQuoteCalculator } from "@/components/a4-landing/LandingQuoteCalculator";
 import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
 import { A4BooksPromo } from "@/components/a4-landing/A4BooksPromo";
-import { Hero, Statement } from "./Sections1";
+import { Hero, Statement, Manifesto } from "./Sections1";
 import { ComplianceJourney } from "./ComplianceJourney";
 import { IntroVideo } from "./IntroVideo";
 import { LinkedInVideoFeed } from "./LinkedInVideoFeed";
@@ -34,6 +34,7 @@ import { MotionBand } from "./MotionBand";
 export const HOMEPAGE_SECTIONS = [
   { id: "hero", label: "Hero", el: Hero },
   { id: "statement", label: "Statement", el: Statement },
+  { id: "manifesto", label: "AI-Native Manifesto", el: Manifesto },
   { id: "journey", label: "Compliance Journey (scroll story)", el: ComplianceJourney },
   { id: "intro-video", label: "Intro Video", el: IntroVideo },
   { id: "case-studies", label: "Case Studies Teaser", el: CaseStudiesTeaser },

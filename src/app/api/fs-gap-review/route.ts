@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { isVerified } from "@/lib/email-verify";
+import { attachFsToLead, checkVerified, sendAuditQuoteEmail } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
-import { pushLeadToPortal } from "@/lib/portal-lead";
+import { pushLeadToPortal, provenanceOf } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
 import { augmentWithAiCommentary } from "@/lib/ai-review";
 import { issueQuoteLock, LOCK_COOKIE, lockCookieOptions } from "@/lib/quote-lock";
+import { renderA4Email, type EmailRow } from "@/lib/email-shell";
 import type { ReviewResponse } from "./types";
 
 export const runtime = "nodejs";
@@ -14,12 +15,21 @@ export const maxDuration = 120;
 const FS_TYPES = [".pdf", ".doc", ".docx"];
 const TB_TYPES = [".pdf", ".csv", ".xlsx", ".xlsm"];
 
-function emailLead(subject: string, text: string, replyTo?: string) {
+/** Staff notification. `text` stays the text part; `rows` paint the same values on the A4 shell. */
+function emailLead(subject: string, text: string, replyTo: string | undefined, rows: EmailRow[]) {
   const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
   const to = process.env.CONTACT_TO_EMAIL || user;
   if (!host || !user || !pass || !to) return Promise.resolve();
   const t = nodemailer.createTransport({ host, port: Number(process.env.SMTP_PORT) || 587, secure: process.env.SMTP_SECURE === "true", auth: { user, pass } });
-  return t.sendMail({ from: `"A4 Website" <${process.env.SMTP_FROM || user}>`, to, replyTo, subject, text });
+  const { html } = renderA4Email({
+    eyebrow: "Website · FS review",
+    headline: subject,
+    intro: "A visitor uploaded a document for the AI financial-statements / trial-balance review.",
+    rows,
+    cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+    signoff: "Automated notification from a4.com.mt",
+  });
+  return t.sendMail({ from: `"A4 Website" <${process.env.SMTP_FROM || user}>`, to, replyTo, subject, text, html });
 }
 
 export async function POST(req: NextRequest) {
@@ -43,7 +53,7 @@ export async function POST(req: NextRequest) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
     if (consent !== "true") return NextResponse.json({ error: "Consent is required to process the file." }, { status: 400 });
     // Gate the AI engine behind a confirmed email — never spend a review on an unverified address.
-    if (!isVerified(email, verifiedToken)) {
+    if (!(await checkVerified(email, verifiedToken))) {
       return NextResponse.json({ error: "Please confirm your email before running the review." }, { status: 401 });
     }
 
@@ -74,7 +84,18 @@ export async function POST(req: NextRequest) {
         (revenueBand ? `\nShown to client: €${quotedFee}/yr (${revenueBand} band)` : "") +
         (scoping ? `\n\nScoping notes:\n${scoping}` : ""),
       sourceDetail: "fs-review",
+      provenance: provenanceOf(req),
     });
+
+    // Keep the document with the enquiry (owner 2026-08-28). Fired here, right
+    // after the lead exists and BEFORE the engine call we are about to await,
+    // so the upload is already on its way while the review runs. Deliberately
+    // not awaited: the visitor's review must never wait on — or fail because
+    // of — storage. The backend attaches it to the lead just written.
+    const attaching = leadWritten
+      ? attachFsToLead({ email, verifiedToken, file })
+      : Promise.resolve(false);
+    void attaching.catch(() => false);
 
     // A thrown engine call must not skip the error path and lose the response
     // shape — the outer catch returns a 500 with no `leadCaptured` signal.
@@ -121,6 +142,22 @@ export async function POST(req: NextRequest) {
         (scoping ? `\n\nScoping notes from the estimator:\n${scoping}` : "") +
         quoteText,
       email,
+      [
+        { label: "Name", value: name },
+        { label: "Company", value: company },
+        { label: "Email", value: email },
+        { label: "Kind", value: kind },
+        { label: "File", value: file.name },
+        { label: "Engine status", value: String(engine.status) },
+        { label: "Shown to client", value: revenueBand ? `€${quotedFee}/yr (quotation figures, ${revenueBand} band)` : "" },
+        { label: "Scoping notes", value: scoping },
+        {
+          label: "Quote (internal)",
+          value: fullQuote
+            ? `€${fullQuote.fee} (${fullQuote.docKind}, basis: ${fullQuote.basis})\nDo not share fee basis with client.\nDetail: ${JSON.stringify(fullQuote.detail)}`
+            : "",
+        },
+      ],
     ).catch(() => {});
 
     await pushToPortal({
@@ -156,11 +193,17 @@ export async function POST(req: NextRequest) {
     // company cannot be quoted two different fees by the same site — and
     // cannot shop the tool by declining to upload. Bound to the verified
     // email, which we already hold at this point.
-    const res = NextResponse.json(clientPayload);
-    if (fullQuote && typeof fullQuote.fee === "number" && fullQuote.fee > 0) {
+    const priced = !!fullQuote && typeof fullQuote.fee === "number" && fullQuote.fee > 0;
+    // The backend emails the prospect their quote (with a booking link). Best
+    // effort: a mail failure never fails the review the client is waiting on.
+    const emailed = priced
+      ? await sendAuditQuoteEmail({ email, verifiedToken, name, fee: fullQuote!.fee, docKind: fullQuote!.docKind })
+      : false;
+    const res = NextResponse.json({ ...clientPayload, emailed });
+    if (priced) {
       res.cookies.set(
         LOCK_COOKIE,
-        issueQuoteLock(fullQuote.fee, "audit", email),
+        issueQuoteLock(fullQuote!.fee, "audit", email),
         lockCookieOptions(),
       );
     }

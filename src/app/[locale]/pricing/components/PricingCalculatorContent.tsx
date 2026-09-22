@@ -57,6 +57,11 @@ const PR_SERVICES = [
  * VAT and audit are both priced off volume, not filing frequency or turnover.
  */
 const PR_VOLUME_BANDS = ["1-20", "21-60", "61-150", "151-400"] as const;
+/** VAT offers the '0' band too — a registered, not-yet-trading company still
+ *  has nil returns prepared and filed (€19/mo, pack finding A4 2026-08-17).
+ *  Without it the card's "from €19" was unreachable in the calculator. */
+const VAT_BANDS = ["0", "1-20", "21-60", "61-150", "151-400"] as const;
+const VAT_LABELS = ["None yet", "Up to 20", "20 to 60", "60 to 150", "150 to 400"];
 /** The bookkeeping tab asks the FULL band ladder — volume prices the fee now. */
 const BOOK_TXN_BANDS = ["0", "1-20", "21-60", "61-150", "151-400", "401-1000", "1000+"] as const;
 const BOOK_TXN_LABELS = ["None yet", "Up to 20", "20 to 60", "60 to 150", "150 to 400", "400 to 1,000", "1,000+"];
@@ -557,11 +562,17 @@ function PricingCalc() {
    */
   const [bookTxnIdx, setBookTxnIdx] = useState(1); // BOOK_TXN_BANDS index — '1-20' (owner ruling 2026-08-26: every calculator defaults to "Up to 20")
   const [bookBanks, setBookBanks] = useState(1);
+  // Defaults follow the owner ruling 2026-08-26: every calculator opens on
+  // "Up to 20" — VAT_BANDS[1] and PR_VOLUME_BANDS[0] respectively (the old
+  // useState(1) on the 4-band array opened audit/VAT on "20 to 60").
   const [vatVol, setVatVol] = useState(1);
-  const [turn, setTurn] = useState(1);
+  const [turn, setTurn] = useState(0);
   const [incShareholders, setIncShareholders] = useState(1);
   const [incDirectors, setIncDirectors] = useState(1);
-  const [incRegistrations, setIncRegistrations] = useState(true);
+  // Off by default: the card says "from €2,000" and the calculator must open
+  // on the same figure — the €150 registrations add-on is the visitor's choice
+  // (owner 2026-08-27: "VAT option auto select in pricing page incorporation").
+  const [incRegistrations, setIncRegistrations] = useState(false);
   const [incBank, setIncBank] = useState(false);
   const [incRegOffice, setIncRegOffice] = useState(false);
   const [incSecretary, setIncSecretary] = useState(false);
@@ -611,7 +622,7 @@ function PricingCalc() {
         : []),
     ];
   } else if (svc === "vat") {
-    items = [{ service: "vat", txn: PR_VOLUME_BANDS[vatVol], vatreg: "art10" }];
+    items = [{ service: "vat", txn: VAT_BANDS[vatVol], vatreg: "art10" }];
   } else if (svc === "audit") {
     unit = "/ yr";
     items = [{ service: "audit", txn: PR_VOLUME_BANDS[turn] }];
@@ -870,7 +881,7 @@ function PricingCalc() {
             {svc === "vat" && (
               <div>
                 <div className="a4-font-body text-[14px] font-semibold text-white">Transactions a month</div>
-                <PrChip items={PR_VOLUME_LABELS} value={vatVol} set={setVatVol} cols={2} />
+                <PrChip items={VAT_LABELS} value={vatVol} set={setVatVol} cols={2} />
                 <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
                   Every VAT return prepared and filed with the CFR, reviewed before submission. The fee is a monthly one
                   set by your transaction volume, whatever your filing frequency. Art. 11 small-exempt businesses instead

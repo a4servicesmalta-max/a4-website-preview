@@ -105,6 +105,36 @@ function WhyMalta() {
   );
 }
 
+/** AI-native positioning band — audit rebuilt around AI, licensed auditors on the judgement and the opinion. */
+function AuditManifesto() {
+  return (
+    <section style={{ background: "#000", padding: "clamp(64px,9vw,104px) 0" }}>
+      <Container>
+        <div style={{ textAlign: "center" }}>
+          <Reveal>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14 }}>
+              <span style={{ width: 28, height: 1, background: "var(--a4-hairline-strong)" }} />
+              <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-on-dark-mute)" }}>Built AI-native</span>
+              <span style={{ width: 28, height: 1, background: "var(--a4-hairline-strong)" }} />
+            </div>
+            <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(32px,4.4vw,58px)", lineHeight: 1.1, letterSpacing: "-.02em", margin: "24px auto 0", maxWidth: 780, textWrap: "balance" }}>
+              We&rsquo;re not adding AI to audit.<br /><span style={{ color: "var(--a4-primary-bright)" }}>We&rsquo;re rebuilding it.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={120}>
+            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: "clamp(16px,1.7vw,19px)", lineHeight: 1.65, color: "var(--a4-on-dark-mute)", margin: "26px auto 0", maxWidth: 680, textWrap: "pretty" }}>
+              Audit is the last layer of finance nobody rebuilt — decades-old methods, brilliant people buried in repetitive work, fees billed by the hour. A4 works the other way around. The machines do the volume: collecting evidence, reconciling, documenting, analysing every transaction. Our licensed auditors do the judgement, the risk, the call and the hard conversations — and they sign the opinion.
+            </p>
+            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: "clamp(16px,1.7vw,19px)", lineHeight: 1.65, color: "var(--a4-on-dark)", margin: "18px auto 0", maxWidth: 680, textWrap: "pretty" }}>
+              AI agents check every transaction in real time. Licensed auditors own the judgement and the sign-off. <strong style={{ color: "#fff", fontWeight: 600 }}>Faster closes, deeper assurance, no year-end surprises</strong> — at a fixed fee agreed up front.
+            </p>
+          </Reveal>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
 function AuditServices() {
   const items = [
     { icon: "file-check-2", t: "Statutory audit", s: "Full audit of your annual financial statements under Maltese law (GAPSME / IFRS), signed by our licensed audit firm." },
@@ -242,6 +272,7 @@ export function AuditApp() {
         <AuditHero />
         <WhyMalta />
         <AuditEstimator />
+        <AuditManifesto />
         <AuditServices />
         <AuditProcess />
         <AuditFAQ />

@@ -7,6 +7,7 @@ import { usePrefersReducedMotion } from "@/contexts/ReduceMotionContext";
 // Bookkeeping figures come from the quote pack. Under mt-2026-08-14-volume they
 // are the ENTRY band of nine, priced by monthly expenses — always shown as "from".
 import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 
 /** Typewriter cycle for the hero — types/deletes each word with a caret. Static under reduced motion. */
 function TypeCycle({ words, fallback }: { words: string[]; fallback: string }) {
@@ -100,10 +101,13 @@ export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit F
             <br />with <span style={{ color: "var(--a4-primary-bright)" }}>A4</span>.
           </h1>
           <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: "clamp(16px,1.7vw,20px)", lineHeight: 1.6, maxWidth: 560, margin: "26px auto 0", textWrap: "pretty" }}>
-            A licensed Malta accounting &amp; audit firm. <a href="https://vacei.com" target="_blank" rel="noopener noreferrer" style={{ color: "#fff", textDecoration: "underline", textUnderlineOffset: 3 }}>Vacei</a> is the software we build and run — it does the heavy lifting while our team keeps you compliant, organised and in control.
+            A licensed Malta accounting &amp; audit firm. <a href="https://vacei.com" target="_blank" rel="noopener noreferrer" style={{ color: "#fff", textDecoration: "underline", textUnderlineOffset: 3 }}>Vacei</a> is the software we build and run — <strong style={{ color: "#fff", fontWeight: 600 }}>the machines do the volume, our accountants and auditors do the judgement</strong>, the risk and the call.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
-            <Button variant="primary" size="lg" href="/contact">Request information <Icon name="arrow-right" size={18} color="#000" /></Button>
+            {/* The calculator (#pricing) lives further down this same page — the
+                hero's job is to send people straight to it. */}
+            <Button variant="primary" size="lg" href="#pricing">Get an instant quote <Icon name="arrow-right" size={18} color="#000" /></Button>
+            <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
             <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
           </div>
           <div style={{ display: "flex", gap: "6px 22px", marginTop: 22, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
@@ -148,6 +152,46 @@ export function Statement() {
             <div style={{ marginTop: 26, display: "flex", flexWrap: "wrap", gap: 10 }}>
               {["Accounting", "Statutory audit", "Tax", "VAT", "Payroll", "Fractional CFO"].map((s) => (
                 <span key={s} style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 500, color: "var(--a4-on-dark)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-full)", padding: "7px 15px" }}>{s}</span>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+/** AI-native positioning band — the firm rebuilt around AI, humans on the judgement and the signature. */
+export function Manifesto() {
+  return (
+    <section style={{ background: "#000", padding: "0 0 clamp(64px,9vw,120px)" }}>
+      <Container>
+        <div style={{ borderTop: "1px solid var(--a4-hairline-dark)", paddingTop: "clamp(48px,7vw,88px)", textAlign: "center" }}>
+          <Reveal>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14 }}>
+              <span style={{ width: 28, height: 1, background: "var(--a4-hairline-strong)" }} />
+              <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-on-dark-mute)" }}>Built AI-native</span>
+              <span style={{ width: 28, height: 1, background: "var(--a4-hairline-strong)" }} />
+            </div>
+            <h2 style={{
+              fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff",
+              fontSize: "clamp(32px, 4.4vw, 58px)", lineHeight: 1.1,
+              letterSpacing: "-0.02em", margin: "24px auto 0", maxWidth: 820, textWrap: "balance",
+            }}>We&rsquo;re not adding AI to accounting.<br /><span style={{ color: "var(--a4-primary-bright)" }}>We rebuilt the firm around it.</span></h2>
+          </Reveal>
+          <Reveal delay={120}>
+            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: "clamp(16px,1.7vw,19px)", lineHeight: 1.65, color: "var(--a4-on-dark-mute)", margin: "26px auto 0", maxWidth: 680, textWrap: "pretty" }}>
+              Most of the industry bolts AI tools onto firms that still sell hours. A4 works the other way around — a licensed Maltese accounting and audit firm running on Vacei, the platform we built ourselves. The machines do the volume: collecting documents, coding transactions, reconciling, preparing the file. Our accountants and auditors do the judgement, the risk and the hard conversations.
+            </p>
+            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: "clamp(16px,1.7vw,19px)", lineHeight: 1.65, color: "var(--a4-on-dark)", margin: "18px auto 0", maxWidth: 680, textWrap: "pretty" }}>
+              AI agents check every transaction in real time, and a licensed professional approves every figure before you see it. <strong style={{ color: "#fff", fontWeight: 600 }}>Faster closes, deeper assurance, no year-end surprises</strong> — at a fixed fee.
+            </p>
+            <div style={{ display: "flex", gap: "8px 24px", marginTop: 28, flexWrap: "wrap", justifyContent: "center" }}>
+              {["The machines do the volume", "Our people do the judgement", "Licensed humans sign off"].map((t) => (
+                <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 500, color: "var(--a4-on-dark-mute)" }}>
+                  <Icon name="check" size={14} color="var(--a4-primary-bright)" stroke={2.5} />
+                  {t}
+                </span>
               ))}
             </div>
           </Reveal>

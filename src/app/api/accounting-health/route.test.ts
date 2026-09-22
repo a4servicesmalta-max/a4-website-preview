@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/email-verify", () => ({ isVerified: vi.fn(() => false) }));
-import { isVerified } from "@/lib/email-verify";
+vi.mock("@/lib/portal-verify", () => ({ checkVerified: vi.fn(async () => false), sendAuditQuoteEmail: vi.fn(async () => false) }));
+import { checkVerified, sendAuditQuoteEmail } from "@/lib/portal-verify";
 import { POST } from "./route";
 
 function form(fields: Record<string, string | Blob>) {
@@ -13,20 +13,20 @@ function form(fields: Record<string, string | Blob>) {
 beforeEach(() => { vi.clearAllMocks(); process.env.A4_ACCOUNTING_URL = "https://engine.test"; });
 
 it("401s when email not verified", async () => {
-  (isVerified as any).mockReturnValue(false);
+  (checkVerified as any).mockResolvedValue(false);
   const res = await POST(form({ tb: new File(["x"], "tb.csv"), email: "a@b.com", consent: "true", verifiedToken: "bad" }));
   expect(res.status).toBe(401);
 });
 
 it("503s when engine url unset", async () => {
-  (isVerified as any).mockReturnValue(true);
+  (checkVerified as any).mockResolvedValue(true);
   delete process.env.A4_ACCOUNTING_URL;
   const res = await POST(form({ tb: new File(["x"], "tb.csv"), email: "a@b.com", consent: "true", verifiedToken: "ok" }));
   expect(res.status).toBe(503);
 });
 
 it("forwards to engine when verified", async () => {
-  (isVerified as any).mockReturnValue(true);
+  (checkVerified as any).mockResolvedValue(true);
   const fetchMock = vi.fn(async () => new Response(JSON.stringify({ score: 80, band: "Healthy" }), { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
   const res = await POST(form({ tb: new File(["x"], "tb.csv"), email: "a@b.com", consent: "true", verifiedToken: "ok" }));
@@ -35,7 +35,7 @@ it("forwards to engine when verified", async () => {
 });
 
 it("400s with no files", async () => {
-  (isVerified as any).mockReturnValue(true);
+  (checkVerified as any).mockResolvedValue(true);
   const res = await POST(form({ email: "a@b.com", consent: "true", verifiedToken: "ok" }));
   expect(res.status).toBe(400);
 });

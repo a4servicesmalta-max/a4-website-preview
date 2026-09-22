@@ -10,11 +10,15 @@ export function FindingsList({ findings }: { findings: Finding[] }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {findings.map((f, i) => (
-        <div key={i} style={{ borderLeft: `4px solid ${COLOR[f.severity] || "#00659c"}`, padding: "8px 12px", background: "var(--a4-surface-soft)", borderRadius: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: COLOR[f.severity] }}>
+        // These cards sit on a LIGHT surface inside pages wrapped in
+        // `.a4-landing-page`, which sets `color: #fff` — so any text here
+        // without its own colour inherits white and is invisible (owner
+        // 2026-08-28). Every line states its colour explicitly.
+        <div key={i} style={{ borderLeft: `4px solid ${COLOR[f.severity] || "#00659c"}`, padding: "8px 12px", background: "var(--a4-surface-soft)", borderRadius: 8, color: "var(--a4-ink)" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: COLOR[f.severity] || "#00659c" }}>
             {f.severityLabel}{f.location ? ` · ${f.location}` : ""}{f.source === "ai" ? " · AI" : ""}
           </div>
-          <div style={{ fontSize: 14, marginTop: 2 }}>{f.description}</div>
+          <div style={{ fontSize: 14, marginTop: 2, lineHeight: 1.55, color: "var(--a4-ink)" }}>{f.description}</div>
         </div>
       ))}
     </div>

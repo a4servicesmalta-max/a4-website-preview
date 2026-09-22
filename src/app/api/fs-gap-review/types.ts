@@ -29,4 +29,6 @@ export type ReviewResponse = {
    * step was skipped/unavailable/failed. Additive to engine findings only —
    * never replaces them. */
   aiCommentary?: string;
+  /** True when the portal backend emailed this quote to the verified address. */
+  emailed?: boolean;
 };

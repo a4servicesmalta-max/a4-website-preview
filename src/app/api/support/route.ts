@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { pushToPortal } from "@/lib/portal";
 import { pushChatToPortal } from "@/lib/portal-chat";
-import { pushLeadToPortal } from "@/lib/portal-lead";
+import { pushLeadToPortal, provenanceOf } from "@/lib/portal-lead";
+import { renderA4Email } from "@/lib/email-shell";
 
 function getTransport() {
   const host = process.env.SMTP_HOST;
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest) {
     // pushed to the portal and no email is sent — but answer 200 so the bot
     // learns nothing about why it failed.
     if (typeof company_website === "string" && company_website.trim()) {
-      return NextResponse.json({ ok: true });
+      // Same shape as a real success, so the response reveals nothing.
+      return NextResponse.json({ ok: true, thread: true });
     }
 
     if (!name || typeof name !== "string" || !name.trim()) {
@@ -91,15 +93,18 @@ export async function POST(req: NextRequest) {
       pageUrl: req.headers.get("referer") || undefined,
     });
 
-    // The chat thread carries the conversation but creates no lead, so the
-    // visitor shows up in the portal as an anonymous "Website visitor". File
-    // the lead separately — this is the row that carries their name and email.
+    // The portal records the WebsiteLead itself when the chat session opens
+    // (with this name and email), so only file one separately when the thread
+    // could not be opened — otherwise every chat would double-lead.
     // Non-fatal, exactly like the thread push above.
-    const leadWritten = await pushLeadToPortal({
-      name: name.trim(),
-      email: email.trim(),
-      message: issue.trim(),
-    });
+    const leadWritten = thread
+      ? true
+      : await pushLeadToPortal({
+          name: name.trim(),
+          email: email.trim(),
+          message: issue.trim(),
+          provenance: provenanceOf(req),
+        });
 
     // If the chat module could not be reached the conversation must still land
     // somewhere a human looks, so fall back to the Requests inbox.
@@ -112,6 +117,19 @@ export async function POST(req: NextRequest) {
     try {
       const toAddress = process.env.CONTACT_TO_EMAIL || process.env.SMTP_USER;
       if (toAddress) {
+        const staff = renderA4Email({
+          eyebrow: "Website · support chat",
+          headline: "Website support request",
+          intro: ["Support request from the website chat.", issue.trim()],
+          rows: [
+            { label: "Name", value: name.trim() },
+            { label: "Email", value: email.trim() },
+            { label: "Session", value: sessionToken },
+            { label: "Transcript", value: transcript },
+          ],
+          cta: { label: "Open lead queue", url: "https://partner.vacei.com/dashboard/leads" },
+          signoff: "Automated notification from a4.com.mt",
+        });
         await getTransport().sendMail({
           from: `"A4 Website Support" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to: toAddress,
@@ -131,6 +149,7 @@ ${issue.trim()}
 ${transcript}
 --- End transcript ---
           `.trim(),
+          html: staff.html,
         });
         emailSent = true;
       }
@@ -148,7 +167,8 @@ ${transcript}
       );
     }
 
-    return NextResponse.json({ ok: true });
+    // `thread` lets the widget (and a live probe) tell a real Support-inbox thread from the fallback.
+    return NextResponse.json({ ok: true, thread: Boolean(thread) });
   } catch (error) {
     console.error("Support API error:", error);
     return NextResponse.json(
