@@ -1,7 +1,11 @@
 import { it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/portal", () => ({ pushToPortal: vi.fn(async () => {}) }));
 vi.mock("@/lib/portal-chat", () => ({ pushChatToPortal: vi.fn(async () => ({ threadId: "t1" })) }));
-vi.mock("@/lib/portal-lead", () => ({ pushLeadToPortal: vi.fn(async () => true) }));
+vi.mock("@/lib/portal-lead", () => ({
+  pushLeadToPortal: vi.fn(async () => true),
+  // Campaign attribution from the first-touch cookie; "organic" here.
+  provenanceOf: vi.fn(() => undefined),
+}));
 import { pushChatToPortal } from "@/lib/portal-chat";
 import { pushLeadToPortal } from "@/lib/portal-lead";
 import { POST } from "./route";

@@ -66,6 +66,10 @@ export type ChatProvenance = {
   utmCampaign?: string;
   utmTerm?: string;
   utmContent?: string;
+  /** Google click ID, when the visitor arrived on a Google ad. */
+  gclid?: string;
+  /** LinkedIn click ID (`li_fat_id`), when they arrived on a LinkedIn ad. */
+  liFatId?: string;
 };
 
 /** Every call resolves; nothing here rejects. `status` is null for a network failure. */
@@ -151,6 +155,12 @@ export function buildProvenance(href: string, referrer: string = ""): ChatProven
     const value = (params.get(key) || "").trim();
     return value ? value.slice(0, 160) : undefined;
   };
+  // Click IDs get a longer ceiling than UTM values: Google's gclid has grown
+  // over the years, and a truncated one is useless for the single job it does.
+  const clickId = (key: "gclid" | "li_fat_id") => {
+    const value = (params.get(key) || "").trim();
+    return value ? value.slice(0, 512) : undefined;
+  };
   const out: ChatProvenance = {
     siteOrigin: hostname,
     formName: "support-chat",
@@ -161,6 +171,11 @@ export function buildProvenance(href: string, referrer: string = ""): ChatProven
     utmCampaign: utm("utm_campaign"),
     utmTerm: utm("utm_term"),
     utmContent: utm("utm_content"),
+    // Click IDs — which CLICK, not just which campaign. Read from the same
+    // query string; the ad platforms append them by default, so they survive a
+    // missing or mistyped UTM.
+    gclid: clickId("gclid"),
+    liFatId: clickId("li_fat_id"),
   };
   (Object.keys(out) as (keyof ChatProvenance)[]).forEach((k) => {
     if (!out[k]) delete out[k];

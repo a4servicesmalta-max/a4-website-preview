@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { checkVerified } from "@/lib/portal-verify";
 import { pushToPortal } from "@/lib/portal";
-import { pushLeadToPortal } from "@/lib/portal-lead";
+import { pushLeadToPortal, provenanceOf } from "@/lib/portal-lead";
 import { engineFetch } from "@/lib/fs-review-engine";
 import { renderA4Email, type EmailRow } from "@/lib/email-shell";
 
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
         `${glFile ? ` + ${glFile.name}` : ""} for accounting / trial-balance review` +
         (company ? `\nCompany: ${company}` : ""),
       sourceDetail: "accounting-health",
+      provenance: provenanceOf(req),
     });
 
     const base = process.env.A4_ACCOUNTING_URL;
