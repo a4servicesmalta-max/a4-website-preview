@@ -104,13 +104,11 @@ export function Hero({ eyebrow = "Malta · Automation-First Accounting & Audit F
             A licensed Malta accounting &amp; audit firm. <a href="https://vacei.com" target="_blank" rel="noopener noreferrer" style={{ color: "#fff", textDecoration: "underline", textUnderlineOffset: 3 }}>Vacei</a> is the software we build and run — <strong style={{ color: "#fff", fontWeight: 600 }}>the machines do the volume, our accountants and auditors do the judgement</strong>, the risk and the call.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
-            {/* The instant quotation is the strongest thing this page offers —
-                a real price in seconds, no form first (owner 2026-08-29). It
-                jumps to the homepage calculator (#pricing), so the other two
-                CTAs step down to outline and the hero keeps ONE primary. */}
-            <Button variant="primary" size="lg" href="#pricing">Get instant quotation <Icon name="arrow-right" size={18} color="#000" /></Button>
+            {/* The calculator (#pricing) lives further down this same page — the
+                hero's job is to send people straight to it. */}
+            <Button variant="primary" size="lg" href="#pricing">Get an instant quote <Icon name="arrow-right" size={18} color="#000" /></Button>
             <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
-            <Button variant="outline-dark" size="lg" href={BOOK_A_CALL_PATH}>Book a consultation</Button>
+            <Button variant="outline-dark" size="lg" href="/contact">Book a consultation</Button>
           </div>
           <div style={{ display: "flex", gap: "6px 22px", marginTop: 22, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
             {["Quotes within 24 hours", `Managed bookkeeping from €${BOOKKEEPING_FROM}/mo self-employed, from €${BOOKKEEPING_COMPANY}/mo company`, "Free accounting health check"].map((fact, i) => (
