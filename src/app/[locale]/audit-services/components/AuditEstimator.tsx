@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Button, Icon, Container } from "@/components/a4-landing/Primitives";
-import { Field, primaryBtn, outlineBtn } from "@/app/[locale]/accounting-health-check/components/Field";
+import { Field, primaryBtn as fieldPrimaryBtn, outlineBtn as fieldOutlineBtn } from "@/app/[locale]/accounting-health-check/components/Field";
 import { ReviewFailureNotice } from "@/app/[locale]/accounting-health-check/components/ReviewFailureNotice";
 import { NETWORK_FAILURE, readReviewFailure, type ReviewFailure } from "@/lib/review-failure";
 import type { ReviewResponse } from "@/app/api/fs-gap-review/types";
@@ -18,9 +18,50 @@ type Opt = { id: string; label: string; sub?: string };
 
 const labelOf = (list: Opt[], id: string) => (list.find((o) => o.id === id) ?? list[0]).label;
 
-function Pills({ items, value, set }: { items: Opt[]; value: string; set: (id: string) => void }) {
+// This section is the vacei.com/services/audit calculator (owner, 2026-09-11:
+// "make it as per Vacei Audit landing page"), so it carries that page's own
+// palette and type instead of the site's black and blue. The values are the
+// Vacei design-system tokens that page renders with.
+const V = {
+  brand: "#33646E",
+  brandSoft: "#EBF0F0",
+  brandSoftBorder: "#D2DDDF",
+  ink: "#151515",
+  body: "#3B3B3B",
+  stone: "#6B6B6B",
+  mute: "#8E8E8E",
+  line: "#E4E4E4",
+  lineSoft: "#EDEDED",
+  hairline: "#D6D6D6",
+  paper: "#FAFAFA",
+  dark: "#151515",
+  section: "linear-gradient(180deg, #3B6D78 0%, #34656F 50%, #2D5963 100%)",
+  // The variable is set on the page wrapper by audit-services/page.tsx. It
+  // carries its own fallback: an unset var() with none would invalidate the
+  // whole stack and silently inherit the body face.
+  mono: 'var(--font-jetbrains-mono, "JetBrains Mono"), ui-monospace, SFMono-Regular, monospace',
+} as const;
+
+// Field's shared button helpers stay blue for /accounting-health-check; the
+// review form here takes them recoloured to the section.
+const primaryBtn = (disabled?: boolean): React.CSSProperties => ({
+  ...fieldPrimaryBtn(disabled), height: 42, padding: "0 22px", background: V.dark, fontSize: 13, letterSpacing: 0,
+});
+const outlineBtn: React.CSSProperties = {
+  ...fieldOutlineBtn, height: 40, padding: "0 20px", border: `1px solid ${V.hairline}`, background: "transparent", color: V.body, fontSize: 12.5,
+};
+const darkPill: React.CSSProperties = {
+  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, height: 42, padding: "0 22px",
+  borderRadius: "var(--a4-r-full)", border: `1px solid ${V.dark}`, background: V.dark, color: "#fff",
+  fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, letterSpacing: 0, cursor: "pointer",
+  // globals.css lifts every button on hover; the Vacei calculator's stay put.
+  transform: "none",
+};
+const lightPill: React.CSSProperties = { ...darkPill, border: `1px solid ${V.line}`, background: "#fff", color: V.ink };
+
+function Pills({ items, value, set, compact = false }: { items: Opt[]; value: string; set: (id: string) => void; compact?: boolean }) {
   return (
-    <div role="group" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+    <div role="group" style={{ display: "flex", flexWrap: "wrap", gap: compact ? 6 : 8 }}>
       {items.map((o) => {
         const on = value === o.id;
         return (
@@ -30,18 +71,22 @@ function Pills({ items, value, set }: { items: Opt[]; value: string; set: (id: s
             onClick={() => set(o.id)}
             aria-pressed={on}
             style={{
-              display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 1,
-              padding: "9px 16px", borderRadius: "var(--a4-r-md)",
-              border: "1px solid " + (on ? "var(--a4-primary)" : "var(--a4-hairline-light)"),
-              background: on ? "var(--a4-primary)" : "transparent",
-              color: on ? "#fff" : "var(--a4-body)",
-              fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600,
-              cursor: "pointer", textAlign: "left",
+              display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", gap: 1,
+              // The four questions use soft-cornered option cards; the review
+              // form's smaller choices are round chips, as on the Vacei page.
+              ...(compact
+                ? { height: 32, padding: "0 14px", borderRadius: "var(--a4-r-full)", fontSize: 12 }
+                : { padding: "9px 16px", borderRadius: 12, fontSize: 13 }),
+              border: "1px solid " + (on ? V.brand : V.hairline),
+              background: on ? V.brand : "transparent",
+              color: on ? "#fff" : V.body,
+              fontFamily: "var(--a4-font-body)", fontWeight: 600,
+              cursor: "pointer", textAlign: "left", transform: "none",
               transition: "background .15s, color .15s, border-color .15s",
             }}
           >
             {o.label}
-            {o.sub ? <span style={{ fontSize: 10.5, fontWeight: 400, opacity: 0.75 }}>{o.sub}</span> : null}
+            {o.sub && !compact ? <span style={{ fontSize: 10.5, fontWeight: 400, opacity: 0.75 }}>{o.sub}</span> : null}
           </button>
         );
       })}
@@ -49,10 +94,10 @@ function Pills({ items, value, set }: { items: Opt[]; value: string; set: (id: s
   );
 }
 
-const fieldLabel: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, color: "var(--a4-ink)" };
-const hintLabel: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 2 };
-const tagLabel: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--a4-primary)" };
-const cardStyle: React.CSSProperties = { background: "var(--a4-surface-card)", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", textAlign: "left" };
+const fieldLabel: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, color: V.ink };
+const hintLabel: React.CSSProperties = { fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: V.mute, marginTop: 2 };
+const tagLabel: React.CSSProperties = { fontFamily: V.mono, fontSize: 10.5, fontWeight: 400, letterSpacing: ".12em", textTransform: "uppercase", color: V.brand };
+const cardStyle: React.CSSProperties = { background: "#fff", color: V.body, borderRadius: 24, padding: "clamp(22px,3vw,30px)", textAlign: "left" };
 
 type AnswerKey = keyof Omit<AuditInput, "uploaded">;
 
@@ -252,6 +297,9 @@ export function AuditEstimator() {
         }),
       });
       if (!res.ok) throw new Error("request failed");
+      // The backend accepted the request. Only here — a non-2xx lands on the
+      // throw above, so we never report a conversion the firm did not receive.
+      trackConversion(intent === "proposal" ? "audit_proposal_submit" : "audit_consultation_submit");
       setDone(ref);
     } catch {
       setModalError("Something went wrong sending your request. Please try again or email info@a4.com.mt.");
@@ -264,34 +312,39 @@ export function AuditEstimator() {
     height: 40, padding: "0 22px", borderRadius: "var(--a4-r-full)",
     border: "1px solid " + (on ? "#fff" : "rgba(255,255,255,.32)"),
     background: on ? "#fff" : "rgba(255,255,255,.12)",
-    color: on ? "var(--a4-primary)" : "#fff",
+    color: on ? V.brand : "#fff",
     fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, cursor: "pointer",
-    transition: "background .15s, color .15s",
+    transition: "background .15s, color .15s", transform: "none",
   });
 
   return (
     <section
       id="estimate"
-      style={{ background: "#000", borderBottom: "1px solid var(--a4-hairline-dark)", padding: "clamp(56px,8vw,88px) 0 clamp(60px,8vw,96px)" }}
+      // scrollMarginTop keeps the heading clear of the fixed nav when a
+      // "#estimate" link jumps here.
+      style={{ background: V.section, padding: "72px 0 80px", scrollMarginTop: 40 }}
     >
-      <Container>
+      {/* lineHeight: the Vacei page sets no body line-height, and this site's
+          inherited 1.5 makes every pill, button and heading taller than its twin.
+          On the Container, not the section, so the lead modal keeps the site's. */}
+      <Container style={{ lineHeight: "normal" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 600, letterSpacing: ".2em", textTransform: "uppercase", color: "rgba(255,255,255,.75)" }}>• Audit fee calculator</div>
-          <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: "clamp(28px,3.6vw,44px)", lineHeight: 1.08, letterSpacing: "-.03em", color: "#fff", margin: "16px 0 0", textWrap: "balance" }}>
+          <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.1, letterSpacing: "-.03em", color: "#fff", margin: "16px 0 0", textWrap: "balance" }}>
             Your audit fee, in sixty seconds
           </h2>
-          <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 15.5, lineHeight: 1.7, color: "rgba(255,255,255,.76)", margin: "14px auto 0", maxWidth: "56ch", textWrap: "pretty" }}>
+          <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,.7)", margin: "14px auto 0", maxWidth: "56ch", textWrap: "pretty" }}>
             Four quick questions — the fee builds as you answer. Or send last year&apos;s statements and we run a real compliance review on them.
           </p>
         </div>
 
-        <div style={{ margin: "30px auto 0", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+        <div style={{ margin: "32px auto 0", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
           <button type="button" onClick={() => setAmode("ask")} aria-pressed={amode === "ask"} style={modeBtn(amode === "ask")}>Answer four questions</button>
-          <button type="button" onClick={() => setAmode("docs")} aria-pressed={amode === "docs"} style={modeBtn(amode === "docs")}>Just upload last year&apos;s FS</button>
+          <button type="button" onClick={() => setAmode("docs")} aria-pressed={amode === "docs"} style={modeBtn(amode === "docs")}>I have last year&apos;s FS</button>
         </div>
 
         {amode === "ask" ? (
-          <div className="af-grid" style={{ maxWidth: 1040, margin: "30px auto 0" }}>
+          <div className="af-grid" style={{ maxWidth: 1000, margin: "32px auto 0" }}>
             {/* step rail */}
             <div className="af-rail" style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "left", position: "sticky", top: 90 }}>
               {STEPS.map((label, i) => {
@@ -303,16 +356,16 @@ export function AuditEstimator() {
                     onClick={() => setStep(i)}
                     aria-current={active ? "step" : undefined}
                     style={{
-                      display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: "var(--a4-r-md)",
-                      border: 0, background: active ? "rgba(255,255,255,.15)" : "transparent",
-                      cursor: "pointer", fontFamily: "var(--a4-font-body)", textAlign: "left", transition: "background .2s ease",
+                      display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 12,
+                      border: 0, background: active ? "rgba(255,255,255,.13)" : "transparent",
+                      cursor: "pointer", fontFamily: "var(--a4-font-body)", textAlign: "left", transition: "background .2s ease", transform: "none",
                     }}
                   >
                     <span style={{
                       width: 24, height: 24, borderRadius: "var(--a4-r-full)", display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "none",
                       background: doneStep ? "rgba(255,255,255,.92)" : active ? "rgba(255,255,255,.26)" : "rgba(255,255,255,.1)",
-                      color: doneStep ? "var(--a4-primary)" : active ? "#fff" : "rgba(255,255,255,.6)",
-                      fontSize: 10.5, fontWeight: 700, fontVariantNumeric: "tabular-nums", transition: "background .2s ease, color .2s ease",
+                      color: doneStep ? V.brand : active ? "#fff" : "rgba(255,255,255,.6)",
+                      fontFamily: V.mono, fontSize: 10.5, fontWeight: 600, fontVariantNumeric: "tabular-nums", transition: "background .2s ease, color .2s ease",
                     }}>{"0" + (i + 1)}</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: active ? "#fff" : doneStep ? "rgba(255,255,255,.78)" : "rgba(255,255,255,.5)", transition: "color .2s ease" }}>{label}</span>
                   </button>
@@ -321,97 +374,99 @@ export function AuditEstimator() {
             </div>
 
             {/* question card */}
-            <div style={{ ...cardStyle, display: "flex", flexDirection: "column", gap: 18, minHeight: 360 }}>
+            {/* Vacei's 360px minimum sits inside its padding (content-box); this site is border-box. */}
+            <div style={{ ...cardStyle, display: "flex", flexDirection: "column", gap: 18, minHeight: "calc(360px + 2 * clamp(22px,3vw,30px))" }}>
               <div>
                 <div style={tagLabel}>{step === LAST ? "Your fee" : `Question ${step + 1} of ${LAST}`}</div>
-                <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 21, letterSpacing: "-.015em", color: "var(--a4-ink)", margin: "8px 0 0" }}>
+                <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 600, fontSize: 21, letterSpacing: "-.015em", color: V.ink, margin: "8px 0 0" }}>
                   {step === LAST ? "Your fee" : QUESTIONS[step].title}
                 </h3>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, lineHeight: 1.6, color: "var(--a4-mute)", margin: "8px 0 0", textWrap: "pretty" }}>
+                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, lineHeight: 1.6, color: V.stone, margin: "8px 0 0", textWrap: "pretty" }}>
                   {step === LAST ? "Everything on the right is itemised — nothing appears later that is not on that list." : QUESTIONS[step].help}
                 </p>
               </div>
 
               {step === LAST ? (
                 <div>
-                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.65, color: "var(--a4-body)", margin: 0, textWrap: "pretty" }}>{summary}</p>
+                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.65, color: V.body, margin: 0, textWrap: "pretty" }}>{summary}</p>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-                    <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
-                    <Button variant="outline-light" size="md" onClick={() => openModal("consultation")}>Book a consultation</Button>
+                    <Button variant="dark" size="md" onClick={() => openModal("proposal")} style={darkPill}>{ctaLabel} <Icon name="arrow-right" size={14} color="#fff" /></Button>
+                    <Button variant="outline-light" size="md" onClick={() => openModal("consultation")} style={lightPill}>Book a consultation</Button>
                   </div>
                   {/* Upload-and-save upsell removed (owner 2026-08-27) — the
                       box now only appears as confirmation once statements have
                       actually been read or a held quote applies. */}
                   {(data || held !== null) && (
-                    <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", background: "var(--a4-surface-soft)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
-                        <Icon name="file-check-2" size={16} color="var(--a4-primary)" />
+                    <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: 10, border: `1px solid ${V.brandSoftBorder}`, background: V.brandSoft }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: V.body }}>
+                        <Icon name="file-check-2" size={16} color={V.brand} />
                         <span>
                           {held !== null
                             ? "Priced from the statements you sent us — the fee above is the one we quoted you."
                             : "Your statements have been read, and the planning saving is already off the fee above."}
                           {data && (
-                            <> <button type="button" onClick={() => setAmode("docs")} style={{ background: "none", border: 0, padding: 0, color: "var(--a4-primary)", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>See your quote</button></>
+                            <> <button type="button" onClick={() => setAmode("docs")} style={{ background: "none", border: 0, padding: 0, color: V.brand, fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>See your quote</button></>
                           )}
                         </span>
                       </div>
                     </div>
                   )}
-                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "10px 0 0" }}>Fixed after a short scoping call. Never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}</p>
+                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: V.mute, margin: "10px 0 0" }}>Fixed after a short scoping call. Never below €{AUDIT_PRE_TRADING}. {PRICING_VAT_NOTE}</p>
                 </div>
               ) : (
                 <Pills items={QUESTIONS[step].items} value={String(answers[QUESTIONS[step].key])} set={(id) => set({ [QUESTIONS[step].key]: id } as Partial<AuditInput>)} />
               )}
 
-              <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--a4-hairline-light)", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ marginTop: "auto", paddingTop: 16, borderTop: `1px solid ${V.lineSoft}`, display: "flex", alignItems: "center", gap: 12 }}>
                 {step !== LAST && (
                   <>
                     <button type="button" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}
-                      style={{ height: 36, padding: "0 16px", borderRadius: "var(--a4-r-full)", border: "1px solid var(--a4-hairline-light)", background: "transparent", color: "var(--a4-mute)", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: step === 0 ? "default" : "pointer", opacity: step === 0 ? 0.45 : 1 }}>Back</button>
+                      style={{ height: 36, padding: "0 16px", borderRadius: "var(--a4-r-full)", border: `1px solid ${V.hairline}`, background: "transparent", color: V.stone, fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: step === 0 ? "default" : "pointer", transform: "none" }}>Back</button>
                     <button type="button" onClick={() => setStep(Math.min(LAST, step + 1))}
-                      style={{ height: 36, padding: "0 18px", borderRadius: "var(--a4-r-full)", border: "1px solid var(--a4-ink)", background: "var(--a4-ink)", color: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{step === LAST - 1 ? "See my fee" : "Next"}</button>
+                      style={{ height: 36, padding: "0 18px", borderRadius: "var(--a4-r-full)", border: `1px solid ${V.dark}`, background: V.dark, color: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer", transform: "none" }}>{step === LAST - 1 ? "See my fee" : "Next"}</button>
                   </>
                 )}
-                <span style={{ marginLeft: "auto", fontFamily: "var(--a4-font-display)", fontVariantNumeric: "tabular-nums", fontSize: 15, fontWeight: 600, color: "var(--a4-ink)" }}>{feeMini}</span>
+                <span style={{ marginLeft: "auto", fontFamily: V.mono, fontVariantNumeric: "tabular-nums", fontSize: 15, fontWeight: 600, color: V.ink }}>{feeMini}</span>
               </div>
             </div>
 
             {/* fee panel */}
-            <div className="af-panel" style={{ background: "linear-gradient(180deg, #4f55f1 0%, #494fdf 50%, #3a40c4 100%)", borderRadius: "var(--a4-r-lg)", padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 90, textAlign: "left" }}>
-              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(255,255,255,.72)" }}>Estimated audit fee</div>
+            <div className="af-panel" style={{ background: V.dark, borderRadius: 24, padding: "clamp(22px,3vw,30px)", color: "#fff", position: "sticky", top: 90, textAlign: "left" }}>
+              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(255,255,255,.5)" }}>Estimated audit fee</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
-                <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontVariantNumeric: "tabular-nums", fontSize: 38, letterSpacing: "-1.5px", lineHeight: 1 }}>{feeBig}</span>
-                {!q.refer && <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)" }}>/ year</span>}
+                <span style={{ fontFamily: V.mono, fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 38 }}>{feeBig}</span>
+                {!q.refer && <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "rgba(255,255,255,.6)" }}>/ year</span>}
               </div>
-              <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)", display: lines.length ? "flex" : "none", flexDirection: "column", gap: 9 }}>
+              <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.14)", display: lines.length ? "flex" : "none", flexDirection: "column", gap: 9 }}>
                 {lines.map((l) => (
                   <span key={l.k} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: "var(--a4-font-body)", fontSize: 12.5 }}>
-                    <span style={{ color: "var(--a4-on-dark-mute)" }}>{l.k}</span>
+                    <span style={{ color: "rgba(255,255,255,.62)" }}>{l.k}</span>
                     <span style={{ color: "#fff", fontWeight: 500, whiteSpace: "nowrap" }}>{l.v}</span>
                   </span>
                 ))}
               </div>
-              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "rgba(255,255,255,.72)", margin: "18px 0 0", paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)" }}>{feeNote}</p>
-              <Button variant="primary" size="md" onClick={() => openModal("proposal")} style={{ width: "100%", marginTop: 18 }}>{ctaLabel} <Icon name="arrow-right" size={16} color="#000" /></Button>
+              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, lineHeight: 1.6, color: "rgba(255,255,255,.55)", margin: "18px 0 0", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.14)" }}>{feeNote}</p>
+              <Button variant="primary" size="md" onClick={() => openModal("proposal")} style={{ ...lightPill, height: 44, border: 0, marginTop: 18 }}>{ctaLabel} <Icon name="arrow-right" size={14} color={V.ink} /></Button>
             </div>
           </div>
         ) : (
           /* ---- Upload last year's FS: the design's scoping form, A4's real review engine ---- */
-          <div style={{ ...cardStyle, maxWidth: 660, margin: "30px auto 0" }}>
+          /* 700 = the Vacei card's 640px content box plus its 30px padding. */
+          <div style={{ ...cardStyle, maxWidth: 700, margin: "32px auto 0" }}>
             {data ? (
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 600, color: "var(--a4-mute)", display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                    <Icon name="file-check-2" size={16} color="var(--a4-primary)" /> {data.framework} review — {data.company}
+                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 600, color: V.stone, display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <Icon name="file-check-2" size={16} color={V.brand} /> {data.framework} review — {data.company}
                   </span>
-                  <button onClick={resetReview} style={{ background: "none", border: 0, cursor: "pointer", color: "var(--a4-mute)", fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>New</button>
+                  <button onClick={resetReview} style={{ background: "none", border: 0, cursor: "pointer", color: V.stone, fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>New</button>
                 </div>
-                <div style={{ background: "#000", borderRadius: "var(--a4-r-lg)", padding: "clamp(20px,3vw,26px)", color: "#fff", marginTop: 16 }}>
+                <div style={{ background: V.dark, borderRadius: 18, padding: "clamp(20px,3vw,26px)", color: "#fff", marginTop: 16 }}>
                   {engineFee !== null ? (
                     <>
-                      <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Priced from your statements</div>
+                      <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(255,255,255,.5)" }}>Priced from your statements</div>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 12 }}>
-                        <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontVariantNumeric: "tabular-nums", fontSize: 38, letterSpacing: "-1.5px", lineHeight: 1 }}>{euro(engineFee)}</span>
+                        <span style={{ fontFamily: V.mono, fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 38 }}>{euro(engineFee)}</span>
                         <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-on-dark-mute)" }}>/ year</span>
                       </div>
                       <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.6, color: "var(--a4-stone)", margin: "12px 0 0" }}>
@@ -440,46 +495,46 @@ export function AuditEstimator() {
                     runs the full review — the findings travel with the lead and we walk
                     the client through them on the scoping call. /accounting-health-check
                     remains the page whose product IS the findings. */}
-                <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid var(--a4-hairline-light)", display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <Button variant="dark" size="md" onClick={() => openModal("proposal")}>{ctaLabel} <Icon name="arrow-right" size={16} color="#fff" /></Button>
-                  <Button variant="outline-light" size="md" href={BOOK_A_CALL_PATH}>Book a call</Button>
+                <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${V.lineSoft}`, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <Button variant="dark" size="md" onClick={() => openModal("proposal")} style={darkPill}>{ctaLabel} <Icon name="arrow-right" size={14} color="#fff" /></Button>
+                  <Button variant="outline-light" size="md" href={BOOK_A_CALL_PATH} style={lightPill}>Book a call</Button>
                 </div>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "12px 0 0" }}>Indicative pre-check, not a substitute for audit. Fixed after a short scoping call, never below the pre-trading figure of our scale (€{AUDIT_PRE_TRADING} for a full audit, €{auditFloor(true)} for a review). {PRICING_VAT_NOTE}</p>
+                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: V.mute, margin: "12px 0 0" }}>Indicative pre-check, not a substitute for audit. Fixed after a short scoping call, never below the pre-trading figure of our scale (€{AUDIT_PRE_TRADING} for a full audit, €{auditFloor(true)} for a review). {PRICING_VAT_NOTE}</p>
               </div>
             ) : (
               <div>
-                <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 21, letterSpacing: "-.015em", color: "var(--a4-ink)", margin: 0 }}>Send the numbers</h3>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, lineHeight: 1.6, color: "var(--a4-mute)", margin: "8px 0 0", textWrap: "pretty" }}>
+                <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 600, fontSize: 21, letterSpacing: "-.015em", color: V.ink, margin: 0 }}>Send the numbers</h3>
+                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, lineHeight: 1.6, color: V.stone, margin: "8px 0 0", textWrap: "pretty" }}>
                   Upload last year&apos;s financial statements or management accounts. We run a real disclosure, consistency and casting review on the file, price the audit from it, and take the planning saving off your fee. We go through what we found on the scoping call.
                 </p>
                 {/* The way back. Nothing here clears an answer, so a visitor who
                     opened this from the fee step returns to exactly what they
                     left — saying so is what makes the trip safe to take. */}
-                <button type="button" onClick={() => setAmode("ask")} style={{ marginTop: 10, background: "none", border: 0, padding: 0, color: "var(--a4-primary)", fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+                <button type="button" onClick={() => setAmode("ask")} style={{ marginTop: 10, background: "none", border: 0, padding: 0, color: V.brand, fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
                   ← Back to the questions — your answers are kept
                 </button>
 
                 <div style={{ marginTop: 18 }}>
                   <div style={fieldLabel}>Which year needs auditing?</div>
-                  <div style={{ marginTop: 8 }}><Pills items={YEARS} value={answers.year} set={(id) => set({ year: id })} /></div>
-                  {answers.year === "multi" && <div style={{ marginTop: 8 }}><Pills items={NYRS} value={answers.nyrs} set={(id) => set({ nyrs: id })} /></div>}
+                  <div style={{ marginTop: 8 }}><Pills compact items={YEARS} value={answers.year} set={(id) => set({ year: id })} /></div>
+                  {answers.year === "multi" && <div style={{ marginTop: 8 }}><Pills compact items={NYRS} value={answers.nyrs} set={(id) => set({ nyrs: id })} /></div>}
                 </div>
 
                 <div style={{ marginTop: 16 }}>
                   <div style={fieldLabel}>Any major changes since that year?</div>
                   <div style={hintLabel}>New activity, new owners, a big jump in volume — anything that makes last year a poor guide.</div>
-                  <div style={{ marginTop: 8 }}><Pills items={CHANGES} value={answers.chg} set={(id) => set({ chg: id })} /></div>
+                  <div style={{ marginTop: 8 }}><Pills compact items={CHANGES} value={answers.chg} set={(id) => set({ chg: id })} /></div>
                 </div>
 
                 <div style={{ marginTop: 16 }}>
                   <div style={fieldLabel}>Need the annual tax return as well?</div>
-                  <div style={{ marginTop: 8 }}><Pills items={TAX_RETURN} value={answers.taxret} set={(id) => set({ taxret: id })} /></div>
+                  <div style={{ marginTop: 8 }}><Pills compact items={TAX_RETURN} value={answers.taxret} set={(id) => set({ taxret: id })} /></div>
                 </div>
 
                 <div style={{ marginTop: 16 }}>
                   <div style={fieldLabel}>What are you sending?</div>
                   <div style={{ marginTop: 8 }}>
-                    <Pills items={[{ id: "fs", label: "Financial statements" }, { id: "mgmt", label: "Management accounts" }]} value={answers.doc} set={(id) => set({ doc: id as "fs" | "mgmt" })} />
+                    <Pills compact items={[{ id: "fs", label: "Financial statements" }, { id: "mgmt", label: "Management accounts" }]} value={answers.doc} set={(id) => set({ doc: id as "fs" | "mgmt" })} />
                   </div>
                 </div>
 
@@ -490,23 +545,22 @@ export function AuditEstimator() {
                     onDrop={(e) => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); }}
                     onClick={() => inputRef.current?.click()}
                     style={{
-                      marginTop: 18, cursor: "pointer", padding: "clamp(24px,4vw,34px)", textAlign: "center",
-                      borderRadius: "var(--a4-r-md)", borderStyle: "dashed", borderWidth: 2,
-                      borderColor: drag ? "var(--a4-primary)" : "var(--a4-hairline-light)",
-                      background: drag ? "var(--a4-surface-soft)" : "transparent", transition: "border-color .15s, background .15s",
+                      marginTop: 12, cursor: "pointer", padding: 22, textAlign: "center",
+                      borderRadius: 10, borderStyle: "solid", borderWidth: 1,
+                      borderColor: drag ? V.brand : V.hairline,
+                      background: drag ? V.brandSoft : V.paper, transition: "border-color .15s, background .15s",
                     }}
                   >
                     <input ref={inputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: "none" }} onChange={(e) => { if (e.target.files?.[0]) setFile(e.target.files[0]); }} />
-                    <Icon name="upload-cloud" size={26} color="var(--a4-primary)" stroke={1.75} />
-                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 600, color: "var(--a4-ink)", marginTop: 10 }}>Drop the file here or click to upload</div>
-                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 6 }}>PDF or Word · confidential, kept securely with your enquiry</div>
+                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: V.stone }}>Drop the file here or click to upload</div>
+                    <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: V.stone, marginTop: 2 }}>PDF or Word · confidential, kept securely with your enquiry</div>
                   </div>
                 ) : (
                   <div style={{ display: "grid", gap: 14, marginTop: 18 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-                      <Icon name="file-text" size={18} color="var(--a4-primary)" />
-                      <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14.5, fontWeight: 600, color: "var(--a4-ink)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{file.name}</span>
-                      <button onClick={resetReview} style={{ background: "none", border: 0, cursor: "pointer", color: "var(--a4-mute)", fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600 }}>Change</button>
+                      <Icon name="file-text" size={18} color={V.brand} />
+                      <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14.5, fontWeight: 600, color: V.ink, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{file.name}</span>
+                      <button onClick={resetReview} style={{ background: "none", border: 0, cursor: "pointer", color: V.stone, fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600 }}>Change</button>
                     </div>
 
                     <Field required type="email" placeholder="Work email" autoComplete="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
@@ -517,13 +571,13 @@ export function AuditEstimator() {
                       Anything else we should know?
                       <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)}
                         placeholder="Foreign income, related-party loans, a pending dispute — whatever helps us quote well."
-                        style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid var(--a4-hairline-light)", background: "#fff", fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 400, color: "var(--a4-ink)", resize: "vertical" }} />
+                        style={{ padding: "12px 14px", borderRadius: 10, border: `1px solid ${V.line}`, background: V.paper, fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 400, color: V.ink, resize: "vertical" }} />
                     </label>
 
                     {!verified ? (
-                      <div style={{ border: "1px solid var(--a4-hairline-light)", borderRadius: 12, padding: 14, background: "var(--a4-surface-soft)", display: "grid", gap: 10 }}>
-                        <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-charcoal)", lineHeight: 1.5 }}>
-                          <strong style={{ color: "var(--a4-ink)" }}>Confirm your email to run the review.</strong> We&apos;ll send a 6-digit code.
+                      <div style={{ border: `1px solid ${V.line}`, borderRadius: 12, padding: 14, background: V.paper, display: "grid", gap: 10 }}>
+                        <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: V.body, lineHeight: 1.5 }}>
+                          <strong style={{ color: V.ink }}>Confirm your email to run the review.</strong> We&apos;ll send a 6-digit code.
                         </div>
                         {!codeSent ? (
                           <button type="button" disabled={!emailValid || vBusy} onClick={sendCode}
@@ -532,7 +586,7 @@ export function AuditEstimator() {
                           </button>
                         ) : (
                           <>
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                               <Field placeholder="6-digit code" inputMode="numeric" maxLength={6} value={code}
                                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                                 style={{ maxWidth: 170, letterSpacing: "3px", fontWeight: 600 }} />
@@ -540,22 +594,22 @@ export function AuditEstimator() {
                                 {vBusy ? "Checking…" : "Confirm"}
                               </button>
                             </div>
-                            <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-mute)" }}>
+                            <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: V.stone }}>
                               {devCode ? `Test mode — your code is ${devCode}. ` : `Code sent to ${contact.email}. `}
-                              <button type="button" onClick={sendCode} disabled={vBusy} style={{ background: "none", border: 0, color: "var(--a4-primary)", cursor: "pointer", fontWeight: 600, fontSize: 12.5, padding: 0 }}>Resend</button>
+                              <button type="button" onClick={sendCode} disabled={vBusy} style={{ background: "none", border: 0, color: V.brand, cursor: "pointer", fontWeight: 600, fontSize: 12.5, padding: 0 }}>Resend</button>
                             </div>
                           </>
                         )}
                         {vErr && <p style={{ color: "#c2303d", fontSize: 13.5, margin: 0 }}>{vErr}</p>}
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "var(--a4-font-body)", fontSize: 14, color: "#1a7f4b", fontWeight: 600 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "var(--a4-font-body)", fontSize: 14, color: V.brand, fontWeight: 600 }}>
                         <span aria-hidden>✓</span> Email confirmed — {verifiedEmail}
                       </div>
                     )}
 
-                    <label style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, display: "flex", gap: 9, alignItems: "flex-start", color: "var(--a4-charcoal)", lineHeight: 1.5 }}>
-                      <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: "var(--a4-primary)", width: 16, height: 16 }} />
+                    <label style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, display: "flex", gap: 9, alignItems: "flex-start", color: V.body, lineHeight: 1.5 }}>
+                      <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: V.brand, width: 16, height: 16 }} />
                       I understand my file is processed — including by AI models — to generate this review, and is kept securely with my enquiry. Ask us at any time and we will delete it.
                     </label>
 
@@ -566,7 +620,7 @@ export function AuditEstimator() {
                   </div>
                 )}
 
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-stone)", margin: "14px 0 0" }}>
+                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: V.mute, margin: "14px 0 0" }}>
                   The file is only used to review and scope the audit. Fixed after a short scoping call, never below the pre-trading figure of our scale (€{AUDIT_PRE_TRADING} for a full audit, €{auditFloor(true)} for a review). {PRICING_VAT_NOTE}
                 </p>
               </div>

@@ -20,8 +20,18 @@ export function resolveClientUrl(pathOrUrl?: string, fallbackPath = "/"): string
   return `${origin}${path}`;
 }
 
-/** Client login (existing accounts) */
-export const CLIENT_LOGIN_URL = resolveClientUrl(process.env.NEXT_PUBLIC_CLIENT_LOGIN_URL, "/");
+/**
+ * Client login (existing accounts). PINNED, not env-resolved (owner
+ * 2026-08-29): both sites send existing clients to the one client portal at
+ * this exact URL. It is deliberately not read from
+ * NEXT_PUBLIC_CLIENT_LOGIN_URL — an env-resolved CTA is exactly how the
+ * "Open the portal" button ended up cross-branded to another site (#46), and a
+ * login link that silently follows an env var is not worth that risk.
+ *
+ * There is NO self-service signup behind it: accounts are opened by us after a
+ * call, so this is a door for people who already have one.
+ */
+export const CLIENT_LOGIN_URL = "https://client.vacei.com/login";
 
 /** Client registration / onboarding (new accounts) — Access Portal navbar target */
 export const CLIENT_ONBOARDING_URL = resolveClientUrl(

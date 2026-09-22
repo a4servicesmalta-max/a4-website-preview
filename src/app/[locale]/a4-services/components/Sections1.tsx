@@ -7,6 +7,7 @@ import { usePrefersReducedMotion } from "@/contexts/ReduceMotionContext";
 // Bookkeeping figures come from the quote pack. Under mt-2026-08-14-volume they
 // are the ENTRY band of nine, priced by monthly expenses — always shown as "from".
 import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 
 /** Typewriter cycle for the hero — types/deletes each word with a caret. Static under reduced motion. */
 function TypeCycle({ words, fallback }: { words: string[]; fallback: string }) {

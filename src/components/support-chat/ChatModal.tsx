@@ -93,23 +93,41 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
     setMessages((prev) => [...prev, { role: "bot", content }]);
   }, []);
 
-  /** Render newly-arrived server messages, skipping anything already on screen. */
-  const applyServerMessages = useCallback((incoming: ChatServerMessage[], render: boolean) => {
-    const seen = seenIdsRef.current;
-    const fresh = mergeServerMessages([], incoming).filter((m) => !seen.has(m.id));
-    fresh.forEach((m) => seen.add(m.id));
-    if (!render || !fresh.length) return;
-    if (fresh.some((m) => m.role === "staff")) setStaffJoined(true);
-    setMessages((prev) => [
-      ...prev,
-      ...fresh.map<Message>((m) => ({
-        role: m.role === "staff" ? "staff" : "user",
-        content: m.content,
-        id: m.id,
-        authorName: m.role === "staff" ? m.authorName : undefined,
-      })),
-    ]);
-  }, []);
+  /**
+   * Fold newly-arrived server messages into the thread.
+   *
+   *  - 'replay': render everything unseen — resuming a stored thread, where the
+   *    screen starts empty and the server IS the conversation.
+   *  - 'poll':   render STAFF messages only. The visitor's own messages are
+   *    already on screen (rendered optimistically at send time); rendering
+   *    them back off a poll tick is exactly the duplicate-bubble bug — the
+   *    id-dedupe below only protects them when the POST ack lands before the
+   *    next poll, which is a race, not a guarantee.
+   *  - 'prime':  render nothing, just mark ids seen and let the caller advance
+   *    the cursor (session open: the first message is already on screen).
+   * Every mode marks ids as seen so the dedupe set and cursor stay whole.
+   */
+  const applyServerMessages = useCallback(
+    (incoming: ChatServerMessage[], mode: "replay" | "poll" | "prime") => {
+      const seen = seenIdsRef.current;
+      const fresh = mergeServerMessages([], incoming).filter((m) => !seen.has(m.id));
+      fresh.forEach((m) => seen.add(m.id));
+      if (mode === "prime" || !fresh.length) return;
+      if (fresh.some((m) => m.role === "staff")) setStaffJoined(true);
+      const renderable = mode === "replay" ? fresh : fresh.filter((m) => m.role === "staff");
+      if (!renderable.length) return;
+      setMessages((prev) => [
+        ...prev,
+        ...renderable.map<Message>((m) => ({
+          role: m.role === "staff" ? "staff" : "user",
+          content: m.content,
+          id: m.id,
+          authorName: m.role === "staff" ? m.authorName : undefined,
+        })),
+      ]);
+    },
+    []
+  );
 
   /* ---------------------------------------------------------------- *
    * Open: resume an existing thread, or start the opening flow.
@@ -159,7 +177,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
         return;
       }
       say(t("supportChat.botResumed"));
-      applyServerMessages(res.data.messages, true);
+      applyServerMessages(res.data.messages, "replay");
       sinceRef.current = nextSinceCursor(res.data.messages, res.data.serverTime, sinceRef.current);
     };
 
@@ -199,7 +217,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
       if (cancelled) return;
       if (res.ok) {
         failures = 0;
-        applyServerMessages(res.data.messages, true);
+        applyServerMessages(res.data.messages, "poll");
         sinceRef.current = nextSinceCursor(res.data.messages, res.data.serverTime, sinceRef.current);
         timer = setTimeout(tick, nextPollDelayMs(0));
         return;
@@ -263,7 +281,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
       // false) so the first poll does not repeat it back at the visitor.
       const primed = await fetchChatMessages(session.token);
       if (primed.ok) {
-        applyServerMessages(primed.data.messages, false);
+        applyServerMessages(primed.data.messages, "prime");
         sinceRef.current = nextSinceCursor(primed.data.messages, primed.data.serverTime, sinceRef.current);
       } else {
         sinceRef.current = new Date().toISOString();
@@ -396,9 +414,12 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
       setMessages((prev) => [...prev, { role: "user", content, id: tempId, pending: true }]);
       const res = await postChatMessage(token, content);
       if (res.ok) {
-        seenIdsRef.current.add(res.data.messageId);
+        // Guard the ack id: an empty/missing id must never poison the dedupe
+        // set (adding "" once made every later message with no id "seen").
+        const ackId = res.data.messageId || undefined;
+        if (ackId) seenIdsRef.current.add(ackId);
         setMessages((prev) =>
-          prev.map((m) => (m.id === tempId ? { ...m, id: res.data.messageId, pending: false } : m))
+          prev.map((m) => (m.id === tempId ? { ...m, id: ackId ?? tempId, pending: false } : m))
         );
         return;
       }
