@@ -65,7 +65,17 @@ type Props = { summary: QuotationSummary; token: string; preview: boolean };
 
 export default function QuotationLanding({ summary, token, preview }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const lines = useMemo(() => readLines(summary.lineItems), [summary.lineItems]);
+  const parsed = useMemo(() => readLines(summary.lineItems), [summary.lineItems]);
+  // A quotation typed without a breakdown still reads as one service: its
+  // title at its total. It is then accepted as a whole (no line choices).
+  const itemised = parsed.length > 0;
+  const lines = useMemo(
+    () =>
+      itemised
+        ? parsed
+        : [{ index: 0, label: summary.title, amount: Number(summary.totalAmount) || 0, cadence: null, registry: 0, adjustment: false }],
+    [itemised, parsed, summary.title, summary.totalAmount]
+  );
   const cards = useMemo(() => buildCards(lines), [lines]);
   const initial = useMemo(() => pageState(summary), [summary]);
   const hasMonthly = cards.some((c) => c.monthly > 0);
@@ -290,7 +300,7 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
     const body = JSON.stringify({
       token,
       signerName: name.trim(),
-      lineIndexes: acceptedLineIndexes(cards, on),
+      ...(itemised ? { lineIndexes: acceptedLineIndexes(cards, on) } : {}),
       billing: view === "year" ? "annual" : "monthly",
     });
     const post = (url: string) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
