@@ -7,6 +7,7 @@ import { ABOUT_GET, ABOUT_OUTCOMES, ABOUT_PILLARS, ABOUT_WHO } from "@/data/a4Ab
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { CloseFilm } from "@/components/film/chapters";
 
 const SANS = "var(--a4x-display)";
 const BODY = "var(--a4x-body)";
@@ -54,6 +55,7 @@ export function AboutContent() {
         title="A modern accounting, audit and corporate services firm"
         sub="A4 is a firm — not software, and not a marketplace. We do the work for you, supported by a secure, structured client portal that keeps everything visible and on track."
       />
+      <CloseFilm />
 
       {/* Pillars — 2×2 card grid, light and dark cards in a checkerboard */}
       <section style={{ position: "relative", padding: SECTION_PAD, background: LIGHT_GLOW, color: INK }}>

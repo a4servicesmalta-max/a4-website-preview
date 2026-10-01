@@ -14,6 +14,7 @@ import {
 // (docs/DESIGN-LANGUAGE.md).
 
 import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
+import { OldWayFilm } from "@/components/film/chapters";
 
 // export function LandingNav() {
 //   const [open, setOpen] = useState(false);
@@ -261,6 +262,7 @@ export function LandingApp() {
       <main id="main-content">
         <KitStyles />
         <LandingHero />
+        <OldWayFilm />
         <HealthCheckPromo />
         <Integrations />
         <HowItWorks />

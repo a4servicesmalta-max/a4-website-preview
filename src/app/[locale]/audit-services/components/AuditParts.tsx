@@ -7,6 +7,7 @@ import { AUDIT_PRE_TRADING, REVIEW_ENGAGEMENT_FACTOR } from "@/data/a4QuotePack"
 import {
   BODY, CardGrid, CenterEyebrow, CtaBand, FaqSection, G, Head, InfoCard, KitStyles, PaidHero, Section, Statement, Timeline, ctaPill,
 } from "@/app/[locale]/accounting-services/components/PaidLandingKit";
+import { AiNativeFilm } from "@/components/film/chapters";
 // NOTE: `./FSReview` was imported here but has never existed — no file on disk,
 // no history in any branch, not gitignored. The import has been present since
 // the "pages added" commit, so this module has never typechecked and
@@ -213,6 +214,7 @@ export function AuditApp() {
       <main id="main-content">
         <KitStyles />
         <AuditHero />
+        <AiNativeFilm />
         <WhyMalta />
         <AuditEstimator />
         <AuditManifesto />

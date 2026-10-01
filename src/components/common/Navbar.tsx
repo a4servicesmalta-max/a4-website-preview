@@ -61,12 +61,22 @@ const Navbar = () => {
   const [mobileSection, setMobileSection] = useState<NavDropdownId | null>(null);
   const [solid, setSolid] = useState(false);
   const [darkTop, setDarkTop] = useState(true);
+  // Tucked away while scrolling down so the scroll films play full screen; back on scroll up.
+  const [tucked, setTucked] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<number | null>(null);
 
   // Transparent at the top only over a dark hero; anything else gets the bar.
   useEffect(() => {
+    let lastY = window.scrollY || 0;
     const check = () => {
-      setSolid((window.scrollY || 0) > 30);
+      const y = window.scrollY || 0;
+      setSolid(y > 30);
+      if (Math.abs(y - lastY) > 8) {
+        const focusInside = !!headerRef.current?.contains(document.activeElement);
+        setTucked(y > lastY && y > 240 && !focusInside);
+        lastY = y;
+      }
     };
     const detectHero = () => {
       const first = document.querySelector("main [data-hero], #main-content [data-hero], [data-hero]");
@@ -153,6 +163,7 @@ const Navbar = () => {
   if (HIDE_CHROME.includes(barePath)) return null;
 
   const filled = solid || !darkTop || open !== null;
+  const hidden = tucked && open === null && !mobileOpen;
   const isActive = (href: string) => (href === "/" ? barePath === "/" || barePath === "" : barePath.startsWith(href));
 
   const linkStyle = (active: boolean): React.CSSProperties => ({
@@ -176,6 +187,8 @@ const Navbar = () => {
   return (
     <>
       <header
+        ref={headerRef}
+        onFocus={() => setTucked(false)}
         style={{
           position: "fixed",
           top: 0,
@@ -191,7 +204,8 @@ const Navbar = () => {
           borderBottom: `1px solid ${filled ? "rgba(255,255,255,.08)" : "rgba(255,255,255,0)"}`,
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
-          transition: "background .4s, border-color .4s",
+          transform: hidden ? "translateY(-100%)" : "none",
+          transition: "background .4s, border-color .4s, transform .5s cubic-bezier(.16,1,.3,1)",
           color: "#FFFFFF",
           fontFamily: SANS,
         }}

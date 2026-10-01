@@ -7,6 +7,7 @@ import { SECURITY_COMPLIANCE_BLOCKS } from "@/data/a4SecurityComplianceSiteData"
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { ProofFilm } from "@/components/film/chapters";
 
 const SANS = "var(--a4x-display)";
 const BODY = "var(--a4x-body)";
@@ -27,6 +28,7 @@ export function SecurityComplianceContent() {
         title="Your data, protected. Your standards, upheld."
         sub="Security and professional integrity aren't features — they're the foundation. Here's how A4 keeps your information safe and your engagements sound."
       />
+      <ProofFilm />
 
       {/* Card grid: one card per control area, light and dark alternating */}
       <section style={{ position: "relative", padding: SECTION_PAD, background: LIGHT_GLOW, color: INK }}>

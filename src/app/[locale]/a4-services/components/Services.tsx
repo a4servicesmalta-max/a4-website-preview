@@ -2,9 +2,10 @@
 
 import React from "react";
 import { Eyebrow, Icon } from "@/components/a4-landing/Primitives";
-import { A4Mark, DARK_CARD, DARK_GRID, DriftGlow, GRAD, LetterWord, TypeText, Words, gradText } from "@/components/fx/primitives";
+import { A4Mark, DARK_CARD, DARK_GRID, DriftGlow, GRAD, LetterWord, gradText } from "@/components/fx/primitives";
 import { INDIGO, INK, PERI, gcol } from "@/lib/fx/engine";
 import LocalizedLink from "@/components/common/LocalizedLink";
+import { ServicesFilm } from "@/components/film/chapters";
 import { SERVICE_KEY_TO_SLUG, serviceHref } from "@/data/a4ServicesSiteData";
 
 // The portal (audit dashboard) shown full-width as the product hero, above the
@@ -299,6 +300,8 @@ const SERVICES_CSS = `
 export function Services() {
   const total = String(SVC_LIST.length).padStart(2, "0");
   return (
+    <>
+    <ServicesFilm />
     <section
       id="services"
       style={{ position: "relative", overflow: "hidden", padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)", color: "#FFFFFF", background: DARK_GRID, fontFamily: "var(--a4x-display)" }}
@@ -306,29 +309,16 @@ export function Services() {
       <style>{SERVICES_CSS}</style>
       <DriftGlow left="30%" top="-24%" strength={0.24} />
       <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
-        <div style={{ textAlign: "center" }}>
-          <div data-fx="rise" style={{ display: "flex", justifyContent: "center" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: "16px 48px" }}>
+          <div>
             <Eyebrow dark>What we do</Eyebrow>
+            <h2 data-fx="rise" data-d="80" style={{ margin: "14px 0 0", fontSize: "clamp(32px,4vw,60px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.04 }}>
+              Explore each <span style={{ ...gradText, paddingBottom: ".06em" }}>service</span>
+            </h2>
           </div>
-          <h2 style={{ margin: "18px 0 0", fontSize: "clamp(44px,7.4vw,132px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.1 }}>
-            <span className="sr-only">Every service, in one portal</span>
-            <div aria-hidden="true">
-              <TypeText segments={[{ t: "Every service,", c: "#FFFFFF" }]} per={40} caret={PERI} style={{ display: "inline-block" }} />
-              <Words d={640} style={{ fontWeight: 600 }} parts={[{ t: "in one" }, { t: "portal", g: true }]} />
-            </div>
-          </h2>
-          <p
-            data-fx="rise"
-            data-d="300"
-            style={{ margin: "clamp(28px,3vw,40px) auto 0", maxWidth: 760, fontSize: "clamp(18px,1.7vw,24px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.45, color: "#A1A1AA", textWrap: "pretty" }}
-          >
-            One licensed firm for the full financial stack — track every engagement, document and deadline in your A4 client portal, handled end-to-end by our
-            team.
+          <p data-fx="rise" data-d="160" style={{ margin: 0, maxWidth: 460, fontFamily: "var(--a4x-body)", fontSize: 17, lineHeight: 1.55, color: "#A1A1AA", textWrap: "pretty" }}>
+            Every engagement, document and deadline is tracked in your A4 client portal.
           </p>
-        </div>
-
-        <div data-fx="rise" data-dy="80" style={{ marginTop: "clamp(56px,7vw,96px)" }}>
-          <PortalDashboardMock />
         </div>
 
         <div className="a4-svc-grid" style={{ marginTop: 16 }}>
@@ -390,5 +380,6 @@ export function Services() {
         </div>
       </div>
     </section>
+    </>
   );
 }

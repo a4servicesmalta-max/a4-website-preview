@@ -10,6 +10,7 @@ import {
   formatComplianceDate,
   COMPLIANCE_DL_RULES,
 } from "@/lib/compliance-deadlines";
+import { ProofFilm } from "@/components/film/chapters";
 
 const DL_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const DL_WD = ["M", "T", "W", "T", "F", "S", "S"];
@@ -153,26 +154,29 @@ export function DeadlineTracker() {
   const next = getNextComplianceDeadline(now);
 
   return (
-    <section data-sec="deadlines" style={{ position: "relative", overflow: "hidden", color: "#FFFFFF", background: DARK_GRID, padding: "clamp(96px,11vw,150px) 0" }}>
-      <DriftGlow left="52%" top="-70%" strength={0.24} />
-      <Container style={{ position: "relative", display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: "40px 64px" }}>
-        <div style={{ flex: "1 1 520px", minWidth: 0, maxWidth: 780 }}>
-          <div data-fx="rise">
-            <Eyebrow dark>Malta compliance</Eyebrow>
+    <>
+      <ProofFilm />
+      <section data-sec="deadlines" style={{ position: "relative", overflow: "hidden", color: "#FFFFFF", background: DARK_GRID, padding: "clamp(96px,11vw,150px) 0" }}>
+        <DriftGlow left="52%" top="-70%" strength={0.24} />
+        <Container style={{ position: "relative", display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: "40px 64px" }}>
+          <div style={{ flex: "1 1 520px", minWidth: 0, maxWidth: 780 }}>
+            <div data-fx="rise">
+              <Eyebrow dark>Malta compliance</Eyebrow>
+            </div>
+            <h2 data-fx="rise" data-d="100" style={{ margin: "16px 0 0", fontFamily: DISPLAY, fontSize: "clamp(36px,4.6vw,72px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.04, color: "#FFFFFF", textWrap: "balance" }}>
+              Stay ahead of every filing <span style={{ ...gradText, paddingBottom: ".06em" }}>deadline.</span>
+            </h2>
+            <p data-fx="rise" data-d="200" style={{ margin: "22px 0 0", maxWidth: 640, fontFamily: BODY, fontSize: "clamp(16px,1.4vw,18px)", lineHeight: 1.6, color: "#A1A1AA", textWrap: "pretty" }}>
+              As your accountants and auditors, we track every statutory date and keep you ahead of it. Next up: <strong style={{ color: "#fff", fontWeight: 600 }}>{next.name}</strong>, due {formatComplianceDate(next.date)}.
+            </p>
           </div>
-          <h2 data-fx="rise" data-d="100" style={{ margin: "16px 0 0", fontFamily: DISPLAY, fontSize: "clamp(36px,4.6vw,72px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.04, color: "#FFFFFF", textWrap: "balance" }}>
-            Stay ahead of every filing <span style={{ ...gradText, paddingBottom: ".06em" }}>deadline.</span>
-          </h2>
-          <p data-fx="rise" data-d="200" style={{ margin: "22px 0 0", maxWidth: 640, fontFamily: BODY, fontSize: "clamp(16px,1.4vw,18px)", lineHeight: 1.6, color: "#A1A1AA", textWrap: "pretty" }}>
-            As your accountants and auditors, we track every statutory date and keep you ahead of it. Next up: <strong style={{ color: "#fff", fontWeight: 600 }}>{next.name}</strong>, due {formatComplianceDate(next.date)}.
-          </p>
-        </div>
-        <div data-fx="rise" data-d="300" style={{ flex: "0 1 auto", minWidth: 0, display: "flex", flexWrap: "wrap", gap: 12 }}>
-          <Button variant="outline-dark" size="lg" onClick={() => setOpen(true)} style={{ flex: "1 1 auto", minWidth: 0 }}>View compliance calendar <Icon name="arrow-right" size={18} color="#fff" /></Button>
-          <Button variant="primary" size="lg" href="/compliance-calendar" style={{ flex: "1 1 auto", minWidth: 0 }}>Download 2026 calendar <Icon name="download" size={18} color={INK} /></Button>
-        </div>
-      </Container>
-      <DLDrawer now={now} open={open} onClose={() => setOpen(false)} />
-    </section>
+          <div data-fx="rise" data-d="300" style={{ flex: "0 1 auto", minWidth: 0, display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <Button variant="outline-dark" size="lg" onClick={() => setOpen(true)} style={{ flex: "1 1 auto", minWidth: 0 }}>View compliance calendar <Icon name="arrow-right" size={18} color="#fff" /></Button>
+            <Button variant="primary" size="lg" href="/compliance-calendar" style={{ flex: "1 1 auto", minWidth: 0 }}>Download 2026 calendar <Icon name="download" size={18} color={INK} /></Button>
+          </div>
+        </Container>
+        <DLDrawer now={now} open={open} onClose={() => setOpen(false)} />
+      </section>
+    </>
   );
 }

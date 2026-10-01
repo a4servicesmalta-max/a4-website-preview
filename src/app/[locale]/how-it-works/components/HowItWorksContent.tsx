@@ -7,6 +7,7 @@ import { HOW_IT_WORKS_STEPS } from "@/data/a4HowItWorksSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { PortalFilm } from "@/components/film/chapters";
 
 const SANS = "var(--a4x-display)";
 const BODY = "var(--a4x-body)";
@@ -25,6 +26,7 @@ export function HowItWorksContent() {
         title="Simple to start. Easy to work with."
         sub="From first hello to work delivered, A4 keeps every step clear, professional and on time — with one dedicated team and one secure portal."
       />
+      <PortalFilm />
 
       {/* The five steps on the design's timeline: the line fills as you scroll */}
       <section style={{ position: "relative", padding: SECTION_PAD, background: LIGHT_GLOW, color: INK }}>

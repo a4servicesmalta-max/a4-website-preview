@@ -6,6 +6,7 @@ import { DARK_GRID, DriftGlow, TypeText, Words, gradText } from "@/components/fx
 import { getNextComplianceDeadline, formatComplianceDate } from "@/lib/compliance-deadlines";
 import { SUPPORT_RESPONSE_LABEL } from "@/lib/site-config";
 import { BOOK_A_CALL_PATH } from "@/lib/external-links";
+import { CloseFilm } from "@/components/film/chapters";
 
 const INK = "#09090B";
 const INDIGO = "#4F55F1";
@@ -33,50 +34,53 @@ export function ContactCTA() {
   const onClient = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   return (
-    <section data-sec="contact-cta" style={{ position: "relative", overflow: "hidden", padding: "clamp(110px,14vw,190px) 0", color: "#FFFFFF", background: DARK_GRID, borderTop: "1px solid rgba(255,255,255,.08)" }}>
-      <DriftGlow left="-10%" top="-20%" strength={0.26} />
-      <Container style={{ position: "relative", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "56px 72px", alignItems: "center" }}>
-        <div style={{ minWidth: 0 }}>
-          <div data-fx="rise">
-            <Eyebrow dark>Get started</Eyebrow>
+    <>
+      <CloseFilm />
+      <section data-sec="contact-cta" style={{ position: "relative", overflow: "hidden", padding: "clamp(110px,14vw,190px) 0", color: "#FFFFFF", background: DARK_GRID, borderTop: "1px solid rgba(255,255,255,.08)" }}>
+        <DriftGlow left="-10%" top="-20%" strength={0.26} />
+        <Container style={{ position: "relative", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "56px 72px", alignItems: "center" }}>
+          <div style={{ minWidth: 0 }}>
+            <div data-fx="rise">
+              <Eyebrow dark>Get started</Eyebrow>
+            </div>
+            <h2 style={{ margin: "20px 0 0", fontFamily: "var(--a4x-display)", fontSize: "clamp(42px,6vw,104px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.06, color: "#FFFFFF" }}>
+              <span className="sr-only">When should you contact A4 Services?</span>
+              <span aria-hidden="true" style={{ display: "block" }}>
+                <TypeText as="span" segments={[{ t: "When should you contact", c: "#FFFFFF" }]} per={40} caret={PERI} style={{ display: "block" }} />
+                <Words as="span" d={1020} style={{ display: "block", fontWeight: 600 }} parts={[{ t: "A4 Services?", g: true }]} />
+              </span>
+            </h2>
+            <p data-fx="rise" data-d="700" style={{ margin: "28px 0 0", maxWidth: 620, fontFamily: "var(--a4x-display)", fontSize: "clamp(18px,1.6vw,22px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.45, color: "#A1A1AA", textWrap: "pretty" }}>
+              Speak to us if you need an accounting firm in Malta, your company requires a statutory audit, your bookkeeping is behind, or you want better visibility over your business numbers.
+            </p>
+            <div data-fx="rise" data-d="820" style={{ marginTop: 28 }}>
+              <span className="a4-chip a4-chip-dark">
+                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: PERI, boxShadow: "0 0 0 4px rgba(139,143,247,.18)" }} />
+                {SUPPORT_RESPONSE_LABEL}
+              </span>
+            </div>
           </div>
-          <h2 style={{ margin: "20px 0 0", fontFamily: "var(--a4x-display)", fontSize: "clamp(42px,6vw,104px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.06, color: "#FFFFFF" }}>
-            <span className="sr-only">When should you contact A4 Services?</span>
-            <span aria-hidden="true" style={{ display: "block" }}>
-              <TypeText as="span" segments={[{ t: "When should you contact", c: "#FFFFFF" }]} per={40} caret={PERI} style={{ display: "block" }} />
-              <Words as="span" d={1020} style={{ display: "block", fontWeight: 600 }} parts={[{ t: "A4 Services?", g: true }]} />
-            </span>
-          </h2>
-          <p data-fx="rise" data-d="700" style={{ margin: "28px 0 0", maxWidth: 620, fontFamily: "var(--a4x-display)", fontSize: "clamp(18px,1.6vw,22px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.45, color: "#A1A1AA", textWrap: "pretty" }}>
-            Speak to us if you need an accounting firm in Malta, your company requires a statutory audit, your bookkeeping is behind, or you want better visibility over your business numbers.
-          </p>
-          <div data-fx="rise" data-d="820" style={{ marginTop: 28 }}>
-            <span className="a4-chip a4-chip-dark">
-              <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: PERI, boxShadow: "0 0 0 4px rgba(139,143,247,.18)" }} />
-              {SUPPORT_RESPONSE_LABEL}
-            </span>
-          </div>
-        </div>
 
-        <div data-fx="rise" data-d="200" style={{ position: "relative", minWidth: 0, padding: "clamp(24px,3.4vw,40px)", borderRadius: 28, background: "rgba(24,24,27,.92)", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 40px 100px rgba(0,0,0,.45)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", minHeight: 30 }}>
-            <span style={{ fontFamily: BODY, fontSize: 12, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#A1A1AA" }}>Next up</span>
-            {onClient ? <span style={{ height: 30, padding: "0 13px", display: "inline-flex", alignItems: "center", borderRadius: 999, background: "rgba(139,143,247,.18)", color: "#FFFFFF", fontFamily: "var(--a4x-display)", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
-              {days === 1 ? "in 1 day" : `in ${days} days`}
-            </span> : null}
+          <div data-fx="rise" data-d="200" style={{ position: "relative", minWidth: 0, padding: "clamp(24px,3.4vw,40px)", borderRadius: 28, background: "rgba(24,24,27,.92)", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 40px 100px rgba(0,0,0,.45)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", minHeight: 30 }}>
+              <span style={{ fontFamily: BODY, fontSize: 12, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#A1A1AA" }}>Next up</span>
+              {onClient ? <span style={{ height: 30, padding: "0 13px", display: "inline-flex", alignItems: "center", borderRadius: 999, background: "rgba(139,143,247,.18)", color: "#FFFFFF", fontFamily: "var(--a4x-display)", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
+                {days === 1 ? "in 1 day" : `in ${days} days`}
+              </span> : null}
+            </div>
+            <div style={{ marginTop: 16, fontFamily: "var(--a4x-display)", fontSize: "clamp(24px,2.2vw,30px)", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.15 }}>{next.name}</div>
+            <div style={{ marginTop: 6, fontFamily: "var(--a4x-display)", fontSize: "clamp(34px,3.6vw,52px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.1, paddingBottom: ".06em", ...gradText }}>
+              {formatComplianceDate(next.date)}
+            </div>
+            <div style={{ height: 1, margin: "26px 0", background: "rgba(255,255,255,.1)" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Button variant="primary" size="lg" href="/contact" style={{ width: "100%" }}>Request information <Icon name="arrow-right" size={18} color={INK} /></Button>
+              <Button variant="outline-dark" size="lg" href={BOOK_A_CALL_PATH} style={{ width: "100%" }}>Book a consultation</Button>
+            </div>
           </div>
-          <div style={{ marginTop: 16, fontFamily: "var(--a4x-display)", fontSize: "clamp(24px,2.2vw,30px)", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.15 }}>{next.name}</div>
-          <div style={{ marginTop: 6, fontFamily: "var(--a4x-display)", fontSize: "clamp(34px,3.6vw,52px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.1, paddingBottom: ".06em", ...gradText }}>
-            {formatComplianceDate(next.date)}
-          </div>
-          <div style={{ height: 1, margin: "26px 0", background: "rgba(255,255,255,.1)" }} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <Button variant="primary" size="lg" href="/contact" style={{ width: "100%" }}>Request information <Icon name="arrow-right" size={18} color={INK} /></Button>
-            <Button variant="outline-dark" size="lg" href={BOOK_A_CALL_PATH} style={{ width: "100%" }}>Book a consultation</Button>
-          </div>
-        </div>
-      </Container>
-    </section>
+        </Container>
+      </section>
+    </>
   );
 }
 

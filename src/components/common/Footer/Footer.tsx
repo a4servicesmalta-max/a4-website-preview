@@ -14,14 +14,15 @@ import {
   CONTACT_PHONES,
   LINKEDIN_COMPANY_URL,
 } from '@/lib/contact'
-import FooterCtaStrip from './FooterCtaStrip'
+import { BOOK_A_CALL_PATH } from '@/lib/external-links'
 
 const HIDE_CHROME = ['/privacy-policy', '/terms-and-conditions', '/cookie-policy']
 
 /**
- * The footer in the A4 design language: the closing CTA, then the glitch
- * lockup ("Accounting that works differently." · Powered by Vacei) on the dark
- * grid, then the link columns, contact details and the legal line.
+ * The footer in the A4 design language. Every page ends on the teaser film's end
+ * card: a full screen on the dark grid where the white lockup glitches into place,
+ * "Accounting that works differently.", Powered by Vacei, and the two ways to start.
+ * Then the link columns, contact details and the legal line.
  */
 const Footer = () => {
   const pathname = usePathname()
@@ -59,24 +60,43 @@ const Footer = () => {
   return (
     <footer style={{ position: 'relative', overflow: 'hidden', color: '#FFFFFF', background: DARK_GRID, fontFamily: 'var(--a4x-display)' }}>
       <DriftGlow left="-10%" top="-20%" strength={0.22} />
-      <FooterCtaStrip />
+      <section
+        aria-label="Get started with A4"
+        style={{
+          position: 'relative',
+          minHeight: '100svh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 'clamp(96px,12vw,160px) clamp(20px,5vw,72px)',
+        }}
+      >
+        <GlitchLockup tagline="Accounting that works differently.">
+          <a
+            data-glitch-after=""
+            href="https://vacei.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Powered by Vacei — the software platform built by A4 Services"
+            style={{ marginTop: 28, display: 'inline-flex', alignItems: 'center', height: 56, padding: '0 24px', borderRadius: 28, border: '1px solid rgba(255,255,255,.22)', background: 'rgba(255,255,255,.06)' }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/a4/powered-by-vacei-white.png" alt="Powered by Vacei" style={{ height: 26, width: 'auto', display: 'block' }} />
+          </a>
+          <div data-glitch-after="" style={{ marginTop: 'clamp(36px,4vw,56px)', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
+            <LocalizedLink href="/quote" className="a4-btn a4-btn-light" style={{ textDecoration: 'none' }}>
+              Get a quote
+            </LocalizedLink>
+            <LocalizedLink href={BOOK_A_CALL_PATH} className="a4-btn a4-btn-ghost" style={{ textDecoration: 'none' }}>
+              {t('footer.ctaStripButton')}
+            </LocalizedLink>
+          </div>
+        </GlitchLockup>
+      </section>
 
       <div style={{ position: 'relative', maxWidth: 1280, margin: '0 auto', padding: '0 clamp(20px,5vw,72px)' }}>
-        <div style={{ paddingTop: 'clamp(72px,8vw,112px)', borderTop: '1px solid rgba(255,255,255,.08)' }}>
-          <GlitchLockup tagline="Accounting that works differently.">
-            <a
-              data-glitch-after=""
-              href="https://vacei.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Powered by Vacei — the software platform built by A4 Services"
-              style={{ marginTop: 28, display: 'inline-flex', alignItems: 'center', height: 56, padding: '0 24px', borderRadius: 28, border: '1px solid rgba(255,255,255,.22)', background: 'rgba(255,255,255,.06)' }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/a4/powered-by-vacei-white.png" alt="Powered by Vacei" style={{ height: 26, width: 'auto', display: 'block' }} />
-            </a>
-          </GlitchLockup>
-        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,.08)' }} />
 
         <div
           data-fx="rise"

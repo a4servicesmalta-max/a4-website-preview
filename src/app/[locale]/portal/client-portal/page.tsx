@@ -10,6 +10,7 @@ import ClientPortalOverviewSection from "@/components/client-portal/ClientPortal
 import ClientPortalFeaturesTimelineSection from "@/components/client-portal/ClientPortalFeaturesTimelineSection";
 import PortalFeature from "@/components/services/PortalFeature";
 import { BOOK_A_CALL_PATH, CLIENT_LOGIN_URL } from "@/lib/external-links";
+import { PortalFilm } from "@/components/film/chapters";
 
 const ROUTE = "portal/client-portal";
 
@@ -44,6 +45,7 @@ const ClientPortalPage = () => {
           </Button>
         </div>
       </PageHero>
+      <PortalFilm />
 
       <ClientPortalOverviewSection variant="client" i18nRouteKey={ROUTE} heading={t("overview.heading")} paragraphs={paragraphs.slice(1)} />
 

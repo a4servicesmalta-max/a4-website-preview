@@ -15,6 +15,7 @@ import { PageHero } from "./PageHero";
 import { ServiceClosing } from "./ServiceClosing";
 import { ServicePortalBand } from "./ServicePortalBand";
 import { BODY, Band, G, GRID3, Head, INDIGO, PillLink, Pills, WordCard, kicker, type CardFx } from "./SiteKit";
+import { ServicesFilm } from "@/components/film/chapters";
 
 /**
  * The big card word for each service and the letter effect it plays — short
@@ -72,6 +73,7 @@ export function ServicesOverviewContent() {
           </PillLink>
         </Pills>
       </PageHero>
+      <ServicesFilm />
 
       <Band surface="light" sec="services" id="services">
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 28 }}>

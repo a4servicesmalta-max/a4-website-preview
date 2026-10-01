@@ -6,15 +6,13 @@ import {
   A4DrawnLockup,
   DARK_GRID,
   DriftGlow,
-  LIGHT_GLOW,
   Slab,
-  SweepSlab,
   TypeText,
-  Words,
   gradText,
 } from "@/components/fx/primitives";
 import { INDIGO, INK, PERI, gcol } from "@/lib/fx/engine";
 import { usePrefersReducedMotion } from "@/contexts/ReduceMotionContext";
+import { AiNativeFilm, OldWayFilm } from "@/components/film/chapters";
 // Bookkeeping figures come from the quote pack. Under mt-2026-08-14-volume they
 // are the ENTRY band of nine, priced by monthly expenses — always shown as "from".
 import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
@@ -271,114 +269,42 @@ export function Hero({
   );
 }
 
-const STATEMENT_TAIL = "requires more than filing accounts and meeting".split(" ");
-
-/** The design's statement: a centred typewriter line, then a rising line with one gradient word. */
+/** Act 1 and 2 of the A4 teaser film, played by scroll: the old way, the turn, Meet A4. */
 export function Statement() {
-  return (
-    <section
-      style={{ position: "relative", padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)", background: LIGHT_GLOW, color: INK, fontFamily: SANS }}
-    >
-      <div style={{ maxWidth: 1180, margin: "0 auto", textAlign: "center" }}>
-        <h2 style={{ margin: 0, fontSize: "clamp(36px,5vw,84px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.08 }}>
-          <span className="sr-only">Running a business in Malta requires more than filing accounts and meeting deadlines.</span>
-          <div aria-hidden="true">
-            <TypeText segments={[{ t: "Running a business in Malta", c: INK }]} per={32} style={{ display: "inline-block", textWrap: "balance" }} />
-            <Words
-              d={960}
-              stagger={60}
-              style={{ fontWeight: 600, textWrap: "balance" }}
-              parts={[...STATEMENT_TAIL.map((t) => ({ t })), { t: "deadlines.", g: true }]}
-            />
-          </div>
-        </h2>
-        <p
-          data-fx="rise"
-          data-d="250"
-          style={{ margin: "clamp(36px,4vw,56px) auto 0", maxWidth: 780, fontSize: "clamp(18px,1.7vw,24px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.45, color: "#52525B", textWrap: "pretty" }}
-        >
-          One coordinated system that eliminates the complexity of multiple providers — and one dedicated team that understands your business end to end.
-        </p>
-        <div data-fx="rise" data-d="380" style={{ marginTop: 28, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10 }}>
-          {["Accounting", "Statutory audit", "Tax", "VAT", "Payroll", "Fractional CFO"].map((s) => (
-            <span key={s} className="a4-chip a4-chip-light">
-              {s}
-            </span>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+  return <OldWayFilm />;
 }
 
-const BIG: React.CSSProperties = { fontSize: "clamp(56px,13.5vw,250px)", fontWeight: 600, letterSpacing: "-0.05em", lineHeight: 0.98 };
-
-/** AI-native positioning — the design's big statement on dark (04 WHY A4). */
+/**
+ * AI-native positioning: the film's "AI-native audit." and "The machines do the volume.
+ * Our people do the judgement." beats, then the explanation on the black grid.
+ */
 export function Manifesto() {
   return (
-    <section
-      style={{ position: "relative", overflow: "hidden", padding: "clamp(120px,16vw,220px) clamp(20px,5vw,72px)", color: "#FFFFFF", background: DARK_GRID, fontFamily: SANS }}
-    >
-      <DriftGlow left="40%" top="-10%" strength={0.24} />
-      <SweepSlab />
-
-      <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto", textAlign: "center" }}>
-        <div data-fx="big" style={{ ...BIG, paddingBottom: ".06em", ...gradText }}>
-          Built
-        </div>
-        <div data-fx="big" data-d="150" style={{ ...BIG, color: "#FFFFFF" }}>
-          AI-native
-        </div>
-        <h2
-          data-fx="rise"
-          data-d="650"
-          style={{ margin: "44px auto 0", maxWidth: 1040, fontSize: "clamp(20px,2.4vw,40px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.3, color: "#A1A1AA", textWrap: "balance" }}
+    <>
+      <AiNativeFilm />
+      <section style={{ position: "relative", overflow: "hidden", padding: "clamp(72px,9vw,128px) clamp(20px,5vw,72px)", color: "#FFFFFF", background: DARK_GRID, fontFamily: SANS }}>
+        <DriftGlow left="40%" top="-40%" strength={0.18} />
+        <div
+          style={{
+            position: "relative",
+            maxWidth: 1280,
+            margin: "0 auto",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))",
+            gap: "24px 72px",
+          }}
         >
-          We&rsquo;re not adding AI to accounting. <span style={{ color: "#FFFFFF" }}>We rebuilt the firm around it.</span>
-        </h2>
-      </div>
-
-      <div
-        style={{
-          position: "relative",
-          maxWidth: 1280,
-          margin: "clamp(110px,13vw,190px) auto 0",
-          display: "flex",
-          flexDirection: "column",
-          gap: 20,
-          fontSize: "clamp(34px,5.4vw,96px)",
-          fontWeight: 500,
-          letterSpacing: "-0.035em",
-          lineHeight: 1.06,
-        }}
-      >
-        <Words stagger={100} parts={[{ t: "The machines do the" }, { t: "volume.", g: true, style: { fontWeight: 600 } }]} />
-        <Words d={420} stagger={100} parts={[{ t: "Our people do the" }, { t: "judgement.", g: true, style: { fontWeight: 600 } }]} />
-        <Words d={840} stagger={100} parts={[{ t: "Licensed humans" }, { t: "sign off.", g: true, style: { fontWeight: 600 } }]} />
-      </div>
-
-      <div
-        style={{
-          position: "relative",
-          maxWidth: 1280,
-          margin: "clamp(72px,8vw,112px) auto 0",
-          paddingTop: "clamp(36px,4vw,52px)",
-          borderTop: "1px solid rgba(255,255,255,.08)",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))",
-          gap: "24px 72px",
-        }}
-      >
-        <p data-fx="rise" style={{ margin: 0, fontFamily: BODY, fontSize: 17, lineHeight: 1.65, color: "#A1A1AA", textWrap: "pretty" }}>
-          Most of the industry bolts AI tools onto firms that still sell hours. A4 works the other way around — a licensed Maltese accounting and audit firm
-          running on Vacei, the platform we built ourselves. The machines do the volume: collecting documents, coding transactions, reconciling, preparing the
-          file. Our accountants and auditors do the judgement, the risk and the hard conversations.
-        </p>
-        <p data-fx="rise" data-d="120" style={{ margin: 0, fontFamily: BODY, fontSize: 17, lineHeight: 1.65, color: "#D4D4D8", textWrap: "pretty" }}>
-          AI agents check every transaction in real time, and a licensed professional approves every figure before you see it.{" "}
-          <strong style={{ color: "#FFFFFF", fontWeight: 600 }}>Faster closes, deeper assurance, no year-end surprises</strong> — at a fixed fee.
-        </p>
-      </div>
-    </section>
+          <p data-fx="rise" style={{ margin: 0, fontFamily: BODY, fontSize: 17, lineHeight: 1.65, color: "#A1A1AA", textWrap: "pretty" }}>
+            Most of the industry bolts AI tools onto firms that still sell hours. A4 works the other way around — a licensed Maltese accounting and audit firm
+            running on Vacei, the platform we built ourselves. The machines do the volume: collecting documents, coding transactions, reconciling, preparing the
+            file. Our accountants and auditors do the judgement, the risk and the hard conversations.
+          </p>
+          <p data-fx="rise" data-d="120" style={{ margin: 0, fontFamily: BODY, fontSize: 17, lineHeight: 1.65, color: "#D4D4D8", textWrap: "pretty" }}>
+            AI agents check every transaction in real time, and a licensed professional approves every figure before you see it.{" "}
+            <strong style={{ color: "#FFFFFF", fontWeight: 600 }}>Faster closes, deeper assurance, no year-end surprises</strong> — at a fixed fee.
+          </p>
+        </div>
+      </section>
+    </>
   );
 }

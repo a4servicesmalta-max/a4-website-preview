@@ -23,6 +23,7 @@ import {
   pad2,
   type CardFx,
 } from "@/app/[locale]/services/components/SiteKit";
+import { PortalFilm } from "@/components/film/chapters";
 
 /** The big card word for each part of the platform, and its letter effect. */
 const WHAT_WORD: Record<string, [string, CardFx]> = {
@@ -55,6 +56,7 @@ export function WhiteLabelPlatformContent() {
           </PillLink>
         </Pills>
       </PageHero>
+      <PortalFilm />
 
       {/* 01 — WHAT YOU GET */}
       <Band surface="light" sec="what">

@@ -31,6 +31,7 @@ import {
   gradText,
   type CardFx,
 } from "@/app/[locale]/services/components/SiteKit";
+import { PortalFilm } from "@/components/film/chapters";
 
 const OPP_FX: CardFx[] = ["zoom", "type", "stack", "scatter"];
 
@@ -66,6 +67,7 @@ export function PartnersPlatformContent() {
           </Pills>
         </div>
       </PageHero>
+      <PortalFilm />
 
       {/* 01 — LIVE OPPORTUNITIES */}
       <Band surface="light" sec="opportunities">

@@ -5,6 +5,7 @@ import { Icon } from "@/components/a4-landing/Primitives";
 import { A4Mark, LIGHT_GLOW } from "@/components/fx/primitives";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { HOW_A4_WORKS_STAGES, type HowA4WorksStage } from "@/data/a4HowA4WorksSiteData";
+import { AiNativeFilm } from "@/components/film/chapters";
 
 const SANS = "var(--a4x-display)";
 const BODY = "var(--a4x-body)";
@@ -114,6 +115,7 @@ export function HowA4WorksContent() {
         title="Automation does the work. People sign it off."
         sub="Follow an engagement from intake to final delivery — see the agents that do the heavy lifting, the human layer that reviews everything, and the complete file we hand you with every letter drafted."
       />
+      <AiNativeFilm />
 
       <section style={{ position: "relative", padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)", background: LIGHT_GLOW, color: INK }}>
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
