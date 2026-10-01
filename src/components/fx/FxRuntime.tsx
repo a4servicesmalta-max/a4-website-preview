@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { EO, IO, clamp, fireFx, ioF, lerp, prefersReducedMotion, prepFx } from "@/lib/fx/engine";
+import { EO, IO, clamp, fireFx, ioF, lerp, prefersReducedMotion, prepFx, unprepFx } from "@/lib/fx/engine";
 
 /**
  * Site-wide motion runtime (mounted once in the root layout).
@@ -16,9 +16,21 @@ import { EO, IO, clamp, fireFx, ioF, lerp, prefersReducedMotion, prepFx } from "
  *
  * Pre-hiding before hydration is done in CSS under `html.fx` (see globals.css); a head script adds
  * the class and removes it again if this runtime never boots, so content can never stay hidden.
+ *
+ * Hydration: page content can hydrate after this runtime starts (it sits behind the
+ * `[locale]/loading.tsx` Suspense boundary), so the runtime leaves a server-rendered node alone
+ * until React has claimed it — React's hydration check then never sees the runtime's attributes or
+ * inline styles. Nodes React never claims (HTML injected as a string) are picked up after a grace period.
  */
 
 type Win = Window & { __fxReady?: boolean };
+
+const SEL = "[data-fx],[data-drift],[data-loop]";
+const AMB = "fx-ambient";
+const GRACE_MS = 3000;
+
+/** React stamps each node it creates or hydrates with a `__reactFiber$…` key; from then on it is safe to touch. */
+const claimed = (el: Element) => Object.keys(el).some((k) => k.startsWith("__reactFiber$"));
 
 export function subtleMotion() {
   return prefersReducedMotion();
@@ -43,6 +55,10 @@ export default function FxRuntime() {
     let ready = false;
     let io: IntersectionObserver | null = null;
     const pending: Element[] = [];
+    const bound = new WeakSet<Element>();
+    const ambient = new WeakSet<Element>();
+    const waiting = new Map<Element, { initial: boolean; since: number }>();
+    let retryTimer = 0;
     let driftIndex = 0;
 
     const inView = (el: Element) => {
@@ -51,13 +67,11 @@ export default function FxRuntime() {
     };
 
     const bindFx = (el: Element, initial: boolean) => {
-      if (el.hasAttribute("data-fx-bound")) return;
-      el.setAttribute("data-fx-bound", "");
-      if (reduced) {
-        el.setAttribute("data-fx-done", "");
-        return;
-      }
-      if (initial && late && inView(el)) {
+      if (bound.has(el)) return;
+      bound.add(el);
+      // Already played (or playing) — e.g. before a strict-mode remount of this runtime.
+      if (el.hasAttribute("data-fx-done")) return;
+      if (reduced || (initial && late && inView(el))) {
         el.setAttribute("data-fx-done", "");
         return;
       }
@@ -72,17 +86,18 @@ export default function FxRuntime() {
     };
 
     const bindAmbient = (el: Element) => {
-      if (reduced || el.hasAttribute("data-fx-amb")) return;
-      el.setAttribute("data-fx-amb", "");
+      if (reduced || ambient.has(el)) return;
+      ambient.add(el);
       if (el.hasAttribute("data-drift")) {
         const i = driftIndex++;
         el.animate(
           [{ transform: "translate(0,0)" }, { transform: `translate(${i % 2 ? -10 : 12}vw, ${i % 2 ? 6 : -5}vh)` }],
-          { duration: 9000 + i * 1700, direction: "alternate", iterations: Infinity, easing: "ease-in-out" },
+          { id: AMB, duration: 9000 + i * 1700, direction: "alternate", iterations: Infinity, easing: "ease-in-out" },
         );
       }
       if (el.hasAttribute("data-loop")) {
         el.animate([{ transform: "translateY(-100%)" }, { transform: "translateY(100%)" }], {
+          id: AMB,
           duration: 1600,
           iterations: Infinity,
           easing: IO,
@@ -90,16 +105,34 @@ export default function FxRuntime() {
       }
     };
 
-    const scan = (root: ParentNode, initial: boolean) => {
-      if (root instanceof Element) {
-        if (root.hasAttribute("data-fx")) bindFx(root, initial);
-        if (root.hasAttribute("data-drift") || root.hasAttribute("data-loop")) bindAmbient(root);
+    const bind = (el: Element, initial: boolean, force = false) => {
+      if (!force && !claimed(el)) {
+        if (!waiting.has(el)) waiting.set(el, { initial, since: performance.now() });
+        if (!retryTimer) retryTimer = window.setTimeout(retry, 80);
+        return;
       }
-      root.querySelectorAll("[data-fx]").forEach((el) => bindFx(el, initial));
-      root.querySelectorAll("[data-drift],[data-loop]").forEach(bindAmbient);
+      if (el.hasAttribute("data-fx")) bindFx(el, initial);
+      if (el.hasAttribute("data-drift") || el.hasAttribute("data-loop")) bindAmbient(el);
     };
 
-    scan(document, true);
+    const retry = () => {
+      retryTimer = 0;
+      const now = performance.now();
+      waiting.forEach((wait, el) => {
+        if (!el.isConnected) waiting.delete(el);
+        else if (claimed(el) || now - wait.since > GRACE_MS) {
+          waiting.delete(el);
+          bind(el, wait.initial, true);
+        }
+      });
+      if (waiting.size) retryTimer = window.setTimeout(retry, 80);
+      onScroll();
+    };
+
+    const scan = (root: ParentNode, initial: boolean) => {
+      if (root instanceof Element && root.matches(SEL)) bind(root, initial);
+      root.querySelectorAll(SEL).forEach((el) => bind(el, initial));
+    };
 
     const mo = new MutationObserver((records) => {
       for (const r of records) {
@@ -109,7 +142,6 @@ export default function FxRuntime() {
       }
       onScroll();
     });
-    mo.observe(document.body, { childList: true, subtree: true });
 
     const fontsReady: Promise<unknown> = document.fonts
       ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))])
@@ -131,28 +163,32 @@ export default function FxRuntime() {
       pending.splice(0).forEach(observe);
     });
 
-    // ── scroll-linked effects ──
+    // ── scroll-linked effects ── (a section's own nodes hydrate before it, so checking it covers them)
+    const each = (sel: string, fn: (el: HTMLElement) => void) =>
+      document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
+        if (claimed(el)) fn(el);
+      });
     const scrollFx = () => {
       const vh = window.innerHeight || 800;
       const y = window.scrollY || document.documentElement.scrollTop || 0;
 
-      document.querySelectorAll<HTMLElement>("[data-hero-exit]").forEach((hx) => {
+      each("[data-hero-exit]", (hx) => {
         const p = clamp(y / (vh * 0.9), 0, 1);
         hx.style.transform = `translateY(${-p * 140}px)`;
         hx.style.opacity = String(1 - p * 0.85);
         hx.style.filter = subtle || p < 0.02 ? "none" : `blur(${(p * 10).toFixed(2)}px)`;
       });
-      document.querySelectorAll<HTMLElement>("[data-hero-par]").forEach((hp) => {
+      each("[data-hero-par]", (hp) => {
         hp.style.transform = `translate(${-y * 0.2}px, ${y * 0.3}px)`;
       });
-      document.querySelectorAll<HTMLElement>("[data-sweep]").forEach((sw) => {
+      each("[data-sweep]", (sw) => {
         const sec = sw.closest("[data-sweep-sec]") || sw.closest("section") || sw.parentElement;
         if (!sec) return;
         const r = sec.getBoundingClientRect();
         const p = clamp((vh - r.top) / (vh + r.height), 0, 1);
         sw.style.transform = `translateX(${lerp(-60, 170, ioF(p))}vw)`;
       });
-      document.querySelectorAll<HTMLElement>("[data-tl]").forEach((tl) => {
+      each("[data-tl]", (tl) => {
         const sec = tl.closest("[data-tl-sec]") || tl.closest("section") || tl;
         const r = sec.getBoundingClientRect();
         const p = clamp((vh * 0.8 - r.top) / (vh * 0.6), 0, 1);
@@ -164,7 +200,7 @@ export default function FxRuntime() {
           dot.style.transform = `scale(${p > 0.02 && p >= i / n - 0.001 ? 1 : 0})`;
         });
       });
-      document.querySelectorAll<HTMLElement>("[data-stage]").forEach((st) => {
+      each("[data-stage]", (st) => {
         const cam = st.querySelector<HTMLElement>("[data-cam]");
         if (!cam) return;
         const CW = Number(st.getAttribute("data-cw") || 1600);
@@ -188,6 +224,9 @@ export default function FxRuntime() {
         scrollFx();
       });
     };
+
+    scan(document, true);
+    mo.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("scroll", onScroll, { passive: true, capture: true });
     window.addEventListener("resize", onScroll);
     scrollFx();
@@ -196,9 +235,17 @@ export default function FxRuntime() {
       dead = true;
       mo.disconnect();
       io?.disconnect();
+      clearTimeout(retryTimer);
       cancelAnimationFrame(raf);
       document.removeEventListener("scroll", onScroll, { capture: true });
       window.removeEventListener("resize", onScroll);
+      // Hand everything back so a remount (React strict mode, fast refresh) starts clean.
+      document.querySelectorAll("[data-fx]:not([data-fx-done])").forEach(unprepFx);
+      document.querySelectorAll("[data-drift],[data-loop]").forEach((el) =>
+        el.getAnimations().forEach((a) => {
+          if (a.id === AMB) a.cancel();
+        }),
+      );
     };
   }, []);
 

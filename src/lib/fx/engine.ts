@@ -243,6 +243,13 @@ export function prepFx(el: Element, subtle: boolean) {
   });
 }
 
+/** Undo prepFx so the CSS pre-hide holds the element again (runtime teardown, e.g. a strict-mode remount). */
+export function unprepFx(el: Element) {
+  const a = el as Animated;
+  (a.__fx || []).forEach((anim) => anim.cancel());
+  delete a.__fx;
+}
+
 /** Typewriter caret that hops letter to letter, blinks three times, then hides. */
 export function runCaret(el: Element, d: number) {
   const c = el.querySelector<HTMLElement>("[data-caret]");

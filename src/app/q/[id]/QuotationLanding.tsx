@@ -117,15 +117,11 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
     const from = shownRef.current;
     cancelAnimationFrame(twRaf.current);
     if (from === to) return;
-    if (prefersReducedMotion()) {
-      shownRef.current = to;
-      setShown(to);
-      return;
-    }
     const t0 = performance.now();
-    const D = 600;
+    // Reduced motion: land on the new total in the next frame.
+    const D = prefersReducedMotion() ? 0 : 600;
     const step = (now: number) => {
-      const p = Math.min(1, (now - t0) / D);
+      const p = D ? Math.min(1, (now - t0) / D) : 1;
       const e = p >= 1 ? 1 : 1 - Math.pow(2, -10 * p);
       const v = from + (to - from) * e;
       shownRef.current = v;

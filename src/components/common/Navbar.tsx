@@ -84,10 +84,12 @@ const Navbar = () => {
   }, [pathname]);
 
   // Route change closes everything.
-  useEffect(() => {
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
     setOpen(null);
     setMobileOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     if (!mobileOpen) return;
