@@ -8,8 +8,8 @@ export const PayrollApp = dynamic(
     ssr: false,
     loading: () => (
       <div
-        className="min-h-screen grid place-items-center a4-font-body text-[var(--a4-on-dark-mute)]"
-        style={{ background: "#000" }}
+        className="grid place-items-center"
+        style={{ height: "calc(100dvh - 72px)", background: "#09090B", color: "#A1A1AA", fontFamily: "var(--a4x-display)", fontSize: 15, fontWeight: 500 }}
       >
         Loading payroll…
       </div>

@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { FadeInUp } from "../common/Animations";
-import { motion } from "framer-motion";
-import GradientContainer from "../common/GradientContainer";
 import FormStatusModal from "../common/FormStatusModal";
+import { BODY, Band, PERI, SANS, gradTail } from "@/components/services/SectionKit";
+import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
 
 interface ContactHRFormProps {
   title?: string;
@@ -40,12 +39,14 @@ interface ContactHRFormProps {
   };
 }
 
-const ContactHRForm = ({
-  title,
-  subtitle,
-  emailLabel,
-  form
-}: ContactHRFormProps) => {
+const label: React.CSSProperties = { display: "block", fontFamily: SANS, fontSize: 15, fontWeight: 600, color: "#E4E4E7", marginBottom: 10 };
+
+/**
+ * "Join our talent network" — the design's dark CTA: heading and email on the
+ * left, the form in the dark card on the right (dark inputs, white pill).
+ * Submits to /api/contact exactly as before.
+ */
+const ContactHRForm = ({ title, subtitle, emailLabel, form }: ContactHRFormProps) => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -96,7 +97,7 @@ const ContactHRForm = ({
       setStatusOpen(true);
     } catch (err) {
       console.error(err);
-      const msg = err instanceof Error ? err.message : (form?.error || "");
+      const msg = err instanceof Error ? err.message : form?.error || "";
       setSubmitError(msg);
       setStatusType("error");
       setStatusMessage(msg);
@@ -106,140 +107,133 @@ const ContactHRForm = ({
     }
   };
 
+  const required = (
+    <span aria-hidden="true" style={{ color: PERI }}>
+      {" "}
+      *
+    </span>
+  );
+
   return (
     <>
       <FormStatusModal
         open={statusOpen}
         type={statusType}
-        title={statusType === "success" ? (form?.modalSuccessTitle || "") : (form?.modalErrorTitle || "")}
+        title={statusType === "success" ? form?.modalSuccessTitle || "" : form?.modalErrorTitle || ""}
         message={statusMessage}
         onClose={() => setStatusOpen(false)}
       />
-      <GradientContainer className="py-20 lg:py-28 overflow-hidden" showRadials={false} backgroundColor="bg-[#020410]">
-        <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-16">
-            <FadeInUp>
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-8">
-                {title}
+      <Band id="talent-network" surface="dark">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 440px), 1fr))", gap: "56px 72px", alignItems: "center" }}>
+          <div>
+            {title ? (
+              <h2 data-fx="rise" style={{ margin: 0, fontSize: "clamp(44px,5.6vw,92px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.02, color: "#FFFFFF", textWrap: "balance" }}>
+                {gradTail(title, 2)}
               </h2>
-              <div className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
-                <p>{subtitle}</p>
-                <div className="mt-8">
-                  {emailLabel} <a href="mailto:info@a4.com.mt" className="text-white font-semibold hover:text-primary-blue transition-colors">info@a4.com.mt</a>
-                </div>
-              </div>
-            </FadeInUp>
+            ) : null}
+            {subtitle ? (
+              <p data-fx="rise" data-d="100" style={{ margin: "24px 0 0", maxWidth: 540, fontFamily: BODY, fontSize: 18, lineHeight: 1.55, color: "#A1A1AA" }}>
+                {subtitle}
+              </p>
+            ) : null}
+            <p data-fx="rise" data-d="180" style={{ margin: "28px 0 0", fontFamily: SANS, fontSize: 19, fontWeight: 500, letterSpacing: "-0.015em", color: "#A1A1AA" }}>
+              {emailLabel}{" "}
+              <a href={CONTACT_EMAIL_HREF} style={{ color: "#FFFFFF", textDecoration: "underline", textDecorationColor: "rgba(139,143,247,.6)", textUnderlineOffset: 4 }}>
+                {CONTACT_EMAIL}
+              </a>
+            </p>
           </div>
 
-          <FadeInUp delay={0.2}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="bg-white rounded-3xl shadow-2xl overflow-hidden"
-            >
-              {/* Decorative header strip */}
-              <div className="h-2 bg-gradient-brand w-full" />
-
-              <div className="p-8 md:p-12 lg:p-14">
-                <form onSubmit={handleSubmit} className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-2.5">
-                      <label htmlFor="name" className="text-sm font-semibold text-text-heading ml-1">
-                        {form?.labels.name} <span className="text-primary-blue">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        required
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="w-full px-5 py-4 rounded-xl bg-section-light border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-primary-blue/30 focus:bg-white transition-all outline-none placeholder:text-gray-400 font-medium text-text-heading"
-                        placeholder={form?.placeholders.name}
-                      />
-                    </div>
-                    <div className="space-y-2.5">
-                      <label htmlFor="email" className="text-sm font-semibold text-text-heading ml-1">
-                        {form?.labels.email} <span className="text-primary-blue">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        required
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full px-5 py-4 rounded-xl bg-section-light border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-primary-blue/30 focus:bg-white transition-all outline-none placeholder:text-gray-400 font-medium text-text-heading"
-                        placeholder={form?.placeholders.email}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    <label htmlFor="role" className="text-sm font-semibold text-text-heading ml-1">
-                      {form?.labels.role}
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="role"
-                        name="role"
-                        value={formData.role}
-                        onChange={handleChange}
-                        className="w-full px-5 py-4 rounded-xl bg-section-light border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-primary-blue/30 focus:bg-white transition-all outline-none text-text-heading font-medium appearance-none"
-                      >
-                        <option value="" disabled>{form?.placeholders.role}</option>
-                        <option value="audit">{form?.roles.audit}</option>
-                        <option value="tax">{form?.roles.tax}</option>
-                        <option value="corporate">{form?.roles.corporate}</option>
-                        <option value="tech">{form?.roles.tech}</option>
-                        <option value="marketing">{form?.roles.marketing}</option>
-                        <option value="other">{form?.roles.other}</option>
-                      </select>
-                      <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                        <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    <label htmlFor="message" className="text-sm font-semibold text-text-heading ml-1">
-                      {form?.labels.message}
-                    </label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      rows={4}
-                      value={formData.message}
-                      onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-xl bg-section-light border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-primary-blue/30 focus:bg-white transition-all outline-none placeholder:text-gray-400 resize-none font-medium text-text-heading"
-                      placeholder={form?.placeholders.message}
-                    />
-                  </div>
-
-                  <div className="pt-4 space-y-3">
-                    {submitError && (
-                      <p className="text-sm text-red-500">{submitError}</p>
-                    )}
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full bg-primary text-white text-lg font-bold py-4 rounded-xl hover:bg-primary-blue transition-all shadow-xl hover:shadow-primary-blue/25 active:scale-[0.98] flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {isSubmitting ? (form?.submitting) : (form?.submit)}
-                      <svg className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </button>
-                  </div>
-                </form>
+          <div
+            data-fx="rise"
+            data-d="200"
+            style={{ padding: "clamp(24px,3.4vw,40px)", borderRadius: 28, background: "rgba(24,24,27,.92)", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 40px 100px rgba(0,0,0,.45)" }}
+          >
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: 20 }}>
+                <div>
+                  <label htmlFor="name" style={label}>
+                    {form?.labels.name}
+                    {required}
+                  </label>
+                  <input type="text" id="name" name="name" required autoComplete="name" value={formData.name} onChange={handleChange} className="a4-input-dark" placeholder={form?.placeholders.name} />
+                </div>
+                <div>
+                  <label htmlFor="email" style={label}>
+                    {form?.labels.email}
+                    {required}
+                  </label>
+                  <input type="email" id="email" name="email" required autoComplete="email" value={formData.email} onChange={handleChange} className="a4-input-dark" placeholder={form?.placeholders.email} />
+                </div>
               </div>
-            </motion.div>
-          </FadeInUp>
+
+              <div>
+                <label htmlFor="role" style={label}>
+                  {form?.labels.role}
+                </label>
+                <div style={{ position: "relative" }}>
+                  <select
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    className="a4-input-dark"
+                    style={{ appearance: "none", WebkitAppearance: "none", paddingRight: 48, cursor: "pointer", color: formData.role ? "#FFFFFF" : "#71717A" }}
+                  >
+                    <option value="" disabled>
+                      {form?.placeholders.role}
+                    </option>
+                    <option value="audit">{form?.roles.audit}</option>
+                    <option value="tax">{form?.roles.tax}</option>
+                    <option value="corporate">{form?.roles.corporate}</option>
+                    <option value="tech">{form?.roles.tech}</option>
+                    <option value="marketing">{form?.roles.marketing}</option>
+                    <option value="other">{form?.roles.other}</option>
+                  </select>
+                  <svg width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden="true" style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#A1A1AA" }}>
+                    <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="message" style={label}>
+                  {form?.labels.message}
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows={4}
+                  value={formData.message}
+                  onChange={handleChange}
+                  className="a4-input-dark"
+                  placeholder={form?.placeholders.message}
+                  style={{ height: "auto", minHeight: 140, padding: "16px 18px", lineHeight: 1.5, resize: "vertical" }}
+                />
+              </div>
+
+              <div style={{ paddingTop: 6, display: "flex", flexDirection: "column", gap: 12 }}>
+                {submitError ? (
+                  <p role="alert" style={{ margin: 0, fontFamily: BODY, fontSize: 14, lineHeight: 1.5, color: "#FFFFFF" }}>
+                    {submitError}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="a4-btn a4-btn-light"
+                  style={{ width: "100%", height: 64, fontSize: 19, opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? "default" : "pointer" }}
+                >
+                  {isSubmitting ? form?.submitting : form?.submit}
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </GradientContainer>
+      </Band>
     </>
   );
 };

@@ -1,57 +1,86 @@
-/* payroll.css — A4 client-portal payroll app styles */
-.a4-landing-page {
-  --canvas-dark: var(--a4-canvas-dark);
-  --primary: var(--a4-primary);
-  --primary-bright: var(--a4-primary-bright);
-  --surface-deep: var(--a4-surface-deep);
-  --surface-elevated: var(--a4-surface-elevated);
-  --hairline-dark: var(--a4-hairline-dark);
-  --divider-soft: var(--a4-divider-soft);
-  --stone: var(--a4-stone);
-  --on-dark-mute: var(--a4-on-dark-mute);
-  --font-body: var(--a4-font-body);
-  --r-sm: var(--a4-r-sm);
-  --r-md: var(--a4-r-md);
-  --r-lg: var(--a4-r-lg);
-  --r-xl: var(--a4-r-xl, 24px);
+/* payroll.css — A4 client-portal payroll app, in the A4 palette.
+   Scoped to .pay-root: the old file styled html/body globally, which leaked the
+   app's white text and body font into every page visited afterwards. */
+.pay-root {
+  --canvas-dark: #09090b;
+  --primary: #4f55f1;
+  --primary-bright: #8b8ff7;
+  --surface-deep: #09090b;
+  --surface-elevated: #18181b;
+  --hairline-dark: rgba(255, 255, 255, 0.12);
+  --divider-soft: rgba(255, 255, 255, 0.06);
+  /* Secondary text stays ≥ 4.5:1 on ink: hints #A1A1AA, labels #D4D4D8. */
+  --stone: #a1a1aa;
+  --on-dark-mute: #d4d4d8;
+  --on-dark: #ffffff;
+  /* No teal / amber / red in the design: positive reads periwinkle, attention near-white. */
+  --accent-teal: #8b8ff7;
+  --accent-warning: #e4e4e7;
+  --accent-danger: #ffffff;
+  --font-body: var(--a4x-body);
+  --font-display: var(--a4x-display);
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 24px;
+  --r-xl: 28px;
   --r-full: 9999px;
+  font-family: var(--font-body);
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
 }
 
-* { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--canvas-dark); }
-body { font-family: var(--font-body); -webkit-font-smoothing: antialiased; color: #fff; }
-::selection { background: var(--primary); color: #fff; }
-.lucide { display: block; }
+.pay-root *,
+.pay-root *::before,
+.pay-root *::after { box-sizing: border-box; }
+.pay-root .lucide { display: block; }
+.pay-root button:focus-visible,
+.pay-root [role="button"]:focus-visible { outline: 3px solid rgba(79, 85, 241, 0.55); outline-offset: 2px; }
 
 .pay-input, .pay-select {
   width: 100%; height: 44px; padding: 0 14px;
-  background: var(--surface-deep); border: 1px solid var(--hairline-dark);
+  background: var(--surface-deep); border: 1px solid #3f3f46;
   border-radius: var(--r-md); color: #fff;
-  font-family: var(--font-body); font-size: 14.5px; outline: none;
-  transition: border-color .15s;
+  font-family: var(--font-display); font-size: 15px; font-weight: 500; outline: none;
+  transition: border-color .25s;
 }
-.pay-input:focus, .pay-select:focus { border-color: var(--primary-bright); }
-.pay-input::placeholder { color: var(--stone); }
-.pay-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23808489' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; cursor: pointer; }
-.pay-select option { background: #16181a; color: #fff; }
+.pay-input:focus, .pay-select:focus { border-color: #4f55f1; }
+.pay-input::placeholder { color: #71717a; }
+.pay-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23A1A1AA' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; cursor: pointer; }
+.pay-select option { background: #18181b; color: #fff; }
 input[type="date"].pay-input::-webkit-calendar-picker-indicator { filter: invert(.7); cursor: pointer; }
 
 .pay-table { width: 100%; border-collapse: collapse; }
-.pay-table th { text-align: left; font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--stone); padding: 10px 14px; border-bottom: 1px solid var(--hairline-dark); white-space: nowrap; }
+.pay-table th { text-align: left; font-family: var(--font-body); font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--stone); padding: 12px 14px; border-bottom: 1px solid var(--hairline-dark); white-space: nowrap; }
 .pay-table td { padding: 13px 14px; font-size: 14px; color: #fff; border-bottom: 1px solid var(--divider-soft); white-space: nowrap; }
 .pay-table tr.pay-rowlink { cursor: pointer; transition: background .14s; }
 .pay-table tr.pay-rowlink:hover { background: rgba(255,255,255,.035); }
 .pay-table td.num, .pay-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.pay-table tr.totals td { border-top: 1px solid var(--hairline-dark); border-bottom: none; font-weight: 700; background: rgba(73,79,223,.07); }
+.pay-table tr.totals td { border-top: 1px solid var(--hairline-dark); border-bottom: none; font-weight: 700; background: rgba(79,85,241,.08); }
 
-.pay-navitem { display: flex; align-items: center; gap: 11px; width: 100%; height: 42px; padding: 0 14px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--on-dark-mute); font-family: var(--font-body); font-size: 14px; font-weight: 600; letter-spacing: .1px; cursor: pointer; transition: background .15s, color .15s; text-align: left; }
+.pay-navitem { display: flex; align-items: center; gap: 11px; width: 100%; height: 42px; padding: 0 14px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--on-dark-mute); font-family: var(--font-display); font-size: 15px; font-weight: 500; cursor: pointer; transition: background .15s, color .15s; text-align: left; }
 .pay-navitem:hover { color: #fff; background: rgba(255,255,255,.05); }
-.pay-navitem.active { color: #fff; background: rgba(73,79,223,.18); }
+.pay-navitem.active { color: #fff; background: rgba(79,85,241,.18); font-weight: 600; }
 
 .pay-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
-.pay-scroll::-webkit-scrollbar-thumb { background: #2a2d31; border-radius: 99px; border: 2px solid #000; }
-.pay-scroll { scrollbar-color: #2a2d31 #000; }
+.pay-scroll::-webkit-scrollbar-thumb { background: #27272a; border-radius: 99px; border: 2px solid #09090b; }
+.pay-scroll { scrollbar-color: #27272a #09090b; }
 
 @keyframes payFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.pay-fade { animation: payFade .35s cubic-bezier(.2,.7,.2,1) both; }
+.pay-fade { animation: payFade .35s cubic-bezier(.16,1,.3,1) both; }
 @media (prefers-reduced-motion: reduce) { .pay-fade { animation: none; } }
+
+/* Narrow screens: the sidebar folds to icons, grids collapse. */
+@media (max-width: 900px) {
+  .pay-root .pay-four { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .pay-root .pay-three,
+  .pay-root .pay-two { grid-template-columns: minmax(0, 1fr) !important; }
+}
+@media (max-width: 640px) {
+  .pay-root .pay-side { width: 64px !important; padding: 16px 8px !important; }
+  .pay-root .pay-side .pay-side-label,
+  .pay-root .pay-side .pay-navitem-label { display: none; }
+  .pay-root .pay-side .pay-navitem { justify-content: center; padding: 0; }
+  .pay-root .pay-topbar-company { display: none !important; }
+  .pay-root .pay-main { padding: 20px 16px 40px !important; }
+  .pay-root .pay-four { grid-template-columns: minmax(0, 1fr) !important; }
+}

@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -100,12 +99,13 @@ export function PayrollApp() {
 
   return (
     <div
-      className="flex overflow-hidden bg-[var(--a4-canvas-dark,#000)] h-[calc(100dvh-6rem)] sm:h-[calc(100dvh-7rem)]"
+      className="pay-root flex overflow-hidden h-[calc(100dvh-72px)]"
+      style={{ background: "#09090B" }}
     >
       <PaySidebar page={page} go={go} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <PayTopbar title={titles[page]} monthIdx={monthIdx} setMonthIdx={setMonthIdx} />
-        <main className="pay-scroll" style={{ flex: 1, overflowY: "auto", padding: "26px 28px 48px" }}>
+        <main className="pay-scroll pay-main" style={{ flex: 1, overflowY: "auto", padding: "26px 28px 48px" }}>
           {page === "dashboard" && <DashboardView employees={employees} runs={runs} monthIdx={monthIdx} go={go} />}
           {page === "people" && !emp && (
             <PeopleView employees={employees} openEmployee={setEmpId} openWizard={() => setWizard(true)} />

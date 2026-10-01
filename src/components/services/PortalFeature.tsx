@@ -2,12 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import SectionBadge from "@/components/common/SectionBadge";
-import TextAnimation from "@/components/common/TextAnimation";
-import { FadeInUp } from "@/components/common/Animations";
-import { Search, Settings, Bell, Home, FileText, Share2, Building2, MessageSquare, LogOut, FolderUp } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Bell, Building2, FileText, FolderUp, Home, LogOut, MessageSquare, Search, Settings, Share2, Upload } from "lucide-react";
+import { Button, Icon } from "@/components/a4-landing/Primitives";
+import { A4Mark, Eyebrow, LIGHT_GLOW, MUTED_GLOW } from "@/components/fx/primitives";
+import { BODY, DARK_CARD, DocPanel, FrameBar, GRAD, INDIGO, INK, PERI, SANS, SECTION_PAD, StatusPill, gradTail, kicker } from "./SectionKit";
 
 type PortalFeatureVariant = "default" | "technology" | "upload-dashboard";
 
@@ -33,8 +32,250 @@ interface PortalFeatureProps {
     heading: string;
     description: string;
   };
+  /** Section number for the eyebrow ("02"). */
+  n?: string;
+  /** Section surface; the light glow by default. */
+  surface?: "light" | "muted" | "white";
 }
 
+const SURFACES = { light: LIGHT_GLOW, muted: MUTED_GLOW, white: "#FFFFFF" };
+
+/* ── visuals ─────────────────────────────────────────────────────────────── */
+
+function Spinner({ color = INDIGO }: { color?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="animate-spin"
+      style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${color}`, borderTopColor: "transparent", display: "inline-block", flexShrink: 0 }}
+    />
+  );
+}
+
+function TechnologyVisual() {
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+
+  useEffect(() => {
+    let frame: number;
+    const step = () => {
+      setAnalysisProgress((prev) => (prev >= 100 ? 100 : prev + 1));
+      frame = window.setTimeout(step, 60);
+    };
+    step();
+    return () => window.clearTimeout(frame);
+  }, []);
+
+  const errors = ["BS32 - Balance sheet does not reconcile", "BS14 - Missing balance sheet note", "BS19 - Total current assets mismatch", "BI02 - Inventory valuation issue"];
+  const confirmed = ["GI01 - ENTITY_LEGAL_NAME — GENERAL", "GI05 - REGISTERED_OFFICE — GENERAL", "BI02 - CONTACT_PERSON — GENERAL", "BI06 - PRIMARY_BUSINESS — GENERAL"];
+  const done = analysisProgress === 100;
+
+  return (
+    <DocPanel style={{ padding: "clamp(18px,2.4vw,28px)", display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <span style={{ width: 40, height: 40, borderRadius: 12, background: INK, display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <A4Mark size={18} />
+          </span>
+          <span style={{ height: 8, width: "min(160px, 30vw)", borderRadius: 4, background: "#F4F4F5" }} />
+        </div>
+        <StatusPill tone="indigo">
+          <Spinner /> Improving
+        </StatusPill>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-[1.1fr_.9fr]" style={{ gap: 14 }}>
+        <div style={{ border: "1px solid #E4E4E7", borderRadius: 20, padding: 18, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(79,85,241,.1)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <Icon name="scan-text" size={18} color={INDIGO} />
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 600, letterSpacing: "-0.01em", textDecoration: done ? "line-through" : "none", opacity: done ? 0.55 : 1 }}>
+                  Analyzing Financial Statement
+                </div>
+                <div style={{ fontFamily: BODY, fontSize: 12.5, color: "#71717A" }}>Generate AI report on financial statements</div>
+              </div>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: "#F4F4F5", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${analysisProgress}%`, borderRadius: 3, background: GRAD, transition: "width .15s linear" }} />
+            </div>
+            <p style={{ margin: 0, fontFamily: BODY, fontSize: 12.5, lineHeight: 1.5, color: "#71717A" }}>
+              Uploading financial statements, extracting engagement data, validating fields and generating AI report.
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: BODY, fontSize: 12.5, color: "#71717A" }}>
+            <span>Setup status</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: SANS, fontWeight: 600, color: INDIGO }}>
+              {!done ? <Spinner /> : null}
+              {analysisProgress}%
+            </span>
+          </div>
+        </div>
+
+        <div style={{ border: "1px solid #E4E4E7", borderRadius: 20, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 14.5, fontWeight: 600, letterSpacing: "-0.01em" }}>Analyze your Finance Document</div>
+            <div style={{ marginTop: 2, fontFamily: BODY, fontSize: 12.5, color: "#71717A" }}>Drop your document and run advanced text recognition.</div>
+          </div>
+          <div style={{ flex: 1, border: "1.5px dashed #D4D4D8", borderRadius: 16, background: "#FAFAFA", padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
+            <div style={{ fontFamily: BODY, fontSize: 12.5, color: "#52525B" }}>Drop your document here</div>
+            <div style={{ fontFamily: BODY, fontSize: 11.5, color: "#71717A" }}>Support PDF files up to 10MB</div>
+            <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6 }}>
+              <StatusPill tone="line" style={{ background: "#FFFFFF", color: INK }}>
+                Choose Files
+              </StatusPill>
+              <StatusPill tone="ink">Analyze Document</StatusPill>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 14 }}>
+        {[
+          { title: "Critical Errors", tone: "ink" as const, items: errors },
+          { title: "Confirmed Correct Items", tone: "indigo" as const, items: confirmed },
+        ].map((b) => (
+          <div key={b.title} style={{ border: "1px solid #E4E4E7", borderRadius: 20, padding: "14px 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 600 }}>{b.title}</span>
+              <StatusPill tone={b.tone} style={{ height: 24, padding: "0 10px", fontSize: 12 }}>
+                33
+              </StatusPill>
+            </div>
+            {b.items.map((it) => (
+              <div key={it} style={{ padding: "6px 0", borderTop: "1px solid #F4F4F5", fontFamily: BODY, fontSize: 11.5, color: "#52525B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {it}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </DocPanel>
+  );
+}
+
+function UploadDashboardVisual() {
+  const navIcons = [FileText, FolderUp, Share2, Building2, MessageSquare];
+  return (
+    <DocPanel style={{ display: "flex", minHeight: 520 }}>
+      <div className="hidden sm:flex" style={{ width: 68, flexShrink: 0, background: INK, flexDirection: "column", alignItems: "center", padding: "22px 0", gap: 22 }}>
+        <span style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,.08)", display: "grid", placeItems: "center", marginBottom: 6 }}>
+          <A4Mark size={18} />
+        </span>
+        <span style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(139,143,247,.2)", display: "grid", placeItems: "center", color: "#FFFFFF" }}>
+          <Home size={18} aria-hidden="true" />
+        </span>
+        {navIcons.map((I, i) => (
+          <I key={i} size={18} color="#71717A" aria-hidden="true" />
+        ))}
+        <span style={{ marginTop: "auto", width: 34, height: 34, borderRadius: 17, background: INDIGO, color: "#FFFFFF", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 600 }}>CL</span>
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "0 clamp(14px,2vw,22px)", borderBottom: "1px solid #E4E4E7" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, height: 34, padding: "0 6px 0 14px", borderRadius: 17, background: "#F4F4F5", width: "min(220px, 45%)" }}>
+            <span style={{ flex: 1, fontFamily: BODY, fontSize: 12, color: "#71717A" }}>Search...</span>
+            <Search size={14} color="#52525B" aria-hidden="true" />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span className="hidden md:inline-flex">
+              <StatusPill tone="line">Quick action</StatusPill>
+            </span>
+            <Settings size={16} color="#71717A" aria-hidden="true" />
+            <Bell size={16} color="#71717A" aria-hidden="true" />
+            <span className="hidden lg:flex" style={{ alignItems: "center", gap: 8, paddingLeft: 12, borderLeft: "1px solid #E4E4E7" }}>
+              <span style={{ width: 28, height: 28, borderRadius: 14, background: "rgba(79,85,241,.12)", color: INDIGO, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 600 }}>CL</span>
+              <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>Cleven</span>
+                <span style={{ fontFamily: BODY, fontSize: 10.5, color: "#71717A" }}>Client</span>
+              </span>
+              <LogOut size={15} color="#A1A1AA" aria-hidden="true" />
+            </span>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, padding: "clamp(16px,2.4vw,26px)", display: "flex", flexDirection: "column", gap: 18 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em" }}>Welcome Back, Cleven</div>
+            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderRadius: 14, border: "1px solid #E4E4E7", fontFamily: BODY, fontSize: 13 }}>
+              <Icon name="alert-circle" size={16} color={INDIGO} />
+              <span>
+                <strong style={{ fontWeight: 600 }}>Warning:</strong> <span style={{ color: "#52525B" }}>No documents uploaded this month</span>
+              </span>
+            </div>
+          </div>
+
+          <div style={{ border: "1.5px dashed #D4D4D8", borderRadius: 20, padding: "26px 16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <span style={{ width: 52, height: 52, borderRadius: 16, background: "#F4F4F5", display: "grid", placeItems: "center" }}>
+              <Upload size={20} color="#52525B" aria-hidden="true" />
+            </span>
+            <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>Click to upload PDF</span>
+            <span style={{ ...kicker, fontSize: 11 }}>Maximum size 10MB</span>
+          </div>
+
+          <div style={{ marginTop: "auto", borderRadius: 18, background: "#FAFAFA", border: "1px solid #E4E4E7", padding: "14px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingBottom: 10, borderBottom: "1px solid #E4E4E7" }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Pending Requests</span>
+              <StatusPill tone="indigo" style={{ height: 24, fontSize: 11.5 }}>
+                2 Action Required
+              </StatusPill>
+            </div>
+            {[
+              { t: "Q1 VAT Return Invoices", s: "Overdue by 3 days", strong: true },
+              { t: "Copy of Director's ID Proof", s: "Due in 5 days", strong: false },
+            ].map((r) => (
+              <div key={r.t} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingTop: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: 10, background: r.strong ? INK : "rgba(79,85,241,.1)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <FileText size={15} color={r.strong ? "#FFFFFF" : INDIGO} aria-hidden="true" />
+                  </span>
+                  <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.t}</span>
+                    <span style={{ fontFamily: BODY, fontSize: 11.5, fontWeight: r.strong ? 600 : 500, color: r.strong ? INK : "#71717A" }}>{r.s}</span>
+                  </span>
+                </div>
+                <StatusPill tone="line" style={{ background: "#FFFFFF", color: INK, height: 30 }}>
+                  Upload
+                </StatusPill>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </DocPanel>
+  );
+}
+
+function ImageVisual({ src }: { src: string }) {
+  const sample = src.startsWith("/brand/portal/");
+  return (
+    <div style={{ position: "relative", borderRadius: 20, overflow: "hidden", background: "#FFFFFF", border: "1px solid #E4E4E7", boxShadow: "0 50px 120px rgba(9,9,11,.16)" }}>
+      <FrameBar
+        label={
+          <>
+            Your client portal<span style={{ fontWeight: 500, color: "#A1A1AA" }}>Powered by Vacei</span>
+          </>
+        }
+      />
+      <Image src={src} alt="Client portal" width={1600} height={940} sizes="(max-width: 1024px) 100vw, 640px" style={{ width: "100%", height: "auto", display: "block" }} />
+      {sample ? (
+        <span style={{ position: "absolute", right: 14, top: 54, padding: "5px 12px", borderRadius: 999, background: "rgba(9,9,11,.78)", color: "#FFFFFF", fontFamily: SANS, fontSize: 12, fontWeight: 500 }}>
+          Sample data · fictional companies
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/* ── section ─────────────────────────────────────────────────────────────── */
+
+/**
+ * "How it works" block in the A4 design language: numbered eyebrow, H2 with
+ * its last word on the gradient, the lead and the scope bullets on the left;
+ * a product panel on the right; then a row of cards alternating light and dark
+ * (workflow detail, the portal line, the quote).
+ */
 const PortalFeature = ({
   portalImage,
   variant = "default",
@@ -54,434 +295,124 @@ const PortalFeature = ({
   bottomDescription = "Documents, tasks, deadlines and communication in one place.",
   quoteText = "Good firms rely on experience. Great firms rely on structure. A4 exists to make that structure visible, auditable, and scalable.",
   workflowDetail,
+  n,
+  surface = "light",
 }: PortalFeatureProps) => {
+  const pathname = usePathname() || "";
+  const here = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
+  const showCta = !!ctaLabel && !!ctaHref && here !== ctaHref;
 
-  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const cards: { key: string; dark: boolean; node: React.ReactNode }[] = [];
+  if (workflowDetail)
+    cards.push({
+      key: "wf",
+      dark: false,
+      node: (
+        <>
+          <h3 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.15 }}>{workflowDetail.heading}</h3>
+          <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 16, lineHeight: 1.55, color: "#52525B" }}>{workflowDetail.description}</p>
+        </>
+      ),
+    });
+  cards.push({
+    key: "quote",
+    dark: true,
+    node: (
+      <>
+        <span aria-hidden="true" style={{ display: "block", height: 44, fontSize: 72, fontWeight: 600, lineHeight: 1, color: PERI }}>
+          &ldquo;
+        </span>
+        <p style={{ margin: "8px 0 0", fontSize: "clamp(19px,1.6vw,22px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.4, color: "#FFFFFF", textWrap: "pretty" }}>{quoteText}</p>
+      </>
+    ),
+  });
+  cards.push({
+    key: "bottom",
+    dark: false,
+    node: (
+      <>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ width: 36, height: 36, borderRadius: 10, background: INK, display: "grid", placeItems: "center" }}>
+            <A4Mark size={16} />
+          </span>
+          <h3 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: "-0.03em" }}>{bottomTitle}</h3>
+        </div>
+        <p style={{ margin: "14px 0 0", fontFamily: BODY, fontSize: 16, lineHeight: 1.55, color: "#52525B" }}>{bottomDescription}</p>
+      </>
+    ),
+  });
 
-  useEffect(() => {
-    if (variant !== "technology") return;
-    let frame: number;
-    const step = () => {
-      setAnalysisProgress((prev) => {
-        if (prev >= 100) return 100;
-        return prev + 1;
-      });
-      frame = window.setTimeout(step, 60);
-    };
-    step();
-    return () => {
-      window.clearTimeout(frame);
-    };
-  }, [variant]);
   return (
-    <section className="bg-section-light py-20 lg:py-28 overflow-hidden">
-      <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row items-stretch gap-12 lg:gap-4 lg:h-[658px]">
-          {/* Left Column: Text / How it works */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="w-full lg:w-1/2 h-full"
-          >
-            <div className="flex flex-col gap-4 h-full">
-              {/* 1. Top Wide Card: How it is used */}
-              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm grow flex flex-col justify-center transition-shadow duration-300 hover:shadow-md">
-                <div className="mb-4">
-                  <SectionBadge text={sectionLabel} className="text-heading" />
-                </div>
-                <TextAnimation
-                  text={heading}
-                  as="h2"
-                  className="text-2xl lg:text-3xl font-medium text-heading mb-3 text-left"
-                />
-                <p className="text-gray text-sm mb-4 text-left">
-                  {description}
-                </p>
-                <p className="text-gray text-sm mb-3 text-left font-semibold">
-                  {bulletIntro}
-                </p>
-                <ul className="space-y-2 mb-6">
-                  {bulletItems.map((item, index) => (
-                    <motion.li
-                      key={index}
-                      initial={{ opacity: 0, x: -10 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.3, delay: 0.3 + (index * 0.1) }}
-                      className="flex items-start gap-2 text-sm text-heading font-medium text-left"
-                    >
-                      {/* Circle Container with Diamond Bullet (Dark) */}
-                      <div className="mt-1 shrink-0 text-heading">
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <circle
-                            opacity="0.2"
-                            cx="10"
-                            cy="10"
-                            r="9"
-                            stroke="currentColor"
-                          />
-                          <path
-                            d="M10 6L14 10L10 14L6 10Z"
-                            fill="currentColor"
-                          />
-                        </svg>
-                      </div>
-                      {item}
-                    </motion.li>
-                  ))}
-                </ul>
-                <p className="text-gray text-sm mb-4 text-left">
-                  {closingText}
-                </p>
-
-                <div className="text-left">
-                  <Link
-                    href={ctaHref}
-                    className="inline-flex items-center gap-2 text-heading font-semibold text-sm hover:text-primary-blue transition-colors group"
+    <section style={{ position: "relative", overflow: "hidden", padding: SECTION_PAD, background: SURFACES[surface], color: INK, fontFamily: SANS }}>
+      <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-14 lg:gap-[72px] items-center">
+          <div>
+            <Eyebrow n={n}>{sectionLabel}</Eyebrow>
+            <h2 data-fx="rise" data-d="100" style={{ margin: "16px 0 0", fontSize: "clamp(36px,4.4vw,68px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.03, textWrap: "balance" }}>
+              {gradTail(heading)}
+            </h2>
+            {description ? (
+              <p data-fx="rise" data-d="200" style={{ margin: "20px 0 0", maxWidth: 560, fontFamily: BODY, fontSize: 18, lineHeight: 1.55, color: "#52525B", textWrap: "pretty" }}>
+                {description}
+              </p>
+            ) : null}
+            <div data-fx="rise" data-d="280" style={{ marginTop: 28 }}>
+              {bulletIntro ? <div style={{ marginBottom: 6, fontSize: 17, fontWeight: 600, letterSpacing: "-0.01em" }}>{bulletIntro}</div> : null}
+              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                {bulletItems.map((item, index) => (
+                  <li
+                    key={index}
+                    style={{ display: "flex", gap: 14, padding: "14px 0", borderBottom: "1px solid #E4E4E7", fontSize: 17, fontWeight: 500, letterSpacing: "-0.01em", lineHeight: 1.4 }}
                   >
-                    {ctaLabel}
-                    <div className="w-5 h-5 rounded-full bg-primary group-hover:bg-primary-blue flex items-center justify-center transition-colors">
-                      <svg
-                        className="w-2.5 h-2.5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 19L19 5M19 5H9M19 5V15"
-                        />
-                      </svg>
-                    </div>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Workflow Detail Card (Optional) */}
-              {workflowDetail && (
-                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                  <h3 className="text-lg font-medium text-heading mb-3 text-left">
-                    {workflowDetail.heading}
-                  </h3>
-                  <p className="text-gray text-sm leading-relaxed text-left">
-                    {workflowDetail.description}
-                  </p>
-                </div>
-              )}
-
-              {/* 2. Bottom Row: Split 2:3 Ratio */}
-
-              <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-4 h-auto md:h-[35%] min-h-[200px]">
-                {/* Client Portal Info */}
-                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-center h-full transition-transform duration-300 hover:scale-[1.02]">
-                  <h3 className="text-lg font-medium text-heading mb-3 text-left">
-                    {bottomTitle}
-                  </h3>
-                  <p className="text-gray text-sm leading-relaxed text-left">
-                    {bottomDescription}
-                  </p>
-                </div>
-
-                {/* Quote Card */}
-                <div className="bg-primary-blue rounded-2xl p-6 shadow-sm flex flex-col justify-center relative overflow-hidden h-full transition-transform duration-300 hover:scale-[1.02]">
-                  {/* Quote Icon Top Left */}
-                  <div className="absolute top-4 left-4 opacity-30">
-                    <Image
-                      src="/assets/images/Vector (3).png"
-                      alt="Quote icon"
-                      width={20}
-                      height={20}
-                      className="object-contain"
-                    />
-                  </div>
-
-                  <p className="text-white text-[13px] leading-relaxed text-center relative z-10 pt-2 pb-2">
-                    {quoteText}
-                  </p>
-
-                  {/* Quote Icon Bottom Right */}
-                  <div className="absolute bottom-4 right-4 opacity-30 rotate-180">
-                    <Image
-                      src="/assets/images/Vector (3).png"
-                      alt="Quote icon"
-                      width={20}
-                      height={20}
-                      className="object-contain"
-                    />
-                  </div>
-                </div>
-              </div>
+                    <span className="a4-bullet" style={{ marginTop: 7 }} />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </motion.div>
-
-          {/* Right Column */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-            className="w-full lg:w-1/2 flex flex-col h-full"
-          >
-            {variant === "technology" ? (
-              <div className="w-full h-full rounded-3xl bg-background border border-input shadow-xl px-5 py-6 md:px-7 md:py-7 flex flex-col gap-5 hover:shadow-2xl transition-shadow duration-500">
-                {/* Top status row with vector */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-tab-active flex items-center justify-center text-white text-xl font-semibold">
-                      $
-                    </div>
-                    <div className="h-2 w-40 rounded-full bg-gray-200" />
-                  </div>
-                  <div className="flex items-center gap-2 text-tab-active text-sm font-semibold">
-                    <span className="inline-flex w-6 h-6 rounded-full bg-icon items-center justify-center">
-                      <span className="w-3 h-3 border-2 border-tab-active border-t-transparent rounded-full animate-spin" />
-                    </span>
-                    <span>Improving</span>
-                  </div>
-                </div>
-
-                {/* Main analysis + upload area */}
-                <div className="grid grid-cols-1 md:grid-cols-[1.1fr_0.9fr] gap-4 md:gap-5">
-                  {/* Analyzing Financial Statement */}
-                  <div className="bg-white rounded-2xl border border-input px-5 py-5 flex flex-col justify-between">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-icon flex items-center justify-center text-tab-active">
-                          <Image
-                            src="/assets/images/VectorC.png"
-                            alt="Analysis"
-                            width={22}
-                            height={22}
-                            className="object-contain"
-                          />
-                        </div>
-                        <div className="flex flex-col">
-                          <span
-                            className={`text-[13px] font-semibold text-heading ${analysisProgress === 100
-                              ? "line-through opacity-60"
-                              : ""
-                              }`}
-                          >
-                            Analyzing Financial Statement
-                          </span>
-                          <span className="text-[11px] text-gray-500">
-                            Generate AI report on financial statements
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-icon overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-tab-active transition-all duration-150"
-                          style={{ width: `${analysisProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-[11px] text-gray-500">
-                        Uploading financial statements, extracting engagement
-                        data, validating fields and generating AI report.
-                      </p>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500">
-                      <span>Setup status</span>
-                      <span className="flex items-center gap-1 text-tab-active font-semibold">
-                        <span className="w-3 h-3 border-2 border-tab-active border-t-transparent rounded-full animate-spin" />
-                        {analysisProgress}%
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Analyze your Finance Document */}
-                  <div className="bg-white rounded-2xl border border-input px-5 py-5 flex flex-col gap-3">
-                    <div className="space-y-1">
-                      <p className="text-[13px] font-semibold text-heading">
-                        Analyze your Finance Document
-                      </p>
-                      <p className="text-[11px] text-gray-500">
-                        Drop your document and run advanced text recognition.
-                      </p>
-                    </div>
-                    <div className="flex-1">
-                      <div className="w-full border border-dashed border-input rounded-xl bg-icon px-4 py-4 text-center space-y-2 cursor-pointer hover:bg-gray-50 transition-colors">
-                        <p className="text-[11px] text-gray-500">
-                          Drop your document here
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          Support PDF files up to 10MB
-                        </p>
-                        <div className="flex items-center justify-center gap-2 mt-2">
-                          <button className="px-3 py-1.5 rounded-full border border-input text-[11px] font-semibold text-heading">
-                            Choose Files
-                          </button>
-                          <button className="px-3 py-1.5 rounded-full bg-tab-active text-white text-[11px] font-semibold shadow-sm">
-                            Analyze Document
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom summary cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                  <div className="bg-white rounded-2xl border border-error px-5 py-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[12px] font-semibold text-error">
-                        Critical Errors
-                      </p>
-                      <span className="text-[11px] rounded-full bg-error text-error px-2 py-0.5 font-semibold">
-                        33
-                      </span>
-                    </div>
-                    <ul className="space-y-1.5 text-[11px] text-gray-600">
-                      <li>BS32 - Balance sheet does not reconcile</li>
-                      <li>BS14 - Missing balance sheet note</li>
-                      <li>BS19 - Total current assets mismatch</li>
-                      <li>BI02 - Inventory valuation issue</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white rounded-2xl border border-success px-5 py-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[12px] font-semibold text-success">
-                        Confirmed Correct Items
-                      </p>
-                      <span className="text-[11px] rounded-full bg-success text-success px-2 py-0.5 font-semibold">
-                        33
-                      </span>
-                    </div>
-                    <ul className="space-y-1.5 text-[11px] text-gray-600">
-                      <li>GI01 - ENTITY_LEGAL_NAME — GENERAL</li>
-                      <li>GI05 - REGISTERED_OFFICE — GENERAL</li>
-                      <li>BI02 - CONTACT_PERSON — GENERAL</li>
-                      <li>BI06 - PRIMARY_BUSINESS — GENERAL</li>
-                    </ul>
-                  </div>
-                </div>
+            {closingText ? (
+              <p data-fx="rise" data-d="340" style={{ margin: "22px 0 0", maxWidth: 560, fontFamily: BODY, fontSize: 16, lineHeight: 1.6, color: "#52525B", textWrap: "pretty" }}>
+                {closingText}
+              </p>
+            ) : null}
+            {showCta ? (
+              <div data-fx="rise" data-d="400" style={{ marginTop: 28 }}>
+                <Button variant="outline-light" size="md" href={ctaHref}>
+                  {ctaLabel}
+                  <Icon name="arrow-up-right" size={17} color={INK} />
+                </Button>
               </div>
-            ) : variant === "upload-dashboard" ? (
-              <div className="w-full h-full rounded-2xl bg-[#F8FAFC] border border-gray-200 shadow-xl flex overflow-hidden lg:min-h-0 min-h-[500px] group cursor-default">
-                {/* Left Sidebar */}
-                <div className="hidden sm:flex w-[70px] bg-[#0e1222] flex-col items-center py-6 gap-6 z-10 shrink-0">
-                  <div className="w-10 h-10 bg-zinc-600 rounded-xl flex items-center justify-center text-white font-bold text-xl mb-4 shadow-lg shadow-zinc-500/20">V</div>
-                  <div className="flex flex-col gap-6 text-slate-500 w-full items-center">
-                    <div className="p-2.5 bg-white/10 rounded-xl text-white"><Home className="w-5 h-5" /></div>
-                    <FileText className="w-5 h-5 hover:text-white cursor-pointer transition-colors" />
-                    <FolderUp className="w-5 h-5 hover:text-white cursor-pointer transition-colors" />
-                    <Share2 className="w-5 h-5 hover:text-white cursor-pointer transition-colors" />
-                    <Building2 className="w-5 h-5 hover:text-white cursor-pointer transition-colors" />
-                    <MessageSquare className="w-5 h-5 hover:text-white cursor-pointer transition-colors" />
-                  </div>
-                  <div className="mt-auto">
-                    <img src="https://i.pravatar.cc/100?img=11" alt="User" className="w-9 h-9 rounded-full border-2 border-slate-700" />
-                  </div>
-                </div>
+            ) : null}
+          </div>
 
-                {/* Main Content Area */}
-                <div className="flex-1 flex flex-col bg-white overflow-hidden">
-                  {/* Top Navbar */}
-                  <div className="h-16 border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 bg-white shrink-0">
-                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 w-32 sm:w-56">
-                      <span className="text-slate-400 text-[11px] font-medium grow">Search...</span>
-                      <Search className="w-3.5 h-3.5 text-slate-800 bg-slate-200 rounded p-0.5" />
-                    </div>
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="hidden sm:flex items-center gap-2 border border-slate-200 px-3 py-1.5 rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
-                        <svg className="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
-                        <span className="text-[11px] font-semibold text-slate-700">Quick action</span>
-                      </div>
-                      <Settings className="w-4 h-4 text-slate-500 cursor-pointer hover:text-slate-800 transition-colors" />
-                      <Bell className="w-4 h-4 text-slate-500 cursor-pointer hover:text-slate-800 transition-colors" />
-                      <div className="flex items-center gap-2 border-l border-slate-100 pl-3 sm:pl-4">
-                        <img src="https://i.pravatar.cc/100?img=11" alt="User" className="w-7 h-7 rounded-md" />
-                        <div className="flex-col hidden lg:flex">
-                          <span className="text-[11px] font-bold text-slate-800 leading-tight">Cleven</span>
-                          <span className="text-[9px] text-slate-400">Client</span>
-                        </div>
-                        <LogOut className="w-4 h-4 text-red-400 ml-1 hidden sm:block cursor-pointer hover:text-red-500 transition-colors" />
-                      </div>
-                    </div>
-                  </div>
+          <div data-fx="rise" data-d="160" data-dy="70" style={{ minWidth: 0 }}>
+            {variant === "technology" ? <TechnologyVisual /> : variant === "upload-dashboard" ? <UploadDashboardVisual /> : <ImageVisual src={portalImage} />}
+          </div>
+        </div>
 
-                  {/* Body Content */}
-                  <div className="flex-1 p-5 sm:p-6 flex flex-col overflow-y-auto">
-                    {/* Welcome & Warning */}
-                    <div className="mb-4 sm:mb-6">
-                      <h2 className="text-lg font-bold text-slate-900 mb-3">Welcome Back, Cleven</h2>
-                      <div className="bg-white border border-slate-200 rounded-lg p-3 w-full shadow-sm text-sm">
-                        <span className="font-semibold text-slate-800">Warning:</span> <span className="text-slate-500 ml-1">No documents uploaded this month</span>
-                      </div>
-                    </div>
-
-                    {/* Central Image Upload Box */}
-                    <div className="w-full flex justify-center items-center py-4 sm:py-6 mb-4 mt-2">
-                      <div className="relative w-full max-w-[280px] h-[160px] sm:max-w-[340px] sm:h-[190px]">
-                        <Image
-                          src={portalImage}
-                          alt="Upload Box"
-                          fill
-                          className="object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-500"
-                          priority
-                        />
-                      </div>
-                    </div>
-
-                    {/* Bottom UI Related to Uploading Document */}
-                    <div className="mt-auto border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
-                        <h3 className="text-xs font-bold text-slate-700">Pending Requests</h3>
-                        <span className="text-[10px] font-bold text-zinc-600 bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded-full">2 Action Required</span>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 overflow-hidden pr-2">
-                            <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0">
-                              <FileText className="w-4 h-4 text-red-500" />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-[11px] font-semibold text-slate-800 truncate">Q1 VAT Return Invoices</span>
-                              <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">Overdue by 3 days</span>
-                            </div>
-                          </div>
-                          <button className="text-[10px] font-bold text-slate-600 border border-slate-200 bg-white px-3 py-1.5 rounded-md hover:bg-slate-50 shadow-sm shrink-0 transition-colors">Upload</button>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 overflow-hidden pr-2">
-                            <div className="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center shrink-0">
-                              <FileText className="w-4 h-4 text-yellow-600" />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-[11px] font-semibold text-slate-800 truncate">Copy of Director's ID Proof</span>
-                              <span className="text-[10px] text-yellow-600 font-medium whitespace-nowrap">Due in 5 days</span>
-                            </div>
-                          </div>
-                          <button className="text-[10px] font-bold text-slate-600 border border-slate-200 bg-white px-3 py-1.5 rounded-md hover:bg-slate-50 shadow-sm shrink-0 transition-colors">Upload</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="relative w-full h-full rounded-xl overflow-hidden shadow-2xl border border-gray-100 bg-white min-h-[400px] lg:min-h-0 group">
-                <Image
-                  src={portalImage}
-                  alt="Client Portal Dashboard"
-                  fill
-                  className="object-contain group-hover:scale-105 transition-transform duration-700"
-                  priority
-                />
-              </div>
-            )}
-          </motion.div>
+        <div style={{ marginTop: "clamp(56px,7vw,88px)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", gap: 16 }}>
+          {cards.map((c, i) => (
+            <div
+              key={c.key}
+              data-fx="rise"
+              data-d={i * 80}
+              className={
+                c.dark
+                  ? "rounded-[24px] border border-white/[.06] transition-[border-color,box-shadow] duration-300 hover:border-[rgba(139,143,247,.45)] hover:shadow-[0_24px_60px_rgba(9,9,11,.28)]"
+                  : "a4-card"
+              }
+              style={{
+                padding: 28,
+                minHeight: 220,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: c.key === "quote" ? "space-between" : "flex-start",
+                ...(c.dark ? { background: DARK_CARD, color: "#FFFFFF" } : null),
+              }}
+            >
+              {c.node}
+            </div>
+          ))}
         </div>
       </div>
     </section>

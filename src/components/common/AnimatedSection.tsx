@@ -1,42 +1,20 @@
-"use client";
-
-import React, { useRef } from "react";
-import { motion } from "framer-motion";
-import { useDirectionalInView } from "@/hooks/use-directional-in-view";
-import {
-  sectionVariants,
-  sectionTransition,
-  sectionTransitionDelayed,
-} from "@/lib/motion";
+import React from "react";
 
 interface AnimatedSectionProps {
   children: React.ReactNode;
   className?: string;
+  /** Rises a beat later (as the old delayed variant did). */
   delay?: boolean;
 }
 
 /**
- * Wraps content in a motion.div with the same reveal animation as Home page sections.
- * Only triggers on scroll down and plays once.
+ * Section reveal on the A4 motion engine: the design's `rise`, fired by
+ * FxRuntime when the block scrolls into view.
  */
-export default function AnimatedSection({
-  children,
-  className,
-  delay = false,
-}: AnimatedSectionProps) {
-  const ref = useRef(null);
-  const isInView = useDirectionalInView(ref);
-
+export default function AnimatedSection({ children, className, delay = false }: AnimatedSectionProps) {
   return (
-    <motion.div
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
-      variants={sectionVariants}
-      transition={delay ? sectionTransitionDelayed : sectionTransition}
-      className={className}
-    >
+    <div data-fx="rise" data-d={delay ? 150 : undefined} className={className}>
       {children}
-    </motion.div>
+    </div>
   );
 }

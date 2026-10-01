@@ -2,8 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { FadeInUp } from "../common/Animations";
+import { BODY, Band, DocPanel, INDIGO, INK, SANS, StatusPill, gradTail } from "@/components/services/SectionKit";
 
 interface Job {
   id: number;
@@ -21,69 +20,61 @@ interface JobOpeningsProps {
   jobs?: Job[];
 }
 
-const JobOpenings = ({ 
-  title, 
-  subtitle,
-  applyNowText,
-  jobs = []
-}: JobOpeningsProps) => {
+/** Open positions as a document: numbered rows with hairlines, meta and an Apply pill per role. */
+const JobOpenings = ({ title, subtitle, applyNowText, jobs = [] }: JobOpeningsProps) => {
   return (
-    <section className="w-full py-20 bg-background relative overflow-hidden">
-      <div className="mx-auto px-4 md:px-6 lg:px-8 max-w-7xl relative z-10">
-        <div className="text-center mb-16">
-          <FadeInUp>
-            <h2 className="text-3xl md:text-5xl font-bold text-text-heading mb-4">
-              {title}
-            </h2>
-            <p className="text-lg text-text-gray max-w-2xl mx-auto">
-              {subtitle}
-            </p>
-          </FadeInUp>
-        </div>
-
-        <div className="grid gap-6">
-          {jobs.map((job, index) => (
-            <FadeInUp key={job.id} delay={index * 0.1}>
-              <motion.div
-                whileHover={{ y: -4, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
-                className="group relative bg-white border border-gray-200 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between transition-all duration-300 hover:border-primary-blue/30"
-              >
-                <div className="flex-1 mb-4 md:mb-0 text-center md:text-left">
-                  <h3 className="text-xl font-bold text-text-heading group-hover:text-primary-blue transition-colors mb-2">
-                    {job.title}
-                  </h3>
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4 text-sm text-text-gray">
-                    <span className="flex items-center gap-1">
-                       <svg className="w-4 h-4 text-primary-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                       {job.department}
-                    </span>
-                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-300"></span>
-                    <span className="flex items-center gap-1">
-                        <svg className="w-4 h-4 text-primary-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        {job.location}
-                    </span>
-                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-300"></span>
-                    <span className="px-3 py-1 rounded-full bg-primary-blue/5 text-primary-blue text-xs font-semibold">
-                      {job.type}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <Link
-                    href={job.link}
-                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-primary hover:bg-primary-blue transition-colors shadow-md hover:shadow-primary-blue/30 w-full md:w-auto"
-                  >
-                    {applyNowText}
-                    <svg className="ml-2 -mr-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                  </Link>
-                </div>
-              </motion.div>
-            </FadeInUp>
-          ))}
-        </div>
+    <Band id="positions" surface="white">
+      <div style={{ maxWidth: 820 }}>
+        {title ? (
+          <h2 data-fx="rise" style={{ margin: 0, fontSize: "clamp(40px,5.6vw,92px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.02 }}>
+            {gradTail(title)}
+          </h2>
+        ) : null}
+        {subtitle ? (
+          <p data-fx="rise" data-d="100" style={{ margin: "20px 0 0", fontFamily: BODY, fontSize: 18, lineHeight: 1.55, color: "#52525B" }}>
+            {subtitle}
+          </p>
+        ) : null}
       </div>
-    </section>
+
+      <div data-fx="rise" data-d="160" data-dy="80" style={{ marginTop: "clamp(40px,5vw,64px)" }}>
+        <DocPanel>
+          {jobs.map((job, index) => (
+            <div
+              key={job.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "48px minmax(0,1fr) auto",
+                alignItems: "center",
+                gap: "14px 20px",
+                padding: "26px clamp(20px,4vw,40px)",
+                borderTop: index ? "1px solid #E4E4E7" : "none",
+              }}
+              className="max-sm:!grid-cols-[36px_minmax(0,1fr)]"
+            >
+              <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, color: INDIGO, alignSelf: "start", paddingTop: 6 }}>{String(index + 1).padStart(2, "0")}</span>
+              <div style={{ minWidth: 0 }}>
+                <h3 style={{ margin: 0, fontFamily: SANS, fontSize: "clamp(22px,2.2vw,28px)", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.15, color: INK }}>{job.title}</h3>
+                <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 14px", fontFamily: BODY, fontSize: 14.5, color: "#52525B" }}>
+                  <span>{job.department}</span>
+                  <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: 2, background: "#D4D4D8" }} />
+                  <span>{job.location}</span>
+                  <StatusPill tone="indigo" style={{ height: 26, fontSize: 12 }}>
+                    {job.type}
+                  </StatusPill>
+                </div>
+              </div>
+              <Link href={job.link} className="a4-btn a4-btn-ink max-sm:col-start-2 max-sm:justify-self-start" style={{ height: 44, padding: "0 20px", fontSize: 15, textDecoration: "none" }}>
+                {applyNowText}
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </Link>
+            </div>
+          ))}
+        </DocPanel>
+      </div>
+    </Band>
   );
 };
 

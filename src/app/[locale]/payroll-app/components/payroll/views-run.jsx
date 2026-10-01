@@ -70,7 +70,7 @@ function RunPayrollView({ employees, runs, monthIdx, setMonthIdx, approve }) {
       </PayCard>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 12.5, color: "var(--stone)" }}>
         <Icon name="info" size={14} color="var(--stone)" />
-        Income tax and SSC are computed live from the 2026 FSS bands and SSC Class 1 tables. Approving locks this month and produces each payslip plus the month's FS5.
+        Income tax and SSC are computed live from the 2026 FSS bands and SSC Class 1 tables. Approving locks this month and produces each payslip plus the month&apos;s FS5.
       </div>
     </div>
   );
@@ -111,9 +111,9 @@ function RunDetail({ run, employees, back, openPayslip }) {
   const C = PayCalc;
   return (
     <div className="pay-fade" data-screen-label="Run detail">
-      <button onClick={back} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "none", border: 0, cursor: "pointer", color: "var(--on-dark-mute)", fontFamily: "var(--font-body)", fontSize: 13.5, fontWeight: 600, padding: 0, marginBottom: 18 }}><Icon name="arrow-left" size={15} color="currentColor" /> Payroll history</button>
+      <button onClick={back} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "none", border: 0, cursor: "pointer", color: "var(--on-dark-mute)", fontFamily: "var(--font-display)", fontSize: 13.5, fontWeight: 600, padding: 0, marginBottom: 18 }}><Icon name="arrow-left" size={15} color="currentColor" /> Payroll history</button>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
-        <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 24, letterSpacing: "-.4px", color: "#fff", margin: 0 }}>{PAY_MONTHS[run.monthIdx]} {run.year} — approved run</h2>
+        <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 24, letterSpacing: "-.4px", color: "#fff", margin: 0 }}>{PAY_MONTHS[run.monthIdx]} {run.year} — approved run</h2>
         <PayChip tone="green"><Icon name="check-circle" size={13} color="var(--accent-teal)" /> FS5 generated · payment due by end of {PAY_MONTHS[(run.monthIdx + 1) % 12]}</PayChip>
       </div>
       <PayCard pad={0}>
@@ -147,13 +147,13 @@ function PayslipModal({ run, row, employees, onClose }) {
     </div>
   );
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.72)", display: "grid", placeItems: "center", padding: 20 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(9,9,11,.72)", display: "grid", placeItems: "center", padding: 20 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="pay-fade pay-scroll" style={{ width: "min(560px,100%)", maxHeight: "92vh", overflowY: "auto", background: "var(--surface-elevated)", border: "1px solid var(--hairline-dark)", borderRadius: "var(--r-xl)", padding: "26px 28px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
             <Logo height={18} />
             <div>
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 18, color: "#fff", letterSpacing: "-.2px" }}>Payslip</div>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "#fff", letterSpacing: "-.2px" }}>Payslip</div>
               <div style={{ fontSize: 12, color: "var(--stone)" }}>Borg Marine Ltd · {PAY_MONTHS[run.monthIdx]} {run.year}</div>
             </div>
           </div>
@@ -176,7 +176,7 @@ function PayslipModal({ run, row, employees, onClose }) {
         {line("Maternity fund", row.maternity)}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
           <PayBtn variant="ghost" size="sm" onClick={onClose}>Close</PayBtn>
-          <PayBtn variant="primary" size="sm" onClick={() => {}}><Icon name="download" size={14} color="#000" /> Download PDF</PayBtn>
+          <PayBtn variant="primary" size="sm" onClick={() => {}}><Icon name="download" size={14} color="#09090B" /> Download PDF</PayBtn>
         </div>
       </div>
     </div>

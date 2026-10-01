@@ -1,114 +1,65 @@
-import React from 'react'
-import Image from 'next/image'
-import { usePerformance } from '@/contexts/ReduceMotionContext'
+import React from "react";
+import { DARK_GRID, LIGHT_GLOW } from "@/components/fx/primitives";
+import { cn } from "@/lib/utils";
 
 interface GradientContainerProps {
-    children?: React.ReactNode
-    className?: string
-    /** Corner radius; default keeps marketing curves. Use `rounded-none` for flush edges. */
-    roundedClassName?: string
-    showRadials?: boolean
-    /** Fine grain overlay (Noise.png). Disable for cleaner light heroes and less GPU work on mobile. */
-    showNoise?: boolean
-    backgroundColor?: string
-    radialImage?: string
-    radialOpacity?: number
-    topLeftRotation?: string
-    bottomRightRotation?: string
-    /** Optional position classes for the left radial (e.g. 'top-0 left-0', 'bottom-0 left-0') */
-    leftPositionClass?: string
-    /** Optional position classes for the right radial (e.g. 'bottom-0 right-0') */
-    rightPositionClass?: string
+  children?: React.ReactNode;
+  className?: string;
+  /** Corner radius; default follows the design's 24/28px cards. Use `rounded-none` for flush edges. */
+  roundedClassName?: string;
+  /** Indigo radial glows in two corners (the design's glow colour). */
+  showRadials?: boolean;
+  /** Kept for compatibility — the A4 surfaces carry no grain. */
+  showNoise?: boolean;
+  /** Tailwind background class. Dark classes render the ink grid, light ones the light glow. */
+  backgroundColor?: string;
+  /** Kept for compatibility — glows are CSS now, not images. */
+  radialImage?: string;
+  radialOpacity?: number;
+  topLeftRotation?: string;
+  bottomRightRotation?: string;
+  leftPositionClass?: string;
+  rightPositionClass?: string;
 }
 
-const GradientContainer = ({ 
-    children, 
-    className = "", 
-    roundedClassName = "rounded-[32px] md:rounded-[48px]",
-    showRadials = true, 
-    showNoise = true,
-    backgroundColor, 
-    radialImage,
-    radialOpacity,
-    topLeftRotation = "-rotate-90",
-    bottomRightRotation = "rotate-90",
-    leftPositionClass,
-    rightPositionClass,
+const LIGHT_RE = /(^|\s)bg-(white|section-light|section-bg-light|background|background-secondary|icon|zinc-50|zinc-100|gray-50|gray-100|slate-50|\[#[fF])/;
+
+/**
+ * Legacy rounded panel, restyled onto the A4 surfaces: dark callers get the
+ * ink grid (`DARK_GRID`) with indigo corner glows, light callers the light
+ * glow. Transparent callers stay transparent.
+ */
+const GradientContainer = ({
+  children,
+  className = "",
+  roundedClassName = "rounded-[24px] md:rounded-[28px]",
+  showRadials = true,
+  backgroundColor,
+  radialOpacity,
 }: GradientContainerProps) => {
-    const { isIPhone, isLowPerformance } = usePerformance()
-    const bgColor = backgroundColor || 'bg-primary'
-    const radialSrc = radialImage || '/assets/images/radial2.png'
-    const leftPos = leftPositionClass || 'top-0 left-0'
-    const rightPos = rightPositionClass || 'bottom-0 right-0'
-    
-    // Determine opacity: user provided > context-based default
-    const getRadialOpacity = () => {
-        if (radialOpacity !== undefined) return radialOpacity;
-        return isIPhone ? 0.2 : 0.3;
-    };
-    
-    const currentOpacity = getRadialOpacity();
-    
-    return (
+  const bgClass = backgroundColor ?? "bg-primary";
+  const probe = `${bgClass} ${className}`;
+  const tone: "none" | "light" | "dark" =
+    backgroundColor === "" || /(^|\s)bg-transparent(\s|$)/.test(probe) ? "none" : LIGHT_RE.test(probe) ? "light" : "dark";
+  const glow = radialOpacity ?? (tone === "dark" ? 0.28 : 0.12);
+
+  return (
+    <div
+      className={cn("relative w-full overflow-hidden", tone === "none" ? bgClass : "", roundedClassName, className)}
+      style={tone === "none" ? undefined : { background: tone === "dark" ? DARK_GRID : LIGHT_GLOW, color: tone === "dark" ? "#FFFFFF" : undefined }}
+    >
+      {showRadials && tone !== "none" ? (
         <div
-            className={`
-                relative w-full ${bgColor} ${className}
-                ${roundedClassName}
-                overflow-hidden
-            `}
-        >
-            {/* Background Wrapper with Overflow Hidden */}
-            <div className="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
-                {/* Background Radial Image - Top Left - Hide on iPhone if performance is an issue */}
-                {showRadials && (
-                    <div 
-                        className={`absolute ${leftPos} w-[350px] h-[330px] z-0 transform ${topLeftRotation}`}
-                        style={{ opacity: currentOpacity }}
-                    >
-                        <Image
-                            src={radialSrc}
-                            alt="Radial Gradient"
-                            fill
-                            className="object-cover"
-                        />
-                    </div>
-                )}
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none rounded-[inherit]"
+          style={{
+            background: `radial-gradient(560px 440px at 0% 0%, rgba(79,85,241,${glow}), rgba(79,85,241,0) 70%), radial-gradient(560px 440px at 100% 100%, rgba(79,85,241,${glow * 0.7}), rgba(79,85,241,0) 70%)`,
+          }}
+        />
+      ) : null}
+      <div className="relative z-10 w-full h-full">{children}</div>
+    </div>
+  );
+};
 
-                {/* Background Radial Image - Bottom Right */}
-                {showRadials && (
-                    <div 
-                        className={`absolute ${rightPos} w-[350px] h-[330px] z-0 transform ${bottomRightRotation}`}
-                        style={{ opacity: currentOpacity }}
-                    >
-                        <Image
-                            src={radialSrc}
-                            alt="Radial Gradient"
-                            fill
-                            className="object-cover"
-                        />
-                    </div>
-                )}
-
-                {/* Noise Overlay - mix-blend-mode is VERY expensive on iOS Safari/Chrome */}
-                {showNoise ? (
-                    <div className={`absolute inset-0 z-[1] opacity-50 ${isIPhone || isLowPerformance ? 'mix-blend-normal' : 'mix-blend-soft-light'}`}>
-                        <Image
-                            src="/assets/images/Noise.png"
-                            alt=""
-                            fill
-                            className="object-cover"
-                            priority
-                        />
-                    </div>
-                ) : null}
-            </div>
-
-            {/* Content */}
-            <div className="relative z-10 w-full h-full">
-                {children}
-            </div>
-        </div>
-    )
-}
-
-export default GradientContainer
+export default GradientContainer;

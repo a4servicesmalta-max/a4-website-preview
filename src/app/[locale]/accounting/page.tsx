@@ -13,11 +13,15 @@ export const metadata: Metadata = {
   description: "Explore accounting agent workflows and how A4 applies automation with professional oversight.",
 };
 
+/**
+ * Accounting agents landing — hero, value cards, the agents, how the
+ * orchestrator runs an engagement (dark), the portal, pricing, dark CTA.
+ */
 export default function AccountingLandingPage() {
   const namespace = "accounting";
 
   return (
-    <main className="a4-landing-page pt-24 sm:pt-28 lg:pt-32 min-h-screen w-full bg-white">
+    <main id="main-content" style={{ overflowX: "clip" }}>
       <LandingHero namespace={namespace} />
       <ValueStrip namespace={namespace} />
       <AgentsShowcase namespace={namespace} />
@@ -27,11 +31,4 @@ export default function AccountingLandingPage() {
       <CTASection namespace={namespace} />
     </main>
   );
-
-  // --- Previous implementation (commented out) ---
-  // return (
-  //   <main className="min-h-screen w-full bg-white pt-[72px] lg:pt-[100px]">
-  //     ... same components without a4-landing-page wrapper
-  //   </main>
-  // );
 }

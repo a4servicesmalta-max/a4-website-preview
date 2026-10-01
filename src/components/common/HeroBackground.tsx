@@ -1,45 +1,29 @@
-import Image from "next/image";
 import { ReactNode } from "react";
+import { DARK_GRID } from "@/components/fx/primitives";
 
 type HeroBackgroundProps = {
   children: ReactNode;
   className?: string;
 };
 
+/**
+ * Dark hero backdrop in the A4 style: ink with the 64px grid and two indigo
+ * radial glows (the design's drift-glow colour), replacing the old radial
+ * texture images.
+ */
 const HeroBackground = ({ children, className = "" }: HeroBackgroundProps) => {
   return (
-    <div
-      className={`relative w-full h-full  rounded-[8px] bg-primary text-white overflow-hidden ${className}`}
-      style={{ width: "100%" }}
-    >
+    <div className={`relative w-full h-full text-white overflow-hidden ${className}`} style={{ background: DARK_GRID, borderRadius: 24 }}>
       <div
-        className="absolute rotate-90 opacity-100 -right-10 -top-10 transform rotate-90"
-        style={{ width: 350, height: 330 }}
-      >
-        <Image
-          src="/assets/images/radial2.png"
-          alt="Radial texture top right"
-          fill
-          className="object-cover"
-          sizes="350px"
-          priority
-        />
-      </div>
-
-      <div
-        className="absolute -rotate-90 opacity-100 -left-10 bottom-0 transform -rotate-90"
-        style={{ width: 350, height: 330 }}
-      >
-        <Image
-          src="/assets/images/radial2.png"
-          alt="Radial texture bottom left"
-          fill
-          className="object-cover"
-          sizes="350px"
-          priority
-        />
-      </div>
-
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          background:
+            "radial-gradient(520px 420px at 92% -6%, rgba(79,85,241,.30), rgba(79,85,241,0) 70%), radial-gradient(480px 380px at 0% 100%, rgba(79,85,241,.18), rgba(79,85,241,0) 70%)",
+        }}
+      />
       <div className="relative z-10 h-full w-full">{children}</div>
     </div>
   );

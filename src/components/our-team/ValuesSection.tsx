@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
-import { FadeInUp } from "../common/Animations";
+import { Button } from "@/components/a4-landing/Primitives";
+import { BODY, Band, INDIGO, INK, SANS, TwoLineHeading } from "@/components/services/SectionKit";
 
 interface ValueItem {
   title: string;
@@ -18,72 +18,53 @@ interface ValuesSectionProps {
   items?: ValueItem[];
 }
 
-const ValuesSection = ({
-  title,
-  titleAccent,
-  description,
-  ctaText,
-  items = []
-}: ValuesSectionProps) => {
-  // Default icons if not provided
-  const getIcon = (index: number) => {
-    const icons = [
-      <svg key="0" className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
-      <svg key="1" className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
-      <svg key="2" className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
-    ];
-    return icons[index % icons.length];
-  };
-
+/**
+ * "Driven by values" as the design's numbered list: the two-line heading with
+ * its gradient line, the description and the pill on the left; the values as
+ * numbered rows with hairlines on the right.
+ */
+const ValuesSection = ({ title, titleAccent, description, ctaText, items = [] }: ValuesSectionProps) => {
   return (
-    <section className="w-full py-20 bg-section-light relative">
-       {/* Background Noise/Texture */}
-        <div className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none" 
-             style={{ backgroundImage: `url("/assets/images/Noise.png")` }}>
+    <Band surface="muted">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: "56px 72px", alignItems: "start" }}>
+        <div>
+          <TwoLineHeading first={title} second={titleAccent} d={0} />
+          {description ? (
+            <p data-fx="rise" data-d="200" style={{ margin: "24px 0 0", maxWidth: 540, fontFamily: BODY, fontSize: 18, lineHeight: 1.55, color: "#52525B" }}>
+              {description}
+            </p>
+          ) : null}
+          {ctaText ? (
+            <div data-fx="rise" data-d="280" style={{ marginTop: 32 }}>
+              <Button variant="dark" size="lg" href="/careers">
+                {ctaText}
+              </Button>
+            </div>
+          ) : null}
         </div>
-
-      <div className="mx-auto px-4 md:px-6 lg:px-8 max-w-7xl relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          
-          <FadeInUp>
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-5xl font-bold text-text-heading">
-                {title} <span className="text-primary-blue">{titleAccent}</span>
-              </h2>
-              <p className="text-lg text-text-gray leading-relaxed">
-                {description}
-              </p>
-              
-               <div className="pt-4">
-                <button className="px-8 py-3 bg-primary text-white rounded-full font-medium hover:bg-primary-blue transition-colors shadow-lg hover:shadow-primary-blue/30">
-                  {ctaText}
-                </button>
+        <div data-fx="rise" data-d="150" style={{ display: "flex", flexDirection: "column" }}>
+          {items.map((value, index) => (
+            <div
+              key={index}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "48px minmax(0,1fr)",
+                gap: 12,
+                padding: "28px 0",
+                borderTop: "1px solid #E4E4E7",
+                ...(index === items.length - 1 ? { borderBottom: "1px solid #E4E4E7" } : null),
+              }}
+            >
+              <span style={{ fontFamily: SANS, fontSize: 16, fontWeight: 600, color: INDIGO, paddingTop: 6 }}>{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3 style={{ margin: 0, fontFamily: SANS, fontSize: "clamp(24px,2.2vw,30px)", fontWeight: 600, letterSpacing: "-0.03em", color: INK }}>{value.title}</h3>
+                <p style={{ margin: "8px 0 0", fontFamily: BODY, fontSize: 16.5, lineHeight: 1.55, color: "#52525B" }}>{value.description}</p>
               </div>
             </div>
-          </FadeInUp>
-
-          <div className="grid grid-cols-1 gap-6">
-            {items.map((value, index) => (
-              <FadeInUp key={index} delay={index * 0.2}>
-                <motion.div 
-                    whileHover={{ scale: 1.02 }}
-                    className="flex items-start gap-4 p-6 bg-white rounded-2xl shadow-sm border border-black/5 hover:border-primary-blue/30 hover:shadow-md transition-all duration-300"
-                >
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary-blue/10 flex items-center justify-center text-primary-blue">
-                    {value.icon || getIcon(index)}
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-text-heading mb-2">{value.title}</h3>
-                    <p className="text-text-gray text-sm">{value.description}</p>
-                  </div>
-                </motion.div>
-              </FadeInUp>
-            ))}
-          </div>
-
+          ))}
         </div>
       </div>
-    </section>
+    </Band>
   );
 };
 

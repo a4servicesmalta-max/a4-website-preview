@@ -34,7 +34,7 @@ function TaxFormsView({ employees, runs }) {
       <div style={{ display: "flex", alignItems: "flex-end", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
         <PayField label="Form" style={{ width: 220 }}>
           <select className="pay-select" value={form} onChange={(e) => setForm(e.target.value)}>
-            <option value="FS5">FS5 — monthly payer's advice</option>
+            <option value="FS5">FS5 — monthly payer&apos;s advice</option>
             <option value="FS3">FS3 — annual statements</option>
             <option value="FS7">FS7 — annual reconciliation</option>
           </select>
@@ -43,7 +43,7 @@ function TaxFormsView({ employees, runs }) {
           <select className="pay-select" value={year} onChange={() => {}}><option>2026</option></select>
         </PayField>
         <div style={{ flex: 1 }} />
-        <PayBtn variant="primary" onClick={() => {}}><Icon name="download" size={15} color="#000" /> Generate / download {form}</PayBtn>
+        <PayBtn variant="primary" onClick={() => {}}><Icon name="download" size={15} color="#09090B" /> Generate / download {form}</PayBtn>
       </div>
 
       <PayCard title={FORM_META[form].t} icon={FORM_META[form].icon} pad={0}
@@ -118,7 +118,7 @@ function TaxFormsView({ employees, runs }) {
                 ))}
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16, padding: "14px 18px", borderRadius: "var(--r-md)", background: reconciles ? "rgba(0,160,130,.12)" : "rgba(214,134,30,.12)", border: `1px solid ${reconciles ? "rgba(0,160,130,.4)" : "rgba(214,134,30,.4)"}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16, padding: "14px 18px", borderRadius: "var(--r-md)", background: reconciles ? "rgba(139,143,247,.12)" : "rgba(255,255,255,.12)", border: `1px solid ${reconciles ? "rgba(139,143,247,.4)" : "rgba(255,255,255,.4)"}` }}>
               <Icon name={reconciles ? "badge-check" : "alert-triangle"} size={19} color={reconciles ? "var(--accent-teal)" : "var(--accent-warning)"} />
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: reconciles ? "var(--accent-teal)" : "var(--accent-warning)" }}>{reconciles ? "FS7 reconciles" : "Differences found"}</div>
@@ -215,10 +215,10 @@ function DashboardView({ employees, runs, monthIdx, go }) {
               ["bar-chart-3", "Reports", "Employer cost analysis", "reports"],
             ].map(([ic, t, s, page]) => (
               <button key={t} onClick={() => go(page)} style={{ display: "flex", alignItems: "center", gap: 13, background: "var(--surface-deep)", border: "1px solid var(--hairline-dark)", borderRadius: "var(--r-md)", padding: "14px 15px", cursor: "pointer", textAlign: "left", transition: "border-color .15s" }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(73,79,223,.55)")}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(79,85,241,.55)")}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--hairline-dark)")}>
-                <span style={{ width: 38, height: 38, borderRadius: "var(--r-md)", background: "rgba(73,79,223,.16)", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name={ic} size={18} color="var(--primary-bright)" /></span>
-                <span><span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "#fff", fontFamily: "var(--font-body)" }}>{t}</span><span style={{ display: "block", fontSize: 12, color: "var(--stone)", marginTop: 2 }}>{s}</span></span>
+                <span style={{ width: 38, height: 38, borderRadius: "var(--r-md)", background: "rgba(79,85,241,.16)", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name={ic} size={18} color="var(--primary-bright)" /></span>
+                <span><span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "#fff", fontFamily: "var(--font-display)" }}>{t}</span><span style={{ display: "block", fontSize: 12, color: "var(--stone)", marginTop: 2 }}>{s}</span></span>
               </button>
             ))}
           </div>

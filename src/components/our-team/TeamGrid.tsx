@@ -2,14 +2,14 @@
 
 import React from "react";
 import Image from "next/image";
-import { motion } from "framer-motion";
-import { FadeInUp } from "../common/Animations";
+import { BODY, Band, INDIGO, INK, PERI, SANS, card, gradTail, kicker } from "@/components/services/SectionKit";
+import { GRAD } from "@/components/fx/primitives";
 
 interface TeamMember {
-  id: number;
+  id?: number;
   name: string;
   role: string;
-  image: string;
+  image?: string;
   bio: string;
   socials?: {
     linkedin?: string;
@@ -24,72 +24,77 @@ interface TeamGridProps {
   members?: TeamMember[];
 }
 
-const TeamGrid = ({ 
-  title, 
-  subtitle,
-  members = []
-}: TeamGridProps) => {
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
+
+/** The team as the design's card grid: alternating light and dark cards, monogram (or photo), name, role, bio. */
+const TeamGrid = ({ title, subtitle, members = [] }: TeamGridProps) => {
+  const total = String(members.length).padStart(2, "0");
   return (
-    <section className="w-full py-20 bg-background relative overflow-hidden">
-      <div className="mx-auto px-4 md:px-6 lg:px-8 max-w-7xl relative z-10">
-        <div className="text-center mb-16">
-           <FadeInUp>
-            <h2 className="text-3xl md:text-5xl font-bold text-text-heading mb-4">
-               {title}
-            </h2>
-             <p className="text-lg text-text-gray max-w-2xl mx-auto">
-              {subtitle}
-            </p>
-          </FadeInUp>
-        </div>
+    <Band surface="light">
+      {title ? (
+        <h2 data-fx="rise" style={{ margin: 0, fontSize: "clamp(40px,5.6vw,92px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.02, color: INK }}>
+          {gradTail(title)}
+        </h2>
+      ) : null}
+      {subtitle ? (
+        <p data-fx="rise" data-d="100" style={{ margin: "20px 0 0", maxWidth: 680, fontFamily: BODY, fontSize: 18, lineHeight: 1.55, color: "#52525B" }}>
+          {subtitle}
+        </p>
+      ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {members.map((member, index) => (
-            <FadeInUp key={member.id || index} delay={index * 0.1}>
-              <motion.div
-                whileHover={{ y: -10 }}
-                className="group relative bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-white/20"
-              >
-                {/* Image Container */}
-                <div className="relative h-80 w-full overflow-hidden bg-gray-100">
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex items-end justify-center pb-6">
-                      {/* Social Icons Placeholder */}
-                       <div className="flex gap-4 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                          {/* Example Icon */}
-                           <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white cursor-pointer hover:bg-primary-blue hover:text-white transition-colors">
-                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-                           </div>
-                       </div>
-                  </div>
-                  <Image
-                    src={member.image || "/assets/images/placeholder.png"}
-                    alt={member.name}
-                    fill
-                    className="object-cover object-center transition-transform duration-500 group-hover:scale-110 grayscale group-hover:grayscale-0"
-                  />
+      <div style={{ marginTop: "clamp(48px,6vw,72px)", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 16 }}>
+        {members.map((member, index) => {
+          const dark = index % 2 === 1;
+          const c = card(dark, { padding: 28, minHeight: 330, display: "flex", flexDirection: "column", gap: 14 });
+          return (
+            <div key={member.id ?? index} data-fx="rise" data-d={(index % 3) * 80} className={c.className} style={c.style}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, fontFamily: SANS, fontSize: 17, fontWeight: 600, letterSpacing: ".02em", color: dark ? "#A1A1AA" : "#52525B" }}>
+                  <span style={{ color: dark ? PERI : INDIGO }}>{String(index + 1).padStart(2, "0")}</span>
+                  <span>/ {total}</span>
                 </div>
-
-                {/* Content */}
-                <div className="p-6 text-center">
-                  <h3 className="text-xl font-bold text-text-heading group-hover:text-primary-blue transition-colors">
-                    {member.name}
-                  </h3>
-                  <p className="text-sm font-medium text-primary-blue mb-3">
-                    {member.role}
-                  </p>
-                  <p className="text-text-gray text-sm leading-relaxed line-clamp-3">
-                    {member.bio}
-                  </p>
-                </div>
-                
-                 {/* Decorative Accent */}
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary-blue to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
-              </motion.div>
-            </FadeInUp>
-          ))}
-        </div>
+                {member.image ? (
+                  <span style={{ position: "relative", width: 64, height: 64, borderRadius: 32, overflow: "hidden", flexShrink: 0 }}>
+                    <Image src={member.image} alt={member.name} fill sizes="64px" style={{ objectFit: "cover" }} />
+                  </span>
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 32,
+                      display: "grid",
+                      placeItems: "center",
+                      background: dark ? GRAD : INK,
+                      color: "#FFFFFF",
+                      fontFamily: SANS,
+                      fontSize: 22,
+                      fontWeight: 600,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {initials(member.name)}
+                  </span>
+                )}
+              </div>
+              <h3 style={{ margin: "auto 0 0", paddingTop: 28, fontFamily: SANS, fontSize: "clamp(28px,2.6vw,36px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.08 }}>{member.name}</h3>
+              <div style={{ ...kicker, color: dark ? PERI : INDIGO }}>{member.role}</div>
+              <p style={{ margin: 0, paddingTop: 14, borderTop: `1px solid ${dark ? "rgba(255,255,255,.1)" : "#E4E4E7"}`, fontFamily: BODY, fontSize: 15.5, lineHeight: 1.55, color: dark ? "#A1A1AA" : "#52525B" }}>
+                {member.bio}
+              </p>
+            </div>
+          );
+        })}
       </div>
-    </section>
+    </Band>
   );
 };
 

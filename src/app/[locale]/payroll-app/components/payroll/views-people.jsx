@@ -24,7 +24,7 @@ function PeopleView({ employees, openEmployee, openWizard }) {
                   <tr key={e.id} className="pay-rowlink" onClick={() => openEmployee(e.id)}>
                     <td>
                       <span style={{ display: "flex", alignItems: "center", gap: 11 }}>
-                        <span style={{ width: 32, height: 32, borderRadius: "var(--r-full)", background: "rgba(73,79,223,.2)", display: "grid", placeItems: "center", fontSize: 11.5, fontWeight: 700, color: "var(--primary-bright)", flexShrink: 0 }}>{e.first[0]}{e.last[0]}</span>
+                        <span style={{ width: 32, height: 32, borderRadius: "var(--r-full)", background: "rgba(79,85,241,.2)", display: "grid", placeItems: "center", fontSize: 11.5, fontWeight: 700, color: "var(--primary-bright)", flexShrink: 0 }}>{e.first[0]}{e.last[0]}</span>
                         <span style={{ fontWeight: 600 }}>{e.first} {e.last}</span>
                         {e.student && <PayChip tone="warn">Student</PayChip>}
                       </span>
@@ -61,17 +61,17 @@ function EmployeeDetail({ emp, runs, back, openPayslip }) {
   );
   return (
     <div className="pay-fade" data-screen-label="Employee detail">
-      <button onClick={back} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "none", border: 0, cursor: "pointer", color: "var(--on-dark-mute)", fontFamily: "var(--font-body)", fontSize: 13.5, fontWeight: 600, padding: 0, marginBottom: 18 }}><Icon name="arrow-left" size={15} color="currentColor" /> All people</button>
+      <button onClick={back} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "none", border: 0, cursor: "pointer", color: "var(--on-dark-mute)", fontFamily: "var(--font-display)", fontSize: 13.5, fontWeight: 600, padding: 0, marginBottom: 18 }}><Icon name="arrow-left" size={15} color="currentColor" /> All people</button>
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 22 }}>
-        <span style={{ width: 52, height: 52, borderRadius: "var(--r-full)", background: "rgba(73,79,223,.2)", display: "grid", placeItems: "center", fontSize: 17, fontWeight: 700, color: "var(--primary-bright)" }}>{emp.first[0]}{emp.last[0]}</span>
+        <span style={{ width: 52, height: 52, borderRadius: "var(--r-full)", background: "rgba(79,85,241,.2)", display: "grid", placeItems: "center", fontSize: 17, fontWeight: 700, color: "var(--primary-bright)" }}>{emp.first[0]}{emp.last[0]}</span>
         <div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 26, letterSpacing: "-.4px", color: "#fff", margin: 0 }}>{emp.first} {emp.last}</h2>
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 26, letterSpacing: "-.4px", color: "#fff", margin: 0 }}>{emp.first} {emp.last}</h2>
           <div style={{ fontSize: 13.5, color: "var(--stone)", marginTop: 3 }}>{emp.role} · {emp.type} · Net {C.fmtE(p.net)}/month</div>
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
         {EMP_TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)} style={{ height: 36, padding: "0 16px", borderRadius: "var(--r-full)", border: 0, cursor: "pointer", fontFamily: "var(--font-body)", fontSize: 13.5, fontWeight: 600, background: tab === t ? "#fff" : "var(--surface-elevated)", color: tab === t ? "#000" : "var(--on-dark-mute)", transition: "all .15s" }}>{t}</button>
+          <button key={t} onClick={() => setTab(t)} style={{ height: 36, padding: "0 16px", borderRadius: "var(--r-full)", border: 0, cursor: "pointer", fontFamily: "var(--font-display)", fontSize: 13.5, fontWeight: 600, background: tab === t ? "#fff" : "var(--surface-elevated)", color: tab === t ? "#09090B" : "var(--on-dark-mute)", transition: "all .15s" }}>{t}</button>
         ))}
       </div>
 

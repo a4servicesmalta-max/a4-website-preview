@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Adjustment } from "./QuestionnaireLayout";
+import { BODY, GRAD, INK, SANS, kicker, pill, type AqTone } from "./aqStyle";
 
 export default function SidebarRight({ adjustments = [] }: { adjustments?: Adjustment[] }) {
   const { t } = useTranslation("auditor-questionnaire");
@@ -17,64 +18,50 @@ export default function SidebarRight({ adjustments = [] }: { adjustments?: Adjus
     { name: "Presentation", status: "partial" },
   ];
 
-  const getStatusClass = (status: string) => {
-    if (status === "open") return "bg-red-100 text-red-600";
-    if (status === "partial") return "bg-amber-100 text-amber-600";
-    return "bg-emerald-100 text-emerald-600";
-  };
+  /** open = flag (ink), partial = hairline, done = indigo. */
+  const toneFor = (status: string): AqTone => (status === "open" ? "flag" : status === "partial" ? "open" : "done");
 
   return (
-    <aside className="bg-slate-50 flex flex-col h-[calc(100vh-100px)] sticky top-[100px] overflow-y-auto border-l border-slate-200">
+    <aside className="flex flex-col overflow-y-auto lg:sticky lg:top-[72px] lg:h-[calc(100vh-72px)] border-t lg:border-t-0 border-[#E4E4E7]" style={{ background: "#FAFAFA" }}>
       {/* Assertions */}
-      <div className="p-5 border-b border-slate-200">
-        <div className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mb-4">
-          {t("sidebarRight.title1")}
-        </div>
-        
+      <div className="p-5 border-b border-[#E4E4E7]">
+        <div style={{ ...kicker, marginBottom: 12 }}>{t("sidebarRight.title1")}</div>
+
         <div className="flex flex-col">
           {assertions.map((a, i) => (
-            <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-              <span className="text-xs font-semibold text-slate-700">{a.name}</span>
-              <span className={`font-mono text-[10px] px-2 py-0.5 rounded ${getStatusClass(a.status)}`}>
-                {a.status}
-              </span>
+            <div key={i} className="flex items-center justify-between gap-2" style={{ padding: "9px 0", borderTop: i ? "1px solid #E4E4E7" : "none" }}>
+              <span style={{ fontFamily: SANS, fontSize: 13.5, fontWeight: 600, color: INK }}>{a.name}</span>
+              <span style={pill(toneFor(a.status), { height: 22 })}>{a.status}</span>
             </div>
           ))}
         </div>
-        
+
         {/* Mini progress */}
-        <div className="mt-4 h-1 bg-slate-200 rounded-full overflow-hidden">
-          <div className="h-full bg-slate-800 w-[45%]" />
+        <div className="mt-4 overflow-hidden" style={{ height: 6, borderRadius: 3, background: "#E4E4E7" }}>
+          <div className="h-full" style={{ width: "45%", borderRadius: 3, background: GRAD }} />
         </div>
       </div>
 
       {/* Proposed Adjustments */}
       <div className="p-5">
-        <div className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mb-1">
-          {t("sidebarRight.title2")}
-        </div>
-        <div className="text-[10px] text-slate-400 mb-4">
-          {t("sidebarRight.adjSub")}
-        </div>
+        <div style={{ ...kicker, marginBottom: 4 }}>{t("sidebarRight.title2")}</div>
+        <div style={{ fontFamily: BODY, fontSize: 12, color: "#71717A", marginBottom: 14 }}>{t("sidebarRight.adjSub")}</div>
 
         {adjustments.length === 0 ? (
-          <div className="text-[11px] text-slate-400 p-4 border border-dashed border-slate-200 rounded-lg text-center">
+          <div className="text-center p-4" style={{ border: "1.5px dashed #D4D4D8", borderRadius: 16, fontFamily: BODY, fontSize: 12.5, color: "#71717A" }}>
             No proposed adjustments for this section.
           </div>
         ) : (
-          adjustments.map(adj => (
-            <div key={adj.id} className="p-3 bg-white border border-slate-200 rounded-lg mb-2 shadow-sm">
-              <div className="font-mono text-[10px] text-slate-400 mb-1">{adj.id} · {adj.type}</div>
-              <div className="text-xs text-slate-700 leading-snug">
-                {adj.desc}
+          adjustments.map((adj) => (
+            <div key={adj.id} className="mb-2" style={{ padding: 14, background: "#FFFFFF", border: "1px solid #E4E4E7", borderRadius: 16 }}>
+              <div style={{ fontFamily: BODY, fontSize: 11.5, color: "#71717A", marginBottom: 4 }}>
+                {adj.id} · {adj.type}
               </div>
-              <div className="font-mono text-[11px] font-bold text-red-500 mt-2">
-                {adj.amount}
-              </div>
+              <div style={{ fontFamily: BODY, fontSize: 13, lineHeight: 1.45, color: "#3F3F46" }}>{adj.desc}</div>
+              <div style={{ marginTop: 8, fontFamily: SANS, fontSize: 15, fontWeight: 600, letterSpacing: "-0.02em", color: INK, fontVariantNumeric: "tabular-nums" }}>{adj.amount}</div>
             </div>
           ))
         )}
-
       </div>
     </aside>
   );

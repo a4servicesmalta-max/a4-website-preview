@@ -1,12 +1,16 @@
 "use client";
 
 import React, { useMemo } from "react";
-import PageHeader from "@/components/common/PageHeader";
+import { useTranslation } from "react-i18next";
 import { usePagesTranslation } from "@/hooks/usePagesTranslation";
+import { PageHero } from "@/app/[locale]/services/components/PageHero";
+import { Button } from "@/components/a4-landing/Primitives";
+import { gradText } from "@/components/fx/primitives";
 import ClientPortalOverviewSection from "@/components/client-portal/ClientPortalOverviewSection";
 import PortalFeature from "@/components/services/PortalFeature";
 import ServiceFeatures from "@/components/services/ServiceFeatures";
 import RiskAuditSection from "@/components/accounting/RiskAuditSection";
+import { BOOK_A_CALL_PATH, CLIENT_LOGIN_URL } from "@/lib/external-links";
 
 const ROUTE = "portal/accounting-portal";
 
@@ -17,8 +21,14 @@ type BulletedSection = {
   footer?: string;
 };
 
+/**
+ * Accounting Portal — hero, how A4 delivers (with the sample requests panel),
+ * the monthly cycle, risk-based accounting, the numbered quality list on the
+ * dark grid, then integrated delivery.
+ */
 const AccountingPortalPage = () => {
   const { t } = usePagesTranslation(ROUTE);
+  const { t: tc } = useTranslation("common");
 
   const overview1Paragraphs = useMemo(() => {
     const raw = t("overview1.paragraphs", { returnObjects: true });
@@ -41,23 +51,30 @@ const AccountingPortalPage = () => {
   }, [t]);
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
-        <PageHeader
-          title={t("pageHeader.title")}
-          breadcrumbs={[{ label: t("pageHeader.breadcrumbs.0.label") }]}
-        />
-      </div>
+    <main id="main-content">
+      <PageHero eyebrow={tc("nav.platform")} title={t("pageHeader.title")} sub={overview1Paragraphs[0]}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          <Button variant="primary" size="lg" href={BOOK_A_CALL_PATH}>
+            {tc("glossary.bookDemo")}
+          </Button>
+          <Button variant="outline-dark" size="lg" href={CLIENT_LOGIN_URL} target="_blank">
+            {tc("nav.login")}
+          </Button>
+        </div>
+      </PageHero>
 
       <ClientPortalOverviewSection
         variant="accounting"
         i18nRouteKey={ROUTE}
+        n="01"
         heading={t("overview1.heading")}
-        paragraphs={overview1Paragraphs}
+        paragraphs={overview1Paragraphs.slice(1)}
       />
 
       <PortalFeature
-        portalImage="/assets/images/Accounting.jpg"
+        n="02"
+        surface="muted"
+        portalImage="/brand/portal/portal-dashboard.jpg"
         sectionLabel={t("feature.sectionLabel")}
         heading={t("feature.heading")}
         description={t("feature.description")}
@@ -73,28 +90,21 @@ const AccountingPortalPage = () => {
         }}
       />
 
-      <RiskAuditSection variant="accounting" />
+      <RiskAuditSection variant="accounting" n="03" />
+
       <ServiceFeatures
         title={
           <>
             {t("serviceFeatures.titleLine1")}
             <br />
-            {t("serviceFeatures.titleLine2")}
+            <span style={{ ...gradText, display: "inline-block", paddingBottom: ".06em" }}>{t("serviceFeatures.titleLine2")}</span>
           </>
         }
         description={t("serviceFeatures.description")}
-        bulletIconSrc="/assets/images/bullet2.png"
-        bulletIconAlt="Bullet"
         features={serviceFeatureBlocks}
       />
 
-      <ClientPortalOverviewSection
-        variant="accounting"
-        i18nRouteKey={ROUTE}
-        integratedDeliveryVisual
-        bulletedSections={overview2Sections}
-        bulletIconSrc="/assets/images/bullet.png"
-      />
+      <ClientPortalOverviewSection variant="accounting" i18nRouteKey={ROUTE} integratedDeliveryVisual bulletedSections={overview2Sections} />
     </main>
   );
 };

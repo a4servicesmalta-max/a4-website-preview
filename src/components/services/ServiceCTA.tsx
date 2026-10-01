@@ -1,35 +1,25 @@
 "use client";
 
 import React from "react";
-import LocalizedLink from "@/components/common/LocalizedLink";
-import { FadeInUp } from "../common/Animations";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/a4-landing/Primitives";
+import { BODY, Band } from "./SectionKit";
 
+/** Service closing CTA in the A4 style: the dark band, heading left, the white pill right. */
 const ServiceCTA = () => {
   const { t } = useTranslation("services");
   return (
-    <section className="w-full py-16 bg-[#F0F8FF] border-y border-zinc-50">
-      <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8">
-        <FadeInUp className="bg-white rounded-3xl p-8 md:p-12 shadow-lg shadow-zinc-900/5 flex flex-col md:flex-row items-center justify-between gap-8 border border-zinc-100">
-          <div className="max-w-2xl">
-            <h2 className="text-2xl md:text-3xl font-bold text-text-heading mb-4">
-              {t("shared.ctaTitle")}
-            </h2>
-            <p className="text-text-gray text-lg">
-              {t("shared.ctaBody")}
-            </p>
-          </div>
-          <div className="flex-shrink-0">
-            <LocalizedLink
-              href="/quote#process-steps"
-              className="inline-flex items-center justify-center px-8 py-4 bg-primary text-white text-lg font-medium rounded-full shadow-lg hover:bg-primary-blue hover:shadow-primary-blue/30 transition-all duration-300 transform hover:-translate-y-1"
-            >
-              {t("shared.ctaButton")}
-            </LocalizedLink>
-          </div>
-        </FadeInUp>
+    <Band surface="dark" tight>
+      <div data-fx="rise" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 32 }}>
+        <div style={{ maxWidth: 720 }}>
+          <h2 style={{ margin: 0, fontSize: "clamp(32px,3.6vw,52px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.04, color: "#FFFFFF" }}>{t("shared.ctaTitle")}</h2>
+          <p style={{ margin: "14px 0 0", fontFamily: BODY, fontSize: 18, lineHeight: 1.55, color: "#A1A1AA" }}>{t("shared.ctaBody")}</p>
+        </div>
+        <Button variant="primary" size="lg" href="/quote#process-steps">
+          {t("shared.ctaButton")}
+        </Button>
       </div>
-    </section>
+    </Band>
   );
 };
 

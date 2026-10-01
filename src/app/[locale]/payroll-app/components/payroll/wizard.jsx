@@ -1,6 +1,6 @@
 // wizard.jsx — Add Employee: 5-step wizard with live FSS band + SSC category helper.
 "use client";
-import React, { useState, useMemo } from "react";
+import React from "react";
 import { Icon } from "@/components/a4-landing/Primitives";
 import { PayCalc } from "./calc";
 import { PayBtn, PayCard, PayField, PaySeg, PayToggle } from "./ui.jsx";
@@ -23,7 +23,7 @@ function WizProgress({ step }) {
       {WIZ_STEPS.map((s, i) => (
         <React.Fragment key={s}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <span style={{ width: 30, height: 30, borderRadius: "var(--r-full)", display: "grid", placeItems: "center", flexShrink: 0, fontSize: 12.5, fontWeight: 700, background: i < step ? "var(--primary)" : i === step ? "#fff" : "var(--surface-deep)", color: i < step ? "#fff" : i === step ? "#000" : "var(--stone)", border: i > step ? "1px solid var(--hairline-dark)" : "none", transition: "all .2s" }}>
+            <span style={{ width: 30, height: 30, borderRadius: "var(--r-full)", display: "grid", placeItems: "center", flexShrink: 0, fontSize: 12.5, fontWeight: 700, background: i < step ? "var(--primary)" : i === step ? "#fff" : "var(--surface-deep)", color: i < step ? "#fff" : i === step ? "#09090B" : "var(--stone)", border: i > step ? "1px solid var(--hairline-dark)" : "none", transition: "all .2s" }}>
               {i < step ? <Icon name="check" size={14} color="#fff" stroke={3} /> : i + 1}
             </span>
             <span style={{ fontSize: 13, fontWeight: 600, color: i === step ? "#fff" : i < step ? "var(--on-dark-mute)" : "var(--stone)", whiteSpace: "nowrap" }} className={i === step ? "" : "wiz-lbl"}>{s}</span>
@@ -46,7 +46,7 @@ function WizHelper({ d }) {
   const ssc = d.dob ? C.sscWeekly({ ...d, children: d.hasKids ? d.children : 0 }, hasSalary ? weekly : 300) : null;
   const age = d.dob ? C.ageOn(d.dob) : null;
   return (
-    <div style={{ background: "rgba(73,79,223,.08)", border: "1px solid rgba(73,79,223,.35)", borderRadius: "var(--r-md)", padding: "16px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ background: "rgba(79,85,241,.08)", border: "1px solid rgba(79,85,241,.35)", borderRadius: "var(--r-md)", padding: "16px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--primary-bright)" }}>
         <Icon name="sparkles" size={14} color="var(--primary-bright)" /> Live assessment
       </div>
@@ -104,11 +104,11 @@ function WizardModal({ onClose, onSave }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.72)", display: "grid", placeItems: "center", padding: 20 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(9,9,11,.72)", display: "grid", placeItems: "center", padding: 20 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="pay-fade pay-scroll" style={{ width: "min(760px, 100%)", maxHeight: "92vh", overflowY: "auto", background: "var(--surface-elevated)", border: "1px solid var(--hairline-dark)", borderRadius: "var(--r-xl)", padding: "28px 32px 26px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <div>
-            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 24, letterSpacing: "-.4px", color: "#fff", margin: 0 }}>Add employee</h2>
+            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 24, letterSpacing: "-.4px", color: "#fff", margin: 0 }}>Add employee</h2>
             <div style={{ fontSize: 13, color: "var(--stone)", marginTop: 4 }}>Step {step + 1} of 5 — {WIZ_STEPS[step]}</div>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ background: "none", border: 0, cursor: "pointer", padding: 6 }}><Icon name="x" size={20} color="var(--stone)" /></button>
@@ -241,7 +241,7 @@ function WizardModal({ onClose, onSave }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 26, paddingTop: 18, borderTop: "1px solid var(--divider-soft)" }}>
           <PayBtn variant="ghost" onClick={() => (step === 0 ? onClose() : setStep(step - 1))}>{step === 0 ? "Cancel" : <><Icon name="arrow-left" size={15} color="#fff" /> Back</>}</PayBtn>
           {step < 4 ? (
-            <PayBtn variant="primary" disabled={!valid} onClick={() => setStep(step + 1)}>Continue <Icon name="arrow-right" size={15} color={valid ? "#000" : "var(--stone)"} /></PayBtn>
+            <PayBtn variant="primary" disabled={!valid} onClick={() => setStep(step + 1)}>Continue <Icon name="arrow-right" size={15} color={valid ? "#09090B" : "var(--stone)"} /></PayBtn>
           ) : (
             <PayBtn variant="cobalt" onClick={save}><Icon name="user-check" size={16} color="#fff" /> Confirm & add employee</PayBtn>
           )}

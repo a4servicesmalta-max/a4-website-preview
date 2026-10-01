@@ -1,130 +1,193 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { Play, Pause, ArrowLeft, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
+import { SectionHead } from "@/components/a4-landing/Primitives";
+import { A4_F, A4_S } from "@/components/fx/primitives";
+import { gcol, prefersReducedMotion } from "@/lib/fx/engine";
+import { BODY, Band, PERI, SANS, gradText } from "@/components/services/SectionKit";
 
 interface OrchestratorProps {
   namespace: "accounting" | "business";
 }
 
 const AGENTS = [
-  { name: 'Penny', role: 'Planning', color: '#18181b', emoji: '🗺️', angle: -90 },
-  { name: 'Rika', role: 'Risk Assess.', color: '#EF4444', emoji: '🔍', angle: -45 },
-  { name: 'Felix', role: 'Fieldwork', color: '#10B981', emoji: '🔬', angle: 0 },
-  { name: 'Glex', role: 'GL Anomaly', color: '#F59E0B', emoji: '🧮', angle: 45 },
-  { name: 'Cleo', role: 'Completion', color: '#8B5CF6', emoji: '✅', angle: 90 },
-  { name: 'Remy', role: 'Reporting', color: '#06B6D4', emoji: '📄', angle: 135 },
-  { name: 'Comi', role: 'Comms', color: '#EC4899', emoji: '💬', angle: 180 },
-  { name: 'Coda', role: 'Compliance', color: '#14B8A6', emoji: '🛡️', angle: 225 },
+  { name: "Penny", role: "Planning", angle: -90 },
+  { name: "Rika", role: "Risk Assess.", angle: -45 },
+  { name: "Felix", role: "Fieldwork", angle: 0 },
+  { name: "Glex", role: "GL Anomaly", angle: 45 },
+  { name: "Cleo", role: "Completion", angle: 90 },
+  { name: "Remy", role: "Reporting", angle: 135 },
+  { name: "Comi", role: "Comms", angle: 180 },
+  { name: "Coda", role: "Compliance", angle: 225 },
 ];
+
+/** Each agent takes its place on the brand gradient (indigo → periwinkle). */
+const AGENT_COLOR = AGENTS.map((_, i) => gcol(i / (AGENTS.length - 1)));
 
 interface StepType {
   title: string;
   desc: string;
   active: number[];
-  highlight: 'orchestrator' | 'all';
+  highlight: "orchestrator" | "all";
   pulseOrch?: boolean;
   beam?: number[];
 }
 
 const STEPS: StepType[] = [
   {
-    title: 'Engagement received',
-    desc: 'Your firm opens an engagement in the portal. The Orchestrator Agent instantly receives the brief — client name, materiality, prior year file, and deadline.',
+    title: "Engagement received",
+    desc: "Your firm opens an engagement in the portal. The Orchestrator Agent instantly receives the brief — client name, materiality, prior year file, and deadline.",
     active: [],
-    highlight: 'orchestrator',
-    pulseOrch: true
+    highlight: "orchestrator",
+    pulseOrch: true,
   },
   {
-    title: 'Orchestrator dispatches Planning',
-    desc: 'The Orchestrator analyses the brief and activates Penny — the Audit Planning Agent — first. Penny produces the audit strategy, materiality calculations, and PBC list.',
+    title: "Orchestrator dispatches Planning",
+    desc: "The Orchestrator analyses the brief and activates Penny — the Audit Planning Agent — first. Penny produces the audit strategy, materiality calculations, and PBC list.",
     active: [0],
-    highlight: 'orchestrator',
-    beam: [0]
+    highlight: "orchestrator",
+    beam: [0],
   },
   {
-    title: 'Risk assessment activated',
-    desc: 'With the plan approved, the Orchestrator dispatches Rika to perform the risk assessment — mapping every ISA 315 risk to audit assertions before fieldwork begins.',
+    title: "Risk assessment activated",
+    desc: "With the plan approved, the Orchestrator dispatches Rika to perform the risk assessment — mapping every ISA 315 risk to audit assertions before fieldwork begins.",
     active: [0, 1],
-    highlight: 'orchestrator',
-    beam: [1]
+    highlight: "orchestrator",
+    beam: [1],
   },
   {
-    title: 'Parallel specialist deployment',
-    desc: 'The Orchestrator simultaneously activates Felix (Fieldwork), Glex (GL Anomaly), Comi (Communications), and Cleo (Completion) — each working their area concurrently.',
+    title: "Parallel specialist deployment",
+    desc: "The Orchestrator simultaneously activates Felix (Fieldwork), Glex (GL Anomaly), Comi (Communications), and Cleo (Completion) — each working their area concurrently.",
     active: [0, 1, 2, 3, 4, 6],
-    highlight: 'orchestrator',
-    beam: [2, 3, 4, 6]
+    highlight: "orchestrator",
+    beam: [2, 3, 4, 6],
   },
   {
-    title: 'Reporting & compliance finalised',
-    desc: 'Remy drafts the audit report and management letter. The Orchestrator then activates Coda — the Compliance Agent — to review the completed file against ISAs and ISQM.',
+    title: "Reporting & compliance finalised",
+    desc: "Remy drafts the audit report and management letter. The Orchestrator then activates Coda — the Compliance Agent — to review the completed file against ISAs and ISQM.",
     active: [0, 1, 2, 3, 4, 5, 6, 7],
-    highlight: 'orchestrator',
-    beam: [5, 7]
+    highlight: "orchestrator",
+    beam: [5, 7],
   },
   {
-    title: 'Complete file delivered',
-    desc: 'The Orchestrator consolidates all agent outputs into a single indexed audit file and delivers it to your partner portal. Your team reviews, applies judgement, and signs off.',
+    title: "Complete file delivered",
+    desc: "The Orchestrator consolidates all agent outputs into a single indexed audit file and delivers it to your partner portal. Your team reviews, applies judgement, and signs off.",
     active: [0, 1, 2, 3, 4, 5, 6, 7],
-    highlight: 'all',
-    beam: []
-  }
+    highlight: "all",
+    beam: [],
+  },
 ];
 
+const STEP_DURATION = 3200;
+
+const RM_QUERY = "(prefers-reduced-motion: reduce)";
+function useReducedMotion() {
+  return useSyncExternalStore(
+    (cb) => {
+      const m = window.matchMedia(RM_QUERY);
+      m.addEventListener("change", cb);
+      return () => m.removeEventListener("change", cb);
+    },
+    () => window.matchMedia(RM_QUERY).matches,
+    () => false
+  );
+}
+
+type Particle = { agentIdx: number; t: number; speed: number; size: number; color: string; done: boolean };
+
+const roundBtn: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  display: "grid",
+  placeItems: "center",
+  border: "1px solid rgba(255,255,255,.18)",
+  background: "rgba(255,255,255,.06)",
+  color: "#FFFFFF",
+  cursor: "pointer",
+};
+
+/**
+ * "How it works": the orchestrator and its eight specialists on canvas, drawn
+ * in the A4 palette on the dark grid, stepping through an engagement. Autoplay
+ * pauses when the visitor steps manually (and is off under reduced motion).
+ */
 const OrchestratorCanvas = ({ namespace }: OrchestratorProps) => {
   const { t } = useTranslation(namespace);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+  const stepRef = useRef(0);
+  const onStepRef = useRef<((idx: number) => void) | null>(null);
+
   const [currentStep, setCurrentStep] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
+  // null = the visitor hasn't chosen: autoplay unless they prefer reduced motion.
+  const [userPlaying, setUserPlaying] = useState<boolean | null>(null);
+  const reduced = useReducedMotion();
+  const isPlaying = userPlaying ?? !reduced;
+
+  // The canvas loop reads the step from a ref, so manual steps show even while paused.
+  useEffect(() => {
+    stepRef.current = currentStep;
+    onStepRef.current?.(currentStep);
+  }, [currentStep]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const id = window.setInterval(() => setCurrentStep((s) => (s + 1) % STEPS.length), STEP_DURATION + 600);
+    return () => window.clearInterval(id);
+  }, [isPlaying]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const still = prefersReducedMotion();
+    const family = (getComputedStyle(document.body).getPropertyValue("--font-outfit") || "").trim() || "Outfit";
+    const markS = new Path2D(A4_S);
+    const markF = new Path2D(A4_F);
 
-    let W = 0, H = 0, CX = 0, CY = 0, OR = 0, ORCH_R = 0, AGENT_R = 0;
-    let animFrame: number;
-    let playing = isPlaying;
-    let localStep = currentStep;
-    
+    let W = 0,
+      H = 0,
+      CX = 0,
+      CY = 0,
+      OR = 0,
+      ORCH_R = 0,
+      AGENT_R = 0;
+    let animFrame = 0;
     let pulseT = 0;
-    let stepT = 0; 
-    const STEP_DURATION = 3200; 
+    let stepT = 0;
     let lastTime: number | null = null;
-    let beamParticles: any[] = [];
-    let autoPlayTimer: NodeJS.Timeout | null = null;
+    let beamParticles: Particle[] = [];
+    let visible = true;
 
     const resize = () => {
       const rect = canvas.parentElement?.getBoundingClientRect();
       if (!rect) return;
       const dpr = window.devicePixelRatio || 1;
       W = Math.min(rect.width, 1020);
-      H = W * 0.58;
+      H = W * (W < 560 ? 0.96 : 0.58);
       canvas.width = W * dpr;
       canvas.height = H * dpr;
-      canvas.style.width = W + 'px';
-      canvas.style.height = H + 'px';
-      ctx.scale(dpr, dpr);
-      CX = W / 2; CY = H / 2;
+      canvas.style.width = W + "px";
+      canvas.style.height = H + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      CX = W / 2;
+      CY = H / 2;
       OR = Math.min(W, H) * 0.36;
       ORCH_R = Math.min(W, H) * 0.12;
       AGENT_R = Math.min(W, H) * 0.075;
     };
-
     window.addEventListener("resize", resize);
     resize();
 
-    const agentPos = (a: any) => {
-      const rad = (a.angle - 90) * Math.PI / 180;
+    const agentPos = (i: number) => {
+      const rad = ((AGENTS[i].angle - 90) * Math.PI) / 180;
       return { x: CX + OR * Math.cos(rad), y: CY + OR * Math.sin(rad) };
     };
 
-    const drawRing = (x: number, y: number, r: number, color: string, alpha: number, lw: number) => {
+    const ring = (x: number, y: number, r: number, color: string, alpha: number, lw: number) => {
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.beginPath();
@@ -135,167 +198,136 @@ const OrchestratorCanvas = ({ namespace }: OrchestratorProps) => {
       ctx.restore();
     };
 
-    const drawConnector = (x1: number, y1: number, x2: number, y2: number, color: string, alpha: number, lw: number, dashed: boolean) => {
+    const text = (s: string, x: number, y: number, size: number, color: string, weight: number | string = 500) => {
       ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lw;
-      if (dashed) ctx.setLineDash([6, 8]);
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-    };
-
-    const drawText = (text: string, x: number, y: number, size: number, color: string, alpha: number, weight: string | number = 400) => {
-      ctx.save();
-      ctx.globalAlpha = alpha;
       ctx.fillStyle = color;
-      ctx.font = `${weight} ${size}px 'Inter', sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, x, y);
+      ctx.font = `${weight} ${size}px ${family}, Outfit, Inter, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(s, x, y);
       ctx.restore();
     };
 
-    const spawnBeamParticles = (agentIdx: number) => {
-      const a = AGENTS[agentIdx];
+    const spawnBeam = (agentIdx: number) => {
       for (let i = 0; i < 12; i++) {
-        const t = i / 12;
-        beamParticles.push({
-          agentIdx,
-          t: t * 0.6,
-          speed: 0.018 + Math.random() * 0.012,
-          size: 3 + Math.random() * 3,
-          color: a.color,
-          done: false
-        });
+        beamParticles.push({ agentIdx, t: (i / 12) * 0.6, speed: 0.018 + Math.random() * 0.012, size: 2.5 + Math.random() * 2.5, color: AGENT_COLOR[agentIdx], done: false });
       }
     };
 
-    const drawBeamParticle = (p: any) => {
-      const a = AGENTS[p.agentIdx];
-      const pos = agentPos(a);
-      const x = CX + (pos.x - CX) * p.t;
-      const y = CY + (pos.y - CY) * p.t;
-      ctx.save();
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 12;
-      ctx.globalAlpha = Math.sin(p.t * Math.PI) * 0.9;
-      ctx.beginPath();
-      ctx.arc(x, y, p.size, 0, Math.PI * 2);
-      ctx.fillStyle = p.color;
-      ctx.fill();
-      ctx.restore();
+    onStepRef.current = (idx: number) => {
+      stepT = 0;
+      beamParticles = [];
+      (STEPS[idx].beam || []).forEach(spawnBeam);
     };
 
     const draw = (ts: number) => {
+      animFrame = requestAnimationFrame(draw);
+      if (!visible) {
+        lastTime = ts;
+        return;
+      }
       if (!lastTime) lastTime = ts;
-      const dt = ts - lastTime;
+      const dt = still ? 0 : ts - lastTime;
       lastTime = ts;
       pulseT += dt * 0.001;
-      stepT = Math.min(stepT + dt / STEP_DURATION, 1);
+      stepT = still ? 1 : Math.min(stepT + dt / STEP_DURATION, 1);
 
       ctx.clearRect(0, 0, W, H);
-
-      const step = STEPS[localStep];
-
-      // BG grid
-      ctx.save();
-      ctx.globalAlpha = 0.04;
-      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-      ctx.lineWidth = 0.5;
-      for (let x = 0; x < W; x += 52) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-      for (let y = 0; y < H; y += 52) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-      ctx.restore();
+      const step = STEPS[stepRef.current];
 
       // Orbits
-      drawRing(CX, CY, OR, '#18181b', 0.08, 1);
-      drawRing(CX, CY, OR * 1.12, '#18181b', 0.04, 0.5);
-      drawRing(CX, CY, OR * 0.6, '#18181b', 0.05, 0.5);
+      ring(CX, CY, OR, "#FFFFFF", 0.1, 1);
+      ring(CX, CY, OR * 1.12, "#FFFFFF", 0.05, 0.5);
+      ring(CX, CY, OR * 0.6, "#FFFFFF", 0.06, 0.5);
 
       const orbitAngle = pulseT * 0.8;
       ctx.save();
-      ctx.globalAlpha = 0.6;
-      ctx.shadowColor = 'rgba(0,0,0,0.15)';
-      ctx.shadowBlur = 8;
+      ctx.shadowColor = PERI;
+      ctx.shadowBlur = 10;
       ctx.beginPath();
       ctx.arc(CX + OR * Math.cos(orbitAngle), CY + OR * Math.sin(orbitAngle), 3, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillStyle = PERI;
       ctx.fill();
       ctx.restore();
 
       // Connectors
-      AGENTS.forEach((a, i) => {
-        const pos = agentPos(a);
-        const isActive = step.active.includes(i);
-        const alpha = isActive ? 0.35 : 0.08;
-        drawConnector(CX, CY, pos.x, pos.y, isActive ? a.color : 'rgba(0,0,0,0.15)', alpha, isActive ? 1.5 : 0.5, !isActive);
+      AGENTS.forEach((_, i) => {
+        const p = agentPos(i);
+        const on = step.active.includes(i);
+        ctx.save();
+        ctx.globalAlpha = on ? 0.55 : 0.18;
+        ctx.strokeStyle = on ? AGENT_COLOR[i] : "#FFFFFF";
+        ctx.lineWidth = on ? 1.5 : 0.6;
+        if (!on) ctx.setLineDash([5, 8]);
+        ctx.beginPath();
+        ctx.moveTo(CX, CY);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        ctx.restore();
       });
 
       // Beams
-      beamParticles = beamParticles.filter(p => !p.done);
-      beamParticles.forEach(p => {
-        p.t += p.speed;
-        if (p.t >= 1) p.done = true;
-        else drawBeamParticle(p);
+      beamParticles = beamParticles.filter((b) => !b.done);
+      beamParticles.forEach((b) => {
+        b.t += still ? 0 : b.speed;
+        if (b.t >= 1) {
+          b.done = true;
+          return;
+        }
+        const p = agentPos(b.agentIdx);
+        ctx.save();
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 12;
+        ctx.globalAlpha = Math.sin(b.t * Math.PI) * 0.95;
+        ctx.beginPath();
+        ctx.arc(CX + (p.x - CX) * b.t, CY + (p.y - CY) * b.t, b.size, 0, Math.PI * 2);
+        ctx.fillStyle = b.color;
+        ctx.fill();
+        ctx.restore();
       });
 
       // Agents
       AGENTS.forEach((a, i) => {
-        const pos = agentPos(a);
-        const isActive = step.active.includes(i);
-        const isBeaming = step.beam && step.beam.includes(i);
-
-        if (isActive) {
+        const p = agentPos(i);
+        const on = step.active.includes(i);
+        const beaming = !!step.beam?.includes(i);
+        const col = AGENT_COLOR[i];
+        if (on) {
           const pulse = 0.5 + 0.5 * Math.sin(pulseT * 2 + i);
-          drawRing(pos.x, pos.y, AGENT_R + 8 + pulse * 6, a.color, 0.15 + pulse * 0.1, 1);
+          ring(p.x, p.y, AGENT_R + 7 + pulse * 6, col, 0.22 + pulse * 0.14, 1);
         }
-
         ctx.save();
-        ctx.shadowColor = isActive ? a.color : 'transparent';
-        ctx.shadowBlur = isActive ? 20 : 0;
-        ctx.globalAlpha = isActive ? 1 : 0.35;
+        ctx.shadowColor = on ? col : "transparent";
+        ctx.shadowBlur = on ? 22 : 0;
         ctx.beginPath();
-        ctx.arc(pos.x, pos.y, AGENT_R, 0, Math.PI * 2);
-
-        const grad = ctx.createRadialGradient(pos.x - AGENT_R * 0.3, pos.y - AGENT_R * 0.3, 0, pos.x, pos.y, AGENT_R);
-        if (isActive) {
-          grad.addColorStop(0, a.color + 'CC');
-          grad.addColorStop(1, a.color + '44');
+        ctx.arc(p.x, p.y, AGENT_R, 0, Math.PI * 2);
+        const g = ctx.createRadialGradient(p.x - AGENT_R * 0.3, p.y - AGENT_R * 0.3, 0, p.x, p.y, AGENT_R);
+        if (on) {
+          g.addColorStop(0, col);
+          g.addColorStop(1, `${col}44`);
         } else {
-          grad.addColorStop(0, '#ffffff');
-          grad.addColorStop(1, '#f4f4f5');
+          g.addColorStop(0, "#27272A");
+          g.addColorStop(1, "#18181B");
         }
-        ctx.fillStyle = grad;
+        ctx.fillStyle = g;
         ctx.fill();
-        ctx.strokeStyle = isActive ? a.color : '#e4e4e7';
-        ctx.lineWidth = isActive ? 2 : 1;
+        ctx.strokeStyle = on ? col : "#3F3F46";
+        ctx.lineWidth = on ? 2 : 1;
         ctx.stroke();
         ctx.restore();
 
-        ctx.save();
-        ctx.globalAlpha = isActive ? 1 : 0.3;
-        ctx.font = `${AGENT_R * 0.7}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(a.emoji, pos.x, pos.y - AGENT_R * 0.1);
-        ctx.restore();
+        text(a.name.charAt(0), p.x, p.y + 1, AGENT_R * 0.9, on ? "#FFFFFF" : "#71717A", 600);
+        const ly = p.y + AGENT_R + 15;
+        text(a.name, p.x, ly, Math.max(11, AGENT_R * 0.55), on ? "#FFFFFF" : "#71717A", 600);
+        text(a.role, p.x, ly + Math.max(13, AGENT_R * 0.6), Math.max(10, AGENT_R * 0.42), on ? "#C7C9FB" : "#52525B", 500);
 
-        const labelY = pos.y + AGENT_R + 14;
-        drawText(a.name, pos.x, labelY, Math.max(10, AGENT_R * 0.55), isActive ? '#18181b' : '#a1a1aa', 1, 600);
-        drawText(a.role, pos.x, labelY + Math.max(12, AGENT_R * 0.6), Math.max(9, AGENT_R * 0.42), isActive ? a.color : '#d4d4d8', 1, 400);
-
-        if (isBeaming) {
+        if (beaming) {
           ctx.save();
-          const shimmerAlpha = 0.4 + 0.4 * Math.sin(pulseT * 6 + i);
-          ctx.globalAlpha = shimmerAlpha;
-          ctx.strokeStyle = '#18181b';
+          ctx.globalAlpha = 0.5 + 0.4 * Math.sin(pulseT * 6 + i);
+          ctx.strokeStyle = "#FFFFFF";
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(pos.x, pos.y, AGENT_R + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * (stepT * 1.5 % 1) * 2);
+          ctx.arc(p.x, p.y, AGENT_R + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * ((stepT * 1.5) % 1) * 2);
           ctx.stroke();
           ctx.restore();
         }
@@ -303,182 +335,142 @@ const OrchestratorCanvas = ({ namespace }: OrchestratorProps) => {
 
       // Orchestrator
       const orchPulse = 0.5 + 0.5 * Math.sin(pulseT * 1.5);
-      const isHighlightAll = step.highlight === 'all';
+      const all = step.highlight === "all";
+      ring(CX, CY, ORCH_R * 1.5 + orchPulse * 8, "#FFFFFF", 0.1 + orchPulse * 0.06, 1);
+      ring(CX, CY, ORCH_R * 1.8 + orchPulse * 6, "#FFFFFF", 0.06 + orchPulse * 0.04, 1);
 
       ctx.save();
-      ctx.globalAlpha = 0.08 + orchPulse * 0.06;
-      ctx.strokeStyle = '#18181b';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(CX, CY, ORCH_R * 1.5 + orchPulse * 8, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(CX, CY, ORCH_R * 1.8 + orchPulse * 6, 0, Math.PI * 2); ctx.stroke();
-      ctx.restore();
-
-      ctx.save();
-      ctx.shadowColor = isHighlightAll ? 'rgba(74,222,128,0.5)' : 'rgba(0,0,0,0.08)';
+      ctx.shadowColor = all ? "rgba(79,85,241,.85)" : "rgba(79,85,241,.35)";
       ctx.shadowBlur = 30 + orchPulse * 20;
       const og = ctx.createRadialGradient(CX - ORCH_R * 0.2, CY - ORCH_R * 0.2, 0, CX, CY, ORCH_R);
-      if (isHighlightAll) {
-        og.addColorStop(0, '#f0fdf4');
-        og.addColorStop(0.5, '#bbf7d0');
-        og.addColorStop(1, '#4ade80');
+      if (all) {
+        og.addColorStop(0, "#8B8FF7");
+        og.addColorStop(0.55, "#6468F3");
+        og.addColorStop(1, "#4F55F1");
       } else {
-        og.addColorStop(0, '#ffffff');
-        og.addColorStop(0.5, '#f4f4f5');
-        og.addColorStop(1, '#e4e4e7');
+        og.addColorStop(0, "#27272A");
+        og.addColorStop(1, "#09090B");
       }
       ctx.beginPath();
       ctx.arc(CX, CY, ORCH_R, 0, Math.PI * 2);
       ctx.fillStyle = og;
       ctx.fill();
-      ctx.strokeStyle = isHighlightAll ? '#4ADE80' : 'rgba(0,0,0,0.05)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = all ? "#C7C9FB" : "rgba(255,255,255,.18)";
+      ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.restore();
 
       ctx.save();
-      ctx.globalAlpha = 0.5;
-      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 1.2;
       ctx.setLineDash([4, 6]);
       ctx.translate(CX, CY);
       ctx.rotate(pulseT * 0.6);
       ctx.beginPath();
       ctx.arc(0, 0, ORCH_R + 6, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.setLineDash([]);
       ctx.restore();
 
-      const orchFontSize = Math.max(11, ORCH_R * 0.28);
-      drawText('⚡', CX, CY - ORCH_R * 0.22, ORCH_R * 0.5, '#18181b', 1);
-      drawText('ORCHESTRATOR', CX, CY + ORCH_R * 0.22, orchFontSize, '#18181b', 1, 800);
-      drawText('AGENT', CX, CY + ORCH_R * 0.5, orchFontSize * 0.85, isHighlightAll ? '#166534' : '#71717a', 1, 600);
+      // The A4 mark at the centre
+      const ms = ORCH_R * 0.62;
+      ctx.save();
+      ctx.translate(CX - ms / 2, CY - ORCH_R * 0.2 - ms / 2);
+      ctx.scale(ms / 515.6, ms / 515.6);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fill(markS);
+      ctx.fill(markF, "evenodd");
+      ctx.restore();
+      const fs = Math.max(9, ORCH_R * 0.2);
+      text("ORCHESTRATOR", CX, CY + ORCH_R * 0.36, fs, "#FFFFFF", 700);
+      text("AGENT", CX, CY + ORCH_R * 0.36 + fs * 1.25, fs * 0.85, all ? "#FFFFFF" : "#A1A1AA", 600);
 
-      if (isHighlightAll) {
-        const burst = stepT;
+      if (all) {
         for (let i = 0; i < 8; i++) {
-          const angle = (i / 8) * Math.PI * 2 + pulseT * 0.3;
-          const r = ORCH_R * (1.4 + burst * 0.6);
-          const x = CX + r * Math.cos(angle);
-          const y = CY + r * Math.sin(angle);
+          const ang = (i / 8) * Math.PI * 2 + pulseT * 0.3;
+          const r = ORCH_R * (1.4 + stepT * 0.6);
           ctx.save();
-          ctx.globalAlpha = (1 - burst) * 0.6;
-          ctx.shadowColor = '#4ADE80';
+          ctx.globalAlpha = (1 - stepT) * 0.7;
+          ctx.shadowColor = PERI;
           ctx.shadowBlur = 8;
           ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
-          ctx.fillStyle = '#4ADE80';
+          ctx.arc(CX + r * Math.cos(ang), CY + r * Math.sin(ang), 3, 0, Math.PI * 2);
+          ctx.fillStyle = PERI;
           ctx.fill();
           ctx.restore();
         }
       }
-
-      animFrame = requestAnimationFrame(draw);
     };
 
     animFrame = requestAnimationFrame(draw);
+    onStepRef.current(stepRef.current);
 
-    const runStepLogic = (idx: number) => {
-      stepT = 0;
-      beamParticles = [];
-      const st = STEPS[idx];
-      if (st.beam) {
-        st.beam.forEach(b => spawnBeamParticles(b));
-      }
-    };
-
-    const nextStep = () => {
-      localStep = (localStep + 1) % STEPS.length;
-      setCurrentStep(localStep);
-      runStepLogic(localStep);
-    };
-
-    if (playing) {
-      autoPlayTimer = setInterval(nextStep, STEP_DURATION + 600);
-    }
+    // Don't paint while the canvas is off screen.
+    const io = new IntersectionObserver((es) => {
+      visible = es.some((e) => e.isIntersecting);
+    });
+    io.observe(canvas);
 
     return () => {
       window.removeEventListener("resize", resize);
       cancelAnimationFrame(animFrame);
-      if (autoPlayTimer) clearInterval(autoPlayTimer);
+      io.disconnect();
+      onStepRef.current = null;
     };
-  }, [isPlaying]);
+  }, []);
+
+  const go = (dir: 1 | -1) => {
+    setUserPlaying(false);
+    setCurrentStep((s) => (s + dir + STEPS.length) % STEPS.length);
+  };
 
   return (
-    <section id="how" className="relative z-10 py-32 border-t border-zinc-200 overflow-hidden bg-white">
-      <div className="text-center px-6 mb-16">
-        <div className="inline-flex items-center gap-2.5 mb-4">
-          <div className="w-7 h-[2px] bg-zinc-400 rounded-full" />
-          <span className="text-[11px] font-bold tracking-widest uppercase text-zinc-500">
-            {t("how.eyebrow")}
+    <Band id="how" surface="dark">
+      <SectionHead
+        dark
+        n="02"
+        eyebrow={t("how.eyebrow")}
+        title={
+          <>
+            {t("how.titleLine1")} <span style={{ ...gradText, paddingBottom: ".06em" }}>{t("how.titleHighlight")}</span>
+          </>
+        }
+        sub={t("how.sub")}
+      />
+
+      <div data-fx="rise" data-d="150" style={{ position: "relative", marginTop: "clamp(40px,5vw,64px)", maxWidth: 1020, marginInline: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <canvas ref={canvasRef} role="img" aria-label={`${STEPS[currentStep].title}. ${STEPS[currentStep].desc}`} style={{ display: "block", maxWidth: "100%" }} />
+        </div>
+
+        <div style={{ marginTop: 28, textAlign: "center", minHeight: 150 }} aria-live="polite">
+          <span className="a4-chip a4-chip-dark" style={{ height: 30, fontSize: 13, fontWeight: 600 }}>
+            Step <span style={{ color: "#FFFFFF" }}>{currentStep + 1}</span> of {STEPS.length}
           </span>
-          <div className="w-7 h-[2px] bg-zinc-400 rounded-full" />
-        </div>
-        <h2 className="font-sora text-[clamp(34px,4.5vw,56px)] font-extrabold tracking-tight leading-[1.08] text-zinc-900 mb-3">
-          {t("how.titleLine1")} <span className="text-zinc-500">{t("how.titleHighlight")}</span>
-        </h2>
-        <p className="text-base font-normal text-zinc-600 leading-relaxed max-w-xl mx-auto">
-          {t("how.sub")}
-        </p>
-      </div>
-
-      <div className="relative w-full max-w-[1100px] mx-auto px-10">
-        <canvas ref={canvasRef} className="w-full block rounded-3xl" />
-
-        <div className="text-center mt-8 min-h-[72px] px-10">
-          <div className="inline-block text-[10px] font-bold tracking-widest uppercase py-1 px-3.5 rounded-full bg-zinc-100 text-zinc-600 mb-2.5 border border-zinc-200">
-            Step {currentStep + 1} of {STEPS.length}
-          </div>
-          <div className="font-sora text-xl font-bold text-zinc-900 mb-1.5 tracking-tight">
-            {STEPS[currentStep].title}
-          </div>
-          <div className="text-sm font-light text-zinc-900/50 leading-relaxed max-w-2xl mx-auto min-h-[48px]">
-            {STEPS[currentStep].desc}
-          </div>
+          <div style={{ marginTop: 16, fontFamily: SANS, fontSize: "clamp(24px,2.4vw,32px)", fontWeight: 600, letterSpacing: "-0.03em", color: "#FFFFFF" }}>{STEPS[currentStep].title}</div>
+          <p style={{ margin: "10px auto 0", maxWidth: 680, fontFamily: BODY, fontSize: 16, lineHeight: 1.6, color: "#A1A1AA" }}>{STEPS[currentStep].desc}</p>
         </div>
 
-        <div className="flex justify-center gap-2 mt-6">
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24 }} aria-hidden="true">
           {STEPS.map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
-                i === currentStep ? "w-6 bg-zinc-800" : "w-1.5 bg-zinc-300"
-              )}
-            />
+            <span key={i} style={{ height: 6, width: i === currentStep ? 28 : 6, borderRadius: 3, background: i === currentStep ? PERI : "#3F3F46", transition: "width .35s cubic-bezier(.16,1,.3,1), background .3s" }} />
           ))}
         </div>
 
-        <div className="flex justify-center gap-3 mt-6">
-          <button 
-            onClick={() => {
-              setCurrentStep(s => (s - 1 + STEPS.length) % STEPS.length);
-              setIsPlaying(false);
-            }}
-            className="w-10 h-10 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 flex items-center justify-center transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-          >
-            <ArrowLeft className="w-4 h-4" />
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 24 }}>
+          <button type="button" aria-label="Previous step" onClick={() => go(-1)} style={roundBtn}>
+            <ArrowLeft size={17} aria-hidden="true" />
           </button>
-          
-          <button 
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="px-7 h-10 rounded-full bg-zinc-900 text-white font-sora text-xs font-bold tracking-wider flex items-center gap-2 transition-all hover:bg-black hover:shadow-md"
-          >
-            {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            {isPlaying ? "PAUSE" : "PLAY"}
+          <button type="button" onClick={() => setUserPlaying(!isPlaying)} className="a4-btn a4-btn-light" style={{ height: 44, padding: "0 22px", fontSize: 15 }} aria-pressed={isPlaying}>
+            {isPlaying ? <Pause size={15} fill="currentColor" aria-hidden="true" /> : <Play size={15} fill="currentColor" aria-hidden="true" />}
+            {isPlaying ? "Pause" : "Play"}
           </button>
-
-          <button 
-            onClick={() => {
-              setCurrentStep(s => (s + 1) % STEPS.length);
-              setIsPlaying(false);
-            }}
-            className="w-10 h-10 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 flex items-center justify-center transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-          >
-            <ArrowRight className="w-4 h-4" />
+          <button type="button" aria-label="Next step" onClick={() => go(1)} style={roundBtn}>
+            <ArrowRight size={17} aria-hidden="true" />
           </button>
         </div>
       </div>
-    </section>
+    </Band>
   );
 };
 

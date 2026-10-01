@@ -12,22 +12,18 @@ interface ServiceVideoSectionProps {
 
 const FALLBACK_URL = "/assets/videos/Main Render.gif";
 
-const ServiceVideoSection: React.FC<ServiceVideoSectionProps> = ({
-  title,
-  videoUrl,
-}) => {
+/** Service video panel in the A4 style: ink frame (radius 28), kicker + Outfit title over an ink fade. */
+const ServiceVideoSection: React.FC<ServiceVideoSectionProps> = ({ title, videoUrl }) => {
   const { t } = useTranslation("services");
-  const [sourceFailed, setSourceFailed] = useState(false);
+  // The URL that failed; a new `videoUrl` gets a fresh try without resetting state in an effect.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const sourceFailed = !!videoUrl && failedUrl === videoUrl;
+  const setSourceFailed = (failed: boolean) => setFailedUrl(failed ? videoUrl ?? null : null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const effectiveVideoUrl =
-    videoUrl && !sourceFailed ? videoUrl : FALLBACK_URL;
+  const effectiveVideoUrl = videoUrl && !sourceFailed ? videoUrl : FALLBACK_URL;
   const isGif = effectiveVideoUrl.toLowerCase().endsWith(".gif");
   const { ref: lazyRef, shouldLoad } = useLazyMedia();
-
-  useEffect(() => {
-    setSourceFailed(false);
-  }, [videoUrl]);
 
   useEffect(() => {
     if (!shouldLoad || isGif) return;
@@ -35,11 +31,12 @@ const ServiceVideoSection: React.FC<ServiceVideoSectionProps> = ({
   }, [shouldLoad, isGif]);
 
   return (
-    <section className="mt-6 mb-2">
-      <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-8">
+    <section style={{ padding: "24px clamp(20px,5vw,72px) 8px" }}>
+      <div style={{ maxWidth: 1024, margin: "0 auto" }}>
         <div
           ref={lazyRef}
-          className="relative w-full aspect-video rounded-2xl overflow-hidden bg-[#020617]"
+          data-fx="rise"
+          style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", borderRadius: 28, overflow: "hidden", background: "#09090B", border: "1px solid rgba(255,255,255,.06)", boxShadow: "0 50px 120px rgba(9,9,11,.18)" }}
         >
           {effectiveVideoUrl ? (
             <>
@@ -49,7 +46,7 @@ const ServiceVideoSection: React.FC<ServiceVideoSectionProps> = ({
                   alt={title}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 896px"
+                  sizes="(max-width: 1024px) 100vw, 1024px"
                   loading="lazy"
                   decoding="async"
                   unoptimized
@@ -69,24 +66,16 @@ const ServiceVideoSection: React.FC<ServiceVideoSectionProps> = ({
                 />
               )}
 
-              {/* Gradient overlay for readability */}
-              <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/40 via-black/10 to-black/0" />
+              <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to top, rgba(9,9,11,.72), rgba(9,9,11,.12) 45%, rgba(9,9,11,0))" }} />
 
-              {/* Title text */}
-              <div className="absolute left-5 bottom-5 z-10 max-w-[70%]">
-                <p className="text-xs uppercase tracking-[0.16em] text-white/70 mb-1">
-                  {t("shared.videoLabel")}
-                </p>
-                <h2 className="text-white text-lg md:text-xl font-medium leading-snug line-clamp-2">
-                  {title}
-                </h2>
+              <div style={{ position: "absolute", left: 24, bottom: 22, zIndex: 1, maxWidth: "70%" }}>
+                <p style={{ margin: "0 0 6px", fontFamily: "var(--a4x-body)", fontSize: 12, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#A1A1AA" }}>{t("shared.videoLabel")}</p>
+                <h2 style={{ margin: 0, fontFamily: "var(--a4x-display)", fontSize: "clamp(20px,2vw,26px)", fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.2, color: "#FFFFFF" }}>{title}</h2>
               </div>
             </>
           ) : (
-            <div className="relative w-full h-full border border-dashed border-white/20 bg-slate-900 flex items-center justify-center">
-              <p className="text-xs md:text-sm text-slate-200/70 text-center px-6">
-                {t("shared.videoPlaceholder")}
-              </p>
+            <div style={{ position: "relative", width: "100%", height: "100%", border: "1px dashed rgba(255,255,255,.2)", background: "#18181B", display: "grid", placeItems: "center" }}>
+              <p style={{ fontFamily: "var(--a4x-body)", fontSize: 14, color: "#A1A1AA", textAlign: "center", padding: "0 24px" }}>{t("shared.videoPlaceholder")}</p>
             </div>
           )}
         </div>
@@ -96,4 +85,3 @@ const ServiceVideoSection: React.FC<ServiceVideoSectionProps> = ({
 };
 
 export default ServiceVideoSection;
-

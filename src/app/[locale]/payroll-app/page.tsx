@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PayrollAppPage() {
   return (
-    <div className="a4-landing-page min-h-screen pt-24 sm:pt-28">
+    <div id="main-content" style={{ minHeight: "100vh", paddingTop: 72, background: "#09090B", color: "#FFFFFF" }}>
       <PayrollApp />
     </div>
   );

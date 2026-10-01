@@ -8,6 +8,7 @@ import MetricStrip from "./MetricStrip";
 import QuestionCard from "./QuestionCard";
 import { useTranslation } from "react-i18next";
 import { Filter } from "lucide-react";
+import { BODY, INK, SANS, kicker } from "./aqStyle";
 
 export type Question = {
   id: string;
@@ -170,42 +171,58 @@ export default function QuestionnaireLayout() {
   });
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] items-start bg-slate-50 text-slate-900 font-sans pt-[100px]">
+    <div
+      className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)_280px] items-start pt-[72px]"
+      style={{ background: "#FAFAFA", color: INK, fontFamily: BODY }}
+    >
       <SidebarLeft activeTab={activeTab} onTabChange={setActiveTab} navItems={navItems} />
-      
-      <main className="flex flex-col bg-white border-x border-slate-200 min-h-[calc(100vh-100px)]">
+
+      <main className="flex flex-col bg-white lg:border-x border-[#E4E4E7] min-h-[calc(100vh-72px)] min-w-0">
         <Topbar progress={progress} />
         <MetricStrip metrics={metrics} />
-        
+
         {/* Filter Bar */}
-        <div className="flex items-center gap-2 px-8 py-3 bg-slate-50/50 border-b border-slate-200">
-          <Filter className="w-3.5 h-3.5 text-slate-400 mr-2" />
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-2">
+        <div className="flex flex-wrap items-center gap-2 px-5 sm:px-8 py-3 border-b border-[#E4E4E7]" style={{ background: "#FAFAFA" }}>
+          <Filter className="w-3.5 h-3.5 mr-1" color="#71717A" aria-hidden="true" />
+          <span className="mr-2" style={kicker}>
             {t("filters.label", "FILTER BY:")}
           </span>
-          {filters.map(f => (
-            <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.id)}
-              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
-                activeFilter === f.id 
-                  ? "bg-slate-900 text-white shadow-sm" 
-                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+          {filters.map((f) => {
+            const on = activeFilter === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setActiveFilter(f.id)}
+                className="transition-colors duration-200 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[rgba(79,85,241,.55)]"
+                style={{
+                  height: 34,
+                  padding: "0 14px",
+                  borderRadius: 999,
+                  fontFamily: SANS,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: on ? INK : "#FFFFFF",
+                  color: on ? "#FFFFFF" : "#52525B",
+                  border: `1px solid ${on ? INK : "#E4E4E7"}`,
+                }}
+              >
+                {f.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Questions List */}
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-5 sm:p-8">
           {filteredQuestions.length === 0 ? (
-            <div className="text-center py-20 text-slate-400 text-sm">No questions found for this filter.</div>
+            <div className="text-center py-20" style={{ fontFamily: BODY, fontSize: 14, color: "#71717A" }}>
+              No questions found for this filter.
+            </div>
           ) : (
-            filteredQuestions.map((q) => (
-              <QuestionCard key={q.id} question={q} />
-            ))
+            filteredQuestions.map((q) => <QuestionCard key={q.id} question={q} />)
           )}
         </div>
       </main>

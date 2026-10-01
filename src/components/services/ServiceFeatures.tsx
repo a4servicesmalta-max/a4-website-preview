@@ -1,13 +1,10 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
-import { motion } from "framer-motion";
-import GradientContainer from "../common/GradientContainer";
+import { Button } from "@/components/a4-landing/Primitives";
+import { DARK_GRID, DriftGlow, LIGHT_GLOW, MUTED_GLOW } from "@/components/fx/primitives";
 import GetInstantQuoteButton from "../common/GetInstantQuoteButton";
-import TextAnimation from "../common/TextAnimation";
-import { FadeInUp } from "../common/Animations";
-import { usePerformance } from "@/contexts/ReduceMotionContext";
+import { BODY, Bullets, INDIGO, INK, PERI, SANS, SECTION_PAD, gradTail } from "./SectionKit";
 
 interface ServiceFeatureProps {
   title: React.ReactNode;
@@ -17,6 +14,7 @@ interface ServiceFeatureProps {
     title: React.ReactNode;
     items: string[];
   }[];
+  /** Kept for compatibility — bullets are the design's skewed indigo mark. */
   bulletIconSrc?: string;
   bulletIconAlt?: string;
   primaryCtaText?: string;
@@ -28,13 +26,16 @@ interface ServiceFeatureProps {
   hideCta?: boolean;
 }
 
-
+/**
+ * The design's numbered-list pattern: the heading block on the left (sticky on
+ * wide screens) with its gradient emphasis and the CTAs, the feature groups on
+ * the right as numbered rows with hairlines and skewed bullets.
+ * `theme="dark"` (default) sits on the ink grid, `"light"` on the light glow.
+ */
 const ServiceFeatures = ({
   title,
   subtitle,
   features,
-  bulletIconSrc,
-  bulletIconAlt = "Item",
   backgroundColor,
   theme = "dark",
   showRadials = true,
@@ -44,158 +45,105 @@ const ServiceFeatures = ({
   secondaryCtaHref,
   description,
   hideCta = false,
-
 }: ServiceFeatureProps & {
+  /** Light theme only: a background class asking for the muted (grey) surface. */
   backgroundColor?: string;
   theme?: "light" | "dark";
   showRadials?: boolean;
 }) => {
-  const { isIPhone, isLowPerformance } = usePerformance();
-  const isDark = theme === "dark";
-  const styles = {
-    heading: isDark ? "text-white" : "text-text-heading",
-    subheading: isDark ? "text-white/70" : "text-text-gray",
-    cardBg: isDark ? "bg-hero border-white/10" : "bg-white border-gray-200 shadow-sm",
-    cardTitle: isDark ? "text-white" : "text-text-heading",
-    cardBody: isDark ? "text-light-gray group-hover:text-white" : "text-text-gray group-hover:text-text-heading",
-    iconStroke: isDark ? "stroke-white" : "stroke-text-heading",
-    iconFill: isDark ? "fill-white" : "fill-text-heading",
-  };
+  const dark = theme === "dark";
+  const muted = !dark && !!backgroundColor && /F3F5F7|F4F4F5|section|secondary|muted|zinc-100/i.test(backgroundColor);
+  const heading = typeof title === "string" ? gradTail(title) : title;
+  const long = typeof title === "string" && title.length > 42;
+  const lede = subtitle || description;
+
   return (
-    <GradientContainer
-      className="py-20 lg:py-24 px-4 sm:px-6 md:px-8 overflow-hidden"
-      backgroundColor={backgroundColor || (isDark ? "bg-[#020410]" : "bg-primary")}
-      showRadials={showRadials}
+    <section
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        padding: SECTION_PAD,
+        background: dark ? DARK_GRID : muted ? MUTED_GLOW : LIGHT_GLOW,
+        color: dark ? "#FFFFFF" : INK,
+        fontFamily: SANS,
+      }}
     >
-      <div className="max-w-6xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
-          {/* Left Column: Title and CTA */}
-          <FadeInUp className="flex flex-col justify-start pt-0">
-            {typeof title === "string" ? (
-              <TextAnimation
-                text={title}
-                as="h2"
-                className={`text-3xl md:text-5xl font-medium mb-6 leading-tight max-w-lg ${styles.heading}`}
-              />
-            ) : (
-              <h2 className={`text-3xl md:text-5xl font-medium mb-6 leading-tight max-w-lg ${styles.heading}`}>
-                {title}
-              </h2>
-            )}
-            
-            {(subtitle || description) && (
-              <p className={`text-base md:text-lg mb-10 max-w-md ${styles.subheading}`}>
-                {subtitle || description}
-              </p>
-            )}
+      {dark && showRadials ? <DriftGlow left="-18%" top="-30%" strength={0.22} /> : null}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] gap-14 lg:gap-[72px] items-start" style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
+        <div className="lg:sticky lg:top-28">
+          <h2
+            data-fx="rise"
+            style={{
+              margin: 0,
+              fontSize: long ? "clamp(34px,3.8vw,60px)" : "clamp(40px,5.2vw,84px)",
+              fontWeight: 600,
+              letterSpacing: "-0.04em",
+              lineHeight: 1.04,
+              color: dark ? "#FFFFFF" : INK,
+              textWrap: "balance",
+            }}
+          >
+            {heading}
+          </h2>
+          {lede ? (
+            <p
+              data-fx="rise"
+              data-d="120"
+              style={{ margin: "24px 0 0", maxWidth: 520, fontFamily: BODY, fontSize: 18, lineHeight: 1.55, color: dark ? "#A1A1AA" : "#52525B", textWrap: "pretty" }}
+            >
+              {lede}
+            </p>
+          ) : null}
+          {!hideCta ? (
+            <div data-fx="rise" data-d="220" style={{ marginTop: 36, display: "flex", flexWrap: "wrap", gap: 12 }}>
+              {primaryCtaText || secondaryCtaText ? (
+                <>
+                  {primaryCtaText ? (
+                    <Button variant={dark ? "primary" : "dark"} size="md" href={primaryCtaHref || "/quote"}>
+                      {primaryCtaText}
+                    </Button>
+                  ) : null}
+                  {secondaryCtaText ? (
+                    <Button variant={dark ? "outline-dark" : "outline-light"} size="md" href={secondaryCtaHref || "/quote"}>
+                      {secondaryCtaText}
+                    </Button>
+                  ) : null}
+                </>
+              ) : (
+                <GetInstantQuoteButton className={dark ? "" : "bg-[#09090B] text-white hover:bg-[#27272A]"} />
+              )}
+            </div>
+          ) : null}
+        </div>
 
-
-            {!hideCta && (
-              <div className="flex flex-wrap items-center gap-3">
-                {primaryCtaText || secondaryCtaText ? (
-                  <>
-                    {primaryCtaText && (
-                      <GetInstantQuoteButton
-                        variant="custom"
-                        text={primaryCtaText}
-                        href={primaryCtaHref || "/quote"}
-                        hasShadow={true}
-                        className={isDark ? "" : "bg-primary-blue text-white"}
-                      />
-                    )}
-                    {secondaryCtaText && (
-                      <GetInstantQuoteButton
-                        variant="custom"
-                        text={secondaryCtaText}
-                        href={secondaryCtaHref || "/quote"}
-                        hasShadow={false}
-                        bgColor={isDark ? "transparent" : "transparent"}
-                        textColor={isDark ? "#ffffff" : "#111827"}
-                        borderColor={isDark ? "rgba(255,255,255,0.4)" : "rgba(37, 99, 235, 0.6)"}
-                      />
-                    )}
-                  </>
-                ) : (
-                  <GetInstantQuoteButton hasShadow={true} />
-                )}
-              </div>
-            )}
-          </FadeInUp>
-
-          {/* Right Column: Feature Cards */}
-          <div className="space-y-4 w-full">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={isIPhone || isLowPerformance ? {} : { scale: 1.02 }}
-                className={`group ${styles.cardBg} p-6 md:p-8 rounded-2xl transition-all duration-300 hover:border-primary-blue/50 hover:shadow-lg hover:shadow-primary-blue/10 hardware-accelerated`}
-              >
-
-                <div className="flex flex-col md:flex-row gap-6 md:gap-12">
-                  <h3 className={`${styles.cardTitle} font-medium text-lg min-w-[140px] pt-1 group-hover:text-primary-blue transition-colors duration-300`}>
-                    {feature.title}
-                  </h3>
-                  <ul className="space-y-5 flex-1">
-                    {feature.items.map((item, idx) => (
-                      <motion.li
-                        key={idx}
-                        initial={{ opacity: 0, x: 10 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.3, delay: 0.2 + (idx * 0.05) }}
-                        className={`flex items-start gap-4 text-[15px] ${styles.cardBody} leading-relaxed transition-colors duration-300`}
-                      >
-                        <div className="mt-1 shrink-0">
-                          {bulletIconSrc ? (
-                            <Image
-                              src={bulletIconSrc}
-                              alt={bulletIconAlt}
-                              width={16}
-                              height={16}
-                              className="w-4 h-4"
-                            />
-                          ) : (
-                            <svg
-                              width="20"
-                              height="20"
-                              viewBox="0 0 20 20"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="group-hover:text-primary-blue transition-colors duration-300"
-                            >
-                              <circle
-                                opacity="0.2"
-                                cx="10"
-                                cy="10"
-                                r="9"
-                                stroke="currentColor"
-                                className={`${styles.iconStroke} group-hover:stroke-primary-blue transition-colors duration-300`}
-                              />
-                              <path 
-                                d="M10 6L14 10L10 14L6 10Z" 
-                                fill="currentColor" 
-                                className={`${styles.iconFill} group-hover:fill-primary-blue transition-colors duration-300`}
-                              />
-                            </svg>
-                          )}
-                        </div>
-                        {item}
-                      </motion.li>
-                    ))}
-                  </ul>
+        <div data-fx="rise" data-d="150" style={{ display: "flex", flexDirection: "column" }}>
+          {features.map((feature, index) => (
+            <div
+              key={index}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "48px minmax(0,1fr)",
+                gap: 12,
+                padding: "30px 0",
+                borderTop: `1px solid ${dark ? "rgba(255,255,255,.1)" : "#E4E4E7"}`,
+                ...(index === features.length - 1 ? { borderBottom: `1px solid ${dark ? "rgba(255,255,255,.1)" : "#E4E4E7"}` } : null),
+              }}
+            >
+              <span style={{ paddingTop: 6, fontSize: 16, fontWeight: 600, color: dark ? PERI : INDIGO }}>{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "clamp(22px,2vw,28px)", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.15, color: dark ? "#FFFFFF" : INK }}>
+                  {feature.title}
+                </h3>
+                <div style={{ marginTop: 16 }}>
+                  <Bullets items={feature.items} dark={dark} size={16} gap={10} />
                 </div>
-              </motion.div>
-            ))}
-          </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    </GradientContainer>
+    </section>
   );
 };
 
 export default ServiceFeatures;
-

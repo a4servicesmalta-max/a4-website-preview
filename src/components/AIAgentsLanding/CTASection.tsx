@@ -2,39 +2,57 @@
 
 import React from "react";
 import { useTranslation } from "react-i18next";
-import LocalizedLink from "@/components/common/LocalizedLink";
+import { Button } from "@/components/a4-landing/Primitives";
+import { TypeText, Words } from "@/components/fx/primitives";
+import { BODY, Band, PERI } from "@/components/services/SectionKit";
 
 interface CTASectionProps {
   namespace: "accounting" | "business";
 }
 
+/** The design's dark CTA: typed heading with its gradient line on the left, the two pills in a card on the right. */
 const CTASection = ({ namespace }: CTASectionProps) => {
   const { t } = useTranslation(namespace);
+  const line1 = t("cta.titleLine1").trim();
+  const highlight = t("cta.titleHighlight").trim();
+  const words = highlight.split(/\s+/);
+  const parts = words.length > 1 ? [{ t: words.slice(0, -1).join(" ") }, { t: words[words.length - 1], g: true }] : [{ t: highlight, g: true }];
 
   return (
-    <section className="relative z-10 py-32 px-6 lg:px-16 text-center overflow-hidden bg-white border-t border-zinc-200">
-      {/* Background Glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,rgba(0,0,0,0.02),transparent)] pointer-events-none" />
-
-      <div className="relative z-10 max-w-3xl mx-auto">
-        <h2 className="font-sora text-[clamp(40px,5vw,72px)] font-extrabold tracking-tight leading-[1.08] text-zinc-900 mb-6">
-          {t("cta.titleLine1")} <span className="text-zinc-500">{t("cta.titleHighlight")}</span>
-        </h2>
-        
-        <p className="text-lg font-normal text-zinc-600 leading-relaxed max-w-xl mx-auto mb-10">
-          {t("cta.sub")}
-        </p>
-
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <LocalizedLink href="/contact" className="bg-zinc-900 text-white font-sora text-sm font-semibold py-4 px-10 rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(0,0,0,0.2)] hover:bg-black">
+    <Band surface="dark" glow>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "56px 72px", alignItems: "center" }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: "clamp(44px,6.4vw,104px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.06, color: "#FFFFFF" }}>
+            <TypeText segments={[{ t: line1, c: "#FFFFFF" }]} per={45} caret={PERI} style={{ display: "inline-block" }} />
+            <Words d={Math.min(1400, 200 + Array.from(line1).length * 45)} style={{ fontWeight: 600 }} parts={parts} />
+          </h2>
+          <p data-fx="rise" data-d="700" style={{ margin: "28px 0 0", maxWidth: 560, fontFamily: BODY, fontSize: "clamp(17px,1.5vw,20px)", lineHeight: 1.55, color: "#A1A1AA" }}>
+            {t("cta.sub")}
+          </p>
+        </div>
+        <div
+          data-fx="rise"
+          data-d="200"
+          style={{
+            padding: "clamp(24px,3.4vw,40px)",
+            borderRadius: 28,
+            background: "rgba(24,24,27,.92)",
+            border: "1px solid rgba(255,255,255,.1)",
+            boxShadow: "0 40px 100px rgba(0,0,0,.45)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <Button variant="primary" size="lg" href="/contact" style={{ width: "100%", height: 64, fontSize: 19 }}>
             {t("cta.btn1")}
-          </LocalizedLink>
-          <LocalizedLink href="/auditor-questionnaire" className="text-zinc-600 text-sm font-medium py-4 px-10 rounded-full border border-zinc-200 transition-all hover:border-zinc-300 hover:text-zinc-900 bg-zinc-50 hover:bg-zinc-100">
+          </Button>
+          <Button variant="outline-dark" size="lg" href="/auditor-questionnaire" style={{ width: "100%", height: 64, fontSize: 19 }}>
             {t("cta.btn2", { defaultValue: "Try the Dashboard" })}
-          </LocalizedLink>
+          </Button>
         </div>
       </div>
-    </section>
+    </Band>
   );
 };
 

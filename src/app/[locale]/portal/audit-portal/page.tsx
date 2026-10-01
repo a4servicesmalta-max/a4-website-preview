@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useMemo } from "react";
-import PageHeader from "@/components/common/PageHeader";
+import { useTranslation } from "react-i18next";
 import { usePagesTranslation } from "@/hooks/usePagesTranslation";
+import { PageHero } from "@/app/[locale]/services/components/PageHero";
+import { Button } from "@/components/a4-landing/Primitives";
 import ClientPortalOverviewSection from "@/components/client-portal/ClientPortalOverviewSection";
 import PortalFeature from "@/components/services/PortalFeature";
 import RiskAuditSection from "@/components/accounting/RiskAuditSection";
 import HowItWorksTimeline, { HowItWorksStep } from "@/components/how-it-works/HowItWorksTimeline";
 import ServiceFeatures from "@/components/services/ServiceFeatures";
+import { BOOK_A_CALL_PATH, CLIENT_LOGIN_URL } from "@/lib/external-links";
 
 const ROUTE = "portal/audit-portal";
 
@@ -18,8 +21,14 @@ type BulletedSection = {
   footer?: string;
 };
 
+/**
+ * Audit Portal — hero, how A4 delivers (with the sample PBC / ETB panel),
+ * engagement setup, risk-based procedures, the audit workflow as the dark
+ * timeline, the quality & compliance list, then the closing cards.
+ */
 const AuditPortalPage = () => {
   const { t } = usePagesTranslation(ROUTE);
+  const { t: tc } = useTranslation("common");
 
   const overview1Paragraphs = useMemo(() => {
     const raw = t("overview1.paragraphs", { returnObjects: true });
@@ -47,23 +56,24 @@ const AuditPortalPage = () => {
   }, [t]);
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
-        <PageHeader
-          title={t("pageHeader.title")}
-          breadcrumbs={[{ label: t("pageHeader.breadcrumbs.0.label") }]}
-        />
-      </div>
+    <main id="main-content">
+      <PageHero eyebrow={tc("nav.platform")} title={t("pageHeader.title")} sub={overview1Paragraphs[0]}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          <Button variant="primary" size="lg" href={BOOK_A_CALL_PATH}>
+            {tc("glossary.bookDemo")}
+          </Button>
+          <Button variant="outline-dark" size="lg" href={CLIENT_LOGIN_URL} target="_blank">
+            {tc("nav.login")}
+          </Button>
+        </div>
+      </PageHero>
 
-      <ClientPortalOverviewSection
-        variant="audit"
-        i18nRouteKey={ROUTE}
-        heading={t("overview1.heading")}
-        paragraphs={overview1Paragraphs}
-      />
+      <ClientPortalOverviewSection variant="audit" i18nRouteKey={ROUTE} n="01" heading={t("overview1.heading")} paragraphs={overview1Paragraphs.slice(1)} />
 
       <PortalFeature
-        portalImage="/assets/images/Audit.jpg"
+        n="02"
+        surface="muted"
+        portalImage="/brand/portal/portal-audit-engagement.jpg"
         sectionLabel={t("feature.sectionLabel")}
         heading={t("feature.heading")}
         description={t("feature.description")}
@@ -73,41 +83,30 @@ const AuditPortalPage = () => {
         bottomTitle={t("feature.bottomTitle")}
         bottomDescription={t("feature.bottomDescription")}
         quoteText={t("feature.quoteText")}
-        workflowDetail={{
-          heading: t("feature.workflowHeading"),
-          description: t("feature.workflowDescription"),
+      />
+
+      <RiskAuditSection variant="audit" n="03" />
+
+      {/* The workflow detail copy heads the workflow it describes. */}
+      <HowItWorksTimeline
+        steps={workflowSteps}
+        mode="dark"
+        n="04"
+        sectionHeader={{
+          badge: t("pageHeader.title"),
+          title: t("feature.workflowHeading"),
+          subtitle: t("feature.workflowDescription"),
         }}
       />
 
-      <RiskAuditSection variant="audit" />
-
-      <HowItWorksTimeline
-        steps={workflowSteps}
-        backgroundClassName="bg-[#AAACC8]"
-        mode="dark"
-        showHeader={false}
-      />
-
       <ServiceFeatures
-        title={
-          <>
-            {t("serviceFeatures.titleLine1")}
-            <br />
-            {t("serviceFeatures.titleLine2")}
-          </>
-        }
+        theme="light"
+        title={`${t("serviceFeatures.titleLine1")} ${t("serviceFeatures.titleLine2")}`}
         description={t("serviceFeatures.description")}
         features={serviceFeatureBlocks}
-        bulletIconSrc="/assets/images/bullet2.png"
-        bulletIconAlt="Bullet"
       />
 
-      <ClientPortalOverviewSection
-        variant="audit"
-        i18nRouteKey={ROUTE}
-        bulletedSections={overview2Sections}
-        bulletIconSrc="/assets/images/bullet.png"
-      />
+      <ClientPortalOverviewSection variant="audit" i18nRouteKey={ROUTE} surface="muted" bulletedSections={overview2Sections} />
     </main>
   );
 };

@@ -4,8 +4,10 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import LocalizedLink from "@/components/common/LocalizedLink";
 import { BOOK_A_CALL_PATH, CLIENT_ONBOARDING_URL, isExternalHref } from "@/lib/external-links";
+import { cn } from "@/lib/utils";
 
 interface GetInstantQuoteButtonProps {
+  /** Kept for compatibility — pills carry no glow in the A4 style. */
   hasShadow?: boolean;
   className?: string;
   variant?: "default" | "book-demo" | "custom";
@@ -16,26 +18,46 @@ interface GetInstantQuoteButtonProps {
   borderColor?: string;
 }
 
-function ExternalCtaLink({
-  href,
-  className,
-  style,
-  children,
-}: {
-  href: string;
-  className: string;
-  style?: React.CSSProperties;
-  children: React.ReactNode;
-}) {
+/**
+ * The shared quote / demo CTA, as an A4 pill (Outfit 600, fully rounded, no
+ * hover lift): `default` is the white pill (primary on dark), `book-demo` the
+ * glass pill, `custom` takes its colours from the caller. Callers' classes
+ * still win (tailwind-merge).
+ */
+
+const BASE =
+  "inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full text-[15px] font-semibold whitespace-nowrap no-underline transition-colors duration-300 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[rgba(79,85,241,.55)] [font-family:var(--a4x-display)]";
+const LIGHT = "bg-white text-[#09090B] hover:bg-[#E4E4E7]";
+const GLASS = "bg-white/[.06] text-white border border-white/[.22] hover:bg-white/[.12] font-medium";
+const INK = "bg-[#09090B] text-white hover:bg-[#27272A]";
+
+/** The old monochrome button tokens were "indigo" by name — they become the real indigo. */
+const LEGACY_INDIGO = /var\(--(button-indigo|tab-active|primary-blue|card-hover-overlay|purple-bg|primary)\)/;
+
+function Arrow() {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+    </svg>
+  );
+}
+
+function CtaLink({ href, className, style, children }: { href: string; className: string; style?: React.CSSProperties; children: React.ReactNode }) {
+  if (isExternalHref(href)) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <LocalizedLink href={href} className={className} style={style}>
       {children}
-    </a>
+    </LocalizedLink>
   );
 }
 
 const GetInstantQuoteButton = ({
-  hasShadow = true,
   className = "",
   variant = "default",
   text,
@@ -49,84 +71,36 @@ const GetInstantQuoteButton = ({
   const defaultBookDemo = t("glossary.bookDemo");
 
   if (variant === "custom") {
-    const targetHref = href || CLIENT_ONBOARDING_URL;
-    const classNames = `
-          inline-flex items-center gap-2 px-6 py-3 rounded-full transition-all text-[15px] font-medium 
-          ${bgColor ? "" : "bg-primary-blue hover:bg-primary-zinc-hover"}
-          ${textColor ? "" : "text-white"}
-          ${borderColor ? "border-2" : ""}
-          ${hasShadow ? "shadow-[0_4px_30px_var(--primary-zinc-shadow)] hover:shadow-[0_6px_40px_var(--primary-zinc-shadow)] transform hover:-translate-y-0.5" : "hover:shadow-md hover:-translate-y-0.5"}
-          ${className}
-        `;
-    const style = {
-      backgroundColor: bgColor || undefined,
-      color: textColor || undefined,
+    const indigo = !!bgColor && LEGACY_INDIGO.test(bgColor);
+    const style: React.CSSProperties = {
+      backgroundColor: indigo ? "#4F55F1" : bgColor || undefined,
+      color: indigo ? "#FFFFFF" : textColor || undefined,
       borderColor: borderColor || undefined,
+      borderWidth: borderColor ? 1 : undefined,
+      borderStyle: borderColor ? "solid" : undefined,
     };
-
-    if (isExternalHref(targetHref)) {
-      return (
-        <ExternalCtaLink href={targetHref} className={classNames} style={style}>
-          {text ?? defaultQuote}
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-        </ExternalCtaLink>
-      );
-    }
-
     return (
-      <LocalizedLink href={targetHref} className={classNames} style={style}>
+      <CtaLink href={href || CLIENT_ONBOARDING_URL} className={cn(BASE, bgColor ? "" : INK, className)} style={style}>
         {text ?? defaultQuote}
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
-      </LocalizedLink>
+        <Arrow />
+      </CtaLink>
     );
   }
 
   if (variant === "book-demo") {
-    const targetHref = href || BOOK_A_CALL_PATH;
-    const classNames = `
-          inline-flex items-center gap-2 bg-primary-blue hover:bg-primary-zinc-hover text-white px-6 py-3 rounded-full transition-all text-[15px] font-medium transform hover:-translate-y-0.5
-          ${hasShadow ? "shadow-[0_4px_30px_var(--primary-zinc-shadow)] hover:shadow-[0_6px_40px_var(--primary-zinc-shadow)]" : ""}
-          ${className}
-        `;
-
-    if (isExternalHref(targetHref)) {
-      return (
-        <ExternalCtaLink href={targetHref} className={classNames}>
-          {text ?? defaultBookDemo}
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-        </ExternalCtaLink>
-      );
-    }
-
     return (
-      <LocalizedLink href={targetHref} className={classNames}>
+      <CtaLink href={href || BOOK_A_CALL_PATH} className={cn(BASE, GLASS, className)}>
         {text ?? defaultBookDemo}
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
-      </LocalizedLink>
+        <Arrow />
+      </CtaLink>
     );
   }
 
-  const classNames = `
-        inline-flex items-center gap-2 bg-primary-blue hover:bg-primary-zinc-hover text-white px-6 py-3 rounded-full transition-all text-[15px] font-medium 
-        ${hasShadow ? "shadow-[0_4px_30px_var(--primary-zinc-shadow)] hover:shadow-[0_6px_40px_var(--primary-zinc-shadow)] transform hover:-translate-y-0.5" : ""}
-        ${className}
-      `;
-
   return (
-    <ExternalCtaLink href={CLIENT_ONBOARDING_URL} className={classNames}>
+    <CtaLink href={href || CLIENT_ONBOARDING_URL} className={cn(BASE, LIGHT, className)}>
       {text ?? defaultQuote}
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-      </svg>
-    </ExternalCtaLink>
+      <Arrow />
+    </CtaLink>
   );
 };
 
