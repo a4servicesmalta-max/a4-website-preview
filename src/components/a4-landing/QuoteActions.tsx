@@ -24,6 +24,15 @@ import {
  */
 export type Intent = "proposal" | "consultation";
 
+/* The look — the A4 design language: white 28-radius panel, Outfit labels,
+   hairline inputs with the indigo focus ring. */
+const INK = "#09090B";
+const INDIGO = "#4F55F1";
+const HAIR = "#E4E4E7";
+const DISPLAY = "var(--a4x-display)";
+const BODY = "var(--a4x-body)";
+const QA_CSS = `.qa-input::placeholder { color: #A1A1AA; } .qa-input:focus { border-color: #4F55F1 !important; box-shadow: 0 0 0 3px rgba(79,85,241,.14); }`;
+
 const INTENT_COPY: Record<Intent, { title: string; cta: string; done: string; subject: string }> = {
   proposal: {
     title: "Request your proposal",
@@ -114,34 +123,35 @@ export function useQuoteActions(quote: () => QuotePayload) {
   const modal = open ? (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
-      style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(9,9,11,.55)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
     >
+      <style>{QA_CSS}</style>
       <div role="dialog" aria-modal="true" aria-label={INTENT_COPY[intent].title}
-        style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", width: "100%", maxWidth: 460, padding: 30, boxShadow: "0 32px 80px rgba(0,0,0,.3)", maxHeight: "88vh", overflowY: "auto" }}>
+        style={{ background: "#FFFFFF", border: "1px solid " + HAIR, borderRadius: 28, width: "100%", maxWidth: 480, padding: "clamp(24px,3.4vw,36px)", boxShadow: "0 50px 120px rgba(9,9,11,.28)", maxHeight: "88vh", overflowY: "auto", color: INK }}>
         {done ? (
           <div style={{ textAlign: "center", padding: "6px 0" }}>
-            <div style={{ width: 54, height: 54, borderRadius: 999, background: "rgba(0,168,126,.12)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}>
-              <Icon name="check" size={26} color="var(--a4-accent-teal)" stroke={2.5} />
+            <div style={{ width: 56, height: 56, borderRadius: 999, background: "rgba(79,85,241,.1)", display: "grid", placeItems: "center", margin: "0 auto 18px" }}>
+              <Icon name="check" size={26} color={INDIGO} stroke={2.5} />
             </div>
-            <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>{INTENT_COPY[intent].done}</div>
-            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, lineHeight: 1.6, color: "var(--a4-mute)", margin: "10px 0 0" }}>
-              Thanks, {contact.name.split(" ")[0]}. Your quote is with us — we&apos;ll be in touch within 1 business day at <strong style={{ color: "var(--a4-ink)" }}>{contact.email}</strong>.
+            <div style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 26, letterSpacing: "-0.03em", lineHeight: 1.15 }}>{INTENT_COPY[intent].done}</div>
+            <p style={{ fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: "#52525B", margin: "10px 0 0" }}>
+              Thanks, {contact.name.split(" ")[0]}. Your quote is with us — we&apos;ll be in touch within 1 business day at <strong style={{ color: INK }}>{contact.email}</strong>.
             </p>
-            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 12 }}>Reference: {done.ref}</p>
-            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.6, color: "var(--a4-stone)", marginTop: 10 }}>
+            <p style={{ fontFamily: BODY, fontSize: 13, color: "#71717A", marginTop: 12 }}>Reference: {done.ref}</p>
+            <p style={{ fontFamily: BODY, fontSize: 12.5, lineHeight: 1.6, color: "#71717A", marginTop: 10 }}>
               After our call we open your account and send it over to activate &mdash; your quote stays attached to reference {done.ref}, so there is nothing to re-enter.
             </p>
             <Button variant="outline-light" size="md" onClick={() => setOpen(false)} style={{ width: "100%", marginTop: 20 }}>Close</Button>
           </div>
         ) : (
           <div>
-            <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>{INTENT_COPY[intent].title}</div>
-            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.6, color: "var(--a4-mute)", margin: "6px 0 20px" }}>
+            <div style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 26, letterSpacing: "-0.03em", lineHeight: 1.15 }}>{INTENT_COPY[intent].title}</div>
+            <p style={{ fontFamily: BODY, fontSize: 15, lineHeight: 1.55, color: "#52525B", margin: "8px 0 22px" }}>
               {`We'll confirm scope and a fixed price (${quote().headline}) on a short call. No obligation.`}
             </p>
             {([["name", "Your name", "text", "name"], ["company", "Company name", "text", "organization"], ["email", "Email address", "email", "email"], ["phone", "Phone (optional)", "tel", "tel"]] as const).map(([k, label, type, ac]) => (
-              <div key={k} style={{ marginBottom: 13 }}>
-                <label htmlFor={`qa-${k}`} style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--a4-mute)", marginBottom: 6 }}>{label}</label>
+              <div key={k} style={{ marginBottom: 14 }}>
+                <label htmlFor={`qa-${k}`} style={{ display: "block", fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: INK, marginBottom: 8 }}>{label}</label>
                 <input
                   id={`qa-${k}`}
                   type={type}
@@ -149,12 +159,18 @@ export function useQuoteActions(quote: () => QuotePayload) {
                   required={k === "name" || k === "email"}
                   value={contact[k]}
                   onChange={(e) => setContact((f) => ({ ...f, [k]: e.target.value }))}
-                  style={{ width: "100%", boxSizing: "border-box", background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "11px 14px", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 14, outline: "none" }}
+                  className="qa-input"
+                  style={{ width: "100%", boxSizing: "border-box", height: 52, padding: "0 16px", background: "#FFFFFF", border: "1px solid " + HAIR, borderRadius: 14, color: INK, fontFamily: DISPLAY, fontSize: 16, fontWeight: 500, outline: "none" }}
                 />
               </div>
             ))}
-            {error && <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "#c2303d", margin: "0 0 10px" }}>{error}</p>}
-            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+            {error && (
+              <p role="alert" style={{ display: "flex", gap: 10, fontFamily: BODY, fontSize: 14, fontWeight: 600, lineHeight: 1.5, color: INK, margin: "0 0 10px" }}>
+                <span className="a4-bullet" style={{ marginTop: 7, background: INK }} />
+                {error}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
               <Button variant="dark" size="md" onClick={submit} style={{ flex: 1, opacity: busy ? 0.6 : 1, pointerEvents: busy ? "none" : "auto" }}>
                 {busy ? "Sending…" : INTENT_COPY[intent].cta} <Icon name="arrow-right" size={16} color="#fff" />
               </Button>

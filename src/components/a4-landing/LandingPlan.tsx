@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { Button, Icon, Container, Eyebrow } from "@/components/a4-landing/Primitives";
+import { MUTED_GLOW, gradText } from "@/components/fx/primitives";
 import { MANAGED_CAVEAT, MANAGED_CATCHUP_NOTE, MANAGED_SOLE, MANAGED_COMPANY } from "@/data/a4ManagedOffer";
 import {
   VAT_MONTHLY, VAT_RULES, TAX_RETURN_FROM,
@@ -202,26 +203,51 @@ export function lpCalc(s: LPState, now: Date = new Date()): LPQuote {
   };
 }
 
+/* -------------------------------------------------------------------------- */
+/* The look — the A4 design language (the quotation's "Build your quote" and   */
+/* its document totals; see src/app/q/[id]/QuotationLanding.tsx).             */
+/* -------------------------------------------------------------------------- */
+
+const INK = "#09090B";
+const INDIGO = "#4F55F1";
+const HAIR = "#E4E4E7";
+const DISPLAY = "var(--a4x-display)";
+const BODY = "var(--a4x-body)";
+
+/* Hover, focus and placeholder states can't be inline — scoped classes. */
+const LP_CSS = `
+.lp-input::placeholder { color: #A1A1AA; }
+.lp-input:focus { border-color: #4F55F1 !important; box-shadow: 0 0 0 3px rgba(79,85,241,.14); }
+.lp-pill[aria-pressed="false"]:hover { border-color: #A1A1AA !important; }
+.lp-seg[aria-pressed="false"]:hover { color: #09090B !important; }
+.lp-pill:focus-visible, .lp-seg:focus-visible, .lp-switch:focus-visible, .lp-round:focus-visible { outline: 3px solid rgba(79,85,241,.55); outline-offset: 2px; }
+`;
+
 type StepperProps = { value: number; set: (v: number) => void; min?: number; max?: number };
+/** Round hairline pills either side of the figure. */
 export function LPStepper({ value, set, min = 1, max = 10 }: StepperProps) {
-  const btn = { width: 34, height: 34, borderRadius: "var(--a4-r-md)", display: "grid", placeItems: "center", cursor: "pointer", background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", color: "var(--a4-ink)" };
+  const btn: React.CSSProperties = { width: 36, height: 36, padding: 0, borderRadius: 999, display: "grid", placeItems: "center", cursor: "pointer", background: "#FFFFFF", border: "1px solid " + HAIR, color: INK };
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <button aria-label="decrease" onClick={() => set(Math.max(min, value - 1))} style={btn}><Icon name="minus" size={15} color="var(--a4-ink)" /></button>
-      <span style={{ minWidth: 20, textAlign: "center", fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 18, color: "var(--a4-ink)", fontVariantNumeric: "tabular-nums" }}>{value}</span>
-      <button aria-label="increase" onClick={() => set(Math.min(max, value + 1))} style={btn}><Icon name="plus" size={15} color="var(--a4-ink)" /></button>
+      <button type="button" aria-label="decrease" className="lp-round" onClick={() => set(Math.max(min, value - 1))} style={btn}><Icon name="minus" size={15} color={INK} /></button>
+      <span style={{ minWidth: 24, textAlign: "center", fontFamily: DISPLAY, fontWeight: 600, fontSize: 20, letterSpacing: "-0.02em", color: INK, fontVariantNumeric: "tabular-nums" }}>{value}</span>
+      <button type="button" aria-label="increase" className="lp-round" onClick={() => set(Math.min(max, value + 1))} style={btn}><Icon name="plus" size={15} color={INK} /></button>
     </div>
   );
 }
 
-type ToggleProps = { on: boolean; set: (v: boolean) => void };
-export function LPToggle({ on, set }: ToggleProps) {
+type ToggleProps = { on: boolean; set: (v: boolean) => void; label?: string };
+/** The design's 48×28 switch — indigo track when on, white knob, .35s expo. */
+export function LPToggle({ on, set, label }: ToggleProps) {
   return (
-    <button role="switch" aria-checked={on} onClick={() => set(!on)} style={{
-      width: 46, height: 27, borderRadius: 999, border: "1px solid " + (on ? "var(--a4-primary)" : "var(--a4-hairline-strong)"),
-      background: on ? "var(--a4-primary)" : "var(--a4-surface-card)", cursor: "pointer", position: "relative", flexShrink: 0, transition: "background .2s, border-color .2s",
+    <button type="button" role="switch" aria-checked={on} aria-label={label} className="lp-switch" onClick={() => set(!on)} style={{
+      position: "relative", flexShrink: 0, width: 48, height: 28, padding: 0, border: 0, borderRadius: 14,
+      background: on ? INDIGO : "#D4D4D8", cursor: "pointer", transition: "background .3s",
     }}>
-      <span style={{ position: "absolute", top: 2, left: on ? 21 : 2, width: 21, height: 21, borderRadius: 999, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", transition: "left .2s ease" }} />
+      <span aria-hidden="true" style={{
+        position: "absolute", left: 3, top: 3, width: 22, height: 22, borderRadius: 11, background: "#FFFFFF",
+        boxShadow: "0 1px 3px rgba(9,9,11,.3)", transform: `translateX(${on ? 20 : 0}px)`, transition: "transform .35s cubic-bezier(.16,1,.3,1)",
+      }} />
     </button>
   );
 }
@@ -315,61 +341,82 @@ export function LandingPlan() {
     isCompany && { id: "pay", label: "Payroll", sub: `FS5 submissions & payslips · flat €${PAYROLL_ENTRY_RATE}/head/mo, any team size`, on: payroll, set: (v: boolean) => patch({ payroll: v }), fee: `€${PAYROLL_ENTRY_RATE} / head / mo`, emps: true },
   ] as (Addon | false)[]).filter((a): a is Addon => Boolean(a));
 
-  const fieldLabel = { fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" };
-  const fieldSub = { fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-mute)", marginTop: 2 };
+  const fieldLabel: React.CSSProperties = { fontFamily: DISPLAY, fontSize: 17, fontWeight: 600, letterSpacing: "-0.015em", lineHeight: 1.3, color: INK };
+  const fieldSub: React.CSSProperties = { fontFamily: BODY, fontSize: 14, lineHeight: 1.55, color: "#52525B", marginTop: 4 };
+  const kicker: React.CSSProperties = { fontFamily: BODY, fontSize: 12, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#71717A" };
+  /** A row of the picker — a hairline above, like a row of the quote document. */
+  const row: React.CSSProperties = { padding: "18px 0", borderTop: "1px solid " + HAIR };
+  const lastRow: React.CSSProperties = { ...row, borderBottom: "1px solid " + HAIR };
+  /** "01  Your bookkeeping" — the design's numbered eyebrow. */
+  const stepHead = (n: string, label: string) => (
+    <div style={{ display: "flex", alignItems: "baseline", gap: 12, fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, letterSpacing: ".02em", color: "#52525B" }}>
+      <span style={{ color: INDIGO }}>{n}</span>
+      <span>{label}</span>
+    </div>
+  );
+  const fieldInput: React.CSSProperties = { height: 52, padding: "0 16px", borderRadius: 14, border: "1px solid " + HAIR, background: "#FFFFFF", color: INK, fontFamily: DISPLAY, fontSize: 16, fontWeight: 500, outline: "none" };
+  const PAD = "clamp(24px,3vw,32px)";
 
   return (
-    <section id="pricing" style={{ background: "var(--a4-surface-soft)", padding: "clamp(64px,9vw,104px) 0" }}>
+    <section id="pricing" style={{ position: "relative", background: MUTED_GLOW, color: INK, padding: "clamp(100px,13vw,180px) 0" }}>
+      <style>{LP_CSS}</style>
       <Container>
-        <Reveal><SectionHead
-          align="center"
-          eyebrow="Build your price"
-          title="Build your plan"
-          sub={`We keep your books — you send us the paperwork. ${MANAGED_CAVEAT} ${MANAGED_CATCHUP_NOTE} One agreed monthly price, no per-document fees, cancel anytime.`}
-          maxWidth={620}
-        /></Reveal>
+        {/* Head — the design's "Build your quote": eyebrow, H2, then the lead. */}
+        <div style={{ maxWidth: 880 }}>
+          <div style={{ minWidth: 0 }}>
+            <div data-fx="rise">
+              <Eyebrow>Build your price</Eyebrow>
+            </div>
+            <h2 data-fx="rise" data-d="100" style={{ margin: "16px 0 0", fontFamily: DISPLAY, fontSize: "clamp(40px,5.6vw,92px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.02, color: INK }}>
+              Build your <span style={{ ...gradText, paddingBottom: ".06em" }}>plan</span>
+            </h2>
+          </div>
+          <p data-fx="rise" data-d="200" style={{ margin: "22px 0 0", maxWidth: 760, fontFamily: BODY, fontSize: 17, lineHeight: 1.6, color: "#52525B", textWrap: "pretty" }}>
+            {`We keep your books — you send us the paperwork. ${MANAGED_CAVEAT} ${MANAGED_CATCHUP_NOTE} One agreed monthly price, no per-document fees, cancel anytime.`}
+          </p>
+        </div>
 
-        <Reveal delay={80} style={{ marginTop: 52 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 20, alignItems: "start", maxWidth: 1000, margin: "0 auto" }} className="lp-grid">
-            {/* picker */}
-            <div style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", padding: "clamp(24px,3vw,34px)", display: "flex", flexDirection: "column", gap: 26 }}>
-              {/* entity toggle */}
-              <div>
-                <div style={fieldLabel}>I&apos;m a…</div>
-                <div style={{ display: "flex", gap: 6, marginTop: 12, background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-full)", padding: 5 }}>
-                  {([["company", "Company", "building-2"], ["personal", "Personal / sole trader", "user"]] as const).map(([id, label, icon]) => {
-                    const on = entity === id;
-                    return (
-                      <button key={id} onClick={() => setEntityAndSync(id)} style={{
-                        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                        height: 42, borderRadius: "var(--a4-r-full)", cursor: "pointer", border: 0,
-                        background: on ? "var(--a4-ink)" : "transparent", color: on ? "#fff" : "var(--a4-mute)",
-                        fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, transition: "background .15s, color .15s",
-                      }}>
-                        <Icon name={icon} size={16} color={on ? "#fff" : "var(--a4-mute)"} /> {label}
-                      </button>
-                    );
-                  })}
+        <div className="lp-grid" style={{ marginTop: "clamp(48px,6vw,80px)", display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
+          {/* picker — the white document panel */}
+          <div data-fx="rise" data-d="120" style={{ minWidth: 0, background: "#FFFFFF", border: "1px solid " + HAIR, borderRadius: 28, boxShadow: "0 50px 120px rgba(9,9,11,.10)", padding: "clamp(24px,3.4vw,40px)", display: "flex", flexDirection: "column", gap: 36 }}>
+            {/* entity toggle — the design's segmented switch */}
+            <div>
+              <div style={fieldLabel}>I&apos;m a…</div>
+              <div role="group" aria-label="Company or personal" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 4, marginTop: 12, padding: 5, borderRadius: 999, background: "#F4F4F5", border: "1px solid " + HAIR }}>
+                {([["company", "Company", "building-2"], ["personal", "Personal / sole trader", "user"]] as const).map(([id, label, icon]) => {
+                  const on = entity === id;
+                  return (
+                    <button key={id} type="button" aria-pressed={on} className="lp-seg" onClick={() => setEntityAndSync(id)} style={{
+                      minWidth: 0, minHeight: 46, padding: "6px 14px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      borderRadius: 999, cursor: "pointer", border: 0, textAlign: "center",
+                      background: on ? INK : "transparent", color: on ? "#FFFFFF" : "#52525B",
+                      fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, lineHeight: 1.2, transition: "background .3s, color .3s",
+                    }}>
+                      <Icon name={icon} size={16} color={on ? "#FFFFFF" : "#52525B"} /> {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* the managed price for the chosen entity — one price, no ladder */}
+            <div>
+              {stepHead("01", "Your bookkeeping")}
+              <div style={{ marginTop: 16, padding: "22px 22px 24px", borderRadius: 20, background: "#FAFAFA", border: "1px solid rgba(79,85,241,.45)", boxShadow: "0 24px 60px rgba(79,85,241,.12)" }}>
+                <div style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 20, letterSpacing: "-0.02em", lineHeight: 1.25, color: INK }}>Managed bookkeeping — {plan.name}</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 8 }}>
+                  <span style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 40, letterSpacing: "-0.04em", lineHeight: 1.1, paddingBottom: ".04em", fontVariantNumeric: "tabular-nums", ...(base == null ? { color: INK } : gradText) }}>{lpEuroOr(base)}</span>
+                  <span style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, color: "#52525B" }}>/mo</span>
                 </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 12, fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: INDIGO }}>
+                  <span className="a4-bullet" style={{ marginTop: 7 }} />
+                  A qualified accountant on the file
+                </div>
+                <div style={{ fontFamily: BODY, fontSize: 14, lineHeight: 1.55, color: "#52525B", marginTop: 6 }}>{plan.detail}</div>
               </div>
 
-              {/* the managed price for the chosen entity — one price, no ladder */}
-              <div>
-                <div style={fieldLabel}>1 · Your bookkeeping</div>
-                <div style={{
-                  marginTop: 14, background: "var(--a4-surface-soft)",
-                  border: "1.5px solid var(--a4-primary)", borderRadius: "var(--a4-r-md)", padding: "18px 18px 20px",
-                }}>
-                  <div style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 19, color: "var(--a4-ink)" }}>Managed bookkeeping — {plan.name}</div>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: 6 }}>
-                    <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 30, color: "var(--a4-ink)", letterSpacing: "-1px" }}>{lpEuroOr(base)}</span>
-                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)" }}>/mo</span>
-                  </div>
-                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, color: "var(--a4-primary)", marginTop: 8 }}>A qualified accountant on the file</div>
-                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.45, color: "var(--a4-mute)", marginTop: 4 }}>{plan.detail}</div>
-                </div>
-
-                <div style={{ marginTop: 14, borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", padding: "15px 16px" }}>
+              <div style={{ marginTop: 18 }}>
+                <div style={row}>
                   <label htmlFor="lp-start" style={{ ...fieldLabel, display: "block" }}>From which month do you need us?</label>
                   <div style={fieldSub}>Required. Pick the earliest month that still needs doing — everything before this month is catch-up, and the monthly fee runs from now on.</div>
                   <input
@@ -377,138 +424,133 @@ export function LandingPlan() {
                     type="month"
                     value={startMonth}
                     onChange={(e) => patch({ startMonth: e.target.value, catchUpMonths: catchUpMonthsFrom(e.target.value) })}
-                    style={{
-                      marginTop: 10, height: 40, padding: "0 12px", borderRadius: "var(--a4-r-md)",
-                      border: "1px solid var(--a4-hairline-light)", background: "var(--a4-surface-card)",
-                      color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 13.5,
-                    }}
+                    className="lp-input"
+                    style={{ ...fieldInput, marginTop: 12, display: "block", width: "min(100%, 260px)" }}
                   />
-
-                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--a4-hairline-light)" }}>
-                    <div style={fieldLabel}>About how much do you spend a month?</div>
-                    <div style={fieldSub}>
-                      Total money out — suppliers, wages, rent, everything. It is what sets the bookkeeping
-                      price, and you already know it without counting anything.
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                      {EXPENSE_BANDS.map((b) => {
-                        const on = expenses === b.id;
-                        return (
-                          <button key={b.id} type="button" onClick={() => patch({ expenses: b.id })} style={{
-                            padding: "7px 13px", borderRadius: "var(--a4-r-full)", cursor: "pointer",
-                            border: "1px solid " + (on ? "var(--a4-primary)" : "var(--a4-hairline-light)"),
-                            background: on ? "var(--a4-primary)" : "transparent",
-                            color: on ? "#fff" : "var(--a4-body)",
-                            fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600,
-                          }}>{b.label}</button>
-                        );
-                      })}
-                    </div>
-                    {/* Nothing is pre-selected. Say what the blank means, or a
-                        row of unfilled pills reads as a broken control. */}
-                    {!expenses && (
-                      <div style={{ marginTop: 10, fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "#8A6100" }}>
-                        Pick a band and your price appears — we do not assume one for you.
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--a4-hairline-light)" }}>
-                    {/* READ BACK, not asked. The chip row that used to sit
-                       here asked for the same fact the start month above
-                       already gives: a start month in the past IS the count
-                       of earlier months. */}
-                    <div style={fieldLabel}>Earlier months that still need doing</div>
-                    <div style={fieldSub}>{MANAGED_CATCHUP_NOTE} Each one is {lpEuroOr(base)}.</div>
-                    <div style={{ marginTop: 10, fontFamily: "var(--a4-font-body)", fontSize: 13, fontVariantNumeric: "tabular-nums", color: "var(--a4-ink)", fontWeight: 600 }}>
-                      {!startOk
-                        ? "Pick a start month above and we work them out from it."
-                        : catchUpMonths === 0
-                          ? "None — we pick the books up at your start month."
-                          : q.catchUpLabel ?? `${catchUpMonths} ${catchUpMonths === 1 ? "month" : "months"}, once your monthly spend is picked.`}
-                    </div>
-                  </div>
                 </div>
 
-                {/* The independence consequence, before they book anything. */}
-                <div role="note" style={{
-                  marginTop: 14, padding: "12px 14px", borderRadius: "var(--a4-r-md)",
-                  background: "rgba(73,79,223,.06)", border: "1px solid rgba(73,79,223,.25)",
-                }}>
-                  <span style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--a4-primary-deep)" }}>Independence</span>
-                  <span style={{ display: "block", marginTop: 4, fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-body)" }}>{INDEPENDENCE_BOOKKEEPING}</span>
+                <div style={row}>
+                  <div style={fieldLabel}>About how much do you spend a month?</div>
+                  <div style={fieldSub}>
+                    Total money out — suppliers, wages, rent, everything. It is what sets the bookkeeping
+                    price, and you already know it without counting anything.
+                  </div>
+                  <div role="group" aria-label="Monthly spend" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+                    {EXPENSE_BANDS.map((b) => {
+                      const on = expenses === b.id;
+                      return (
+                        <button key={b.id} type="button" aria-pressed={on} className="lp-pill" onClick={() => patch({ expenses: b.id })} style={{
+                          minHeight: 42, padding: "0 16px", borderRadius: 999, cursor: "pointer",
+                          border: "1px solid " + (on ? INK : HAIR), background: on ? INK : "#FFFFFF", color: on ? "#FFFFFF" : INK,
+                          fontFamily: DISPLAY, fontSize: 14, fontWeight: 600, transition: "background .3s, color .3s, border-color .3s",
+                        }}>{b.label}</button>
+                      );
+                    })}
+                  </div>
+                  {/* Nothing is pre-selected. Say what the blank means, or a
+                      row of unfilled pills reads as a broken control. */}
+                  {!expenses && (
+                    <div style={{ display: "flex", gap: 10, marginTop: 12, fontFamily: BODY, fontSize: 14, fontWeight: 500, color: INDIGO }}>
+                      <span className="a4-bullet" style={{ marginTop: 7 }} />
+                      Pick a band and your price appears — we do not assume one for you.
+                    </div>
+                  )}
+                </div>
+
+                <div style={lastRow}>
+                  {/* READ BACK, not asked. The chip row that used to sit
+                     here asked for the same fact the start month above
+                     already gives: a start month in the past IS the count
+                     of earlier months. */}
+                  <div style={fieldLabel}>Earlier months that still need doing</div>
+                  <div style={fieldSub}>{MANAGED_CATCHUP_NOTE} Each one is {lpEuroOr(base)}.</div>
+                  <div style={{ marginTop: 10, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", fontVariantNumeric: "tabular-nums", color: INK }}>
+                    {!startOk
+                      ? "Pick a start month above and we work them out from it."
+                      : catchUpMonths === 0
+                        ? "None — we pick the books up at your start month."
+                        : q.catchUpLabel ?? `${catchUpMonths} ${catchUpMonths === 1 ? "month" : "months"}, once your monthly spend is picked.`}
+                  </div>
                 </div>
               </div>
 
-              {/* monthly add-ons */}
-              <div>
-                <div style={fieldLabel}>2 · Add monthly services</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
-                  {monthlyAddons.map((a) => (
-                    <div key={a.label} style={{ borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", padding: "15px 16px", background: a.on ? "var(--a4-surface-soft)" : "transparent", transition: "background .15s" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ ...fieldLabel, fontWeight: 600, fontSize: 14.5 }}>{a.label} <span style={{ color: "var(--a4-mute)", fontWeight: 500 }}>· {a.fee}</span></div>
-                          <div style={fieldSub}>{a.sub}</div>
-                        </div>
-                        <LPToggle on={a.on} set={a.set} />
-                      </div>
-                      {a.emps && payroll && (
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 13, paddingTop: 13, borderTop: "1px solid var(--a4-hairline-light)" }}>
-                          <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-charcoal)" }}>Employees</span>
-                          <LPStepper value={emps} set={(v) => patch({ emps: v })} min={1} max={50} />
-                        </div>
-                      )}
-                      {a.freq && vat && (
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 13, paddingTop: 13, borderTop: "1px solid var(--a4-hairline-light)" }}>
-                          <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--a4-charcoal)" }}>Filing frequency</span>
-                          <div style={{ display: "flex", gap: 5, background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-full)", padding: 4 }}>
-                            {Object.entries(LP_VAT).map(([k, v]) => {
-                              const on = vatFreq === k;
-                              return (
-                                <button key={k} onClick={() => patch({ vatFreq: k as keyof typeof LP_VAT })} style={{
-                                  padding: "6px 12px", borderRadius: "var(--a4-r-full)", border: 0, cursor: "pointer",
-                                  fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600,
-                                  background: on ? "var(--a4-ink)" : "transparent", color: on ? "#fff" : "var(--a4-mute)", transition: "background .15s, color .15s",
-                                }}>{v.label}</button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* once-a-year */}
-              <div>
-                <div style={fieldLabel}>3 · Once a year</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
-                  {LP_ANNUAL_ITEMS[entity].map((it) => {
-                    const on = !!annualSel[it.id];
-                    return (
-                      <div key={it.id} style={{ borderRadius: "var(--a4-r-md)", border: "1px solid var(--a4-hairline-light)", padding: "15px 16px", background: on ? "var(--a4-surface-soft)" : "transparent", transition: "background .15s" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ ...fieldLabel, fontWeight: 600, fontSize: 14.5 }}>{it.label} <span style={{ color: "var(--a4-mute)", fontWeight: 500 }}>· {it.from ? "from " : ""}{lpEuro(it.fee)} / year</span></div>
-                            <div style={fieldSub}>{it.sub} — billed once a year, not monthly.</div>
-                          </div>
-                          <LPToggle on={on} set={() => toggleAnnual(it.id)} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* The independence consequence, before they book anything. */}
+              <div role="note" style={{ marginTop: 18, padding: "16px 18px", borderRadius: 16, background: "rgba(79,85,241,.06)", border: "1px solid rgba(79,85,241,.2)" }}>
+                <span style={{ display: "block", ...kicker, color: INDIGO }}>Independence</span>
+                <span style={{ display: "block", marginTop: 6, fontFamily: BODY, fontSize: 14, lineHeight: 1.55, color: "#3F3F46" }}>{INDEPENDENCE_BOOKKEEPING}</span>
               </div>
             </div>
 
-            {/* summary */}
-            <div className="a4-sum" style={{ background: "#000", borderRadius: "var(--a4-r-lg)", padding: "clamp(24px,3vw,32px)", position: "sticky", top: 88, color: "#fff" }}>
-              <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--a4-on-dark-mute)" }}>Your monthly price</div>
+            {/* monthly add-ons */}
+            <div>
+              {stepHead("02", "Add monthly services")}
+              <div style={{ marginTop: 14 }}>
+                {monthlyAddons.map((a, i) => (
+                  <div key={a.label} style={i === monthlyAddons.length - 1 ? lastRow : row}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={fieldLabel}>{a.label} <span style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, letterSpacing: 0, color: "#71717A" }}>· {a.fee}</span></div>
+                        <div style={fieldSub}>{a.sub}</div>
+                      </div>
+                      <LPToggle on={a.on} set={a.set} label={a.label} />
+                    </div>
+                    {a.emps && payroll && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 14, padding: "10px 12px 10px 16px", borderRadius: 16, background: "#FAFAFA", border: "1px solid " + HAIR }}>
+                        <span style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, color: "#3F3F46" }}>Employees</span>
+                        <LPStepper value={emps} set={(v) => patch({ emps: v })} min={1} max={50} />
+                      </div>
+                    )}
+                    {a.freq && vat && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 14 }}>
+                        <span style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, color: "#3F3F46" }}>Filing frequency</span>
+                        <div role="group" aria-label="Filing frequency" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {Object.entries(LP_VAT).map(([k, v]) => {
+                            const on = vatFreq === k;
+                            return (
+                              <button key={k} type="button" aria-pressed={on} className="lp-pill" onClick={() => patch({ vatFreq: k as keyof typeof LP_VAT })} style={{
+                                height: 38, padding: "0 14px", borderRadius: 999, cursor: "pointer",
+                                border: "1px solid " + (on ? INK : HAIR), background: on ? INK : "#FFFFFF", color: on ? "#FFFFFF" : "#3F3F46",
+                                fontFamily: DISPLAY, fontSize: 13.5, fontWeight: 600, whiteSpace: "nowrap", transition: "background .3s, color .3s, border-color .3s",
+                              }}>{v.label}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* once-a-year */}
+            <div>
+              {stepHead("03", "Once a year")}
+              <div style={{ marginTop: 14 }}>
+                {LP_ANNUAL_ITEMS[entity].map((it, i, all) => {
+                  const on = !!annualSel[it.id];
+                  return (
+                    <div key={it.id} style={i === all.length - 1 ? lastRow : row}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={fieldLabel}>{it.label} <span style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, letterSpacing: 0, color: "#71717A" }}>· {it.from ? "from " : ""}{lpEuro(it.fee)} / year</span></div>
+                          <div style={fieldSub}>{it.sub} — billed once a year, not monthly.</div>
+                        </div>
+                        <LPToggle on={on} set={() => toggleAnnual(it.id)} label={it.label} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* summary — the quote document's totals */}
+          <aside className="a4-sum" data-fx="rise" data-d="220" style={{ position: "sticky", top: 96, minWidth: 0, background: "#FFFFFF", border: "1px solid " + HAIR, borderRadius: 28, boxShadow: "0 50px 120px rgba(9,9,11,.12)", overflow: "hidden", color: INK }}>
+            <div style={{ padding: `${PAD} ${PAD} 22px` }}>
+              <div style={kicker}>Your monthly price</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 12 }}>
-                <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 54, letterSpacing: "-2px", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{lpEuroOr(monthly)}</span>
-                {q.priced && <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-on-dark-mute)" }}>/ mo</span>}
+                <span style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: "clamp(46px,4.4vw,60px)", letterSpacing: "-0.04em", lineHeight: 1.05, paddingBottom: ".04em", fontVariantNumeric: "tabular-nums", ...(monthly == null ? { color: INK } : gradText) }}>{lpEuroOr(monthly)}</span>
+                {q.priced && <span style={{ fontFamily: BODY, fontSize: 15, fontWeight: 500, color: "#52525B" }}>/ mo</span>}
               </div>
               {/* M9: the launch discount applies here exactly as it does on the
                   homepage wizard, /pricing and the estimator. This page ignored
@@ -516,93 +558,99 @@ export function LandingPlan() {
                   earlier got a booking email quoting full price. */}
               {q.priced && promoApplied && q.grossMonthly != null && (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-                  <span style={{ fontFamily: "var(--a4-font-display)", fontSize: 16, color: "var(--a4-on-dark-mute)", textDecoration: "line-through", fontVariantNumeric: "tabular-nums" }}>{lpEuro(q.grossMonthly)}</span>
-                  <span style={{ padding: "3px 10px", borderRadius: "var(--a4-r-full)", background: "rgba(224,105,94,.18)", border: "1px solid rgba(224,105,94,.45)", color: "#F2A49C", fontFamily: "var(--a4-font-body)", fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" }}>
+                  <span style={{ fontFamily: DISPLAY, fontSize: 17, fontWeight: 500, color: "#71717A", textDecoration: "line-through", fontVariantNumeric: "tabular-nums" }}>{lpEuro(q.grossMonthly)}</span>
+                  <span style={{ height: 26, padding: "0 11px", display: "inline-flex", alignItems: "center", borderRadius: 999, background: "rgba(79,85,241,.1)", color: INDIGO, fontFamily: DISPLAY, fontSize: 12.5, fontWeight: 600 }}>
                     {Math.round(LAUNCH_PROMO.pct * 100)}% off
                   </span>
                 </div>
               )}
               {!q.priced && (
-                <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-on-dark-mute)" }}>
+                <p style={{ margin: "10px 0 0", fontFamily: BODY, fontSize: 14, lineHeight: 1.55, color: "#52525B" }}>
                   Tell us roughly what you spend a month and every figure here fills in. We do not guess it — the monthly spend is what sets the price.
                 </p>
               )}
-              <div style={{ height: 1, background: "var(--a4-hairline-dark)", margin: "22px 0 16px" }} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            </div>
+            {lines.length > 0 && (
+              <div style={{ padding: `0 ${PAD} 8px` }}>
                 {lines.map((l) => (
-                  <div key={l.k} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-on-dark-mute)" }}>{l.k}</span>
-                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 500, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{lpEuro(l.v)}/mo</span>
+                  <div key={l.k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "12px 0", borderTop: "1px solid " + HAIR, fontFamily: BODY, fontSize: 14, lineHeight: 1.45 }}>
+                    <span style={{ minWidth: 0, color: "#3F3F46" }}>{l.k}</span>
+                    <span style={{ color: INK, fontWeight: 600, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{lpEuro(l.v)}/mo</span>
                   </div>
                 ))}
               </div>
-              {selectedAnnual.length > 0 && (
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)" }}>
-                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--a4-stone)", marginBottom: 10 }}>Once a year</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {selectedAnnual.map((it) => (
-                      <div key={it.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-                        <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-on-dark-mute)" }}>{it.label}</span>
-                        <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 600, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{it.from ? "from " : ""}{lpEuro(it.fee)}/yr</span>
-                      </div>
-                    ))}
+            )}
+            {selectedAnnual.length > 0 && (
+              <div style={{ padding: `16px ${PAD} 6px`, borderTop: "1px solid " + HAIR }}>
+                <div style={kicker}>Once a year</div>
+                {selectedAnnual.map((it) => (
+                  <div key={it.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", padding: "10px 0 0", fontFamily: BODY, fontSize: 14, lineHeight: 1.45 }}>
+                    <span style={{ minWidth: 0, color: "#3F3F46" }}>{it.label}</span>
+                    <span style={{ color: INDIGO, fontWeight: 600, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{it.from ? "from " : ""}{lpEuro(it.fee)}/yr</span>
                   </div>
-                  <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)", marginTop: 8 }}>Billed once a year. Tax fees are estimates, confirmed after a quick review.</div>
-                </div>
-              )}
-              {/* The one-off, shown where the client will actually be billed
-                  it, and never discounted — a one-off is not in the promo. */}
-              {catchUpFee > 0 && (
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-dark)", display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-on-dark-mute)" }}>Earlier months</span>
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 600, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{lpEuro(catchUpFee)} once</span>
-                </div>
-              )}
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-                <Button variant="primary" size="md" href="/contact" style={{ width: "100%" }}>Request information <Icon name="arrow-right" size={16} color="#000" /></Button>
+                ))}
+                <div style={{ fontFamily: BODY, fontSize: 12.5, lineHeight: 1.5, color: "#71717A", margin: "10px 0 12px" }}>Billed once a year. Tax fees are estimates, confirmed after a quick review.</div>
+              </div>
+            )}
+            {/* The one-off, shown where the client will actually be billed
+                it, and never discounted — a one-off is not in the promo. */}
+            {catchUpFee > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", padding: `14px ${PAD}`, borderTop: "1px solid " + HAIR, fontFamily: BODY, fontSize: 14 }}>
+                <span style={{ color: "#3F3F46" }}>Earlier months</span>
+                <span style={{ color: INK, fontWeight: 600, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{lpEuro(catchUpFee)} once</span>
+              </div>
+            )}
+            <div style={{ padding: `22px ${PAD} ${PAD}`, borderTop: "1px solid " + HAIR, background: "#FAFAFA" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <Button variant="dark" size="md" href="/contact" style={{ width: "100%" }}>Request information <Icon name="arrow-right" size={16} color="#fff" /></Button>
                 {/* Inert until there is a price to book against: the modal
                     quotes the monthly figure back at the visitor and the lead
                     email repeats it, so booking without one would confirm a
                     plan nobody priced. */}
-                <Button variant="outline-dark" size="md" onClick={() => { if (canBook) { setBooked(null); setModal(true); } }} style={{ width: "100%", opacity: canBook ? 1 : 0.55, pointerEvents: canBook ? "auto" : "none" }}><Icon name="calendar" size={16} color="#fff" /> Request a 30-minute call</Button>
+                <Button variant="outline-light" size="md" onClick={() => { if (canBook) { setBooked(null); setModal(true); } }} style={{ width: "100%", opacity: canBook ? 1 : 0.45, pointerEvents: canBook ? "auto" : "none" }}><Icon name="calendar" size={16} color={INK} /> Request a 30-minute call</Button>
                 {!canBook && (
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.5, color: "#E8C08A", textAlign: "center" }}>
+                  <span style={{ fontFamily: BODY, fontSize: 13, lineHeight: 1.5, fontWeight: 500, color: INDIGO, textAlign: "center" }}>
                     {!q.priced ? "Pick your monthly spend above and this unlocks." : "Pick the month we should start from and this unlocks."}
                   </span>
                 )}
               </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 14 }}>
-                <Icon name="shield-check" size={13} color="var(--a4-stone)" />
-                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-stone)" }}>Price agreed before we start · reviewed by a licensed audit firm · service begins upon KYC approval · {PRICING_VAT_NOTE}</span>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 8, marginTop: 16 }}>
+                <Icon name="shield-check" size={14} color="#71717A" style={{ marginTop: 2, flexShrink: 0 }} />
+                <span style={{ fontFamily: BODY, fontSize: 12, lineHeight: 1.5, color: "#71717A" }}>Price agreed before we start · reviewed by a licensed audit firm · service begins upon KYC approval · {PRICING_VAT_NOTE}</span>
               </div>
             </div>
-          </div>
-        </Reveal>
+          </aside>
+        </div>
       </Container>
 
       {/* booking modal */}
       {modal && (
-        <div onClick={(e) => { if (e.target === e.currentTarget) setModal(false); }} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,.45)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="books-call-title" style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", width: "100%", maxWidth: 440, padding: 30, boxShadow: "0 32px 80px rgba(0,0,0,.25)" }}>
+        <div onClick={(e) => { if (e.target === e.currentTarget) setModal(false); }} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(9,9,11,.55)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="books-call-title" style={{ background: "#FFFFFF", border: "1px solid " + HAIR, borderRadius: 28, width: "100%", maxWidth: 460, maxHeight: "calc(100vh - 48px)", overflowY: "auto", padding: "clamp(24px,3.4vw,36px)", boxShadow: "0 50px 120px rgba(9,9,11,.28)", color: INK }}>
             {booked ? (
-              <div style={{ textAlign: "center", padding: "10px 0" }}>
-                <div style={{ width: 54, height: 54, borderRadius: 999, background: "rgba(0,168,126,.12)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}><Icon name="check" size={26} color="var(--a4-accent-teal)" stroke={2.5} /></div>
-                <div id="books-call-title" style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>Call request received</div>
-                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, lineHeight: 1.6, color: "var(--a4-mute)", margin: "10px 0 0" }}>Thanks, {form.name.split(" ")[0]}. We&apos;ll confirm your 30-minute call by email at <strong style={{ color: "var(--a4-ink)" }}>{form.email}</strong> within 2 business hours.</div>
-                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-stone)", marginTop: 14 }}>Reference: {booked} · {lpEuroOr(monthly)}/mo{annualFee > 0 ? ` + ${lpEuro(annualFee)}/yr` : ""}</div>
+              <div style={{ textAlign: "center", padding: "8px 0" }}>
+                <div style={{ width: 56, height: 56, borderRadius: 999, background: "rgba(79,85,241,.1)", display: "grid", placeItems: "center", margin: "0 auto 18px" }}><Icon name="check" size={26} color={INDIGO} stroke={2.5} /></div>
+                <div id="books-call-title" style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 26, letterSpacing: "-0.03em", lineHeight: 1.15 }}>Call request received</div>
+                <div style={{ fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: "#52525B", margin: "10px 0 0" }}>Thanks, {form.name.split(" ")[0]}. We&apos;ll confirm your 30-minute call by email at <strong style={{ color: INK }}>{form.email}</strong> within 2 business hours.</div>
+                <div style={{ fontFamily: BODY, fontSize: 13, color: "#71717A", marginTop: 14 }}>Reference: {booked} · {lpEuroOr(monthly)}/mo{annualFee > 0 ? ` + ${lpEuro(annualFee)}/yr` : ""}</div>
                 <Button variant="outline-light" size="md" onClick={() => setModal(false)} style={{ width: "100%", marginTop: 22 }}>Close</Button>
               </div>
             ) : (
               <div>
-                <div id="books-call-title" style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-ink)" }}>Request your free 30-minute call</div>
-                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-mute)", margin: "6px 0 22px" }}>We&apos;ll confirm your {lpEuroOr(monthly)}/mo{annualFee > 0 ? ` + ${lpEuro(annualFee)}/yr` : ""} plan and get you set up. No obligation.</div>
+                <div id="books-call-title" style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 26, letterSpacing: "-0.03em", lineHeight: 1.15 }}>Request your free 30-minute call</div>
+                <div style={{ fontFamily: BODY, fontSize: 15, lineHeight: 1.55, color: "#52525B", margin: "8px 0 22px" }}>We&apos;ll confirm your {lpEuroOr(monthly)}/mo{annualFee > 0 ? ` + ${lpEuro(annualFee)}/yr` : ""} plan and get you set up. No obligation.</div>
                 {([["name", "Your name", "text"], ["email", "Email address", "email"], ["phone", "Phone (optional)", "tel"]] as const).map(([k, label, type]) => (
                   <div key={k} style={{ marginBottom: 14 }}>
-                    <label htmlFor={`books-${k}`} style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--a4-mute)", marginBottom: 6 }}>{label}</label>
-                    <input id={`books-${k}`} name={k} type={type} autoComplete={k === "name" ? "name" : k === "email" ? "email" : "tel"} value={form[k]} onChange={(e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setSubmitError(""); }} style={{ width: "100%", background: "var(--a4-surface-soft)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-md)", padding: "11px 14px", color: "var(--a4-ink)", fontFamily: "var(--a4-font-body)", fontSize: 14, outline: "none" }} />
+                    <label htmlFor={`books-${k}`} style={{ display: "block", fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: INK, marginBottom: 8 }}>{label}</label>
+                    <input id={`books-${k}`} name={k} type={type} autoComplete={k === "name" ? "name" : k === "email" ? "email" : "tel"} value={form[k]} onChange={(e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setSubmitError(""); }} className="lp-input" style={{ ...fieldInput, width: "100%" }} />
                   </div>
                 ))}
-                {submitError && <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--accent-danger)", marginBottom: 10 }}>{submitError}</div>}
+                {submitError && (
+                  <div role="alert" style={{ display: "flex", gap: 10, fontFamily: BODY, fontSize: 14, fontWeight: 600, lineHeight: 1.5, color: INK, marginBottom: 10 }}>
+                    <span className="a4-bullet" style={{ marginTop: 7, background: INK }} />
+                    {submitError}
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
                   <Button variant="dark" size="md" onClick={submit} style={{ flex: 1, opacity: submitting ? 0.6 : 1, pointerEvents: submitting ? "none" : "auto" }}>{submitting ? "Sending…" : "Send request"} <Icon name="arrow-right" size={16} color="#fff" /></Button>
                   <Button variant="outline-light" size="md" onClick={() => setModal(false)}>Cancel</Button>

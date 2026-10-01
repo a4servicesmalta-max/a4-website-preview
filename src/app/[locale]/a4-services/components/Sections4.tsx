@@ -1,42 +1,49 @@
-// @ts-nocheck
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Logo, Button, Pill, Badge, Eyebrow, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import React from "react";
+import { Button, Eyebrow, Icon, Container } from "@/components/a4-landing/Primitives";
+import { DARK_CARD, LIGHT_GLOW, gradText } from "@/components/fx/primitives";
+import { A4H_CARD_CSS, FeatureCard } from "./Sections2";
 // (Bookkeeping tiers replaced by the interactive Pricing calculator — see Pricing.jsx)
+
+const INK = "#09090B";
+const PERI = "#8B8FF7";
+const BODY = "var(--a4x-body)";
 
 export function International() {
   const benefits = ["Professional advice from qualified experts", "Digital efficiency through one portal", "Cross-border support via BOKS International", "A move from reactive admin to structured management"];
   return (
-    <section style={{ background: "var(--a4-canvas-light)", padding: "clamp(64px,9vw,104px) 0" }}>
-      <Container style={{ display: "flex", gap: 64, flexWrap: "wrap", alignItems: "center" }}>
-        <Reveal style={{ flex: "1 1 420px", minWidth: 300 }}>
-          <Eyebrow>Local expertise · international reach</Eyebrow>
-          <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "var(--a4-ink)", fontSize: "clamp(30px,3.8vw,46px)", lineHeight: 1.08, letterSpacing: "-.02em", margin: "18px 0 0", textWrap: "balance" }}>
-            We combine professional advice with digital efficiency.
+    <section data-sec="international" style={{ position: "relative", background: LIGHT_GLOW, color: INK, padding: "clamp(100px,13vw,180px) 0" }}>
+      <Container style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 440px), 1fr))", gap: "56px 72px", alignItems: "center" }}>
+        <div style={{ minWidth: 0 }}>
+          <div data-fx="rise">
+            <Eyebrow>Local expertise · international reach</Eyebrow>
+          </div>
+          <h2 data-fx="rise" data-d="100" style={{ margin: "16px 0 0", fontFamily: "var(--a4x-display)", fontSize: "clamp(36px,4.6vw,72px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.04, color: INK, textWrap: "balance" }}>
+            We combine professional advice with <span style={{ ...gradText, paddingBottom: ".06em" }}>digital efficiency.</span>
           </h2>
-          <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 17.5, lineHeight: 1.6, color: "var(--a4-mute)", margin: "20px 0 0", maxWidth: 460, textWrap: "pretty" }}>
+          <p data-fx="rise" data-d="200" style={{ margin: "22px 0 0", maxWidth: 540, fontFamily: BODY, fontSize: 17, lineHeight: 1.6, color: "#52525B", textWrap: "pretty" }}>
             A4 Services Limited is an independent member of BOKS International. Through this association, we support clients who require cross-border professional assistance — moving you from reactive finance administration to structured financial management.
           </p>
-        </Reveal>
-        <Reveal delay={120} style={{ flex: "1 1 360px", minWidth: 300 }}>
-          <div style={{ background: "var(--a4-canvas-dark)", borderRadius: "var(--a4-r-lg)", padding: "clamp(28px,3vw,40px)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 13, marginBottom: 22 }}>
-              <span style={{ width: 46, height: 46, borderRadius: "var(--a4-r-md)", background: "#fff", display: "grid", placeItems: "center", flexShrink: 0, overflow: "hidden" }}>
-                <img src="/assets/boks-logo.png" alt="BOKS International" style={{ width: 32, height: 32, display: "block" }} />
-              </span>
-              <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 18, color: "#fff" }}>BOKS International member</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {benefits.map((b) => (
-                <div key={b} style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
-                  <Icon name="check" size={17} color="var(--a4-accent-teal)" stroke={2.4} style={{ marginTop: 2, flexShrink: 0 }} />
-                  <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 15, lineHeight: 1.45, color: "var(--a4-on-dark)" }}>{b}</span>
-                </div>
-              ))}
-            </div>
+        </div>
+        {/* The design's dark card, carrying the benefits as numbered rows. */}
+        <div data-fx="rise" data-d="150" style={{ position: "relative", overflow: "hidden", minWidth: 0, borderRadius: 28, background: DARK_CARD, border: "1px solid rgba(255,255,255,.08)", boxShadow: "0 50px 120px rgba(9,9,11,.18)", padding: "clamp(26px,3.4vw,44px)", color: "#FFFFFF" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <span style={{ width: 52, height: 52, borderRadius: 14, background: "#FFFFFF", display: "grid", placeItems: "center", flexShrink: 0, overflow: "hidden" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/assets/boks-logo.png" alt="BOKS International" style={{ width: 36, height: 36, display: "block" }} />
+            </span>
+            <span style={{ fontFamily: "var(--a4x-display)", fontSize: "clamp(20px,1.8vw,24px)", fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.2 }}>BOKS International member</span>
           </div>
-        </Reveal>
+          <div style={{ marginTop: 28 }}>
+            {benefits.map((b, i) => (
+              <div key={b} style={{ display: "grid", gridTemplateColumns: "44px minmax(0, 1fr)", gap: 8, padding: "18px 0", borderTop: "1px solid rgba(255,255,255,.1)" }}>
+                <span style={{ fontFamily: "var(--a4x-display)", fontSize: 16, fontWeight: 600, letterSpacing: ".02em", color: PERI }}>{String(i + 1).padStart(2, "0")}</span>
+                <span style={{ fontFamily: BODY, fontSize: 16, lineHeight: 1.5, color: "#E4E4E7" }}>{b}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </Container>
     </section>
   );
@@ -49,29 +56,29 @@ export function WhoWeWorkWith() {
     { icon: "landmark", t: "Regulated entities & HNW individuals", s: "Statutory audit, compliance and private structures." },
   ];
   return (
-    <section style={{ background: "var(--a4-canvas-light)", padding: "clamp(64px,9vw,104px) 0" }}>
+    <section data-sec="who-we-work-with" style={{ position: "relative", background: LIGHT_GLOW, color: INK, padding: "clamp(100px,13vw,180px) 0" }}>
+      <style>{A4H_CARD_CSS}</style>
       <Container>
-        <Reveal style={{ maxWidth: 720 }}>
-          <Eyebrow>Our clients</Eyebrow>
-          <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "var(--a4-ink)", fontSize: "clamp(30px,4vw,48px)", lineHeight: 1.05, letterSpacing: "-.02em", margin: "18px 0 0", textWrap: "balance" }}>
-            We support businesses operating in Malta — across a wide range of sectors.
+        <div style={{ maxWidth: 940 }}>
+          <div data-fx="rise">
+            <Eyebrow>Our clients</Eyebrow>
+          </div>
+          <h2 data-fx="rise" data-d="100" style={{ margin: "16px 0 0", fontFamily: "var(--a4x-display)", fontSize: "clamp(34px,4.4vw,68px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.05, color: INK, textWrap: "balance" }}>
+            We support businesses operating in Malta — <span style={{ ...gradText, paddingBottom: ".06em" }}>across a wide range of sectors.</span>
           </h2>
-          <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 17.5, lineHeight: 1.6, color: "var(--a4-mute)", margin: "20px 0 0", textWrap: "pretty" }}>
+          <p data-fx="rise" data-d="200" style={{ margin: "22px 0 0", maxWidth: 760, fontFamily: BODY, fontSize: 17, lineHeight: 1.6, color: "#52525B", textWrap: "pretty" }}>
             We understand the local compliance environment, reporting obligations, VAT requirements and practical challenges faced by businesses in Malta. Whether you are launching a new company, managing growth, or preparing for audit, A4 Services can support you.
           </p>
-        </Reveal>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginTop: 48 }}>
+        </div>
+        <div style={{ marginTop: "clamp(48px,6vw,80px)", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 16 }}>
           {clients.map((c, i) => (
-            <Reveal key={c.t} delay={i * 80} style={{ background: "var(--a4-canvas-light)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", padding: "30px 28px" }}>
-              <Icon name={c.icon} size={26} color="var(--a4-primary)" />
-              <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 20, color: "var(--a4-ink)", margin: "20px 0 0", letterSpacing: "-.2px" }}>{c.t}</h3>
-              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 15, lineHeight: 1.5, color: "var(--a4-mute)", margin: "9px 0 0", textWrap: "pretty" }}>{c.s}</p>
-            </Reveal>
+            <FeatureCard key={c.t} i={i} total={clients.length} icon={c.icon} title={c.t} body={c.s} d={i * 80} />
           ))}
         </div>
-        <Reveal delay={120} style={{ marginTop: 40 }}>
-          <Button variant="dark" size="lg">Speak to our team <Icon name="arrow-right" size={18} color="#fff" /></Button>
-        </Reveal>
+        <div data-fx="rise" style={{ marginTop: 40 }}>
+          {/* Went nowhere before (no href) — a CTA that does nothing is breakage. */}
+          <Button variant="dark" size="lg" href="/contact">Speak to our team <Icon name="arrow-right" size={18} color="#fff" /></Button>
+        </div>
       </Container>
     </section>
   );
