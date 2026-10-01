@@ -166,17 +166,17 @@ export default function FloatingActionDock() {
             whileTap={{ scale: 0.94 }}
             onClick={expandDock}
             aria-label="Open quick actions"
-            className="pointer-events-auto relative flex h-[3.25rem] w-[3.25rem] items-center justify-center overflow-hidden rounded-full border border-white/30 bg-white/10 shadow-[0_16px_48px_-8px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
+            className="pointer-events-auto relative flex h-[3.25rem] w-[3.25rem] items-center justify-center overflow-hidden rounded-full border border-white/15 bg-[rgba(9,9,11,0.88)] shadow-[0_16px_48px_-8px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
           >
             <motion.span
               aria-hidden="true"
-              className="absolute inset-0 rounded-full bg-[#25D366]/25"
+              className="absolute inset-0 rounded-full bg-[#4F55F1]/30"
               animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.12, 0.35] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             />
             <span className="relative flex flex-col items-center gap-[3px]">
-              <span className="h-[3px] w-5 rounded-full bg-[#25D366]" />
-              <span className="h-[3px] w-5 rounded-full bg-black/70" />
+              <span className="h-[3px] w-5 rounded-full bg-[#8B8FF7]" />
+              <span className="h-[3px] w-5 rounded-full bg-white/45" />
               <span className="h-[3px] w-5 rounded-full bg-white/90" />
             </span>
           </motion.button>
@@ -188,7 +188,7 @@ export default function FloatingActionDock() {
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.88, x: 16 }}
             transition={dockSpring}
-            className="pointer-events-auto relative flex w-[min(17.5rem,calc(100vw-2rem))] flex-col gap-[6px] rounded-[22px] border border-white/25 bg-white/10 p-[6px] pt-3 shadow-[0_16px_48px_-8px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
+            className="pointer-events-auto relative flex w-[min(17.5rem,calc(100vw-2rem))] flex-col gap-[6px] rounded-[22px] border border-white/12 bg-[rgba(24,24,27,0.92)] p-[6px] pt-3 shadow-[0_16px_48px_-8px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
           >
             <motion.button
               type="button"
@@ -218,12 +218,12 @@ export default function FloatingActionDock() {
           onFocus={() => setHovered("wa")}
           className={cn(
             "group relative flex h-[46px] items-center gap-3 overflow-hidden rounded-[16px] px-3.5 transition-all duration-300",
-            "bg-[#25D366]/90 hover:bg-[#25D366] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]"
+            "bg-white/[0.06] hover:bg-white/[0.12] border border-white/10"
           )}
           style={{ transform: hovered === "wa" ? "scale(1.02)" : undefined }}
         >
           <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 transition-opacity group-hover:opacity-100" />
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#25D366]">
             <WhatsAppIcon />
           </span>
           <span className="flex-1 text-[13.5px] font-semibold tracking-tight text-white">WhatsApp</span>
@@ -246,11 +246,11 @@ export default function FloatingActionDock() {
           onFocus={() => setHovered("call")}
           className={cn(
             "group relative flex h-[46px] items-center gap-3 overflow-hidden rounded-[16px] px-3.5 transition-all duration-300",
-            "bg-black/85 hover:bg-black shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+            "bg-[#4F55F1] hover:bg-[#6468F3] shadow-[0_12px_30px_rgba(79,85,241,0.35)]"
           )}
           style={{ transform: hovered === "call" ? "scale(1.02)" : undefined }}
         >
-          <span className="absolute inset-0 bg-gradient-to-r from-primary-blue/0 via-primary-blue/20 to-primary-blue/0 opacity-0 transition-opacity group-hover:opacity-100" />
+          <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 transition-opacity group-hover:opacity-100" />
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10">
             <Calendar className="h-4 w-4 text-white" strokeWidth={2} />
           </span>
@@ -286,7 +286,7 @@ export default function FloatingActionDock() {
           )}
           style={{ transform: hovered === "lang" ? "scale(1.02)" : undefined }}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-white">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#09090B] text-white">
             <Globe className="h-4 w-4" strokeWidth={2} />
           </span>
           <span className="flex-1 truncate text-left text-[13.5px] font-semibold text-black">

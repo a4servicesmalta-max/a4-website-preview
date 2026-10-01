@@ -53,7 +53,8 @@ export function TopLoader() {
             opacity: 0,
             transition: { duration: 0.3 } 
           }}
-          className="fixed top-0 left-0 h-[3px] bg-primary-blue z-[9999] pointer-events-none"
+          className="fixed top-0 left-0 h-[3px] z-[9999] pointer-events-none"
+          style={{ background: "linear-gradient(90deg,#4F55F1 0%,#6468F3 55%,#8B8FF7 100%)", boxShadow: "0 0 12px rgba(79,85,241,.6)" }}
         />
       )}
     </AnimatePresence>

@@ -37,7 +37,8 @@ export default function ChatLauncher({ onClick, disabled }: ChatLauncherProps) {
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         disabled={disabled}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-[#111111] text-white shadow-[0_8px_24px_rgba(30,32,64,0.4)] hover:bg-[#222222] focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2 disabled:opacity-70 transition-colors"
+        className="flex h-14 w-14 items-center justify-center rounded-full text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4F55F1] focus-visible:ring-offset-2 disabled:opacity-70 transition-colors"
+        style={{ background: "rgba(9,9,11,.92)", border: "1px solid rgba(255,255,255,.14)", boxShadow: "0 24px 60px rgba(9,9,11,.35)", backdropFilter: "blur(12px)" }}
         aria-label={t("supportChat.launcherAria")}
       >
         <svg

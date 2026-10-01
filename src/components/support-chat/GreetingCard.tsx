@@ -60,7 +60,7 @@ export default function GreetingCard({ onChatNow, onClose }: GreetingCardProps) 
           <button
             type="button"
             onClick={onChatNow}
-            className="w-full py-3 px-4 rounded-xl bg-[#111111] hover:bg-[#222222] text-white font-medium text-sm transition-colors shadow-sm"
+            className="w-full py-3 px-4 rounded-full bg-[#09090B] hover:bg-[#27272A] text-white font-semibold text-sm transition-colors"
           >
             {t("supportChat.chatNow")}
           </button>

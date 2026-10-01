@@ -530,11 +530,11 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="relative w-full max-w-md h-[85vh] sm:h-[600px] sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden"
+        className="relative w-full max-w-md h-[85vh] sm:h-[600px] sm:max-h-[85vh] rounded-t-[24px] sm:rounded-[24px] bg-white shadow-[0_40px_100px_rgba(9,9,11,0.35)] border border-[#E4E4E7] flex flex-col overflow-hidden"
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/80">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-[#111111] flex items-center justify-center text-white">
+            <div className="w-9 h-9 rounded-full bg-[#09090B] flex items-center justify-center text-white">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -589,7 +589,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
                 <div
                   className={`rounded-2xl px-4 py-2.5 ${
                     msg.role === "user"
-                      ? `rounded-br-md bg-[#111111] text-white ${msg.pending ? "opacity-60" : ""} ${msg.failed ? "opacity-50" : ""}`
+                      ? `rounded-br-md bg-[#4F55F1] text-white ${msg.pending ? "opacity-60" : ""} ${msg.failed ? "opacity-50" : ""}`
                       : msg.role === "staff"
                         ? "rounded-bl-md bg-emerald-50 text-gray-900 border border-emerald-100"
                         : "rounded-bl-md bg-gray-100 text-gray-900"
@@ -626,11 +626,11 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
                     onChange={(e) => setOfflineEmail(e.target.value)}
                     placeholder="you@company.com.mt"
                     aria-label="Your email address"
-                    className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-[13px] text-[#111111] outline-none focus:border-gray-500"
+                    className="min-w-0 flex-1 rounded-[14px] border border-[#E4E4E7] px-3 py-2 text-[13px] text-[#09090B] outline-none focus:border-[#4F55F1]"
                   />
                   <button
                     type="submit"
-                    className="shrink-0 rounded-lg bg-[#111111] px-3 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#222222]"
+                    className="shrink-0 rounded-full bg-[#09090B] px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#27272A]"
                   >
                     Send
                   </button>
@@ -644,7 +644,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
 
               <a
                 href={BOOK_A_CALL_PATH}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-[12.5px] font-semibold text-[#111111] transition-colors hover:border-gray-500"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#E4E4E7] px-4 py-2 text-[12.5px] font-semibold text-[#111111] transition-colors hover:border-gray-500"
               >
                 Book a meeting →
               </a>
@@ -657,7 +657,7 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
             <button
               type="button"
               onClick={handleRestart}
-              className="w-full py-3 rounded-xl bg-[#111111] hover:bg-[#222222] text-white font-semibold text-sm transition-colors"
+              className="w-full py-3 rounded-full bg-[#09090B] hover:bg-[#27272A] text-white font-semibold text-sm transition-colors"
             >
               {t("supportChat.startNewChat")}
             </button>
@@ -672,13 +672,13 @@ export default function ChatModal({ open, onClose, onRestart }: ChatModalProps) 
                 disabled={botTyping}
                 placeholder={t("supportChat.inputPlaceholder")}
                 aria-label={t("supportChat.inputPlaceholder")}
-                className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#111111]/30 focus:border-[#111111] disabled:opacity-60 text-sm"
+                className="flex-1 px-4 py-3 rounded-[14px] border border-[#E4E4E7] focus:outline-none focus:ring-2 focus:ring-[#4F55F1]/30 focus:border-[#4F55F1] disabled:opacity-60 text-sm"
               />
               <button
                 type="submit"
                 disabled={botTyping || !input.trim()}
                 aria-label={t("supportChat.sendAria")}
-                className="px-4 py-3 rounded-xl bg-[#111111] hover:bg-[#222222] text-white disabled:opacity-60 transition-colors"
+                className="px-4 py-3 rounded-full bg-[#4F55F1] hover:bg-[#6468F3] text-white disabled:opacity-60 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 2 9 18z" />
