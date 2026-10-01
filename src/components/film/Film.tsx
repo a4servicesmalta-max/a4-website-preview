@@ -51,15 +51,6 @@ const FilmContext = createContext<FilmState>({
 
 export const useFilm = () => useContext(FilmContext);
 
-/** Next cue after `name` in the sheet (Infinity for the last one). */
-export function useCue(name: string): [number, number] {
-  const { Q } = useFilm();
-  const a = Q[name] ?? Infinity;
-  let b = Infinity;
-  for (const k in Q) if (Q[k] > a && Q[k] < b) b = Q[k];
-  return [a, b];
-}
-
 type BgKind = "light" | "zinc" | "dark" | "blue" | "grad";
 
 const GRID =
