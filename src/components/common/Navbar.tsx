@@ -213,8 +213,6 @@ const Navbar = () => {
       >
         <LocalizedLink href="/" aria-label="A4 Services — home" style={{ display: "flex", alignItems: "center", textDecoration: "none", color: "#FFFFFF", flexShrink: 0 }}>
           <A4Mark size={26} />
-          <span style={{ width: 1.5, height: 21, margin: "0 10px", background: "#FFFFFF", opacity: 0.35 }} />
-          <span style={{ fontSize: 18, fontWeight: 500, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>A4 Services</span>
         </LocalizedLink>
         {/* The firm/software split, above the fold: A4 is the firm, Vacei the software we build. */}
         <a
