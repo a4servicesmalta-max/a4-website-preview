@@ -1,10 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
+import { Icon } from "@/components/a4-landing/Primitives";
+import { A4Mark, LIGHT_GLOW, gradText } from "@/components/fx/primitives";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
-import LocalizedLink from "@/components/common/LocalizedLink";
+
+const SANS = "var(--a4x-display)";
+const BODY = "var(--a4x-body)";
+const INDIGO = "#4F55F1";
+const INK = "#09090B";
+
+const INCLUDED = [
+  "Quarterly VAT filing reminders",
+  "FS5 payroll & SSC monthly cycle",
+  "Provisional tax instalment dates",
+  "MBR annual return window",
+  "Typical audited accounts & tax return deadline",
+];
 
 export function ComplianceCalendarContent() {
   const [email, setEmail] = useState("");
@@ -44,6 +57,8 @@ export function ComplianceCalendarContent() {
     }
   };
 
+  const strong: React.CSSProperties = { color: INK, fontWeight: 600 };
+
   return (
     <div className="a4-site-page">
       <PageHero
@@ -51,89 +66,105 @@ export function ComplianceCalendarContent() {
         title="Malta compliance deadline calendar 2026"
         sub="VAT, payroll, MBR, provisional tax and audit dates — add them to your calendar in one click."
       />
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,96px) 0" }}>
-        <Container>
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12 items-start">
-            <Reveal>
-              <h2 className="a4-font-display font-medium text-[var(--a4-ink)]" style={{ fontSize: "clamp(24px,3vw,32px)" }}>
-                What&apos;s included
-              </h2>
-              <ul className="mt-5 space-y-3 a4-font-body text-[15px] text-[var(--a4-mute)] leading-relaxed">
-                <li>Quarterly VAT filing reminders</li>
-                <li>FS5 payroll &amp; SSC monthly cycle</li>
-                <li>Provisional tax instalment dates</li>
-                <li>MBR annual return window</li>
-                <li>Typical audited accounts &amp; tax return deadline</li>
-              </ul>
-              <p className="a4-font-body text-[13px] text-[var(--a4-mute)] mt-6">
-                Dates are indicative — your company&apos;s year-end and VAT scheme may shift exact deadlines. A4 clients get a tailored compliance calendar in their portal.
-              </p>
-            </Reveal>
-            <Reveal delay={80}>
-              <form
-                onSubmit={download}
-                style={{
-                  background: "var(--a4-surface-card)",
-                  border: "1px solid var(--a4-hairline-light)",
-                  borderRadius: "var(--a4-r-lg)",
-                  padding: "clamp(26px,3vw,40px)",
-                }}
-              >
-                <h3 className="a4-font-display font-medium text-[var(--a4-ink)] text-[22px] mb-2">
-                  Download the .ics calendar
-                </h3>
-                <p className="a4-font-body text-[14px] text-[var(--a4-mute)] mb-5">
-                  Enter your work email — we&apos;ll send the file and occasional compliance tips (unsubscribe anytime).
-                </p>
-                <p className="a4-font-body text-[13px] text-[var(--a4-mute)] mb-5 rounded-[var(--a4-r-md)] border border-[var(--a4-hairline-light)] bg-[var(--a4-surface-soft)] px-3.5 py-3 leading-relaxed">
-                  The download is a <strong className="text-[var(--a4-ink)]">calendar file (.ics)</strong>, not a PDF.
-                  On Windows it usually opens in <strong className="text-[var(--a4-ink)]">Outlook</strong> so you can
-                  import the deadlines — choose <strong className="text-[var(--a4-ink)]">Save</strong> or{" "}
-                  <strong className="text-[var(--a4-ink)]">Import</strong> to add them to your calendar. On Mac, use
-                  Calendar; you can also import the same file into Google Calendar.
-                </p>
-                <label className="a4-font-body text-[12px] font-semibold uppercase tracking-wide text-[var(--a4-mute)]">
-                  Work email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
-                  required
-                  className="w-full mt-2 mb-4 rounded-[var(--a4-r-md)] border border-[var(--a4-hairline-light)] bg-[var(--a4-surface-soft)] px-4 py-3 a4-font-body text-[15px] text-[var(--a4-ink)] outline-none"
-                />
-                {error && <p className="a4-font-body text-[13px] text-red-500 mb-3">{error}</p>}
-                {status === "success" && (
-                  <p
-                    className="a4-font-body text-[13px] mb-3 rounded-[var(--a4-r-md)] border px-3.5 py-3 leading-relaxed"
-                    style={{
-                      color: "var(--a4-ink)",
-                      borderColor: "rgba(73,79,223,.35)",
-                      background: "rgba(73,79,223,.08)",
-                    }}
-                  >
-                    Download started. Open <strong>malta-compliance-deadlines-2026.ics</strong> from your Downloads
-                    folder — if Outlook opens, click <strong>Save</strong> or <strong>Import</strong> to add the 2026
-                    Malta deadlines to your calendar.
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  disabled={status === "loading"}
-                  className="w-full h-12 rounded-[var(--a4-r-full)] bg-black text-white a4-font-body text-[16px] font-semibold inline-flex items-center justify-center gap-2 border-0 cursor-pointer disabled:opacity-50"
+      <section style={{ position: "relative", padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)", background: LIGHT_GLOW, color: INK }}>
+        <div className="cp-split" style={{ maxWidth: 1280, margin: "0 auto", alignItems: "start" }}>
+          {/* What's included — numbered rows */}
+          <div>
+            <h2 style={{ margin: 0, fontFamily: SANS, fontSize: "clamp(40px,5.2vw,84px)", letterSpacing: "-0.035em", lineHeight: 1.05 }}>
+              <span data-fx="rise" style={{ display: "block", fontWeight: 500 }}>
+                What&apos;s
+              </span>
+              <span data-fx="rise" data-d="100" style={{ display: "block", fontWeight: 600, letterSpacing: "-0.04em", paddingBottom: ".08em", ...gradText }}>
+                included
+              </span>
+            </h2>
+            <ol data-fx="rise" data-d="200" style={{ margin: "clamp(32px,4vw,48px) 0 0", padding: 0, listStyle: "none" }}>
+              {INCLUDED.map((item, i) => (
+                <li
+                  key={item}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "48px 1fr",
+                    gap: 12,
+                    padding: "20px 0",
+                    borderTop: "1px solid #E4E4E7",
+                    ...(i === INCLUDED.length - 1 ? { borderBottom: "1px solid #E4E4E7" } : null),
+                  }}
                 >
-                  {status === "loading"
-                    ? "Preparing download…"
-                    : status === "success"
-                      ? "Download again"
-                      : "Download calendar"}
-                  <Icon name="download" size={16} color="#fff" />
-                </button>
-              </form>
-            </Reveal>
+                  <span style={{ paddingTop: 3, fontFamily: SANS, fontSize: 16, fontWeight: 600, letterSpacing: ".02em", color: INDIGO }}>{String(i + 1).padStart(2, "0")}</span>
+                  <span style={{ fontFamily: SANS, fontSize: "clamp(18px,1.6vw,22px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.35 }}>{item}</span>
+                </li>
+              ))}
+            </ol>
+            <p data-fx="rise" data-d="300" style={{ margin: "24px 0 0", maxWidth: 560, fontFamily: BODY, fontSize: 14.5, lineHeight: 1.6, color: "#52525B" }}>
+              Dates are indicative — your company&apos;s year-end and VAT scheme may shift exact deadlines. A4 clients get a tailored compliance calendar in their portal.
+            </p>
           </div>
-        </Container>
+
+          {/* The form as the design's document panel */}
+          <form
+            onSubmit={download}
+            data-fx="rise"
+            data-d="150"
+            data-dy="80"
+            style={{ position: "relative", background: "#FFFFFF", border: "1px solid #E4E4E7", borderRadius: 28, boxShadow: "0 50px 120px rgba(9,9,11,.12)", overflow: "hidden" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", padding: "clamp(24px,3.4vw,40px) clamp(24px,3.4vw,40px) 0" }}>
+              <A4Mark size={32} color={INK} />
+              <span style={{ width: 1.5, height: 26, margin: "0 12px", background: INK, opacity: 0.35 }} />
+              <span style={{ fontFamily: SANS, fontSize: 18, fontWeight: 500, letterSpacing: "-0.02em" }}>A4 Services</span>
+            </div>
+            <div style={{ padding: "28px clamp(24px,3.4vw,40px) clamp(24px,3.4vw,40px)" }}>
+              <h3 style={{ margin: 0, fontFamily: SANS, fontSize: "clamp(28px,2.8vw,38px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.08 }}>Download the .ics calendar</h3>
+              <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 15.5, lineHeight: 1.6, color: "#52525B" }}>
+                Enter your work email — we&apos;ll send the file and occasional compliance tips (unsubscribe anytime).
+              </p>
+              <p style={{ margin: "20px 0 0", padding: "16px 18px", borderRadius: 16, background: "#F4F4F5", fontFamily: BODY, fontSize: 14, lineHeight: 1.6, color: "#52525B" }}>
+                The download is a <strong style={strong}>calendar file (.ics)</strong>, not a PDF. On Windows it usually opens in <strong style={strong}>Outlook</strong> so you can import the
+                deadlines — choose <strong style={strong}>Save</strong> or <strong style={strong}>Import</strong> to add them to your calendar. On Mac, use Calendar; you can also import the same
+                file into Google Calendar.
+              </p>
+              <label htmlFor="lm-email" className="cp-label" style={{ marginTop: 26 }}>
+                Work email
+              </label>
+              <input
+                id="lm-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                autoComplete="email"
+                required
+                className="cp-input"
+                aria-invalid={status === "error" && Boolean(error)}
+                aria-describedby={error ? "lm-email-err" : undefined}
+              />
+              {error && (
+                <p id="lm-email-err" className="cp-error" role="alert">
+                  {error}
+                </p>
+              )}
+              {status === "success" && (
+                <p
+                  role="status"
+                  style={{ margin: "16px 0 0", padding: "16px 18px", borderRadius: 16, border: "1px solid rgba(79,85,241,.3)", background: "rgba(79,85,241,.06)", fontFamily: BODY, fontSize: 14, lineHeight: 1.6, color: INK }}
+                >
+                  Download started. Open <strong>malta-compliance-deadlines-2026.ics</strong> from your Downloads folder — if Outlook opens, click <strong>Save</strong> or{" "}
+                  <strong>Import</strong> to add the 2026 Malta deadlines to your calendar.
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={status === "loading"}
+                className="a4-btn a4-btn-ink"
+                style={{ width: "100%", height: 64, marginTop: 22, fontSize: 19, opacity: status === "loading" ? 0.55 : 1 }}
+              >
+                {status === "loading" ? "Preparing download…" : status === "success" ? "Download again" : "Download calendar"}
+                <Icon name="download" size={18} color="#FFFFFF" />
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
       <ServicePortalBand serviceName="MBR compliance" />
     </div>

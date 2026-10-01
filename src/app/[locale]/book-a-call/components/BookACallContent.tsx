@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import FormStatusModal from "@/components/common/FormStatusModal";
-import { Button, Container, Icon, Logo, Reveal } from "@/components/a4-landing/Primitives";
+import { Button, Icon, Logo } from "@/components/a4-landing/Primitives";
+import { DARK_CARD, LIGHT_GLOW, gradText } from "@/components/fx/primitives";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
 import { QUOTE_API_BASE } from "@/lib/websiteQuotation";
@@ -22,9 +23,9 @@ import {
  * THE PANEL IS THE PAGE. A dark port of the owner-designed booking panel that
  * ships on vacei.com/book-a-demo: a month calendar (Malta days, Monday-first,
  * availability dots) → the free times on the chosen day → details with
- * qualifier chips → booked, all inside one card. A4's palette rather than
- * vacei's teal gradient: deep charcoal on the site's `--a4-*` tokens, with the
- * cobalt accent showing only in the panel wash and the busy-day dots.
+ * qualifier chips → booked, all inside one card. In the A4 design language:
+ * the ink card with its grid and indigo corner glow on the light section,
+ * Outfit, pill controls, periwinkle for the busy-day dots.
  *
  * THE FALLBACK IS THE FLOOR. Whenever the scheduling API is dark, returns no
  * slots or fails outright, the visitor gets the contact route instead — never a
@@ -102,34 +103,31 @@ const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n));
 
 const WEEKDAY_HEADS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
+/** The panel surface: the design's ink card with its 32px grid and indigo corner glow. */
+const PANEL: React.CSSProperties = {
+  position: "relative",
+  overflow: "hidden",
+  borderRadius: 28,
+  padding: "clamp(26px,3.6vw,40px)",
+  color: "#fff",
+  border: "1px solid rgba(255,255,255,.08)",
+  background: DARK_CARD,
+  boxShadow: "0 50px 120px rgba(9,9,11,.28)",
+};
+
 function ContactFallback({ note }: { note: string }) {
   return (
-    <Reveal
-      style={{
-        background: "var(--a4-surface-elevated)",
-        border: "1px solid var(--a4-hairline-dark)",
-        borderRadius: "var(--a4-r-xl)",
-        padding: "clamp(26px,3.4vw,40px)",
-        textAlign: "center",
-        boxShadow: "0 30px 80px -34px rgba(0,0,0,.9)",
-      }}
-    >
-      <h2
-        className="a4-font-display font-medium text-white"
-        style={{ fontSize: "clamp(22px,2.6vw,28px)", letterSpacing: "-.3px" }}
-      >
+    <div data-fx="rise" data-dy="80" style={{ ...PANEL, textAlign: "center" }}>
+      <h2 style={{ margin: 0, fontFamily: "var(--a4x-display)", fontSize: "clamp(26px,2.8vw,34px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.12 }}>
         {note}
       </h2>
-      <p
-        className="a4-font-body text-[15.5px] leading-[1.6] text-[var(--a4-on-dark-mute)] mt-3 mb-6 mx-auto"
-        style={{ maxWidth: 460 }}
-      >
+      <p style={{ margin: "14px auto 28px", maxWidth: 460, fontFamily: "var(--a4x-body)", fontSize: 16, lineHeight: 1.6, color: "#A1A1AA" }}>
         Prefer email? Contact us and we&apos;ll offer you times.
       </p>
-      <Button variant="primary" size="md" href="/contact">
-        Go to contact <Icon name="arrow-right" size={16} color="#000" />
+      <Button variant="primary" size="lg" href="/contact">
+        Go to contact <Icon name="arrow-right" size={18} color="#09090B" />
       </Button>
-    </Reveal>
+    </div>
   );
 }
 
@@ -359,34 +357,29 @@ export function BookACallContent() {
   const stepIndex: Record<Step, number> = { cal: 0, time: 1, form: 2, done: 3 };
   const pillStyle = (i: number): React.CSSProperties => {
     const idx = stepIndex[step];
-    if (idx === i) return { background: "#fff", color: "#000", borderColor: "#fff" };
-    if (idx > i)
-      return { background: "rgba(255,255,255,.2)", color: "#fff", borderColor: "var(--a4-hairline-dark)" };
-    return {
-      background: "rgba(255,255,255,.05)",
-      color: "var(--a4-on-dark-mute)",
-      borderColor: "var(--a4-hairline-dark)",
-    };
+    if (idx === i) return { background: "#fff", color: "#09090B", borderColor: "#fff" };
+    if (idx > i) return { background: "rgba(139,143,247,.18)", color: "#fff", borderColor: "transparent" };
+    return { background: "transparent", color: "#A1A1AA", borderColor: "rgba(255,255,255,.14)" };
   };
 
   const lbl: React.CSSProperties = {
-    marginTop: 6,
-    fontFamily: "var(--a4-font-body)",
-    fontSize: 12,
+    marginTop: 10,
+    fontFamily: "var(--a4x-display)",
+    fontSize: 14,
     fontWeight: 600,
-    color: "var(--a4-on-dark-mute)",
+    color: "#E4E4E7",
   };
   const hint: React.CSSProperties = {
-    margin: "16px 0 0",
+    margin: "18px 0 0",
     textAlign: "center",
-    fontFamily: "var(--a4-font-body)",
-    fontSize: 11.5,
-    color: "rgba(255,255,255,.45)",
+    fontFamily: "var(--a4x-body)",
+    fontSize: 13,
+    color: "#A1A1AA",
   };
   const errText: React.CSSProperties = {
     margin: "4px 0 0",
-    fontFamily: "var(--a4-font-body)",
-    fontSize: 12,
+    fontFamily: "var(--a4x-body)",
+    fontSize: 13,
     color: "#ffc9c0",
     minHeight: "1em",
   };
@@ -399,7 +392,7 @@ export function BookACallContent() {
   const chipRow = (key: QualifierKey, label: string, options: readonly string[]) => (
     <div key={key}>
       <div style={lbl}>{label}</div>
-      <div className="flex flex-wrap gap-[6px] mt-[6px]" role="group" aria-label={label}>
+      <div className="flex flex-wrap gap-[8px] mt-[10px]" role="group" aria-label={label}>
         {options.map((opt) => (
           <button
             key={opt}
@@ -431,462 +424,426 @@ export function BookACallContent() {
         sub={`A free ${duration}-minute call with an A4 accountant — no obligation. We'll learn about your business and set you up from there.`}
       />
 
-      <section className="bg-black" style={{ padding: "clamp(40px,6vw,72px) 0 clamp(56px,8vw,96px)" }}>
-        <Container>
-          <div style={{ maxWidth: 540, margin: "0 auto" }}>
-            {slotsState === "loading" && (
-              <Reveal
-                style={{
-                  background: "var(--a4-surface-elevated)",
-                  border: "1px solid var(--a4-hairline-dark)",
-                  borderRadius: "var(--a4-r-xl)",
-                  padding: "clamp(26px,3.4vw,40px)",
-                  textAlign: "center",
-                }}
-              >
-                <p className="a4-font-body text-[15.5px] text-[var(--a4-on-dark-mute)] m-0">
-                  Loading available times…
-                </p>
-              </Reveal>
-            )}
+      <section style={{ position: "relative", padding: "clamp(88px,11vw,150px) clamp(20px,5vw,72px)", background: LIGHT_GLOW, color: "#09090B" }}>
+        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          {slotsState === "loading" && (
+            <div data-fx="rise" data-dy="80" style={{ ...PANEL, textAlign: "center" }}>
+              <p style={{ margin: 0, fontFamily: "var(--a4x-display)", fontSize: 18, fontWeight: 500, color: "#A1A1AA" }}>
+                Loading available times…
+              </p>
+            </div>
+          )}
 
-            {slotsState === "unavailable" && (
-              <ContactFallback note="Online booking is taking a breather" />
-            )}
+          {slotsState === "unavailable" && (
+            <ContactFallback note="Online booking is taking a breather" />
+          )}
 
-            {slotsState === "ready" && (
-              <div
-                className="bkp"
-                style={{
-                  position: "relative",
-                  overflow: "hidden",
-                  borderRadius: 26,
-                  padding: "34px 34px 30px",
-                  color: "#fff",
-                  border: "1px solid var(--a4-hairline-dark)",
-                  background:
-                    "radial-gradient(560px 320px at 88% 0%, rgba(79,85,241,.30) 0%, rgba(79,85,241,0) 62%), linear-gradient(152deg, #1b1e22 0%, #131518 40%, #0b0c0e 100%)",
-                  boxShadow: "0 34px 90px -34px rgba(0,0,0,.95)",
-                }}
-              >
-                {/* Header. The backend deliberately never reveals which staff
-                    member takes a slot, so no host is ever named here. */}
-                <div className="flex flex-col items-center gap-[14px] text-center">
-                  <span
+          {slotsState === "ready" && (
+            <div className="bkp" data-fx="rise" data-dy="80" style={PANEL}>
+              {/* Header. The backend deliberately never reveals which staff
+                  member takes a slot, so no host is ever named here. */}
+              <div className="flex flex-col items-center gap-[16px] text-center">
+                <span
+                  style={{
+                    width: 64,
+                    height: 64,
+                    flex: "none",
+                    borderRadius: "50%",
+                    border: "1px solid rgba(255,255,255,.18)",
+                    background: "rgba(255,255,255,.06)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  <Logo height={28} />
+                </span>
+                <div>
+                  <div style={{ fontFamily: "var(--a4x-display)", fontSize: "clamp(22px,2.2vw,26px)", fontWeight: 600, letterSpacing: "-0.03em" }}>
+                    Meet with an A4 accountant
+                  </div>
+                  <div style={{ marginTop: 6, fontFamily: "var(--a4x-body)", fontSize: 13, color: "#A1A1AA" }}>
+                    A4 Services Limited &middot; {duration} min &middot; Europe/Malta
+                  </div>
+                </div>
+                <div className="flex items-center gap-[6px] flex-wrap justify-center">
+                  {["1 · Day", "2 · Time", "3 · Details"].map((text, i) => (
+                    <React.Fragment key={text}>
+                      {i > 0 && <span aria-hidden="true" style={{ width: 12, height: 1, background: "rgba(255,255,255,.24)" }} />}
+                      <span
+                        className="inline-flex items-center"
+                        style={{
+                          height: 30,
+                          padding: "0 13px",
+                          borderRadius: 999,
+                          border: "1px solid",
+                          fontFamily: "var(--a4x-display)",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          transition: "background .3s, color .3s, border-color .3s",
+                          ...pillStyle(i),
+                        }}
+                      >
+                        {text}
+                      </span>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Step 1: the month calendar ── */}
+              {step === "cal" && (
+                <div className="bkp-step">
+                  <div className="flex items-center justify-between" style={{ marginTop: 28 }}>
+                    <button
+                      type="button"
+                      className="bkp-glass"
+                      aria-label="Previous month"
+                      disabled={atCurrentMonth}
+                      onClick={() =>
+                        setView((v) =>
+                          v.m === 0 ? { y: v.y - 1, m: 11, dir: -1 } : { y: v.y, m: v.m - 1, dir: -1 },
+                        )
+                      }
+                    >
+                      <Icon name="chevron-left" size={16} color="#fff" />
+                    </button>
+                    <div
+                      key={`${view.y}-${view.m}`}
+                      className={view.dir > 0 ? "bkp-step-l" : view.dir < 0 ? "bkp-step-r" : ""}
+                      style={{ fontFamily: "var(--a4x-display)", fontSize: 19, fontWeight: 600, letterSpacing: "-0.02em" }}
+                    >
+                      {monthTitle}
+                    </div>
+                    <button
+                      type="button"
+                      className="bkp-glass"
+                      aria-label="Next month"
+                      onClick={() =>
+                        setView((v) =>
+                          v.m === 11 ? { y: v.y + 1, m: 0, dir: 1 } : { y: v.y, m: v.m + 1, dir: 1 },
+                        )
+                      }
+                    >
+                      <Icon name="chevron-right" size={16} color="#fff" />
+                    </button>
+                  </div>
+
+                  <div
+                    className="grid text-center"
                     style={{
-                      width: 64,
-                      height: 64,
-                      flex: "none",
-                      borderRadius: "var(--a4-r-full)",
-                      border: "1px solid var(--a4-hairline-dark)",
-                      background: "rgba(255,255,255,.08)",
+                      marginTop: 20,
+                      gridTemplateColumns: "repeat(7, 1fr)",
+                      gap: 6,
+                      fontFamily: "var(--a4x-body)",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: ".1em",
+                      color: "#71717A",
+                    }}
+                  >
+                    {WEEKDAY_HEADS.map((d) => (
+                      <span key={d}>{d}</span>
+                    ))}
+                  </div>
+
+                  <div
+                    key={`grid-${view.y}-${view.m}`}
+                    className={`grid ${view.dir > 0 ? "bkp-step-l" : view.dir < 0 ? "bkp-step-r" : ""}`}
+                    style={{ marginTop: 10, gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}
+                  >
+                    {Array.from({ length: leadIn }, (_, i) => (
+                      <span key={`pad-${i}`} className="bkp-day pad" aria-hidden="true" />
+                    ))}
+                    {Array.from({ length: daysInMonth }, (_, i) => {
+                      const dayNum = i + 1;
+                      const key = `${view.y}-${pad2(view.m + 1)}-${pad2(dayNum)}`;
+                      const free = days.get(key)?.length ?? 0;
+                      const off = free === 0;
+                      const sel = key === selectedDay;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`bkp-day${sel ? " sel" : ""}`}
+                          disabled={off}
+                          title={
+                            off
+                              ? key < todayKey
+                                ? "Past"
+                                : key > horizonKey
+                                  ? "Beyond the booking window"
+                                  : "No times free"
+                              : `${free} ${free === 1 ? "time" : "times"} free`
+                          }
+                          onClick={() => {
+                            setSelectedDay(key);
+                            setSelectedStart(null);
+                            setSlotNotice(null);
+                            setStep("time");
+                          }}
+                        >
+                          {dayNum}
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              position: "absolute",
+                              left: "50%",
+                              bottom: 6,
+                              transform: "translateX(-50%)",
+                              width: 5,
+                              height: 5,
+                              borderRadius: "50%",
+                              background: sel
+                                ? "#09090B"
+                                : free >= 4
+                                  ? "#8B8FF7"
+                                  : free >= 1
+                                    ? "rgba(255,255,255,.4)"
+                                    : "transparent",
+                            }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p style={hint}>
+                    {selectedDay && selectedDayDate
+                      ? `Selected ${maltaDayLabelFmt.format(selectedDayDate)} — pick another day any time`
+                      : "A cobalt dot means the day is mostly free"}
+                  </p>
+                  {slotNotice && (
+                    <p style={{ ...errText, textAlign: "center" }} role="status" aria-live="polite">
+                      {slotNotice}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Step 2: the free times on that day ── */}
+              {step === "time" && (
+                <div className="bkp-step-l">
+                  <div className="flex items-center gap-[12px]" style={{ marginTop: 28 }}>
+                    <button
+                      type="button"
+                      className="bkp-glass"
+                      aria-label="Back to the calendar"
+                      onClick={() => {
+                        setView((v) => ({ ...v, dir: 0 }));
+                        setStep("cal");
+                      }}
+                    >
+                      <Icon name="chevron-left" size={16} color="#fff" />
+                    </button>
+                    <div style={{ fontFamily: "var(--a4x-display)", fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em" }}>
+                      {selectedDayDate ? longMaltaDate(selectedDayDate) : ""}
+                    </div>
+                  </div>
+                  <div className="grid" style={{ marginTop: 20, gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {activeDaySlots.map((start) => (
+                      <button
+                        key={start}
+                        type="button"
+                        className="bkp-time"
+                        onClick={() => {
+                          setSelectedStart(start);
+                          setStep("form");
+                        }}
+                      >
+                        {maltaTimeFmt.format(new Date(start))}
+                      </button>
+                    ))}
+                  </div>
+                  <p style={hint}>All times Europe/Malta</p>
+                </div>
+              )}
+
+              {/* ── Step 3: details ── */}
+              {step === "form" && (
+                <div className="bkp-step-l">
+                  <div
+                    className="flex items-center justify-between gap-[10px]"
+                    style={{
+                      marginTop: 28,
+                      padding: "14px 18px",
+                      borderRadius: 16,
+                      background: "rgba(255,255,255,.04)",
+                      border: "1px solid rgba(255,255,255,.12)",
+                    }}
+                  >
+                    <div style={{ fontVariantNumeric: "tabular-nums", fontFamily: "var(--a4x-display)", fontSize: 16, fontWeight: 600 }}>
+                      {selectedStart
+                        ? `${maltaDayLabelFmt.format(new Date(selectedStart))} · ${maltaTimeFmt.format(new Date(selectedStart))}`
+                        : ""}
+                    </div>
+                    <button type="button" className="bkp-edit" onClick={() => setStep("time")}>
+                      Edit
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-[10px]" style={{ marginTop: 16 }} noValidate>
+                    <div className="grid gap-[10px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}>
+                      <input
+                        className="bkp-input"
+                        name="name"
+                        value={f.name}
+                        onChange={setField("name")}
+                        placeholder="Full name"
+                        autoComplete="name"
+                        aria-label="Full name"
+                        data-invalid={Boolean(errors.name)}
+                      />
+                      <input
+                        className="bkp-input"
+                        name="company"
+                        value={f.company}
+                        onChange={setField("company")}
+                        placeholder="Company (optional)"
+                        autoComplete="organization"
+                        aria-label="Company"
+                      />
+                    </div>
+                    <input
+                      className="bkp-input"
+                      type="email"
+                      name="email"
+                      value={f.email}
+                      onChange={setField("email")}
+                      placeholder="Your email address"
+                      autoComplete="email"
+                      inputMode="email"
+                      aria-label="Email address"
+                      data-invalid={Boolean(errors.email)}
+                    />
+                    <div className="grid gap-[10px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}>
+                      <input
+                        className="bkp-input"
+                        type="tel"
+                        name="phone"
+                        value={f.phone}
+                        onChange={setField("phone")}
+                        placeholder="Phone number"
+                        autoComplete="tel"
+                        inputMode="tel"
+                        aria-label="Phone number"
+                      />
+                      <input
+                        className="bkp-input"
+                        name="website"
+                        value={f.website}
+                        onChange={setField("website")}
+                        placeholder="Website URL"
+                        autoComplete="url"
+                        inputMode="url"
+                        aria-label="Website"
+                      />
+                    </div>
+
+                    {BOOKING_QUALIFIERS.map((q) => chipRow(q.key, q.label, q.options))}
+
+                    {/* Honeypot — hidden from real visitors, tempting to bots. */}
+                    <div
+                      aria-hidden="true"
+                      style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}
+                    >
+                      <label htmlFor="company_website">Company website</label>
+                      <input
+                        id="company_website"
+                        name="company_website"
+                        type="text"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={companyWebsite}
+                        onChange={(e) => setCompanyWebsite(e.target.value)}
+                      />
+                    </div>
+
+                    <p style={errText} role="status" aria-live="polite">
+                      {errors.name || errors.email || slotNotice || ""}
+                    </p>
+                    <button type="submit" className="bkp-confirm" disabled={isSubmitting}>
+                      {isSubmitting ? "Booking…" : "Confirm booking"}
+                      {!isSubmitting && <Icon name="arrow-right" size={18} color="#09090B" />}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* ── Step 4: booked ── */}
+              {step === "done" && (
+                <div className="bkp-step text-center" style={{ marginTop: 32 }}>
+                  <span
+                    className="bkp-pop"
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      background: "#4F55F1",
+                      boxShadow: "0 24px 60px rgba(79,85,241,.45)",
                       display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      overflow: "hidden",
                     }}
                   >
-                    <Logo height={30} />
+                    <Icon name="check" size={24} color="#fff" stroke={3} />
                   </span>
-                  <div>
-                    <div
-                      className="a4-font-display font-semibold"
-                      style={{ fontSize: 19, letterSpacing: "-.015em" }}
-                    >
-                      Meet with an A4 accountant
-                    </div>
-                    <div
-                      className="a4-font-body"
-                      style={{ marginTop: 5, fontSize: 12, color: "var(--a4-on-dark-mute)" }}
-                    >
-                      A4 Services Limited &middot; {duration} min &middot; Europe/Malta
-                    </div>
+                  <div
+                    style={{
+                      marginTop: 18,
+                      fontFamily: "var(--a4x-display)",
+                      fontSize: "clamp(40px,4.4vw,56px)",
+                      fontWeight: 600,
+                      letterSpacing: "-0.04em",
+                      lineHeight: 1.05,
+                      paddingBottom: ".06em",
+                      ...gradText,
+                    }}
+                  >
+                    Booked.
                   </div>
-                  <div className="flex items-center gap-[6px]">
-                    {["1 · Day", "2 · Time", "3 · Details"].map((text, i) => (
-                      <React.Fragment key={text}>
-                        {i > 0 && (
-                          <span style={{ width: 10, height: 1, background: "rgba(255,255,255,.3)" }} />
-                        )}
-                        <span
-                          className="a4-font-body inline-flex items-center"
-                          style={{
-                            height: 26,
-                            padding: "0 12px",
-                            borderRadius: "var(--a4-r-full)",
-                            border: "1px solid",
-                            fontSize: 11,
-                            fontWeight: 600,
-                            transition: "background .2s ease, color .2s ease",
-                            ...pillStyle(i),
-                          }}
-                        >
-                          {text}
-                        </span>
-                      </React.Fragment>
-                    ))}
+                  <div style={{ marginTop: 12, fontVariantNumeric: "tabular-nums", fontFamily: "var(--a4x-display)", fontSize: 17, fontWeight: 600, color: "#fff" }}>
+                    {bookedStart
+                      ? `${longMaltaDate(new Date(bookedStart))} · ${maltaTimeFmt.format(new Date(bookedStart))} · Europe/Malta`
+                      : ""}
                   </div>
+                  <p
+                    className="mx-auto"
+                    style={{
+                      margin: "16px auto 0",
+                      maxWidth: "42ch",
+                      fontFamily: "var(--a4x-body)",
+                      fontSize: 14.5,
+                      lineHeight: 1.65,
+                      color: "#A1A1AA",
+                      textWrap: "pretty",
+                    }}
+                  >
+                    {SUCCESS_COPY} A confirmation email is on its way to{" "}
+                    <span style={{ color: "#fff", fontWeight: 600 }}>{bookedEmail}</span>.
+                  </p>
+                  <button
+                    type="button"
+                    className="bkp-ghost"
+                    style={{ marginTop: 22 }}
+                    onClick={() => void restart(null)}
+                  >
+                    Book another time
+                  </button>
                 </div>
+              )}
+            </div>
+          )}
 
-                {/* ── Step 1: the month calendar ── */}
-                {step === "cal" && (
-                  <div className="bkp-step">
-                    <div className="flex items-center justify-between" style={{ marginTop: 22 }}>
-                      <button
-                        type="button"
-                        className="bkp-glass"
-                        aria-label="Previous month"
-                        disabled={atCurrentMonth}
-                        onClick={() =>
-                          setView((v) =>
-                            v.m === 0 ? { y: v.y - 1, m: 11, dir: -1 } : { y: v.y, m: v.m - 1, dir: -1 },
-                          )
-                        }
-                      >
-                        <Icon name="chevron-left" size={14} color="#fff" />
-                      </button>
-                      <div
-                        key={`${view.y}-${view.m}`}
-                        className={`a4-font-display ${view.dir > 0 ? "bkp-step-l" : view.dir < 0 ? "bkp-step-r" : ""}`}
-                        style={{ fontSize: 16, fontWeight: 600 }}
-                      >
-                        {monthTitle}
-                      </div>
-                      <button
-                        type="button"
-                        className="bkp-glass"
-                        aria-label="Next month"
-                        onClick={() =>
-                          setView((v) =>
-                            v.m === 11 ? { y: v.y + 1, m: 0, dir: 1 } : { y: v.y, m: v.m + 1, dir: 1 },
-                          )
-                        }
-                      >
-                        <Icon name="chevron-right" size={14} color="#fff" />
-                      </button>
-                    </div>
-
-                    <div
-                      className="a4-font-body grid text-center"
-                      style={{
-                        marginTop: 16,
-                        gridTemplateColumns: "repeat(7, 1fr)",
-                        gap: 4,
-                        fontSize: 10.5,
-                        fontWeight: 700,
-                        letterSpacing: ".07em",
-                        color: "rgba(255,255,255,.45)",
-                      }}
-                    >
-                      {WEEKDAY_HEADS.map((d) => (
-                        <span key={d}>{d}</span>
-                      ))}
-                    </div>
-
-                    <div
-                      key={`grid-${view.y}-${view.m}`}
-                      className={`grid ${view.dir > 0 ? "bkp-step-l" : view.dir < 0 ? "bkp-step-r" : ""}`}
-                      style={{ marginTop: 8, gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}
-                    >
-                      {Array.from({ length: leadIn }, (_, i) => (
-                        <span key={`pad-${i}`} className="bkp-day pad" aria-hidden="true" />
-                      ))}
-                      {Array.from({ length: daysInMonth }, (_, i) => {
-                        const dayNum = i + 1;
-                        const key = `${view.y}-${pad2(view.m + 1)}-${pad2(dayNum)}`;
-                        const free = days.get(key)?.length ?? 0;
-                        const off = free === 0;
-                        const sel = key === selectedDay;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            className={`bkp-day${sel ? " sel" : ""}`}
-                            disabled={off}
-                            title={
-                              off
-                                ? key < todayKey
-                                  ? "Past"
-                                  : key > horizonKey
-                                    ? "Beyond the booking window"
-                                    : "No times free"
-                                : `${free} ${free === 1 ? "time" : "times"} free`
-                            }
-                            onClick={() => {
-                              setSelectedDay(key);
-                              setSelectedStart(null);
-                              setSlotNotice(null);
-                              setStep("time");
-                            }}
-                          >
-                            {dayNum}
-                            <span
-                              aria-hidden="true"
-                              style={{
-                                position: "absolute",
-                                left: "50%",
-                                bottom: 5,
-                                transform: "translateX(-50%)",
-                                width: 4,
-                                height: 4,
-                                borderRadius: "var(--a4-r-full)",
-                                background: sel
-                                  ? "#000"
-                                  : free >= 4
-                                    ? "var(--a4-primary-bright)"
-                                    : free >= 1
-                                      ? "rgba(255,255,255,.4)"
-                                      : "transparent",
-                              }}
-                            />
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <p className="a4-font-body" style={hint}>
-                      {selectedDay && selectedDayDate
-                        ? `Selected ${maltaDayLabelFmt.format(selectedDayDate)} — pick another day any time`
-                        : "A cobalt dot means the day is mostly free"}
-                    </p>
-                    {slotNotice && (
-                      <p className="a4-font-body" style={{ ...errText, textAlign: "center" }} role="status" aria-live="polite">
-                        {slotNotice}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* ── Step 2: the free times on that day ── */}
-                {step === "time" && (
-                  <div className="bkp-step-l">
-                    <div className="flex items-center gap-[10px]" style={{ marginTop: 22 }}>
-                      <button
-                        type="button"
-                        className="bkp-glass"
-                        style={{ width: 30, height: 30 }}
-                        aria-label="Back to the calendar"
-                        onClick={() => {
-                          setView((v) => ({ ...v, dir: 0 }));
-                          setStep("cal");
-                        }}
-                      >
-                        <Icon name="chevron-left" size={13} color="#fff" />
-                      </button>
-                      <div className="a4-font-body" style={{ fontSize: 13.5, fontWeight: 600 }}>
-                        {selectedDayDate ? longMaltaDate(selectedDayDate) : ""}
-                      </div>
-                    </div>
-                    <div
-                      className="grid"
-                      style={{ marginTop: 16, gridTemplateColumns: "1fr 1fr", gap: 8 }}
-                    >
-                      {activeDaySlots.map((start) => (
-                        <button
-                          key={start}
-                          type="button"
-                          className="bkp-time"
-                          onClick={() => {
-                            setSelectedStart(start);
-                            setStep("form");
-                          }}
-                        >
-                          {maltaTimeFmt.format(new Date(start))}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="a4-font-body" style={hint}>
-                      All times Europe/Malta
-                    </p>
-                  </div>
-                )}
-
-                {/* ── Step 3: details ── */}
-                {step === "form" && (
-                  <div className="bkp-step-l">
-                    <div
-                      className="flex items-center justify-between gap-[10px]"
-                      style={{
-                        marginTop: 22,
-                        padding: "12px 14px",
-                        borderRadius: 12,
-                        background: "rgba(255,255,255,.06)",
-                        border: "1px solid var(--a4-hairline-dark)",
-                      }}
-                    >
-                      <div
-                        className="a4-font-body"
-                        style={{ fontVariantNumeric: "tabular-nums", fontSize: 12.5, fontWeight: 600 }}
-                      >
-                        {selectedStart
-                          ? `${maltaDayLabelFmt.format(new Date(selectedStart))} · ${maltaTimeFmt.format(new Date(selectedStart))}`
-                          : ""}
-                      </div>
-                      <button type="button" className="bkp-edit" onClick={() => setStep("time")}>
-                        Edit
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-[10px]" style={{ marginTop: 14 }} noValidate>
-                      <div className="grid gap-[10px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                        <input
-                          className="bkp-input"
-                          name="name"
-                          value={f.name}
-                          onChange={setField("name")}
-                          placeholder="Full name"
-                          autoComplete="name"
-                          aria-label="Full name"
-                          data-invalid={Boolean(errors.name)}
-                        />
-                        <input
-                          className="bkp-input"
-                          name="company"
-                          value={f.company}
-                          onChange={setField("company")}
-                          placeholder="Company (optional)"
-                          autoComplete="organization"
-                          aria-label="Company"
-                        />
-                      </div>
-                      <input
-                        className="bkp-input"
-                        type="email"
-                        name="email"
-                        value={f.email}
-                        onChange={setField("email")}
-                        placeholder="Your email address"
-                        autoComplete="email"
-                        inputMode="email"
-                        aria-label="Email address"
-                        data-invalid={Boolean(errors.email)}
-                      />
-                      <div className="grid gap-[10px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                        <input
-                          className="bkp-input"
-                          type="tel"
-                          name="phone"
-                          value={f.phone}
-                          onChange={setField("phone")}
-                          placeholder="Phone number"
-                          autoComplete="tel"
-                          inputMode="tel"
-                          aria-label="Phone number"
-                        />
-                        <input
-                          className="bkp-input"
-                          name="website"
-                          value={f.website}
-                          onChange={setField("website")}
-                          placeholder="Website URL"
-                          autoComplete="url"
-                          inputMode="url"
-                          aria-label="Website"
-                        />
-                      </div>
-
-                      {BOOKING_QUALIFIERS.map((q) => chipRow(q.key, q.label, q.options))}
-
-                      {/* Honeypot — hidden from real visitors, tempting to bots. */}
-                      <div
-                        aria-hidden="true"
-                        style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}
-                      >
-                        <label htmlFor="company_website">Company website</label>
-                        <input
-                          id="company_website"
-                          name="company_website"
-                          type="text"
-                          tabIndex={-1}
-                          autoComplete="off"
-                          value={companyWebsite}
-                          onChange={(e) => setCompanyWebsite(e.target.value)}
-                        />
-                      </div>
-
-                      <p style={errText} role="status" aria-live="polite">
-                        {errors.name || errors.email || slotNotice || ""}
-                      </p>
-                      <button type="submit" className="bkp-confirm" disabled={isSubmitting}>
-                        {isSubmitting ? "Booking…" : "Confirm booking"}
-                        {!isSubmitting && <Icon name="arrow-right" size={16} color="#000" />}
-                      </button>
-                    </form>
-                  </div>
-                )}
-
-                {/* ── Step 4: booked ── */}
-                {step === "done" && (
-                  <div className="bkp-step text-center" style={{ marginTop: 26 }}>
-                    <span
-                      className="bkp-pop"
-                      style={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: "var(--a4-r-full)",
-                        background: "#fff",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon name="check" size={20} color="var(--a4-accent-teal)" stroke={2.2} />
-                    </span>
-                    <div
-                      className="a4-font-display font-semibold"
-                      style={{ marginTop: 16, fontSize: 19, letterSpacing: "-.015em" }}
-                    >
-                      Booked.
-                    </div>
-                    <div
-                      className="a4-font-body"
-                      style={{
-                        marginTop: 10,
-                        fontVariantNumeric: "tabular-nums",
-                        fontSize: 13,
-                        color: "rgba(255,255,255,.92)",
-                      }}
-                    >
-                      {bookedStart
-                        ? `${longMaltaDate(new Date(bookedStart))} · ${maltaTimeFmt.format(new Date(bookedStart))} · Europe/Malta`
-                        : ""}
-                    </div>
-                    <p
-                      className="a4-font-body mx-auto"
-                      style={{
-                        margin: "14px auto 0",
-                        maxWidth: "38ch",
-                        fontSize: 12.5,
-                        lineHeight: 1.65,
-                        color: "var(--a4-on-dark-mute)",
-                        textWrap: "pretty",
-                      }}
-                    >
-                      {SUCCESS_COPY} A confirmation email is on its way to{" "}
-                      <span style={{ color: "#fff", fontWeight: 600 }}>{bookedEmail}</span>.
-                    </p>
-                    <button
-                      type="button"
-                      className="bkp-ghost"
-                      style={{ marginTop: 18 }}
-                      onClick={() => void restart(null)}
-                    >
-                      Book another time
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <p className="a4-font-body text-[13.5px] text-[var(--a4-on-dark-mute)] mt-5 mb-0 text-center">
-              Prefer email?{" "}
-              <a href={localizedHref("/contact")} className="underline text-white">
-                Contact us
-              </a>{" "}
-              and we&apos;ll offer you times.
-            </p>
-          </div>
-        </Container>
+          <p style={{ margin: "24px 0 0", textAlign: "center", fontFamily: "var(--a4x-body)", fontSize: 15, color: "#52525B" }}>
+            Prefer email?{" "}
+            <a href={localizedHref("/contact")} style={{ color: "#4F55F1", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 3 }}>
+              Contact us
+            </a>{" "}
+            and we&apos;ll offer you times.
+          </p>
+        </div>
       </section>
     </div>
   );

@@ -1,71 +1,62 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Container, Icon } from "@/components/a4-landing/Primitives";
+import React, { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/a4-landing/Primitives";
+import { A4Mark, LIGHT_GLOW } from "@/components/fx/primitives";
+import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { HOW_A4_WORKS_STAGES, type HowA4WorksStage } from "@/data/a4HowA4WorksSiteData";
 
-function StageDetail({ s }: { s: HowA4WorksStage }) {
-  const accent =
-    s.kind === "human" ? "var(--a4-accent-teal)" : s.kind === "deliver" ? "var(--a4-accent-warning)" : "var(--a4-primary-bright)";
+const SANS = "var(--a4x-display)";
+const BODY = "var(--a4x-body)";
+const INDIGO = "#4F55F1";
+const PERI = "#8B8FF7";
+const INK = "#09090B";
+const two = (n: number) => String(n).padStart(2, "0");
 
+const KIND_LABEL: Record<HowA4WorksStage["kind"], string> = {
+  agent: "Automation",
+  human: "Human layer",
+  deliver: "Deliverables",
+};
+
+function KindChip({ s }: { s: HowA4WorksStage }) {
+  const look: React.CSSProperties =
+    s.kind === "human"
+      ? { background: INK, color: "#FFFFFF", border: `1px solid ${INK}` }
+      : s.kind === "deliver"
+        ? { background: "#FFFFFF", color: INK, border: "1px solid #E4E4E7" }
+        : { background: "rgba(79,85,241,.1)", color: INDIGO, border: "1px solid transparent" };
   return (
-    <div className="hw-fade" key={s.id}>
-      <div
-        className="inline-flex items-center gap-[9px] rounded-[var(--a4-r-full)] py-[6px] px-[13px]"
-        style={{
-          background:
-            s.kind === "human"
-              ? "rgba(0,168,126,.12)"
-              : s.kind === "deliver"
-                ? "rgba(214,150,40,.12)"
-                : "rgba(73,79,223,.14)",
-        }}
-      >
-        <Icon name={s.icon} size={15} color={accent} />
-        <span
-          className="a4-font-body text-[12px] font-bold tracking-[.06em] uppercase"
-          style={{ color: accent }}
-        >
-          {s.kind === "human" ? "Human layer" : s.kind === "deliver" ? "Deliverables" : "Automation"}
-        </span>
-      </div>
-      <h2
-        className="a4-font-display font-medium text-white mt-4 m-0"
-        style={{ fontSize: "clamp(26px,3.4vw,40px)", letterSpacing: "-.02em", textWrap: "balance" }}
-      >
-        {s.label}
-      </h2>
-      <p
-        className="a4-font-body text-[var(--a4-on-dark-mute)] mt-[14px] m-0 max-w-[540px]"
-        style={{ fontSize: 17, lineHeight: 1.6, textWrap: "pretty" }}
-      >
-        {s.blurb}
-      </p>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 32, padding: "0 14px", borderRadius: 999, fontFamily: SANS, fontSize: 13.5, fontWeight: 600, ...look }}>
+      <Icon name={s.icon} size={15} color={s.kind === "human" ? PERI : INDIGO} />
+      {KIND_LABEL[s.kind]}
+    </span>
+  );
+}
+
+function StageDetail({ s }: { s: HowA4WorksStage }) {
+  return (
+    <div className="cp-stage-in" key={s.id}>
+      <KindChip s={s} />
+      <h2 style={{ margin: "20px 0 0", fontFamily: SANS, fontSize: "clamp(32px,3.4vw,50px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.04, color: INK, textWrap: "balance" }}>{s.label}</h2>
+      <p style={{ margin: "16px 0 0", maxWidth: 620, fontFamily: BODY, fontSize: 17, lineHeight: 1.6, color: "#52525B", textWrap: "pretty" }}>{s.blurb}</p>
 
       {s.agents && (
-        <div className="grid gap-3 mt-[26px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))" }}>
+        <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 230px), 1fr))", gap: 10 }}>
           {s.agents.map((a) => (
-            <div
-              key={a.n}
-              className="flex items-center gap-3 bg-[var(--a4-surface-elevated)] border border-[var(--a4-hairline-dark)] rounded-[var(--a4-r-md)] py-[14px] px-4"
-            >
+            <div key={a.n} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, border: "1px solid #E4E4E7", background: "#FFFFFF" }}>
               <span
-                className="w-[38px] h-[38px] rounded-full grid place-items-center shrink-0 relative"
-                style={{
-                  background: s.kind === "human" ? "rgba(0,168,126,.16)" : "rgba(73,79,223,.16)",
-                }}
+                aria-hidden="true"
+                style={{ position: "relative", width: 40, height: 40, flexShrink: 0, borderRadius: "50%", display: "grid", placeItems: "center", background: s.kind === "human" ? INK : "rgba(79,85,241,.1)" }}
               >
-                <Icon name={s.kind === "human" ? "user" : "bot"} size={18} color={accent} />
+                <Icon name={s.kind === "human" ? "user" : "bot"} size={18} color={s.kind === "human" ? PERI : INDIGO} />
                 {s.kind !== "human" && (
-                  <span
-                    className="absolute -top-px -right-px w-[9px] h-[9px] rounded-full bg-[var(--a4-accent-teal)] border-2 border-black"
-                    style={{ animation: "hwpulse 1.2s ease-in-out infinite" }}
-                  />
+                  <span className="cp-pulse" style={{ position: "absolute", top: -1, right: -1, width: 10, height: 10, borderRadius: "50%", background: INDIGO, border: "2px solid #FFFFFF" }} />
                 )}
               </span>
-              <div className="min-w-0">
-                <div className="a4-font-body text-[14px] font-semibold text-white">{a.n}</div>
-                <div className="a4-font-body text-[12.5px] text-[var(--a4-stone)]">{a.r}</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: SANS, fontSize: 15.5, fontWeight: 600, letterSpacing: "-0.01em", color: INK }}>{a.n}</div>
+                <div style={{ marginTop: 2, fontFamily: BODY, fontSize: 13, lineHeight: 1.4, color: "#71717A" }}>{a.r}</div>
               </div>
             </div>
           ))}
@@ -73,15 +64,14 @@ function StageDetail({ s }: { s: HowA4WorksStage }) {
       )}
 
       {s.letters && (
-        <div className="grid gap-[10px] mt-[26px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))" }}>
+        <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 230px), 1fr))", gap: 10 }}>
           {s.letters.map((l) => (
-            <div
-              key={l}
-              className="flex items-center gap-[11px] bg-[var(--a4-surface-elevated)] border border-[var(--a4-hairline-dark)] rounded-[var(--a4-r-md)] py-[13px] px-[15px]"
-            >
-              <Icon name="file-text" size={17} color="var(--a4-accent-warning)" />
-              <span className="a4-font-body text-[14px] font-semibold text-white">{l}</span>
-              <span className="ml-auto a4-font-body text-[11.5px] font-semibold text-[var(--a4-accent-teal)]">Drafted</span>
+            <div key={l} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, border: "1px solid #E4E4E7", background: "#FFFFFF" }}>
+              <Icon name="file-text" size={18} color={INDIGO} />
+              <span style={{ fontFamily: SANS, fontSize: 15.5, fontWeight: 600, letterSpacing: "-0.01em", color: INK }}>{l}</span>
+              <span style={{ marginLeft: "auto", height: 26, padding: "0 10px", display: "inline-flex", alignItems: "center", borderRadius: 999, background: "rgba(79,85,241,.1)", fontFamily: SANS, fontSize: 12, fontWeight: 600, color: INDIGO }}>
+                Drafted
+              </span>
             </div>
           ))}
         </div>
@@ -93,6 +83,8 @@ function StageDetail({ s }: { s: HowA4WorksStage }) {
 export function HowA4WorksContent() {
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const railRef = useRef<HTMLDivElement>(null);
+  const n = HOW_A4_WORKS_STAGES.length;
 
   useEffect(() => {
     if (!playing) return;
@@ -100,132 +92,123 @@ export function HowA4WorksContent() {
     return () => clearInterval(id);
   }, [playing]);
 
+  // On narrow screens the stage rail scrolls sideways: keep the active stage in view.
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || rail.scrollWidth <= rail.clientWidth) return;
+    const item = rail.querySelectorAll<HTMLElement>("[data-stage-btn]")[active];
+    if (item) rail.scrollTo({ left: Math.max(0, item.offsetLeft - 20), behavior: "smooth" });
+  }, [active]);
+
   const go = (i: number) => {
     setActive(i);
     setPlaying(false);
   };
 
+  const s = HOW_A4_WORKS_STAGES[active];
+
   return (
-    <div className="a4-site-page min-h-screen bg-black">
-      <Container style={{ maxWidth: 1080, padding: "clamp(40px,7vw,80px) 24px" }}>
-        <div className="flex items-center gap-3">
-          <span className="w-[26px] h-px bg-[var(--a4-hairline-strong)]" />
-          <span className="a4-font-body text-[12.5px] font-semibold tracking-[.14em] uppercase text-[var(--a4-on-dark-mute)]">
-            How A4 works · interactive
-          </span>
-        </div>
-        <h1
-          className="a4-font-display font-medium text-white mt-[18px] m-0 max-w-[760px]"
-          style={{ fontSize: "clamp(34px,5vw,64px)", lineHeight: 1.02, letterSpacing: "-.03em", textWrap: "balance" }}
-        >
-          Automation does the work.
-          <br />
-          <span className="text-[var(--a4-accent-teal)]">People sign it off.</span>
-        </h1>
-        <p
-          className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4 m-0 max-w-[560px]"
-          style={{ fontSize: 18, lineHeight: 1.6, textWrap: "pretty" }}
-        >
-          Follow an engagement from intake to final delivery — see the agents that do the heavy lifting, the human layer that
-          reviews everything, and the complete file we hand you with every letter drafted.
-        </p>
+    <div className="a4-site-page">
+      <PageHero
+        eyebrow="How A4 works · interactive"
+        title="Automation does the work. People sign it off."
+        sub="Follow an engagement from intake to final delivery — see the agents that do the heavy lifting, the human layer that reviews everything, and the complete file we hand you with every letter drafted."
+      />
 
-        <div className="hw-rail flex items-center gap-0 mt-11 flex-wrap">
-          {HOW_A4_WORKS_STAGES.map((s, i) => {
-            const on = i === active;
-            const done = i < active;
-            const human = s.kind === "human";
-            const col = human ? "var(--a4-accent-teal)" : s.kind === "deliver" ? "var(--a4-accent-warning)" : "var(--a4-primary-bright)";
-            return (
-              <React.Fragment key={s.id}>
-                {i > 0 && (
-                  <span
-                    className="hw-conn flex-1 h-0.5 min-w-[18px] self-center mx-1.5 transition-colors duration-400"
-                    style={{ background: i <= active ? col : "var(--a4-hairline-dark)" }}
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() => go(i)}
-                  className="flex items-center gap-[10px] rounded-[var(--a4-r-full)] py-[9px] px-[15px] cursor-pointer shrink-0 transition-all duration-300"
-                  style={{
-                    background: on
-                      ? human
-                        ? "rgba(0,168,126,.14)"
-                        : s.kind === "deliver"
-                          ? "rgba(214,150,40,.14)"
-                          : "rgba(73,79,223,.16)"
-                      : "var(--a4-surface-elevated)",
-                    border: `1px solid ${on ? col : "var(--a4-hairline-dark)"}`,
-                  }}
-                >
-                  <span
-                    className="w-[26px] h-[26px] rounded-full grid place-items-center shrink-0 transition-colors duration-300"
-                    style={{ background: on || done ? col : "var(--a4-surface-deep)" }}
-                  >
-                    <Icon name={done ? "check" : s.icon} size={14} color={on || done ? "#fff" : "var(--a4-stone)"} stroke={2.2} />
-                  </span>
-                  <span
-                    className="a4-font-body text-[13.5px] font-semibold"
-                    style={{ color: on ? "#fff" : "var(--a4-on-dark-mute)" }}
-                  >
-                    {s.label}
-                  </span>
-                </button>
-              </React.Fragment>
-            );
-          })}
-        </div>
-
-        <div className="hw-body grid gap-8 mt-10 items-start" style={{ gridTemplateColumns: "1.2fr .8fr" }}>
-          <div
-            className="border border-[var(--a4-hairline-dark)] rounded-[var(--a4-r-xl)] min-h-[320px]"
-            style={{ background: "#0b0c0e", padding: "clamp(24px,3.4vw,40px)" }}
-          >
-            <StageDetail s={HOW_A4_WORKS_STAGES[active]} />
+      <section style={{ position: "relative", padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)", background: LIGHT_GLOW, color: INK }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+          {/* Stage rail — the design's timeline, filled up to the active stage */}
+          <div ref={railRef} data-fx="rise" className="cp-hw-rail">
+            <ol className="cp-hw-steps" style={{ ["--n" as string]: n }}>
+              {HOW_A4_WORKS_STAGES.map((st, i) => {
+                const on = i === active;
+                const reached = i <= active;
+                return (
+                  <li key={st.id} className="cp-hw-step">
+                    {i < n - 1 && (
+                      <span aria-hidden="true" className="cp-hw-conn">
+                        <span style={{ ["--fill" as string]: i < active ? 1 : 0 }} />
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      data-stage-btn=""
+                      onClick={() => go(i)}
+                      aria-current={on ? "step" : undefined}
+                      className="cp-hw-btn cp-focus"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="cp-hw-dot"
+                        style={{ borderColor: reached ? INDIGO : "#E4E4E7", boxShadow: on ? "0 0 0 6px rgba(79,85,241,.14)" : "none" }}
+                      >
+                        <span style={{ transform: `scale(${reached ? 1 : 0})` }} />
+                      </span>
+                      <span className="cp-hw-text">
+                        <span className="cp-hw-num" style={{ color: reached ? INDIGO : "#71717A" }}>{two(i + 1)}</span>
+                        <span className="cp-hw-label" style={{ color: on ? INK : "#52525B" }}>{st.label}</span>
+                        <span className="cp-hw-kind">{KIND_LABEL[st.kind]}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
           </div>
 
-          <div className="sticky top-6">
+          <div className="cp-hw-body" style={{ marginTop: "clamp(40px,5vw,64px)" }}>
+            {/* The stage, as the design's document panel */}
             <div
-              className="rounded-[var(--a4-r-lg)] py-6 px-[22px]"
-              style={{ background: "rgba(0,168,126,.07)", border: "1px solid rgba(0,168,126,.25)" }}
+              data-fx="rise"
+              data-d="100"
+              data-dy="80"
+              style={{ minWidth: 0, background: "#FFFFFF", border: "1px solid #E4E4E7", borderRadius: 28, boxShadow: "0 50px 120px rgba(9,9,11,.12)", overflow: "hidden" }}
             >
-              <span
-                className="w-[46px] h-[46px] rounded-[var(--a4-r-md)] grid place-items-center"
-                style={{ background: "rgba(0,168,126,.16)" }}
-              >
-                <Icon name="user-check" size={23} color="var(--a4-accent-teal)" />
-              </span>
-              <h3 className="a4-font-display font-medium text-[21px] text-white mt-[18px] m-0 tracking-[-.2px]">
-                A human layer, always
-              </h3>
-              <p
-                className="a4-font-body text-[var(--a4-on-dark-mute)] mt-[10px] m-0"
-                style={{ fontSize: 14.5, lineHeight: 1.55, textWrap: "pretty" }}
-              >
-                Agents accelerate the work — but every judgement is reviewed and approved by qualified auditors, and the final
-                opinion is always signed by a person. You keep the final say.
-              </p>
-              <div className="flex flex-col gap-[10px] mt-[18px] pt-4 border-t border-[var(--a4-hairline-dark)]">
-                {["Reviewed by qualified auditors", "Go / no-go escalated to you", "Full engagement, letters drafted"].map((t) => (
-                  <div key={t} className="flex items-center gap-[9px]">
-                    <Icon name="check" size={15} color="var(--a4-accent-teal)" stroke={2.4} />
-                    <span className="a4-font-body text-[13.5px] text-[var(--a4-on-dark)]">{t}</span>
-                  </div>
-                ))}
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "clamp(22px,3vw,36px) clamp(22px,3vw,40px) 0" }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <A4Mark size={30} color={INK} />
+                  <span style={{ width: 1.5, height: 24, margin: "0 12px", background: INK, opacity: 0.35 }} />
+                  <span style={{ fontFamily: SANS, fontSize: 18, fontWeight: 500, letterSpacing: "-0.02em" }}>A4 Services</span>
+                </div>
+                <div style={{ fontFamily: SANS, fontSize: 17, fontWeight: 600, letterSpacing: ".02em", color: "#52525B" }}>
+                  <span style={{ color: INDIGO }}>{two(active + 1)}</span> / {two(n)}
+                </div>
+              </div>
+              <div style={{ padding: "clamp(24px,3vw,36px) clamp(22px,3vw,40px) clamp(28px,3.4vw,44px)", minHeight: 340 }}>
+                <StageDetail s={s} />
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setPlaying((p) => !p)}
-              className="w-full mt-[14px] h-11 rounded-[var(--a4-r-full)] border border-[var(--a4-hairline-dark)] bg-transparent text-white a4-font-body text-[14px] font-semibold cursor-pointer inline-flex items-center justify-center gap-2"
-            >
-              <Icon name={playing ? "pause" : "play"} size={16} color="#fff" />{" "}
-              {playing ? "Pause walkthrough" : "Play walkthrough"}
-            </button>
+
+            <div className="cp-hw-side">
+              <div data-fx="rise" data-d="200" className="cp-card cp-dark cp-static" style={{ padding: "clamp(24px,2.6vw,32px)" }}>
+                <span aria-hidden="true" style={{ width: 48, height: 48, borderRadius: "50%", display: "grid", placeItems: "center", border: "1px solid rgba(255,255,255,.14)", background: "rgba(255,255,255,.04)" }}>
+                  <Icon name="user-check" size={21} color={PERI} />
+                </span>
+                <h3 style={{ margin: "22px 0 0", fontFamily: SANS, fontSize: "clamp(26px,2.2vw,30px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.1 }}>A human layer, always</h3>
+                <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: "#A1A1AA", textWrap: "pretty" }}>
+                  Agents accelerate the work — but every judgement is reviewed and approved by qualified auditors, and the final opinion is always signed by a person. You keep the final say.
+                </p>
+                <ul style={{ margin: "20px 0 0", padding: "18px 0 0", listStyle: "none", display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid rgba(255,255,255,.1)" }}>
+                  {["Reviewed by qualified auditors", "Go / no-go escalated to you", "Full engagement, letters drafted"].map((t) => (
+                    <li key={t} style={{ display: "flex", gap: 12, fontFamily: SANS, fontSize: 16, fontWeight: 500, letterSpacing: "-0.01em", color: "#E4E4E7" }}>
+                      <span className="a4-bullet" style={{ background: PERI }} />
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPlaying((p) => !p)}
+                className="a4-btn a4-btn-outline"
+                style={{ width: "100%", height: 52, marginTop: 12, fontSize: 16 }}
+              >
+                <Icon name={playing ? "pause" : "play"} size={16} color={INK} /> {playing ? "Pause walkthrough" : "Play walkthrough"}
+              </button>
+            </div>
           </div>
         </div>
-      </Container>
+      </section>
     </div>
   );
 }

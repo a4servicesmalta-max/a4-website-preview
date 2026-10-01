@@ -3,7 +3,10 @@ import { useState } from "react";
 
 export type Contact = { email: string; name: string; company: string };
 
-/** Branded text input with cobalt focus ring (A4 colors). */
+/**
+ * Text input in the A4 design language: white, 1px #E4E4E7, radius 14,
+ * 54px, Outfit; the focus border and ring follow the page's accent token.
+ */
 export function Field(props: React.InputHTMLAttributes<HTMLInputElement>) {
   const [focus, setFocus] = useState(false);
   const { style, onFocus, onBlur, ...rest } = props;
@@ -13,58 +16,65 @@ export function Field(props: React.InputHTMLAttributes<HTMLInputElement>) {
       onFocus={(e) => { setFocus(true); onFocus?.(e); }}
       onBlur={(e) => { setFocus(false); onBlur?.(e); }}
       style={{
-        height: 50,
-        padding: "0 15px",
+        height: 54,
+        padding: "0 18px",
         width: "100%",
         boxSizing: "border-box",
-        borderRadius: 10,
-        border: `1px solid ${focus ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
-        boxShadow: focus ? "0 0 0 3px rgba(73,79,223,.15)" : "none",
+        borderRadius: 14,
+        border: `1px solid ${focus ? "var(--a4-primary, #4F55F1)" : "var(--a4-hairline-light, #E4E4E7)"}`,
+        boxShadow: focus ? "0 0 0 3px color-mix(in srgb, var(--a4-primary, #4F55F1) 16%, transparent)" : "none",
         background: "#fff",
-        color: "var(--a4-ink)",
-        fontSize: 15,
-        fontFamily: "var(--a4-font-body)",
+        color: "var(--a4-ink, #09090B)",
+        fontSize: 16.5,
+        fontWeight: 500,
+        letterSpacing: "-0.01em",
+        fontFamily: "var(--a4x-display)",
         outline: "none",
-        transition: "border-color .15s, box-shadow .15s",
+        transition: "border-color .25s, box-shadow .25s",
         ...style,
       }}
     />
   );
 }
 
+/** The design's ink pill (primary action on light). */
 export const primaryBtn = (disabled?: boolean): React.CSSProperties => ({
-  height: 50,
-  padding: "0 30px",
-  borderRadius: "var(--a4-r-full)",
+  height: 54,
+  padding: "0 28px",
+  borderRadius: 999,
   border: 0,
-  background: "var(--a4-primary)",
+  background: "#09090B",
   color: "#fff",
   fontWeight: 600,
-  fontSize: 15.5,
-  letterSpacing: ".2px",
+  fontSize: 16.5,
+  letterSpacing: 0,
   cursor: disabled ? "default" : "pointer",
-  opacity: disabled ? 0.5 : 1,
-  fontFamily: "var(--a4-font-body)",
+  opacity: disabled ? 0.45 : 1,
+  fontFamily: "var(--a4x-display)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 8,
-  transition: "opacity .15s, filter .15s",
+  gap: 10,
+  whiteSpace: "nowrap",
+  transition: "opacity .3s, background .3s",
 });
 
+/** White pill with a hairline (secondary action on light). */
 export const outlineBtn: React.CSSProperties = {
-  height: 50,
+  height: 54,
   padding: "0 24px",
-  borderRadius: "var(--a4-r-full)",
-  border: "1px solid var(--a4-primary)",
+  borderRadius: 999,
+  border: "1px solid #E4E4E7",
   background: "#fff",
-  color: "var(--a4-primary)",
+  color: "#09090B",
   fontWeight: 600,
-  fontSize: 15,
+  fontSize: 16,
   cursor: "pointer",
-  fontFamily: "var(--a4-font-body)",
+  fontFamily: "var(--a4x-display)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 8,
+  gap: 10,
+  whiteSpace: "nowrap",
+  transition: "border-color .3s, opacity .3s",
 };

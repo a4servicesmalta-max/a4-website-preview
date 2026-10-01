@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Container } from "@/components/a4-landing/Primitives";
+import { LIGHT_GLOW } from "@/components/fx/primitives";
 import { ResourceLinkCard } from "@/components/a4-site/ResourceLinkCard";
 import { RESOURCE_CARDS } from "@/data/a4ResourcesSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
@@ -16,14 +16,13 @@ export function ResourcesContent() {
         sub="Guides, insights, tools and answers — a hub to help you get the most from A4 and stay ahead of what's next."
       />
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,96px) 0" }}>
-        <Container>
-          <div className="grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-            {RESOURCE_CARDS.map((card, i) => (
-              <ResourceLinkCard key={card.href} card={card} delay={i * 60} />
-            ))}
-          </div>
-        </Container>
+      {/* Card grid — light and dark cards alternate, as in the design */}
+      <section style={{ position: "relative", padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)", background: LIGHT_GLOW }}>
+        <div className="cp-grid" style={{ maxWidth: 1280, margin: "0 auto" }}>
+          {RESOURCE_CARDS.map((card, i) => (
+            <ResourceLinkCard key={card.href} card={card} index={i} total={RESOURCE_CARDS.length} dark={i % 2 === 1} delay={(i % 3) * 80} />
+          ))}
+        </div>
       </section>
 
       <ServicePortalBand serviceName="your business" />

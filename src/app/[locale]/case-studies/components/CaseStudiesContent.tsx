@@ -1,302 +1,190 @@
 "use client";
 
 import React, { useState } from "react";
-import LocalizedLink from "@/components/common/LocalizedLink";
-import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
+import { Button, Icon } from "@/components/a4-landing/Primitives";
+import { DARK_CARD, LIGHT_GLOW, LetterWord, gradText } from "@/components/fx/primitives";
+import { gcol } from "@/lib/fx/engine";
+import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { CASE_STUDIES, CASE_STUDY_STATS, type CaseStudy } from "@/data/a4CaseStudiesData";
 import { TestimonialsSwiper } from "@/components/a4-landing/TestimonialsSwiper";
 
+const SANS = "var(--a4x-display)";
+const BODY = "var(--a4x-body)";
+const INDIGO = "#4F55F1";
+const PERI = "#8B8FF7";
+const INK = "#09090B";
+
 const ALL_FILTER = "All";
 
-function CaseStudyHero() {
-  return (
-    <section
-      className="relative overflow-hidden bg-black pt-24 sm:pt-28 lg:pt-32"
-      style={{ paddingBottom: "clamp(48px,6vw,80px)" }}
-    >
-      <div aria-hidden="true" className="hero-bg" />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 opacity-30"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(73,79,223,.35) 0%, transparent 70%)",
-        }}
-      />
-      <Container style={{ position: "relative", textAlign: "center" }}>
-        <Reveal>
-          <div className="flex items-center justify-center gap-[14px]">
-            <span className="w-[28px] h-[1px] bg-[var(--a4-hairline-strong)]" />
-            <span className="a4-font-body text-[12.5px] font-semibold tracking-[.14em] uppercase text-[var(--a4-on-dark-mute)]">
-              Client results
-            </span>
-            <span className="w-[28px] h-[1px] bg-[var(--a4-hairline-strong)]" />
-          </div>
-          <h1
-            className="a4-font-display font-medium text-white mx-auto mt-[22px]"
-            style={{
-              fontSize: "clamp(36px,5.4vw,72px)",
-              lineHeight: 1.03,
-              letterSpacing: "-.03em",
-              maxWidth: 860,
-              textWrap: "balance",
-            }}
-          >
-            Real outcomes from{" "}
-            <span style={{ color: "var(--a4-primary-bright)" }}>Malta businesses</span>
-          </h1>
-          <p
-            className="a4-font-body text-[var(--a4-on-dark-mute)] mx-auto mt-[22px]"
-            style={{ fontSize: "clamp(17px,1.8vw,20px)", lineHeight: 1.6, maxWidth: 580, textWrap: "pretty" }}
-          >
-            Anonymised stories with measurable results — overdue work brought current, audits filed on time, and
-            compliance made predictable.
-          </p>
-        </Reveal>
+const kicker = (dark: boolean): React.CSSProperties => ({
+  fontFamily: BODY,
+  fontSize: 12,
+  fontWeight: 600,
+  letterSpacing: ".1em",
+  textTransform: "uppercase",
+  color: dark ? "#A1A1AA" : "#71717A",
+});
 
-        <Reveal delay={80}>
-          <div
-            className="flex flex-wrap justify-center gap-3 mt-12 mx-auto max-w-[720px]"
-          >
-            {CASE_STUDY_STATS.map((s, i) => (
-              <div
-                key={s.label}
-                className="flex flex-col items-center rounded-[var(--a4-r-lg)] border border-[var(--a4-hairline-dark)] px-8 py-5 min-w-[140px]"
-                style={{
-                  background: "rgba(255,255,255,.04)",
-                  animationDelay: `${i * 80}ms`,
-                }}
-              >
-                <span
-                  className="a4-font-display font-medium text-white"
-                  style={{ fontSize: 32, letterSpacing: "-1px", lineHeight: 1 }}
-                >
-                  {s.value}
-                </span>
-                <span className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-2 text-center">
-                  {s.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      </Container>
-    </section>
+/** The featured case: the design's dark document panel, metric in gradient. */
+function Spotlight({ cs }: { cs: CaseStudy }) {
+  return (
+    <article
+      data-fx="rise"
+      data-dy="80"
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: 28,
+        border: "1px solid rgba(255,255,255,.08)",
+        background: DARK_CARD,
+        color: "#FFFFFF",
+        boxShadow: "0 50px 120px rgba(9,9,11,.18)",
+        padding: "clamp(28px,4.4vw,64px)",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))",
+        gap: "40px 64px",
+        alignItems: "end",
+      }}
+    >
+      <div>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "6px 12px", fontFamily: SANS, fontSize: 17, fontWeight: 600, letterSpacing: ".02em" }}>
+          <span style={{ color: PERI }}>Featured · {cs.sector}</span>
+          <span style={{ color: "#A1A1AA" }}>· {cs.service}</span>
+        </div>
+        <h2 style={{ margin: "20px 0 0", fontFamily: SANS, fontSize: "clamp(32px,3.6vw,54px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.04, textWrap: "balance" }}>{cs.headline}</h2>
+        <p style={{ margin: "22px 0 0", maxWidth: 620, fontFamily: BODY, fontSize: 16, lineHeight: 1.6, color: "#A1A1AA", textWrap: "pretty" }}>{cs.challenge}</p>
+        <p style={{ margin: "12px 0 0", maxWidth: 620, fontFamily: BODY, fontSize: 16, lineHeight: 1.6, color: "#E4E4E7", textWrap: "pretty" }}>{cs.result}</p>
+      </div>
+      <div style={{ padding: "clamp(24px,3vw,36px)", borderRadius: 24, border: "1px solid rgba(255,255,255,.1)", background: "rgba(24,24,27,.72)" }}>
+        <div style={kicker(true)}>{cs.timeline}</div>
+        <LetterWord
+          text={cs.metric}
+          fx="cascade"
+          d={250}
+          colors={Array.from(cs.metric).map((_, j, a) => gcol(a.length > 1 ? j / (a.length - 1) : 0))}
+          style={{ marginTop: 14, fontFamily: SANS, fontSize: "clamp(52px,5.6vw,92px)", fontWeight: 600, letterSpacing: "-0.05em", lineHeight: 1.05, whiteSpace: "nowrap" }}
+        />
+        <div style={{ marginTop: 10, fontFamily: SANS, fontSize: 19, fontWeight: 500, letterSpacing: "-0.015em", color: "#E4E4E7" }}>{cs.metricLabel}</div>
+      </div>
+    </article>
   );
 }
 
 function CaseStudyCard({ cs, index }: { cs: CaseStudy; index: number }) {
-  const isSpotlight = cs.variant === "spotlight";
-  const isDark = cs.variant === "dark";
-  const isTinted = cs.variant === "tinted";
-
-  if (isSpotlight) {
-    return (
-      <Reveal delay={index * 60}>
-        <article
-          className="relative overflow-hidden rounded-[var(--a4-r-lg)] border border-[var(--a4-hairline-dark)]"
-          style={{
-            background: "linear-gradient(135deg, #0a0a0a 0%, #141428 100%)",
-            padding: "clamp(32px,4vw,48px)",
-          }}
-        >
-          <div
-            aria-hidden="true"
-            className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-20 blur-3xl"
-            style={{ background: "var(--a4-primary)" }}
-          />
-          <div className="relative grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-end">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="a4-font-body text-[11px] font-bold tracking-[.12em] uppercase text-[var(--a4-primary-bright)]">
-                  Featured · {cs.sector}
-                </span>
-                <span className="a4-font-body text-[11px] text-[var(--a4-stone)]">· {cs.service}</span>
-              </div>
-              <h2
-                className="a4-font-display font-medium text-white mt-4"
-                style={{ fontSize: "clamp(26px,3.2vw,38px)", lineHeight: 1.1, letterSpacing: "-.02em", textWrap: "balance" }}
-              >
-                {cs.headline}
-              </h2>
-              <p className="a4-font-body text-[15px] leading-relaxed text-[var(--a4-on-dark-mute)] mt-4 max-w-xl">
-                {cs.challenge}
-              </p>
-              <p className="a4-font-body text-[15px] leading-relaxed text-white/90 mt-3 max-w-xl">{cs.result}</p>
-            </div>
-            <div
-              className="rounded-[var(--a4-r-lg)] border border-[var(--a4-hairline-dark)] p-8 text-center"
-              style={{ background: "rgba(255,255,255,.06)" }}
-            >
-              <div
-                className="a4-font-display font-medium text-white"
-                style={{ fontSize: 56, letterSpacing: "-2px", lineHeight: 1 }}
-              >
-                {cs.metric}
-              </div>
-              <div className="a4-font-body text-[14px] text-[var(--a4-stone)] mt-3">{cs.metricLabel}</div>
-              <div className="a4-font-body text-[11.5px] text-[var(--a4-stone)] mt-4 uppercase tracking-wide">
-                {cs.timeline}
-              </div>
-            </div>
-          </div>
-        </article>
-      </Reveal>
-    );
-  }
-
-  const cardStyle = isDark
-    ? { background: "#000", borderColor: "var(--a4-hairline-dark)", color: "#fff" }
-    : isTinted
-      ? { background: "rgba(73,79,223,.06)", borderColor: "rgba(73,79,223,.18)" }
-      : { background: "var(--a4-surface-card)", borderColor: "var(--a4-hairline-light)" };
-
-  const textInk = isDark ? "#fff" : "var(--a4-ink)";
-  const textMute = isDark ? "var(--a4-on-dark-mute)" : "var(--a4-mute)";
-
+  const dark = index % 2 === 1;
   return (
-    <Reveal delay={index * 60}>
-      <article
-        className="group relative flex flex-col h-full rounded-[var(--a4-r-lg)] border overflow-hidden transition-transform duration-300 hover:-translate-y-1"
-        style={{ ...cardStyle, padding: "clamp(24px,2.8vw,32px)" }}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <span
-              className="a4-font-body text-[11px] font-bold tracking-[.12em] uppercase"
-              style={{ color: isDark ? "var(--a4-primary-bright)" : "var(--a4-primary)" }}
-            >
-              {cs.sector}
-            </span>
-            <span className="a4-font-body text-[11px] ml-2" style={{ color: textMute }}>
-              {cs.service}
-            </span>
-          </div>
-          <span
-            className="shrink-0 rounded-full px-2.5 py-1 a4-font-body text-[10.5px] font-semibold uppercase tracking-wide"
-            style={{
-              background: isDark ? "rgba(255,255,255,.08)" : "var(--a4-surface-soft)",
-              color: textMute,
-            }}
-          >
-            {cs.timeline.split("·")[0]?.trim()}
-          </span>
+    <article
+      data-fx="rise"
+      data-d={(index % 3) * 80}
+      className={`cp-card${dark ? " cp-dark" : ""}`}
+      style={{ display: "flex", flexDirection: "column", gap: 14, padding: 28 }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: SANS, fontSize: 16, fontWeight: 600, letterSpacing: ".02em", color: dark ? PERI : INDIGO }}>{cs.sector}</div>
+          <div style={{ marginTop: 2, fontFamily: BODY, fontSize: 13.5, color: dark ? "#A1A1AA" : "#52525B" }}>{cs.service}</div>
         </div>
-
-        <h2
-          className="a4-font-display font-medium mt-4"
+        <span
           style={{
-            fontSize: "clamp(20px,2.2vw,26px)",
-            lineHeight: 1.15,
-            letterSpacing: "-.02em",
-            color: textInk,
-            textWrap: "balance",
+            flexShrink: 0,
+            height: 30,
+            padding: "0 13px",
+            display: "inline-flex",
+            alignItems: "center",
+            borderRadius: 999,
+            fontFamily: SANS,
+            fontSize: 13,
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+            border: `1px solid ${dark ? "rgba(255,255,255,.18)" : "#E4E4E7"}`,
+            color: dark ? "#E4E4E7" : "#52525B",
           }}
         >
-          {cs.headline}
-        </h2>
+          {cs.timeline.split("·")[0]?.trim()}
+        </span>
+      </div>
 
-        <div className="mt-5 space-y-3 flex-1">
-          <div>
-            <div className="a4-font-body text-[11px] font-semibold uppercase tracking-wide" style={{ color: textMute }}>
-              Challenge
-            </div>
-            <p className="a4-font-body text-[14.5px] leading-relaxed mt-1.5" style={{ color: textInk, opacity: 0.9 }}>
-              {cs.challenge}
-            </p>
-          </div>
-          <div>
-            <div className="a4-font-body text-[11px] font-semibold uppercase tracking-wide" style={{ color: textMute }}>
-              Outcome
-            </div>
-            <p className="a4-font-body text-[14.5px] leading-relaxed mt-1.5" style={{ color: textInk, opacity: 0.85 }}>
-              {cs.result}
-            </p>
-          </div>
-        </div>
+      <h2 style={{ margin: "18px 0 0", fontFamily: SANS, fontSize: "clamp(24px,2.2vw,30px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.12, textWrap: "balance" }}>{cs.headline}</h2>
 
-        <div
-          className="flex items-baseline gap-2 mt-6 pt-5 border-t"
-          style={{ borderColor: isDark ? "var(--a4-hairline-dark)" : "var(--a4-hairline-light)" }}
-        >
-          <span
-            className="a4-font-display font-medium"
-            style={{ fontSize: 36, letterSpacing: "-1px", color: textInk, lineHeight: 1 }}
-          >
-            {cs.metric}
-          </span>
-          <span className="a4-font-body text-[13px]" style={{ color: textMute }}>
-            {cs.metricLabel}
-          </span>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14, marginTop: 4 }}>
+        <div>
+          <div style={kicker(dark)}>Challenge</div>
+          <p style={{ margin: "6px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: dark ? "#D4D4D8" : "#3F3F46", textWrap: "pretty" }}>{cs.challenge}</p>
         </div>
-      </article>
-    </Reveal>
+        <div>
+          <div style={kicker(dark)}>Outcome</div>
+          <p style={{ margin: "6px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: dark ? "#D4D4D8" : "#3F3F46", textWrap: "pretty" }}>{cs.result}</p>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "4px 10px", marginTop: 8, paddingTop: 18, borderTop: `1px solid ${dark ? "rgba(255,255,255,.1)" : "#E4E4E7"}` }}>
+        <span style={{ fontFamily: SANS, fontSize: 34, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.05, paddingBottom: ".04em", ...gradText }}>{cs.metric}</span>
+        <span style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, color: dark ? "#A1A1AA" : "#52525B" }}>{cs.metricLabel}</span>
+      </div>
+    </article>
   );
 }
 
 export function CaseStudiesContent() {
-  const services = [ALL_FILTER, ...Array.from(new Set(CASE_STUDIES.map((c) => c.service)))];
   const [filter, setFilter] = useState(ALL_FILTER);
 
   const spotlight = CASE_STUDIES.find((c) => c.variant === "spotlight") ?? CASE_STUDIES[0];
   const rest = CASE_STUDIES.filter((c) => c.id !== spotlight.id);
-  const filtered =
-    filter === ALL_FILTER ? rest : rest.filter((c) => c.service === filter);
+  // Filters come from the grid's own cases: the featured case is never in the
+  // grid, so a filter for its service alone would always come up empty.
+  const services = [ALL_FILTER, ...Array.from(new Set(rest.map((c) => c.service)))];
+  const filtered = filter === ALL_FILTER ? rest : rest.filter((c) => c.service === filter);
 
   return (
     <div className="a4-site-page">
-      <CaseStudyHero />
+      <PageHero
+        eyebrow="Client results"
+        title="Real outcomes from"
+        accent="Malta businesses"
+        sub="Anonymised stories with measurable results — overdue work brought current, audits filed on time, and compliance made predictable."
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          {CASE_STUDY_STATS.map((s) => (
+            <span key={s.label} className="a4-chip a4-chip-dark">
+              <span style={{ color: "#FFFFFF", fontWeight: 600 }}>{s.value}</span> {s.label}
+            </span>
+          ))}
+        </div>
+      </PageHero>
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(48px,7vw,88px) 0" }}>
-        <Container>
-          <Reveal>
-            <CaseStudyCard cs={spotlight} index={0} />
-          </Reveal>
+      <section style={{ position: "relative", padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)", background: LIGHT_GLOW, color: INK }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+          <Spotlight cs={spotlight} />
 
-          <Reveal delay={60}>
-            <div className="flex flex-wrap gap-2 mt-12 mb-8">
-              {services.map((s) => {
-                const on = filter === s;
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setFilter(s)}
-                    className="a4-font-body text-[13px] font-semibold rounded-full px-4 py-2 transition-all duration-200"
-                    style={{
-                      background: on ? "#000" : "var(--a4-surface-card)",
-                      color: on ? "#fff" : "var(--a4-mute)",
-                      border: `1px solid ${on ? "#000" : "var(--a4-hairline-light)"}`,
-                    }}
-                  >
-                    {s}
-                  </button>
-                );
-              })}
+          <div data-fx="rise" style={{ marginTop: "clamp(56px,7vw,96px)", marginBottom: 28 }}>
+            <div className="cp-seg" role="group" aria-label="Filter case studies by service">
+              {services.map((s) => (
+                <button key={s} type="button" aria-pressed={filter === s} onClick={() => setFilter(s)}>
+                  {s}
+                </button>
+              ))}
             </div>
-          </Reveal>
+          </div>
 
-          <div
-            className="grid gap-5"
-            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}
-          >
+          <div className="cp-grid">
             {filtered.map((cs, i) => (
-              <CaseStudyCard key={cs.id} cs={cs} index={i + 1} />
+              <CaseStudyCard key={cs.id} cs={cs} index={i} />
             ))}
           </div>
 
-          <Reveal delay={100} style={{ textAlign: "center", marginTop: 56 }}>
-            <p className="a4-font-body text-[16px] text-[var(--a4-mute)] max-w-md mx-auto mb-6">
+          <div
+            data-fx="rise"
+            style={{ marginTop: "clamp(56px,7vw,96px)", paddingTop: 32, borderTop: "1px solid #E4E4E7", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 24 }}
+          >
+            <p style={{ margin: 0, maxWidth: 560, fontFamily: SANS, fontSize: "clamp(20px,1.9vw,26px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.35, color: "#3F3F46" }}>
               Every engagement starts with a clear scope and fixed quote.
             </p>
-            <LocalizedLink href="/contact">
-              <Button variant="primary" size="lg">
-                Discuss your case <Icon name="arrow-right" size={18} color="#000" />
-              </Button>
-            </LocalizedLink>
-          </Reveal>
-        </Container>
+            <Button variant="dark" size="lg" href="/contact">
+              Discuss your case <Icon name="arrow-right" size={18} color="#FFFFFF" />
+            </Button>
+          </div>
+        </div>
       </section>
 
       <TestimonialsSwiper variant="light" />

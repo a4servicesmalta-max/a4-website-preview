@@ -1,4 +1,6 @@
 import { Metadata } from 'next';
+import "@/components/a4-landing/styles.css";
+import "@/components/a4-site/site-pages.css";
 import { locales } from '@/lib/i18n-config';
 import BookkeepingContent from './BookkeepingContent';
 

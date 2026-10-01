@@ -35,17 +35,20 @@ export function ReviewFailureNotice({
       style={{
         display: "grid",
         gap: 6,
-        padding: "12px 14px",
-        borderRadius: 10,
-        border: "1px solid rgba(194,48,61,.28)",
-        background: "rgba(194,48,61,.06)",
-        fontFamily: "var(--a4-font-body)",
+        padding: "16px 18px",
+        borderRadius: 16,
+        borderTop: "1px solid rgba(194,48,61,.22)",
+        borderRight: "1px solid rgba(194,48,61,.22)",
+        borderBottom: "1px solid rgba(194,48,61,.22)",
+        borderLeft: "3px solid #c2303d",
+        background: "rgba(194,48,61,.05)",
+        fontFamily: "var(--a4x-body)",
       }}
     >
-      <strong style={{ fontSize: 14, color: "#c2303d" }}>
+      <strong style={{ fontFamily: "var(--a4x-display)", fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", color: "#c2303d" }}>
         {title ?? t("reviewError.title")}
       </strong>
-      <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
+      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "#3F3F46" }}>
         {reason}
       </p>
       {/* One line, not two. It previously stacked a "we've got you" note on top
@@ -53,7 +56,7 @@ export function ReviewFailureNotice({
           server now reports whether the lead actually landed, so say only the
           true one — and never promise follow-up we cannot deliver. */}
       {isServer && (
-        <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "#3F3F46" }}>
           {failure.leadCaptured
             ? t("reviewError.leadCaptured")
             : t("reviewError.leadNotCaptured")}

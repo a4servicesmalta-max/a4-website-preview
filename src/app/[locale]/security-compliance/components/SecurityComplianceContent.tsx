@@ -1,14 +1,24 @@
 "use client";
 
 import React from "react";
-import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
+import { Button, Icon } from "@/components/a4-landing/Primitives";
+import { DARK_GRID, DriftGlow, LIGHT_GLOW, TypeText, Words } from "@/components/fx/primitives";
 import { SECURITY_COMPLIANCE_BLOCKS } from "@/data/a4SecurityComplianceSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
 
+const SANS = "var(--a4x-display)";
+const BODY = "var(--a4x-body)";
+const INDIGO = "#4F55F1";
+const PERI = "#8B8FF7";
+const INK = "#09090B";
+const SECTION_PAD = "clamp(100px,13vw,180px) clamp(20px,5vw,72px)";
+const two = (n: number) => String(n).padStart(2, "0");
+
 export function SecurityComplianceContent() {
   const href = useLocalizedHref();
+  const total = SECURITY_COMPLIANCE_BLOCKS.length;
 
   return (
     <div className="a4-site-page">
@@ -18,65 +28,73 @@ export function SecurityComplianceContent() {
         sub="Security and professional integrity aren't features — they're the foundation. Here's how A4 keeps your information safe and your engagements sound."
       />
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,96px) 0" }}>
-        <Container>
-          <div className="two-col grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            {SECURITY_COMPLIANCE_BLOCKS.map((b, i) => (
-              <Reveal
+      {/* Card grid: one card per control area, light and dark alternating */}
+      <section style={{ position: "relative", padding: SECTION_PAD, background: LIGHT_GLOW, color: INK }}>
+        <div className="cp-grid" style={{ maxWidth: 1280, margin: "0 auto" }}>
+          {SECURITY_COMPLIANCE_BLOCKS.map((b, i) => {
+            const dark = i % 2 === 1;
+            return (
+              <article
                 key={b.t}
-                delay={i * 50}
-                style={{
-                  background: "var(--a4-surface-card)",
-                  border: "1px solid var(--a4-hairline-light)",
-                  borderRadius: "var(--a4-r-lg)",
-                  padding: "clamp(24px,3vw,32px)",
-                }}
+                data-fx="rise"
+                data-d={(i % 3) * 80}
+                className={`cp-card${dark ? " cp-dark" : ""}`}
+                style={{ padding: 28, display: "flex", flexDirection: "column", gap: 14 }}
               >
-                <div className="flex items-center gap-[13px]">
-                  <span className="w-[46px] h-[46px] rounded-[var(--a4-r-md)] bg-[var(--a4-surface-soft)] grid place-items-center shrink-0">
-                    <Icon name={b.icon} size={22} color="var(--a4-primary)" stroke={1.75} />
-                  </span>
-                  <h3
-                    className="a4-font-display font-medium text-[var(--a4-ink)] m-0"
-                    style={{ fontSize: "clamp(19px,2.2vw,23px)", letterSpacing: "-.2px" }}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, fontFamily: SANS, fontSize: 17, fontWeight: 600, letterSpacing: ".02em", color: dark ? "#A1A1AA" : "#52525B" }}>
+                    <span style={{ color: dark ? PERI : INDIGO }}>{two(i + 1)}</span>
+                    <span>/ {two(total)}</span>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: "50%",
+                      display: "grid",
+                      placeItems: "center",
+                      border: `1px solid ${dark ? "rgba(255,255,255,.14)" : "#E4E4E7"}`,
+                      background: dark ? "rgba(255,255,255,.04)" : "#FAFAFA",
+                    }}
                   >
-                    {b.t}
-                  </h3>
+                    <Icon name={b.icon} size={20} color={dark ? PERI : INDIGO} />
+                  </span>
                 </div>
-                <div className="flex flex-col gap-[11px] mt-[18px]">
+                <h3 style={{ margin: "40px 0 0", fontFamily: SANS, fontSize: "clamp(26px,2.3vw,32px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.1, textWrap: "balance" }}>{b.t}</h3>
+                <ul style={{ margin: "6px 0 0", padding: "16px 0 0", listStyle: "none", display: "flex", flexDirection: "column", gap: 10, borderTop: `1px solid ${dark ? "rgba(255,255,255,.1)" : "#E4E4E7"}` }}>
                   {b.p.map((x) => (
-                    <div key={x} className="flex gap-[11px]">
-                      <Icon name="check" size={17} color="var(--a4-accent-teal)" stroke={2.4} style={{ marginTop: 2, flexShrink: 0 }} />
-                      <span className="a4-font-body text-[14.5px] leading-normal text-[var(--a4-charcoal)]" style={{ textWrap: "pretty" }}>
-                        {x}
-                      </span>
-                    </div>
+                    <li key={x} style={{ display: "flex", gap: 12, fontFamily: BODY, fontSize: 15, lineHeight: 1.55, color: dark ? "#D4D4D8" : "#3F3F46", textWrap: "pretty" }}>
+                      <span className="a4-bullet" style={dark ? { background: PERI } : undefined} />
+                      <span>{x}</span>
+                    </li>
                   ))}
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
+                </ul>
+              </article>
+            );
+          })}
+        </div>
       </section>
 
-      <section className="relative overflow-hidden bg-black" style={{ padding: "clamp(56px,8vw,88px) 0" }}>
-        <div aria-hidden="true" className="hero-bg" />
-        <Container style={{ position: "relative", textAlign: "center", maxWidth: 640 }}>
-          <h2
-            className="a4-font-display font-medium text-white m-0"
-            style={{ fontSize: "clamp(28px,4vw,46px)", lineHeight: 1.05, letterSpacing: "-.025em", textWrap: "balance" }}
-          >
-            Questions about security?
+      {/* Dark CTA */}
+      <section style={{ position: "relative", overflow: "hidden", padding: SECTION_PAD, color: "#FFFFFF", background: DARK_GRID }}>
+        <DriftGlow left="-10%" top="-20%" strength={0.26} />
+        <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
+          <h2 style={{ margin: 0, fontFamily: SANS, fontSize: "clamp(44px,6.4vw,112px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.06 }}>
+            <TypeText as="span" segments={[{ t: "Questions about", c: "#FFFFFF" }]} per={42} caret={PERI} style={{ display: "block" }} />
+            <Words as="span" d={700} style={{ display: "block", fontWeight: 600 }} parts={[{ t: "security?", g: true }]} />
           </h2>
-          <p className="a4-font-body text-[18px] text-[var(--a4-on-dark-mute)] mt-[14px] mx-auto max-w-[480px]">
-            We&apos;re happy to walk your team through our controls in detail.
-          </p>
-          <div className="mt-7">
-            <Button variant="primary" size="lg" href={href("/contact")}>
-              Talk to us <Icon name="arrow-right" size={18} color="#000" />
-            </Button>
+          <div style={{ marginTop: "clamp(36px,4vw,56px)", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "24px 40px" }}>
+            <p data-fx="rise" data-d="800" style={{ margin: 0, maxWidth: 560, fontFamily: SANS, fontSize: "clamp(18px,1.6vw,22px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.45, color: "#A1A1AA" }}>
+              We&apos;re happy to walk your team through our controls in detail.
+            </p>
+            <div data-fx="rise" data-d="920">
+              <Button variant="primary" size="lg" href={href("/contact")}>
+                Talk to us <Icon name="arrow-right" size={18} color={INK} />
+              </Button>
+            </div>
           </div>
-        </Container>
+        </div>
       </section>
 
       <ServicePortalBand serviceName="your data" />

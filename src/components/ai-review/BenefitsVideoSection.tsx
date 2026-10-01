@@ -1,11 +1,10 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Play } from "lucide-react";
+import { Play, Pause } from "lucide-react";
 import BenefitsCardsRow, { BenefitCard } from "./BenefitsCardsRow";
-import { usePerformance } from "@/contexts/ReduceMotionContext";
+import { DARK_GRID, DriftGlow } from "@/components/fx/primitives";
 import { useLazyMedia } from "@/hooks/use-lazy-media";
 import { lazyImgProps } from "@/lib/lazy-media-props";
-import { cn } from "@/lib/utils";
 
 interface BenefitsVideoSectionProps {
     cards: BenefitCard[];
@@ -20,7 +19,6 @@ const BenefitsVideoSection = ({
 }: BenefitsVideoSectionProps) => {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const { isIPhone, isLowPerformance } = usePerformance();
 
     // Add icons manually since they are not in the translation but are part of the UI structure
     const icons = [
@@ -56,31 +54,34 @@ const BenefitsVideoSection = ({
     };
 
     return (
-        <section className="bg-background py-16 lg:py-20">
-            {/* Top row: three cards using reusable component */}
-           <div className="py-12">
-                <BenefitsCardsRow cards={cardsWithIcons} />
-            </div>
+        <section style={{ position: "relative", overflow: "hidden", padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)", background: DARK_GRID, color: "#FFFFFF" }}>
+            <DriftGlow left="40%" top="-30%" strength={0.24} />
+            <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
+                <BenefitsCardsRow cards={cardsWithIcons} dark />
 
-            {/* Video block */}
-            <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 mt-2">
-                <div className="bg-primary-blue rounded-2xl p-3 md:p-4 shadow-md">
+                {/* The review in motion, framed like the design's document panel */}
+                <div
+                    data-fx="rise"
+                    data-dy="80"
+                    style={{ marginTop: "clamp(48px,6vw,80px)", padding: "clamp(8px,1.2vw,14px)", borderRadius: 28, background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", boxShadow: "0 50px 120px rgba(0,0,0,.45)" }}
+                >
                     <div
                         ref={lazyRef}
-                        className="relative w-full rounded-xl overflow-hidden bg-black"
+                        style={{ position: "relative", width: "100%", borderRadius: 20, overflow: "hidden", background: "#09090B" }}
                     >
                         {isGif ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                                 src={videoSrc}
                                 alt="Benefits Video Review"
-                                className="w-full h-auto"
+                                style={{ display: "block", width: "100%", height: "auto" }}
                                 {...lazyImgProps}
                             />
                         ) : (
                             <>
                                 <video
                                     ref={videoRef}
-                                    className="w-full h-auto"
+                                    style={{ display: "block", width: "100%", height: "auto" }}
                                     src={shouldLoad ? videoSrc : undefined}
                                     poster={posterImage}
                                     controls={false}
@@ -93,19 +94,13 @@ const BenefitsVideoSection = ({
                                 <button
                                     type="button"
                                     onClick={handleTogglePlay}
-                                    className="absolute inset-0 flex items-center justify-center focus:outline-none"
+                                    className="cp-focus"
+                                    style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", border: 0, background: "transparent", cursor: "pointer" }}
                                     aria-label={isPlaying ? "Pause video" : "Play video"}
                                 >
-                                    <div className={cn(
-                                        "w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center shadow-xl border border-white/70 transition-colors",
-                                        isIPhone || isLowPerformance ? "bg-white/40" : "bg-white/25 backdrop-blur-md hover:bg-white/35"
-                                    )}>
-                                        <Play
-                                            size={30}
-                                            className="text-white"
-                                            fill="currentColor"
-                                        />
-                                    </div>
+                                    <span style={{ width: 76, height: 76, borderRadius: "50%", display: "grid", placeItems: "center", background: "#FFFFFF", boxShadow: "0 24px 60px rgba(0,0,0,.35)" }}>
+                                        {isPlaying ? <Pause size={28} color="#09090B" fill="#09090B" /> : <Play size={28} color="#09090B" fill="#09090B" style={{ marginLeft: 4 }} />}
+                                    </span>
                                 </button>
                             </>
                         )}
@@ -117,6 +112,3 @@ const BenefitsVideoSection = ({
 };
 
 export default BenefitsVideoSection;
-
-
-

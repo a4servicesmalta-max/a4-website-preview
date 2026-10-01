@@ -1,11 +1,48 @@
 "use client";
 
 import React from "react";
-import { Button, Container, Eyebrow, Icon, Reveal, SectionHead } from "@/components/a4-landing/Primitives";
+import { Button, Icon, SectionHead } from "@/components/a4-landing/Primitives";
+import { DARK_GRID, DriftGlow, LIGHT_GLOW, MUTED_GLOW, SweepSlab, TypeText, Words, gradText } from "@/components/fx/primitives";
 import { ABOUT_GET, ABOUT_OUTCOMES, ABOUT_PILLARS, ABOUT_WHO } from "@/data/a4AboutSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+
+const SANS = "var(--a4x-display)";
+const BODY = "var(--a4x-body)";
+const INDIGO = "#4F55F1";
+const PERI = "#8B8FF7";
+const INK = "#09090B";
+const SECTION_PAD = "clamp(100px,13vw,180px) clamp(20px,5vw,72px)";
+
+const two = (n: number) => String(n).padStart(2, "0");
+
+/** "01 / 04" on the left, the item's icon in a ring on the right — the design's card header. */
+function CardHead({ i, total, icon, dark }: { i: number; total: number; icon: string; dark: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, fontFamily: SANS, fontSize: 17, fontWeight: 600, letterSpacing: ".02em", color: dark ? "#A1A1AA" : "#52525B" }}>
+        <span style={{ color: dark ? PERI : INDIGO }}>{two(i + 1)}</span>
+        <span>/ {two(total)}</span>
+      </div>
+      <span
+        aria-hidden="true"
+        style={{
+          width: 48,
+          height: 48,
+          flexShrink: 0,
+          borderRadius: "50%",
+          display: "grid",
+          placeItems: "center",
+          border: `1px solid ${dark ? "rgba(255,255,255,.14)" : "#E4E4E7"}`,
+          background: dark ? "rgba(255,255,255,.04)" : "#FAFAFA",
+        }}
+      >
+        <Icon name={icon} size={20} color={dark ? PERI : INDIGO} />
+      </span>
+    </div>
+  );
+}
 
 export function AboutContent() {
   const href = useLocalizedHref();
@@ -18,80 +55,148 @@ export function AboutContent() {
         sub="A4 is a firm — not software, and not a marketplace. We do the work for you, supported by a secure, structured client portal that keeps everything visible and on track."
       />
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <Container>
-          <div className="two-col grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            {ABOUT_PILLARS.map((p, i) => (
-              <Reveal key={p.t} delay={i * 80} style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", padding: "clamp(26px,3vw,36px)" }}>
-                <span className="w-12 h-12 rounded-[var(--a4-r-md)] bg-[var(--a4-surface-soft)] grid place-items-center inline-grid">
-                  <Icon name={p.icon} size={23} color="var(--a4-primary)" stroke={1.75} />
+      {/* Pillars — 2×2 card grid, light and dark cards in a checkerboard */}
+      <section style={{ position: "relative", padding: SECTION_PAD, background: LIGHT_GLOW, color: INK }}>
+        <div className="cp-grid-2" style={{ maxWidth: 1280, margin: "0 auto" }}>
+          {ABOUT_PILLARS.map((p, i) => {
+            const dark = i === 1 || i === 2;
+            return (
+              <article
+                key={p.t}
+                data-fx="rise"
+                data-d={i * 80}
+                className={`cp-card${dark ? " cp-dark" : ""}`}
+                style={{ minHeight: 340, padding: "clamp(26px,3vw,36px)", display: "flex", flexDirection: "column", gap: 16 }}
+              >
+                <CardHead i={i} total={ABOUT_PILLARS.length} icon={p.icon} dark={dark} />
+                <div style={{ flex: 1, minHeight: 40 }} />
+                <h3 style={{ margin: 0, fontFamily: SANS, fontSize: "clamp(28px,2.6vw,38px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.08, textWrap: "balance" }}>
+                  {p.t}
+                </h3>
+                <p style={{ margin: 0, maxWidth: 560, fontFamily: BODY, fontSize: 16, lineHeight: 1.6, color: dark ? "#A1A1AA" : "#52525B", textWrap: "pretty" }}>{p.s}</p>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 01 Who it's for — dark */}
+      <section style={{ position: "relative", overflow: "hidden", padding: SECTION_PAD, color: "#FFFFFF", background: DARK_GRID }}>
+        <DriftGlow left="40%" top="-30%" strength={0.24} />
+        <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
+          <SectionHead
+            dark
+            n="01"
+            eyebrow="Who it's for"
+            title={
+              <>
+                Built for businesses that want a <span style={{ ...gradText, paddingBottom: ".06em" }}>real partner</span>
+              </>
+            }
+            maxWidth={900}
+          />
+          <div
+            style={{ marginTop: "clamp(48px,6vw,80px)", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 260px), 1fr))", gap: 16 }}
+          >
+            {ABOUT_WHO.map((w, i) => {
+              const light = i % 2 === 1;
+              return (
+                <article
+                  key={w.t}
+                  data-fx="rise"
+                  data-d={i * 80}
+                  className={`cp-card${light ? "" : " cp-dark"}`}
+                  style={{ minHeight: 300, padding: 28, display: "flex", flexDirection: "column", gap: 14 }}
+                >
+                  <CardHead i={i} total={ABOUT_WHO.length} icon={w.icon} dark={!light} />
+                  <div style={{ flex: 1, minHeight: 24 }} />
+                  <h3 style={{ margin: 0, fontFamily: SANS, fontSize: 23, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.15, textWrap: "balance" }}>{w.t}</h3>
+                  <p style={{ margin: 0, fontFamily: BODY, fontSize: 15, lineHeight: 1.55, color: light ? "#52525B" : "#A1A1AA", textWrap: "pretty" }}>{w.s}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 02 What you get — numbered list, then the outcomes */}
+      <section style={{ position: "relative", padding: SECTION_PAD, background: MUTED_GLOW, color: INK }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+          <div className="cp-split" style={{ alignItems: "start" }}>
+            <div>
+              <div data-fx="rise" className="a4-eyebrow" style={{ color: "#52525B" }}>
+                <span style={{ color: INDIGO }}>02</span>
+                <span>What you get</span>
+              </div>
+              <h2 style={{ margin: "18px 0 0", fontFamily: SANS, fontSize: "clamp(38px,4.4vw,68px)", letterSpacing: "-0.035em", lineHeight: 1.05 }}>
+                <span data-fx="rise" data-d="100" style={{ display: "block", fontWeight: 500 }}>
+                  Everything a finance
                 </span>
-                <h3 className="a4-font-display font-medium text-[var(--a4-ink)] mt-5" style={{ fontSize: "clamp(20px,2.4vw,25px)", letterSpacing: "-.3px" }}>{p.t}</h3>
-                <p className="a4-font-body text-[var(--a4-mute)] mt-[10px]" style={{ fontSize: 15.5, lineHeight: 1.6, textWrap: "pretty" }}>{p.s}</p>
-              </Reveal>
-            ))}
+                <span data-fx="rise" data-d="200" style={{ display: "block", fontWeight: 600, letterSpacing: "-0.04em", paddingBottom: ".08em", ...gradText }}>
+                  function should be.
+                </span>
+              </h2>
+            </div>
+            <div data-fx="rise" data-d="150" style={{ display: "flex", flexDirection: "column" }}>
+              {ABOUT_GET.map((g, i) => (
+                <div
+                  key={g}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "48px 1fr",
+                    gap: 12,
+                    padding: "22px 0",
+                    borderTop: "1px solid #E4E4E7",
+                    ...(i === ABOUT_GET.length - 1 ? { borderBottom: "1px solid #E4E4E7" } : null),
+                  }}
+                >
+                  <span style={{ fontFamily: SANS, fontSize: 16, fontWeight: 600, letterSpacing: ".02em", color: INDIGO, paddingTop: 3 }}>{two(i + 1)}</span>
+                  <span style={{ fontFamily: SANS, fontSize: "clamp(19px,1.6vw,22px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.35, color: INK }}>{g}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </Container>
+
+          <div className="cp-grid" style={{ marginTop: "clamp(72px,9vw,120px)" }}>
+            {ABOUT_OUTCOMES.map(([ic, t, s], i) => {
+              const dark = i % 2 === 1;
+              return (
+                <article
+                  key={t}
+                  data-fx="rise"
+                  data-d={i * 80}
+                  className={`cp-card${dark ? " cp-dark" : ""}`}
+                  style={{ minHeight: 260, padding: 28, display: "flex", flexDirection: "column", gap: 14 }}
+                >
+                  <CardHead i={i} total={ABOUT_OUTCOMES.length} icon={ic} dark={dark} />
+                  <div style={{ flex: 1, minHeight: 24 }} />
+                  <h3 style={{ margin: 0, fontFamily: SANS, fontSize: "clamp(26px,2.4vw,32px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.1 }}>{t}</h3>
+                  <p style={{ margin: 0, fontFamily: SANS, fontSize: 18, fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.4, color: dark ? "#A1A1AA" : "#52525B", textWrap: "pretty" }}>{s}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
-      <section className="bg-black" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <Container>
-          <Reveal><SectionHead dark align="center" eyebrow="Who it's for" title="Built for businesses that want a real partner" maxWidth={620} /></Reveal>
-          <div className="grid gap-5 mt-[52px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px,1fr))" }}>
-            {ABOUT_WHO.map((w, i) => (
-              <Reveal key={w.t} delay={i * 70} style={{ background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "28px 26px" }}>
-                <Icon name={w.icon} size={24} color="var(--a4-primary-bright)" stroke={1.75} />
-                <h3 className="a4-font-display font-medium text-white mt-[18px] text-[19px]" style={{ letterSpacing: "-.2px", textWrap: "balance" }}>{w.t}</h3>
-                <p className="a4-font-body text-[var(--a4-on-dark-mute)] mt-[9px] text-[14.5px] leading-[1.5]" style={{ textWrap: "pretty" }}>{w.s}</p>
-              </Reveal>
-            ))}
+      {/* Dark CTA */}
+      <section style={{ position: "relative", overflow: "hidden", padding: SECTION_PAD, color: "#FFFFFF", background: DARK_GRID }}>
+        <DriftGlow left="-10%" top="-20%" strength={0.26} />
+        <SweepSlab />
+        <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
+          <h2 style={{ margin: 0, maxWidth: 1100, fontFamily: SANS, fontSize: "clamp(44px,6.4vw,112px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.06 }}>
+            <TypeText as="span" segments={[{ t: "Let's build something", c: "#FFFFFF" }]} per={42} caret={PERI} style={{ display: "block" }} />
+            <Words as="span" d={900} style={{ display: "block", fontWeight: 600 }} parts={[{ t: "solid together.", g: true }]} />
+          </h2>
+          <div data-fx="rise" data-d="1100" style={{ marginTop: "clamp(36px,4vw,56px)", display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <Button variant="primary" size="lg" href={href("/contact")}>
+              Talk to A4 <Icon name="arrow-right" size={18} color={INK} />
+            </Button>
+            <Button variant="outline-dark" size="lg" href={href("/how-it-works")}>
+              See how it works
+            </Button>
           </div>
-        </Container>
-      </section>
-
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <Container>
-          <div className="two-col grid gap-12 items-start" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <Reveal>
-              <Eyebrow>What you get</Eyebrow>
-              <h2 className="a4-font-display font-medium text-[var(--a4-ink)] mt-4" style={{ fontSize: "clamp(28px,3.6vw,46px)", lineHeight: 1.05, letterSpacing: "-.025em", textWrap: "balance" }}>Everything a finance function should be.</h2>
-              <div className="flex flex-col gap-[14px] mt-[26px]">
-                {ABOUT_GET.map((g) => (
-                  <div key={g} className="flex items-center gap-3">
-                    <Icon name="check-circle" size={20} color="var(--a4-accent-teal)" />
-                    <span className="a4-font-body text-[16px] font-semibold text-[var(--a4-charcoal)]">{g}</span>
-                  </div>
-                ))}
-              </div>
-            </Reveal>
-            <Reveal delay={100}>
-              <div className="flex flex-col gap-[14px]">
-                {ABOUT_OUTCOMES.map(([ic, t, s]) => (
-                  <div key={t} className="flex items-center gap-4 bg-[var(--a4-surface-card)] border border-[var(--a4-hairline-light)] rounded-[var(--a4-r-lg)] py-[22px] px-6">
-                    <span className="w-[46px] h-[46px] rounded-[var(--a4-r-md)] bg-[var(--a4-surface-soft)] grid place-items-center shrink-0">
-                      <Icon name={ic} size={22} color="var(--a4-primary)" stroke={1.75} />
-                    </span>
-                    <div>
-                      <h3 className="a4-font-display font-medium text-[19px] text-[var(--a4-ink)] m-0" style={{ letterSpacing: "-.2px" }}>{t}</h3>
-                      <p className="a4-font-body text-[14.5px] leading-[1.5] text-[var(--a4-mute)] mt-1" style={{ textWrap: "pretty" }}>{s}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Reveal>
-          </div>
-        </Container>
-      </section>
-
-      <section className="relative overflow-hidden bg-black" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <div aria-hidden="true" className="hero-bg" />
-        <Container style={{ position: "relative", textAlign: "center", maxWidth: 720 }}>
-          <h2 className="a4-font-display font-medium text-white m-0" style={{ fontSize: "clamp(30px,4.4vw,54px)", lineHeight: 1.04, letterSpacing: "-.025em", textWrap: "balance" }}>Let&apos;s build something solid together.</h2>
-          <div className="flex gap-3 mt-8 justify-center flex-wrap">
-            <Button variant="primary" size="lg" href={href("/contact")}>Talk to A4 <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href={href("/how-it-works")}>See how it works</Button>
-          </div>
-        </Container>
+        </div>
       </section>
 
       <ServicePortalBand serviceName="your business" />

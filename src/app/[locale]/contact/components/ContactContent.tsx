@@ -2,12 +2,21 @@
 
 import React, { useState } from "react";
 import FormStatusModal from "@/components/common/FormStatusModal";
-import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
+import { Button, Icon } from "@/components/a4-landing/Primitives";
+import { A4Mark, LIGHT_GLOW } from "@/components/fx/primitives";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONES } from "@/lib/contact";
 import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 import { trackConversion } from "@/lib/analytics";
+
+const SANS = "var(--a4x-display)";
+const BODY = "var(--a4x-body)";
+const INDIGO = "#4F55F1";
+const PERI = "#8B8FF7";
+const INK = "#09090B";
+
+const kicker: React.CSSProperties = { fontFamily: BODY, fontSize: 12, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#71717A" };
 
 function ContactForm() {
   const [f, setF] = useState({ name: "", email: "", phone: "", message: "" });
@@ -86,31 +95,6 @@ function ContactForm() {
     }
   };
 
-  const fieldBorder = (key: keyof typeof f) =>
-    errors[key] ? "#ef4444" : "var(--a4-hairline-light)";
-
-  const inpBase: React.CSSProperties = {
-    width: "100%",
-    background: "var(--a4-surface-soft)",
-    borderRadius: "var(--a4-r-md)",
-    padding: "13px 15px",
-    color: "var(--a4-ink)",
-    fontFamily: "var(--a4-font-body)",
-    fontSize: 15,
-    outline: "none",
-    marginBottom: 6,
-  };
-  const lbl: React.CSSProperties = {
-    display: "block",
-    fontFamily: "var(--a4-font-body)",
-    fontSize: 12,
-    fontWeight: 600,
-    letterSpacing: ".04em",
-    textTransform: "uppercase",
-    color: "var(--a4-mute)",
-    marginBottom: 7,
-  };
-
   return (
     <>
       <FormStatusModal
@@ -120,46 +104,73 @@ function ContactForm() {
         message={statusMessage}
         onClose={() => setStatusOpen(false)}
       />
-      <form onSubmit={handleSubmit}>
-        <label style={lbl}>Full name</label>
-        <input
-          name="name"
-          value={f.name}
-          onChange={(e) => {
-            setF({ ...f, name: e.target.value });
-            if (errors.name) setErrors({ ...errors, name: "" });
-          }}
-          style={{ ...inpBase, border: `1px solid ${fieldBorder("name")}` }}
-          placeholder="Jane Borg"
-        />
-        {errors.name && <p className="a4-font-body text-[13px] text-red-500 mb-2">{errors.name}</p>}
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 20 }}>
+        <div>
+          <label htmlFor="ct-name" className="cp-label">
+            Full name
+          </label>
+          <input
+            id="ct-name"
+            name="name"
+            autoComplete="name"
+            className="cp-input"
+            value={f.name}
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? "ct-name-err" : undefined}
+            onChange={(e) => {
+              setF({ ...f, name: e.target.value });
+              if (errors.name) setErrors({ ...errors, name: "" });
+            }}
+            placeholder="Jane Borg"
+          />
+          {errors.name && (
+            <p id="ct-name-err" className="cp-error">
+              {errors.name}
+            </p>
+          )}
+        </div>
 
-        <label style={lbl}>Email address</label>
-        <input
-          type="email"
-          name="email"
-          value={f.email}
-          onChange={(e) => {
-            setF({ ...f, email: e.target.value });
-            if (errors.email) setErrors({ ...errors, email: "" });
-          }}
-          style={{ ...inpBase, border: `1px solid ${fieldBorder("email")}` }}
-          placeholder="jane@company.com"
-        />
-        {errors.email && <p className="a4-font-body text-[13px] text-red-500 mb-2">{errors.email}</p>}
+        <div>
+          <label htmlFor="ct-email" className="cp-label">
+            Email address
+          </label>
+          <input
+            id="ct-email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            className="cp-input"
+            value={f.email}
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "ct-email-err" : undefined}
+            onChange={(e) => {
+              setF({ ...f, email: e.target.value });
+              if (errors.email) setErrors({ ...errors, email: "" });
+            }}
+            placeholder="jane@company.com"
+          />
+          {errors.email && (
+            <p id="ct-email-err" className="cp-error">
+              {errors.email}
+            </p>
+          )}
+        </div>
 
-        <label style={lbl}>
-          Phone <span style={{ textTransform: "none", fontWeight: 400, letterSpacing: 0 }}>(optional)</span>
-        </label>
-        <input
-          type="tel"
-          name="phone"
-          autoComplete="tel"
-          value={f.phone}
-          onChange={(e) => setF({ ...f, phone: e.target.value })}
-          style={{ ...inpBase, border: `1px solid ${fieldBorder("phone")}` }}
-          placeholder="+356 …"
-        />
+        <div>
+          <label htmlFor="ct-phone" className="cp-label">
+            Phone <span style={{ fontWeight: 500, color: "#71717A" }}>(optional)</span>
+          </label>
+          <input
+            id="ct-phone"
+            type="tel"
+            name="phone"
+            autoComplete="tel"
+            className="cp-input"
+            value={f.phone}
+            onChange={(e) => setF({ ...f, phone: e.target.value })}
+            placeholder="+356 …"
+          />
+        </div>
 
         {/* Honeypot — real visitors never see this field. Bots that
             auto-fill every input on the form trip it; a filled value is
@@ -176,25 +187,37 @@ function ContactForm() {
           style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
         />
 
-        <label style={{ ...lbl, marginTop: 8 }}>Message</label>
-        <textarea
-          name="message"
-          value={f.message}
-          onChange={(e) => {
-            setF({ ...f, message: e.target.value });
-            if (errors.message) setErrors({ ...errors, message: "" });
-          }}
-          style={{ ...inpBase, border: `1px solid ${fieldBorder("message")}`, minHeight: 130, resize: "vertical", marginBottom: 6 }}
-          placeholder="Tell us a little about your business and what you need."
-        />
-        {errors.message && <p className="a4-font-body text-[13px] text-red-500 mb-2">{errors.message}</p>}
+        <div>
+          <label htmlFor="ct-message" className="cp-label">
+            Message
+          </label>
+          <textarea
+            id="ct-message"
+            name="message"
+            className="cp-input"
+            value={f.message}
+            aria-invalid={Boolean(errors.message)}
+            aria-describedby={errors.message ? "ct-message-err" : undefined}
+            onChange={(e) => {
+              setF({ ...f, message: e.target.value });
+              if (errors.message) setErrors({ ...errors, message: "" });
+            }}
+            placeholder="Tell us a little about your business and what you need."
+          />
+          {errors.message && (
+            <p id="ct-message-err" className="cp-error">
+              {errors.message}
+            </p>
+          )}
+        </div>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full mt-2 h-12 rounded-[var(--a4-r-full)] bg-black text-white a4-font-body text-[16px] font-semibold inline-flex items-center justify-center gap-2 cursor-pointer border-0 disabled:opacity-50"
+          className="a4-btn a4-btn-ink"
+          style={{ width: "100%", height: 64, marginTop: 4, fontSize: 19, opacity: isSubmitting ? 0.55 : 1 }}
         >
-          {isSubmitting ? "Sending…" : "Send message"} <Icon name="arrow-right" size={16} color="#fff" />
+          {isSubmitting ? "Sending…" : "Send message"} <Icon name="arrow-right" size={18} color="#FFFFFF" />
         </button>
       </form>
     </>
@@ -212,40 +235,81 @@ export function ContactContent() {
     <div className="a4-site-page">
       <PageHero eyebrow="Get in touch" title="Let's talk about your business" sub="Send us a message, call the team, or book a free 30-minute call. We usually reply within one business day." />
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,96px) 0" }}>
-        <Container>
-          <div className="ct-grid grid gap-10 items-start" style={{ gridTemplateColumns: "1.1fr .9fr" }}>
-            <Reveal style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", padding: "clamp(26px,3.4vw,40px)" }}>
-              <h2 className="a4-font-display font-medium text-[var(--a4-ink)] mb-[22px]" style={{ fontSize: "clamp(22px,2.6vw,28px)", letterSpacing: "-.3px" }}>Send us a message</h2>
+      <section style={{ position: "relative", padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)", background: LIGHT_GLOW, color: INK }}>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
+            gap: "48px 56px",
+            alignItems: "start",
+          }}
+        >
+          {/* The form as the design's document panel */}
+          <div
+            data-fx="rise"
+            data-dy="80"
+            style={{ position: "relative", background: "#FFFFFF", border: "1px solid #E4E4E7", borderRadius: 28, boxShadow: "0 50px 120px rgba(9,9,11,.12)", overflow: "hidden" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", padding: "clamp(24px,3.4vw,40px) clamp(24px,3.4vw,40px) 0" }}>
+              <A4Mark size={32} color={INK} />
+              <span style={{ width: 1.5, height: 26, margin: "0 12px", background: INK, opacity: 0.35 }} />
+              <span style={{ fontFamily: SANS, fontSize: 18, fontWeight: 500, letterSpacing: "-0.02em" }}>A4 Services</span>
+            </div>
+            <div style={{ padding: "28px clamp(24px,3.4vw,40px) clamp(24px,3.4vw,40px)" }}>
+              <h2 style={{ margin: "0 0 26px", fontFamily: SANS, fontSize: "clamp(30px,3vw,40px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.05 }}>Send us a message</h2>
               <ContactForm />
-            </Reveal>
-            <Reveal delay={100}>
-              <div className="flex flex-col gap-[14px]">
-                {CONTACT_ITEMS.map(([ic, k, v, linkHref]) => (
-                  <a key={k} href={linkHref || undefined} onClick={linkHref ? undefined : (e) => e.preventDefault()} className="flex items-center gap-[15px] bg-[var(--a4-surface-card)] border border-[var(--a4-hairline-light)] rounded-[var(--a4-r-lg)] py-5 px-[22px] no-underline">
-                    <span className="w-[46px] h-[46px] rounded-[var(--a4-r-md)] bg-[var(--a4-surface-soft)] grid place-items-center shrink-0">
-                      <Icon name={ic} size={21} color="var(--a4-primary)" stroke={1.75} />
-                    </span>
-                    <div>
-                      <div className="a4-font-body text-[12px] font-semibold tracking-[.06em] uppercase text-[var(--a4-mute)]">{k}</div>
-                      <div className="a4-font-body text-[16px] font-semibold text-[var(--a4-ink)] mt-[2px]">{v}</div>
-                    </div>
-                  </a>
-                ))}
-                <div className="bg-black rounded-[var(--a4-r-lg)] py-[26px] px-6 mt-1">
-                  <div className="flex items-center gap-[11px]">
-                    <Icon name="calendar" size={20} color="var(--a4-primary-bright)" />
-                    <h3 className="a4-font-display font-medium text-[20px] text-white m-0">Book a free 30-minute call</h3>
-                  </div>
-                  <p className="a4-font-body text-[14.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[10px] mb-[18px]">Prefer to talk it through? Grab a slot and we&apos;ll learn about your business — no obligation.</p>
-                  <Button variant="primary" size="md" href={BOOK_A_CALL_PATH}>
-                    Book a call <Icon name="arrow-right" size={16} color="#000" />
-                  </Button>
-                </div>
-              </div>
-            </Reveal>
+            </div>
           </div>
-        </Container>
+
+          {/* Direct lines as numbered rows, then the call card */}
+          <div>
+            <div data-fx="rise" data-d="100" style={{ display: "flex", flexDirection: "column", borderBottom: "1px solid #E4E4E7" }}>
+              {CONTACT_ITEMS.map(([ic, k, v, linkHref]) => {
+                const inner = (
+                  <>
+                    <span style={{ width: 48, height: 48, flexShrink: 0, borderRadius: "50%", display: "grid", placeItems: "center", border: "1px solid #E4E4E7", background: "#FFFFFF" }} aria-hidden="true">
+                      <Icon name={ic} size={19} color={INDIGO} />
+                    </span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ ...kicker, display: "block" }}>{k}</span>
+                      <span style={{ display: "block", marginTop: 4, fontFamily: SANS, fontSize: "clamp(19px,1.7vw,23px)", fontWeight: 600, letterSpacing: "-0.025em", lineHeight: 1.25, color: INK, overflowWrap: "anywhere" }}>{v}</span>
+                    </span>
+                    {linkHref ? (
+                      <span aria-hidden="true" className="cp-arrow" style={{ marginLeft: "auto", flexShrink: 0 }}>
+                        <Icon name="arrow-up-right" size={18} color="#A1A1AA" />
+                      </span>
+                    ) : null}
+                  </>
+                );
+                const rowStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 16, padding: "20px 0", borderTop: "1px solid #E4E4E7", textDecoration: "none", color: INK };
+                return linkHref ? (
+                  <a key={k} href={linkHref} className="cp-focus" style={rowStyle}>
+                    {inner}
+                  </a>
+                ) : (
+                  <div key={k} style={rowStyle}>
+                    {inner}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div data-fx="rise" data-d="200" className="cp-card cp-dark cp-static" style={{ marginTop: 32, padding: "clamp(26px,3vw,36px)" }}>
+              <span aria-hidden="true" style={{ width: 48, height: 48, borderRadius: "50%", display: "grid", placeItems: "center", border: "1px solid rgba(255,255,255,.14)", background: "rgba(255,255,255,.04)" }}>
+                <Icon name="calendar" size={20} color={PERI} />
+              </span>
+              <h3 style={{ margin: "22px 0 0", fontFamily: SANS, fontSize: "clamp(28px,2.6vw,36px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.08 }}>Book a free 30-minute call</h3>
+              <p style={{ margin: "12px 0 24px", fontFamily: BODY, fontSize: 16, lineHeight: 1.6, color: "#A1A1AA" }}>
+                Prefer to talk it through? Grab a slot and we&apos;ll learn about your business — no obligation.
+              </p>
+              <Button variant="primary" size="lg" href={BOOK_A_CALL_PATH}>
+                Book a call <Icon name="arrow-right" size={18} color={INK} />
+              </Button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <ServicePortalBand serviceName="your enquiry" />

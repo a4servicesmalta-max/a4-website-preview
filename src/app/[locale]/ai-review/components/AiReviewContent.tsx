@@ -50,29 +50,20 @@ export function AiReviewContent() {
     <div className="a4-site-page">
       <PageHero eyebrow="AI Review" title={hero.title} sub={`${hero.p1} ${hero.p2}`} />
 
-      <section className="bg-[var(--a4-canvas-light)]">
-        <AIReviewFeature hero={hero} demo={demo} />
-      </section>
+      {/* Surfaces alternate: muted → light → dark → light → dark → the muted portal band. */}
+      <AIReviewFeature hero={hero} demo={demo} />
 
-      <section className="bg-white">
-        <PortalFeature variant="technology" {...portalFeature} portalImage="/assets/images/Frame 1618872451.png" />
-      </section>
+      <PortalFeature variant="technology" surface="light" {...portalFeature} portalImage="/assets/images/Frame 1618872451.png" />
 
-      <section className="bg-[var(--a4-canvas-light)]">
-        <ServiceFeatures
-          title={serviceFeatures.title}
-          subtitle={serviceFeatures.subtitle}
-          features={serviceFeatures.features}
-        />
-      </section>
+      <ServiceFeatures
+        title={serviceFeatures.title}
+        subtitle={serviceFeatures.subtitle}
+        features={serviceFeatures.features}
+      />
 
-      <section className="bg-white">
-        <ReviewOutputSection output={output} />
-      </section>
+      <ReviewOutputSection output={output} />
 
-      <section className="bg-[var(--a4-canvas-light)]">
-        <BenefitsVideoSection cards={videoBenefits} />
-      </section>
+      <BenefitsVideoSection cards={videoBenefits} />
 
       <ServicePortalBand serviceName="AI Review" />
     </div>
