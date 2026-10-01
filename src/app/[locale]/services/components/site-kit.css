@@ -1,0 +1,419 @@
+/*
+ * A4 design-language building blocks for the services, partners, pricing and
+ * quote pages (see docs/DESIGN-LANGUAGE.md and src/app/q/[id]/QuotationLanding.tsx).
+ * Only what an inline style cannot express lives here: hover/focus states,
+ * placeholders, selects, and the responsive collapse of the split layouts.
+ * Every rule is scoped to an `a4k-` class so nothing leaks into other pages.
+ */
+
+/* ── cards (the design's 24px cards, alternating light / dark) ── */
+.a4k-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 28px;
+  border-radius: 24px;
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  color: #09090b;
+  text-decoration: none;
+  transition: border-color 0.35s, box-shadow 0.35s;
+}
+.a4k-card.a4k-card-dark {
+  border-color: rgba(255, 255, 255, 0.06);
+  background:
+    radial-gradient(420px 320px at 85% 0%, rgba(79, 85, 241, 0.3), rgba(79, 85, 241, 0) 70%),
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
+    #09090b;
+  color: #ffffff;
+}
+/* Glass card for dark sections. */
+.a4k-card.a4k-card-glass {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+}
+a.a4k-card:hover,
+a.a4k-card:focus-visible {
+  border-color: rgba(79, 85, 241, 0.45);
+  box-shadow: 0 24px 60px rgba(79, 85, 241, 0.12);
+}
+a.a4k-card.a4k-card-dark:hover,
+a.a4k-card.a4k-card-dark:focus-visible {
+  border-color: rgba(139, 143, 247, 0.45);
+  box-shadow: 0 24px 60px rgba(9, 9, 11, 0.28);
+}
+a.a4k-card:focus-visible {
+  outline: 3px solid rgba(79, 85, 241, 0.55);
+  outline-offset: 2px;
+}
+
+/* The arrow chip at the foot of a link card — "Included" in the design. */
+.a4k-go {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid #e4e4e7;
+  color: #52525b;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.3s, color 0.3s, border-color 0.3s;
+}
+.a4k-card-dark .a4k-go,
+.a4k-card-glass .a4k-go {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #a1a1aa;
+}
+a.a4k-card:hover .a4k-go,
+a.a4k-card:focus-visible .a4k-go {
+  background: rgba(79, 85, 241, 0.1);
+  border-color: transparent;
+  color: #4f55f1;
+}
+a.a4k-card.a4k-card-dark:hover .a4k-go,
+a.a4k-card.a4k-card-dark:focus-visible .a4k-go,
+a.a4k-card.a4k-card-glass:hover .a4k-go,
+a.a4k-card.a4k-card-glass:focus-visible .a4k-go {
+  background: rgba(139, 143, 247, 0.18);
+  color: #ffffff;
+}
+
+/* ── numbered link rows (related services, models) ── */
+.a4k-rowlink {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 0;
+  border-top: 1px solid #e4e4e7;
+  color: #09090b;
+  text-decoration: none;
+}
+.a4k-rowlink:last-child {
+  border-bottom: 1px solid #e4e4e7;
+}
+.a4k-rowlink .a4k-rowlink-t {
+  transition: color 0.3s;
+}
+.a4k-rowlink:hover .a4k-rowlink-t,
+.a4k-rowlink:focus-visible .a4k-rowlink-t {
+  color: #4f55f1;
+}
+.a4k-rowlink .a4k-rowlink-arrow {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s;
+  color: #a1a1aa;
+}
+.a4k-rowlink:hover .a4k-rowlink-arrow,
+.a4k-rowlink:focus-visible .a4k-rowlink-arrow {
+  color: #4f55f1;
+  transform: translateX(4px);
+}
+.a4k-rowlink:focus-visible {
+  outline: 3px solid rgba(79, 85, 241, 0.55);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.a4k-dark .a4k-rowlink {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.a4k-dark .a4k-rowlink:hover .a4k-rowlink-t,
+.a4k-dark .a4k-rowlink:focus-visible .a4k-rowlink-t {
+  color: #8b8ff7;
+}
+.a4k-dark .a4k-rowlink:hover .a4k-rowlink-arrow,
+.a4k-dark .a4k-rowlink:focus-visible .a4k-rowlink-arrow {
+  color: #8b8ff7;
+}
+
+/* ── form fields on light (white, hairline, radius 14, indigo focus) ── */
+.a4k-input {
+  width: 100%;
+  min-width: 0;
+  height: 54px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  color: #09090b;
+  font-family: var(--a4x-display);
+  font-size: 17px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.a4k-input::placeholder {
+  color: #a1a1aa;
+}
+.a4k-input:focus {
+  border-color: #4f55f1;
+  box-shadow: 0 0 0 3px rgba(79, 85, 241, 0.14);
+}
+textarea.a4k-input,
+textarea.a4-input-dark {
+  height: auto;
+  min-height: 132px;
+  padding: 14px 18px;
+  line-height: 1.5;
+  resize: vertical;
+}
+select.a4k-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 46px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2352525B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 18px 18px;
+  text-overflow: ellipsis;
+}
+input[type="month"].a4k-input {
+  cursor: pointer;
+}
+.a4-input-dark:focus {
+  box-shadow: 0 0 0 3px rgba(79, 85, 241, 0.22);
+}
+
+/* ── choice pills (single-select options, the design's active = ink) ── */
+.a4k-opts {
+  display: grid;
+  gap: 8px;
+}
+.a4k-opt {
+  min-height: 48px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  color: #3f3f46;
+  font-family: var(--a4x-display);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s, border-color 0.3s;
+}
+.a4k-opt:hover {
+  border-color: #a1a1aa;
+}
+.a4k-opt[aria-pressed="true"] {
+  background: #09090b;
+  border-color: #09090b;
+  color: #ffffff;
+}
+.a4k-opt:focus-visible,
+.a4k-seg button:focus-visible,
+.a4k-step:focus-visible,
+.a4k-switch:focus-visible,
+.a4k-check:focus-visible,
+.a4k-svc:focus-visible {
+  outline: 3px solid rgba(79, 85, 241, 0.55);
+  outline-offset: 2px;
+}
+/* On dark (the request form's service pills). */
+.a4k-dark .a4k-opt {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e4e4e7;
+}
+.a4k-dark .a4k-opt:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.a4k-dark .a4k-opt[aria-pressed="true"] {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #09090b;
+}
+
+/* ── segmented control (the design's Monthly / Annual switch) ── */
+.a4k-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 27px;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  max-width: 100%;
+}
+.a4k-seg button {
+  height: 44px;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: #52525b;
+  font-family: var(--a4x-display);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s;
+}
+.a4k-seg button:hover {
+  color: #09090b;
+}
+.a4k-seg button[aria-pressed="true"] {
+  background: #09090b;
+  color: #ffffff;
+}
+
+/* ── the design's 48×28 toggle ── */
+.a4k-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: #e4e4e7;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.a4k-switch[aria-checked="true"] {
+  background: #4f55f1;
+}
+.a4k-switch > span {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(9, 9, 11, 0.3);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.a4k-switch[aria-checked="true"] > span {
+  transform: translateX(20px);
+}
+
+/* ── stepper ── */
+.a4k-step {
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  color: #09090b;
+  cursor: pointer;
+  transition: border-color 0.25s, background 0.25s;
+}
+.a4k-step:hover:not(:disabled) {
+  border-color: #a1a1aa;
+}
+.a4k-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── checkbox tile (quote builder services) ── */
+.a4k-svc {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+.a4k-svc:hover {
+  border-color: #a1a1aa;
+}
+.a4k-svc[aria-pressed="true"] {
+  border-color: rgba(79, 85, 241, 0.45);
+  box-shadow: 0 16px 40px rgba(79, 85, 241, 0.1);
+}
+.a4k-check {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1.5px solid #a1a1aa;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.25s, border-color 0.25s;
+}
+[aria-pressed="true"] > .a4k-check,
+.a4k-check[data-on="true"] {
+  background: #4f55f1;
+  border-color: #4f55f1;
+}
+
+/* ── layout helpers ── */
+/* Spans two grid columns wherever the card grid has at least two (≥800px);
+   on one column it stays a single cell, so it never creates an extra track. */
+@media (min-width: 800px) {
+  .a4k-span2 {
+    grid-column: span 2;
+  }
+}
+.a4k-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(40px, 6vw, 88px);
+  align-items: center;
+}
+.a4k-split-top {
+  align-items: start;
+}
+.a4k-calc {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (min-width: 1001px) {
+  .a4k-sticky {
+    position: sticky;
+    top: 96px;
+  }
+}
+@media (max-width: 1000px) {
+  .a4k-calc {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .a4k-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .a4k-hide-sm {
+    display: none !important;
+  }
+  .a4k-seg {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .a4k-seg button {
+    justify-content: center;
+    padding: 0 12px;
+  }
+}

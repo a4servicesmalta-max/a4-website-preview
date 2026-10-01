@@ -1,8 +1,8 @@
 "use client";
 
-import LocalizedLink from "@/components/common/LocalizedLink";
-import { Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
+import { Icon } from "@/components/a4-landing/Primitives";
 import { usePagesTranslation } from "@/hooks/usePagesTranslation";
+import { BODY, Band, GRID2, WordCard } from "@/app/[locale]/services/components/SiteKit";
 import { PartnerSubpageLayout, usePartnerSections } from "./PartnerSubpageLayout";
 
 export default function WhiteLabelPageContent() {
@@ -21,50 +21,39 @@ export default function WhiteLabelPageContent() {
       sections={sections}
       currentHref="/partners/white-label"
     >
-      <section className="bg-[var(--a4-canvas-light)] border-b border-[var(--a4-hairline-light)]" style={{ padding: "clamp(48px,6vw,72px) 0" }}>
-        <Container>
-          <Reveal>
-            <div className="grid gap-5 md:grid-cols-2">
-              {(["client", "audit"] as const).map((key, i) => (
-                <Reveal
-                  key={key}
-                  delay={i * 80}
-                  style={{
-                    background: "var(--a4-surface-card)",
-                    border: "1px solid var(--a4-hairline-light)",
-                    borderRadius: "var(--a4-r-lg)",
-                    padding: "clamp(26px,3vw,36px)",
-                    display: "flex",
-                    flexDirection: "column",
-                    minHeight: "100%",
-                  }}
-                >
-                  <span
-                    className="grid place-items-center w-12 h-12 rounded-[var(--a4-r-md)]"
-                    style={{ background: "rgba(73,79,223,.1)", border: "1px solid rgba(73,79,223,.2)" }}
-                  >
-                    <Icon name={key === "client" ? "layout-dashboard" : "clipboard-check"} size={22} color="var(--a4-primary)" stroke={1.75} />
-                  </span>
-                  <h3 className="a4-font-display font-medium text-[var(--a4-ink)] mt-5" style={{ fontSize: "clamp(20px,2.4vw,24px)" }}>
-                    {t(`whiteLabel.experience.${key}.title`)}
-                  </h3>
-                  <p className="a4-font-body text-[15px] leading-[1.6] text-[var(--a4-mute)] mt-3 flex-1" style={{ textWrap: "pretty" }}>
-                    {t(`whiteLabel.experience.${key}.description`)}
-                  </p>
-                  <LocalizedLink
-                    href={key === "client" ? "/partners/white-label/client-portal" : "/partners/white-label/audit-portal"}
-                    className="inline-flex items-center gap-1.5 mt-6 a4-font-body text-[14.5px] font-semibold no-underline"
-                    style={{ color: "var(--a4-link)" }}
-                  >
-                    {t(`whiteLabel.experience.${key}.cta`)}
-                    <Icon name="arrow-right" size={15} color="var(--a4-link)" />
-                  </LocalizedLink>
-                </Reveal>
-              ))}
-            </div>
-          </Reveal>
-        </Container>
-      </section>
+      {/* The two portals a white-label partner runs — the design's card pair. */}
+      <Band surface="muted" sec="portals">
+        <div style={GRID2}>
+          {(["client", "audit"] as const).map((key, i) => {
+            const dark = i % 2 === 1;
+            return (
+              <WordCard
+                key={key}
+                href={key === "client" ? "/partners/white-label/client-portal" : "/partners/white-label/audit-portal"}
+                ariaLabel={t(`whiteLabel.experience.${key}.cta`)}
+                i={i}
+                total={2}
+                word={key === "client" ? "Client portal" : "Audit portal"}
+                fx={key === "client" ? "scatter" : "tighten"}
+                icon={key === "client" ? "layout-dashboard" : "clipboard-check"}
+                line={t(`whiteLabel.experience.${key}.title`)}
+                dark={dark}
+                d={i * 80}
+                minHeight={420}
+                go={
+                  <>
+                    {t(`whiteLabel.experience.${key}.cta`)} <Icon name="arrow-right" size={14} color="currentColor" />
+                  </>
+                }
+              >
+                <p style={{ margin: 0, fontFamily: BODY, fontSize: 16, lineHeight: 1.6, color: dark ? "#A1A1AA" : "#52525B", textWrap: "pretty" }}>
+                  {t(`whiteLabel.experience.${key}.description`)}
+                </p>
+              </WordCard>
+            );
+          })}
+        </div>
+      </Band>
     </PartnerSubpageLayout>
   );
 }

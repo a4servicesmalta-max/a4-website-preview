@@ -2,15 +2,13 @@
 
 import React, { useState } from "react";
 import LocalizedLink from "@/components/common/LocalizedLink";
-import { Button, Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
-import { useLocalizedHref } from "./useLocalizedHref";
+import { Icon } from "@/components/a4-landing/Primitives";
+import { DARK_CARD } from "@/components/fx/primitives";
 import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
-import { A4_MANAGED_OFFER, MANAGED_CAVEAT, MANAGED_CATCHUP_NOTE, MANAGED_SOLE, MANAGED_COMPANY } from "@/data/a4ManagedOffer";
+import { A4_MANAGED_OFFER, MANAGED_CAVEAT, MANAGED_CATCHUP_NOTE } from "@/data/a4ManagedOffer";
 import {
-  VAT_MONTHLY,
   VAT_RULES,
   VAT_FROM,
-  AUDIT_YEARLY,
   AUDIT_FROM,
   BOOKKEEPING_FROM,
   BOOKKEEPING_COMPANY,
@@ -40,10 +38,42 @@ import {
   type WebsiteQuoteResult,
 } from "@/lib/websiteQuotation";
 import { independenceFlags, independenceNotice } from "@/lib/independence";
-import { catchUpMonthsFrom, nextMonth, ongoingStartMonth } from "@/lib/accounting-fee";
+import { catchUpMonthsFrom, ongoingStartMonth } from "@/lib/accounting-fee";
 import { trackConversion } from "@/lib/analytics";
+import { PageHero } from "@/app/[locale]/services/components/PageHero";
+import {
+  BODY,
+  Band,
+  CtaCard,
+  DarkCta,
+  Doc,
+  DocChip,
+  DocFoot,
+  DocHead,
+  DocRow,
+  G,
+  GRID3,
+  Head,
+  INDIGO,
+  INK,
+  NumberedRows,
+  OptionPills,
+  PERI,
+  PillLink,
+  Pills,
+  Segmented,
+  Stepper,
+  Switch,
+  WordCard,
+  gradText,
+  kicker,
+  pad2,
+} from "@/app/[locale]/services/components/SiteKit";
 
 const prEuro =(n: number) => "€" + Math.round(n).toLocaleString();
+
+/** The pack's cadence words, as the copy conventions write them ("/mo", "/yr", "one-off"). */
+const unitLabel = (u: string) => u.replace(/^\/\s+/, "/");
 
 const PR_SERVICES = [
   { id: "accounting", label: "Bookkeeping", icon: "book-open-check" },
@@ -89,142 +119,61 @@ const PR_EXPENSE_LABELS = EXPENSE_BANDS.map((b) => b.label);
 
 type ServiceId = (typeof PR_SERVICES)[number]["id"];
 
-function PrChip({
-  items,
-  value,
-  set,
-  cols,
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Calculator building blocks (the design's numbered steps and rows)          */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/** One numbered question — "01  Are these a company's books, or your own?" */
+function PrStep({
+  n,
+  title,
+  hint,
+  htmlFor,
+  first = false,
+  children,
 }: {
-  items: string[];
-  value: number;
-  set: (v: number) => void;
-  cols?: number;
+  n: number;
+  title: React.ReactNode;
+  hint?: React.ReactNode;
+  htmlFor?: string;
+  first?: boolean;
+  children?: React.ReactNode;
 }) {
+  const titleStyle: React.CSSProperties = { fontSize: "clamp(19px,1.6vw,21px)", fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.3, color: INK };
   return (
-    <div
-      className="grid gap-2 mt-3"
-      style={{ gridTemplateColumns: `repeat(${cols || items.length}, 1fr)` }}
-    >
-      {items.map((it, i) => {
-        const on = value === i;
-        return (
-          <button
-            key={it}
-            type="button"
-            onClick={() => set(i)}
-            className="py-[11px] px-2 rounded-[var(--a4-r-md)] cursor-pointer a4-font-body text-[13.5px] font-semibold transition-colors duration-150"
-            style={{
-              background: on ? "#fff" : "var(--a4-surface-deep)",
-              color: on ? "#000" : "var(--a4-on-dark-mute)",
-              border: `1px solid ${on ? "#fff" : "var(--a4-hairline-dark)"}`,
-            }}
-          >
-            {it}
-          </button>
-        );
-      })}
+    <div data-fx="rise" data-dy="30" style={{ marginTop: first ? 0 : 28, paddingTop: first ? 0 : 28, borderTop: first ? 0 : "1px solid #E4E4E7" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "34px minmax(0,1fr)", alignItems: "baseline" }}>
+        <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: ".02em", color: INDIGO }}>{pad2(n)}</span>
+        {htmlFor ? (
+          <label htmlFor={htmlFor} style={titleStyle}>
+            {title}
+          </label>
+        ) : (
+          <div style={titleStyle}>{title}</div>
+        )}
+      </div>
+      {hint ? <div style={{ margin: "6px 0 0 34px", fontFamily: BODY, fontSize: 14, lineHeight: 1.55, color: "#71717A" }}>{hint}</div> : null}
+      {children ? <div style={{ marginTop: 16 }}>{children}</div> : null}
     </div>
   );
 }
 
-function PrToggle({ on, set }: { on: boolean; set: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={() => set(!on)}
-      className="relative shrink-0 cursor-pointer transition-colors duration-200"
-      style={{
-        width: 46,
-        height: 27,
-        borderRadius: 999,
-        border: `1px solid ${on ? "var(--a4-ink)" : "var(--a4-hairline-strong)"}`,
-        background: on ? "var(--a4-ink)" : "var(--a4-hairline-light)",
-      }}
-    >
-      <span
-        className="absolute top-[2px] rounded-full bg-white transition-all duration-200 ease-out"
-        style={{
-          width: 21,
-          height: 21,
-          left: on ? 21 : 2,
-          boxShadow: "0 1px 3px rgba(0,0,0,.2)",
-        }}
-      />
-    </button>
-  );
-}
-
-function PrStepper({ value, set, min = 1, max = 10 }: { value: number; set: (v: number) => void; min?: number; max?: number }) {
-  const btn =
-    "w-[32px] h-[32px] rounded-[var(--a4-r-md)] grid place-items-center cursor-pointer bg-[var(--a4-surface-deep)] border border-[var(--a4-hairline-dark)] text-white";
-  return (
-    <div className="flex items-center gap-3 shrink-0">
-      <button type="button" aria-label="decrease" onClick={() => set(Math.max(min, value - 1))} className={btn}>
-        <Icon name="minus" size={14} color="#fff" />
-      </button>
-      <span className="a4-font-display font-medium text-[17px] text-white text-center min-w-[20px] tabular-nums">{value}</span>
-      <button type="button" aria-label="increase" onClick={() => set(Math.min(max, value + 1))} className={btn}>
-        <Icon name="plus" size={14} color="#fff" />
-      </button>
-    </div>
-  );
-}
-
+/** A labelled row with a control on the right (incorporation extras). */
 function PrRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
   return (
-    <div
-      className="flex items-center gap-[14px] py-[15px]"
-      style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}
-    >
-      <div className="flex-1">
-        <div className="a4-font-body text-[14.5px] font-semibold text-white">{label}</div>
-        {sub && <div className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[2px]">{sub}</div>}
+    <div className="flex items-center gap-[14px]" style={{ padding: "16px 0", borderTop: "1px solid #E4E4E7" }}>
+      <div className="flex-1 min-w-0">
+        <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.015em", color: INK }}>{label}</div>
+        {sub && <div style={{ marginTop: 3, fontFamily: BODY, fontSize: 13.5, lineHeight: 1.45, color: "#71717A" }}>{sub}</div>}
       </div>
       {children}
     </div>
   );
 }
 
-function PricingHero() {
-  return (
-    <section
-      className="relative overflow-hidden bg-black pt-24 sm:pt-28 lg:pt-32"
-      style={{ paddingBottom: "clamp(40px,5vw,64px)" }}
-    >
-      <div aria-hidden="true" className="hero-bg" />
-      <Container style={{ position: "relative", textAlign: "center" }}>
-        <div className="flex items-center justify-center gap-[14px]">
-          <span className="w-[28px] h-[1px] bg-[var(--a4-hairline-strong)]" />
-          <span className="a4-font-body text-[12.5px] font-semibold tracking-[.14em] uppercase text-[var(--a4-on-dark-mute)]">
-            Transparent pricing · Malta
-          </span>
-          <span className="w-[28px] h-[1px] bg-[var(--a4-hairline-strong)]" />
-        </div>
-        <h1
-          className="a4-font-display font-medium text-white mx-auto mt-[22px]"
-          style={{
-            fontSize: "clamp(40px,6vw,80px)",
-            lineHeight: 1.02,
-            letterSpacing: "-.03em",
-            maxWidth: 860,
-            textWrap: "balance",
-          }}
-        >
-          A fixed price, <span style={{ color: "var(--a4-primary-bright)" }}>in seconds.</span>
-        </h1>
-        <p
-          className="a4-font-body text-[var(--a4-on-dark-mute)] mx-auto mt-[22px]"
-          style={{ fontSize: "clamp(17px,1.8vw,20px)", lineHeight: 1.6, maxWidth: 560, textWrap: "pretty" }}
-        >
-          Build a price for your everyday accounting, VAT and audit work below. Something more complex? We&apos;ll scope
-          it on a quick call.
-        </p>
-      </Container>
-    </section>
-  );
-}
+/* ────────────────────────────────────────────────────────────────────────── */
+/* 01 Starting prices                                                         */
+/* ────────────────────────────────────────────────────────────────────────── */
 
 // The managed offer, straight from src/data/a4ManagedOffer.ts so this page can
 // never drift. Two prices, both published, an accountant on the file in both.
@@ -305,236 +254,154 @@ function tierPromoPrice(tier: StartingTier): number {
     : tier.price!;
 }
 
-function PricingTierCard({ tier }: { tier: StartingTier }) {
+/**
+ * A starting price as the design's card: counter, the plan as the big word,
+ * the blurb, and the price over the hairline. Every bookkeeping figure is the
+ * entry band of nine, so it always reads "from" (a4ManagedOffer copy rules).
+ */
+function PricingTierCard({ tier, i, total }: { tier: StartingTier; i: number; total: number }) {
   const isPopular = "popular" in tier && tier.popular;
   const isQuoted = "quoted" in tier && tier.quoted;
+  const showFrom = ("from" in tier && tier.from) || ("ladder" in tier && tier.ladder);
+  const dark = i % 2 === 1;
+  const dim = dark ? "#A1A1AA" : "#52525B";
 
   return (
-    <div
-      className="group relative flex flex-col h-full overflow-hidden rounded-[var(--a4-r-lg)] transition-all duration-300 hover:-translate-y-1"
-      style={{
-        padding: isPopular ? "28px 24px 26px" : "24px 22px",
-        background: isPopular
-          ? "linear-gradient(160deg, rgba(73,79,223,.22) 0%, rgba(18,18,28,.95) 45%, var(--a4-surface-elevated) 100%)"
-          : "linear-gradient(180deg, rgba(255,255,255,.04) 0%, var(--a4-surface-elevated) 100%)",
-        border: `1px solid ${isPopular ? "rgba(73,79,223,.55)" : "var(--a4-hairline-dark)"}`,
-        boxShadow: isPopular
-          ? "0 24px 48px -12px rgba(73,79,223,.35), inset 0 1px 0 rgba(255,255,255,.08)"
-          : "inset 0 1px 0 rgba(255,255,255,.04)",
-      }}
-    >
-      {isPopular && (
-        <>
-          <div
-            aria-hidden="true"
-            className="absolute -top-12 -right-12 w-40 h-40 rounded-full pointer-events-none opacity-60"
-            style={{ background: "radial-gradient(circle, rgba(73,79,223,.45) 0%, transparent 70%)" }}
-          />
-          <span
-            className="relative self-start mb-3 a4-font-body text-[10px] font-bold uppercase tracking-[.1em] px-2.5 py-1 rounded-full"
-            style={{ background: "var(--a4-primary)", color: "#fff", boxShadow: "0 4px 14px rgba(73,79,223,.4)" }}
-          >
+    <WordCard
+      i={i}
+      total={total}
+      word={tier.name}
+      dark={dark}
+      d={(i % 3) * 80}
+      minHeight={380}
+      topRight={
+        isPopular ? (
+          <span style={{ height: 30, padding: "0 13px", display: "inline-flex", alignItems: "center", borderRadius: 999, background: INDIGO, color: "#FFFFFF", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
             Most popular
           </span>
-        </>
-      )}
-
-      <div className="relative flex items-start justify-between gap-3">
-        <span
-          className="grid place-items-center shrink-0 transition-transform duration-300 group-hover:scale-105"
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: "var(--a4-r-md)",
-            background: isPopular ? "rgba(73,79,223,.25)" : "rgba(255,255,255,.06)",
-            border: `1px solid ${isPopular ? "rgba(73,79,223,.4)" : "var(--a4-hairline-dark)"}`,
-          }}
-        >
-          <Icon
-            name={tier.icon}
-            size={22}
-            color={isPopular ? "var(--a4-primary-bright)" : "var(--a4-on-dark-mute)"}
-            stroke={1.75}
-          />
-        </span>
-        <span
-          className="a4-font-body text-[10.5px] font-bold uppercase tracking-[.1em] rounded-full px-2.5 py-1"
-          style={{
-            color: "var(--a4-stone)",
-            background: "rgba(255,255,255,.05)",
-            border: "1px solid var(--a4-hairline-dark)",
-          }}
-        >
-          {tier.tag}
-        </span>
-      </div>
-
-      <div className="relative mt-5">
-        <div
-          className="a4-font-body text-[12px] font-semibold uppercase tracking-[.12em]"
-          style={{ color: isPopular ? "var(--a4-primary-bright)" : "var(--a4-stone)" }}
-        >
-          {tier.name}
-        </div>
-
-        {isQuoted ? (
-          <div className="a4-font-display font-medium text-white mt-3 leading-tight text-[clamp(28px,7vw,34px)] tracking-[-.02em]">
-            Quoted
-          </div>
         ) : (
-          <div className="flex flex-wrap items-baseline gap-1.5 mt-3">
-            {"from" in tier && tier.from && (
-              <span className="a4-font-body text-[13px] text-[var(--a4-stone)]">from</span>
-            )}
+          <span
+            style={{
+              height: 30,
+              padding: "0 13px",
+              display: "inline-flex",
+              alignItems: "center",
+              borderRadius: 999,
+              border: `1px solid ${dark ? "rgba(255,255,255,.18)" : "#E4E4E7"}`,
+              color: dim,
+              fontSize: 13,
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {tier.tag}
+          </span>
+        )
+      }
+      foot={
+        isQuoted ? (
+          <span style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.03em", color: dark ? "#FFFFFF" : INK }}>Quoted</span>
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 6 }}>
+            {showFrom && <span style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, color: dim }}>from</span>}
             {/* The banner on this page says the launch discount is "already
                 deducted". It was not: these cards showed the list price while
                 the calculator beside them showed 25% less, so the page argued
                 with itself about what a customer pays. Show the discounted
                 figure with the list price struck through, exactly as the
                 calculator does. The pack is untouched — this is presentation. */}
-            <span className="a4-font-display font-medium text-white leading-none text-[clamp(32px,8vw,44px)] tracking-[-2px] tabular-nums">
+            <span style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.03em", color: dark ? "#FFFFFF" : INK, fontVariantNumeric: "tabular-nums" }}>
               {prEuro(tierPromoPrice(tier))}
             </span>
             {tierIsDiscounted(tier) && (
-              <span className="a4-font-body text-[15px] text-[var(--a4-stone)] line-through tabular-nums">
-                {prEuro(tier.price!)}
-              </span>
+              <span style={{ fontFamily: BODY, fontSize: 15, color: dim, textDecoration: "line-through", fontVariantNumeric: "tabular-nums" }}>{prEuro(tier.price!)}</span>
             )}
-            <span className="a4-font-body text-[13px] text-[var(--a4-stone)]">{tier.unit}</span>
+            <span style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, color: dim }}>{unitLabel(tier.unit)}</span>
           </div>
-        )}
-      </div>
-
-      <div
-        className="relative mt-5 pt-5 flex-1"
-        style={{ borderTop: `1px solid ${isPopular ? "rgba(73,79,223,.25)" : "var(--a4-hairline-dark)"}` }}
-      >
-        <p
-          className="a4-font-body text-[14px] leading-[1.55] text-[var(--a4-on-dark-mute)] m-0"
-          style={{ textWrap: "pretty" }}
-        >
-          {tier.blurb}
-        </p>
-      </div>
-
-      <div
-        className="absolute inset-0 rounded-[var(--a4-r-lg)] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{
-          boxShadow: "inset 0 0 0 1px rgba(255,255,255,.08)",
-        }}
-      />
-    </div>
+        )
+      }
+    >
+      <p style={{ margin: 0, fontFamily: BODY, fontSize: 15, lineHeight: 1.55, color: dark ? "#A1A1AA" : "#52525B", textWrap: "pretty" }}>{tier.blurb}</p>
+    </WordCard>
   );
 }
 
 function PricingStartingTiers() {
-  const href = useLocalizedHref();
-  const bookkeeping = PR_STARTING_TIERS.filter((t) => (t as { ladder?: boolean }).ladder);
-  const other = PR_STARTING_TIERS.filter((t) => !(t as { ladder?: boolean }).ladder);
-
   return (
-    <section
-      className="relative bg-black border-b border-[var(--a4-hairline-dark)] overflow-hidden"
-      style={{ padding: "clamp(40px,5vw,64px) 0" }}
-    >
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(73,79,223,.12) 0%, transparent 65%)",
-        }}
+    <Band surface="light" sec="starting" id="starting">
+      <Head
+        n="01"
+        eyebrow="Starting prices"
+        maxWidth={860}
+        title={
+          <>
+            We keep your books, priced on what you spend <G>each month.</G>
+          </>
+        }
+        sub={
+          <>
+            From {prEuro(BOOKKEEPING_FROM)}/mo if you are self-employed, from {prEuro(BOOKKEEPING_COMPANY)}/mo for a company, up to {prEuro(BOOKKEEPING_COMPANY_TOP)}/mo at the top band — each including one bank account. Nine bands, every one priced instantly — and there is no software-only plan, a qualified accountant is on the file either way. VAT, audit, tax and company formation are priced separately below, on your transaction volume. {MANAGED_CATCHUP_NOTE}
+          </>
+        }
       />
-      <Container style={{ position: "relative" }}>
-        <Reveal style={{ textAlign: "center", maxWidth: 640, margin: "0 auto" }}>
-          <Eyebrow dark>Starting prices</Eyebrow>
-          <p
-            className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4"
-            style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}
-          >
-            We keep your books, priced on what you spend each month: from {prEuro(BOOKKEEPING_FROM)}/mo if you are self-employed, from {prEuro(BOOKKEEPING_COMPANY)}/mo for a company, up to {prEuro(BOOKKEEPING_COMPANY_TOP)}/mo at the top band — each including one bank account. Nine bands, every one priced instantly — and there is no software-only plan, a qualified accountant is on the file either way. VAT, audit, tax and company formation are priced separately below, on your transaction volume. {MANAGED_CATCHUP_NOTE}
-          </p>
-          {isPromoActive() && (
-            <p className="a4-font-body text-[13px] font-semibold text-[var(--a4-primary-bright)] mt-3">
-              {LAUNCH_PROMO.note}
-            </p>
-          )}
-          <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-2">
-            {PRICING_VAT_NOTE} {PRICING_GOV_NOTE}
-          </p>
-        </Reveal>
+      {isPromoActive() && (
+        <p data-fx="rise" data-d="260" style={{ margin: "14px 0 0", fontFamily: BODY, fontSize: 14, fontWeight: 600, color: INDIGO }}>
+          {LAUNCH_PROMO.note}
+        </p>
+      )}
+      <p data-fx="rise" data-d="280" style={{ margin: "14px 0 0", fontFamily: BODY, fontSize: 13, fontWeight: 500, color: "#71717A" }}>
+        {PRICING_VAT_NOTE} {PRICING_GOV_NOTE}
+      </p>
 
-        {/* Bookkeeping — featured row */}
-        <Reveal delay={60}>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 mx-auto max-w-[1100px]">
-            {bookkeeping.map((tier, i) => (
-              <Reveal key={tier.id} delay={i * 70}>
-                <PricingTierCard tier={tier} />
-              </Reveal>
-            ))}
-          </div>
-        </Reveal>
+      <div style={{ ...GRID3, marginTop: 40 }}>
+        {PR_STARTING_TIERS.map((tier, i) => (
+          <PricingTierCard key={tier.id} tier={tier} i={i} total={PR_STARTING_TIERS.length} />
+        ))}
+      </div>
 
-        {/* Other services */}
-        <Reveal delay={100}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 mx-auto max-w-[1100px]">
-            {other.map((tier, i) => (
-              <Reveal key={tier.id} delay={120 + i * 60}>
-                <PricingTierCard tier={tier} />
-              </Reveal>
-            ))}
-          </div>
-        </Reveal>
+      <Pills style={{ marginTop: 40 }}>
+        <PillLink href={CLIENT_ONBOARDING_URL} target="_blank" variant="ink" size="md">
+          Access portal
+        </PillLink>
+        <PillLink href="/contact" variant="outline" size="md">
+          Get a tailored quote
+        </PillLink>
+      </Pills>
 
-        <Reveal delay={160}>
-          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-3 mt-10 px-1">
-            <Button variant="primary" size="md" href={CLIENT_ONBOARDING_URL} target="_blank" style={{ width: "100%", maxWidth: 320 }}>
-              Access portal <Icon name="arrow-right" size={16} color="#000" />
-            </Button>
-            <Button variant="outline-dark" size="md" href={href("/contact")} style={{ width: "100%", maxWidth: 320 }}>
-              Get a tailored quote
-            </Button>
-          </div>
-        </Reveal>
-
-        <Reveal delay={180}>
-          <PricingInfoBanner />
-        </Reveal>
-      </Container>
-    </section>
+      <PricingInfoBanner />
+    </Band>
   );
 }
 
 function PricingInfoBanner() {
   return (
     <LocalizedLink
-        href="/pricing-info"
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 no-underline mx-auto max-w-[980px] mt-8 px-4 py-4 sm:px-5 rounded-[var(--a4-r-lg)] transition-colors duration-150 hover:border-[var(--a4-primary-bright)]"
-        style={{
-          background: "rgba(73,79,223,.10)",
-          border: "1px solid rgba(73,79,223,.35)",
-        }}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <span
-            className="w-10 h-10 rounded-[var(--a4-r-md)] grid place-items-center shrink-0"
-            style={{ background: "rgba(73,79,223,.16)" }}
-          >
-            <Icon name="info" size={18} color="var(--a4-primary-bright)" />
-          </span>
-          <div className="min-w-0">
-            <div className="a4-font-body text-[14px] font-semibold text-white">How our pricing works</div>
-            <div className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-0.5">
-              Fixed monthly plans for bookkeeping and VAT — plus how we quote audit and complex work.
-            </div>
-          </div>
-        </div>
-        <span className="a4-font-body text-[13px] font-semibold text-white sm:whitespace-nowrap shrink-0 inline-flex items-center gap-1.5">
-          Read pricing guide <Icon name="arrow-right" size={14} color="#fff" />
+      href="/pricing-info"
+      className="a4k-card"
+      data-fx="rise"
+      style={{ marginTop: 24, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "14px 24px", padding: "22px 26px" }}
+    >
+      <span style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
+        <span aria-hidden="true" style={{ width: 44, height: 44, flexShrink: 0, display: "grid", placeItems: "center", borderRadius: 999, background: "rgba(79,85,241,.08)" }}>
+          <Icon name="info" size={20} color={INDIGO} />
         </span>
-      </LocalizedLink>
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 19, fontWeight: 600, letterSpacing: "-0.02em", color: INK }}>How our pricing works</span>
+          <span style={{ display: "block", marginTop: 3, fontFamily: BODY, fontSize: 15, lineHeight: 1.5, color: "#52525B" }}>
+            Fixed monthly plans for bookkeeping and VAT — plus how we quote audit and complex work.
+          </span>
+        </span>
+      </span>
+      <span className="a4k-go">
+        Read pricing guide <Icon name="arrow-right" size={14} color="currentColor" />
+      </span>
+    </LocalizedLink>
   );
 }
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* 02 Build your quote                                                        */
+/* ────────────────────────────────────────────────────────────────────────── */
 
 function PricingCalc() {
   const [svc, setSvc] = useState<ServiceId>("accounting");
@@ -722,483 +589,301 @@ function PricingCalc() {
     setSending(false);
   };
 
-  return (
-    <section id="calc" style={{ background: "#000", padding: "clamp(40px,5vw,64px) 0 clamp(64px,9vw,104px)" }}>
-      <Container>
-        <div className="flex justify-center mb-9">
-          <div
-            className="inline-flex gap-1 flex-wrap justify-center rounded-[var(--a4-r-full)] p-[5px]"
-            style={{ background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)" }}
-          >
-            {PR_SERVICES.map((s) => {
-              const on = svc === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSvc(s.id)}
-                  className="inline-flex items-center gap-[9px] py-[11px] px-5 rounded-[var(--a4-r-full)] border-0 cursor-pointer a4-font-body text-[15px] font-semibold transition-colors duration-150"
-                  style={{
-                    background: on ? "#fff" : "transparent",
-                    color: on ? "#000" : "var(--a4-on-dark-mute)",
-                  }}
-                >
-                  <Icon name={s.icon} size={17} color={on ? "#000" : "var(--a4-on-dark-mute)"} /> {s.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+  const svcLabel = PR_SERVICES.find((s) => s.id === svc)?.label ?? "";
+  const muted = "#52525B";
 
-        <div
-          className="pr-grid grid items-start gap-5 max-w-[980px] mx-auto"
-          style={{ gridTemplateColumns: "1.25fr 1fr" }}
-        >
-          <div
-            className="rounded-[var(--a4-r-lg)]"
-            style={{
-              background: "var(--a4-surface-elevated)",
-              border: "1px solid var(--a4-hairline-dark)",
-              padding: "clamp(24px,3vw,34px)",
-            }}
-          >
-            {svc === "accounting" && (
-              <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">Are these a company&apos;s books, or your own?</div>
-                <PrChip items={A4_MANAGED_OFFER.map((l) => l.name)} value={entityIdx} set={setEntityIdx} cols={2} />
-                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
+  return (
+    <Band surface="muted" sec="calc" id="calc">
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 28 }}>
+        <Head
+          n="02"
+          eyebrow="Build your quote"
+          title="Choose what you need."
+          sub="The price you see is the price we invoice — itemised, and never gated behind an email."
+          maxWidth={600}
+        />
+        <div data-fx="rise" data-d="120" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, maxWidth: "100%" }}>
+          <Segmented label="Service" options={PR_SERVICES.map((s) => ({ id: s.id, label: s.label, icon: s.icon }))} value={svc} onChange={setSvc} />
+          <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: "#71717A" }}>{PRICING_VAT_NOTE}</span>
+        </div>
+      </div>
+
+      <div className="a4k-calc" style={{ marginTop: 40 }}>
+        {/* Left: the questions, as numbered steps (each step rises on its own) */}
+        <div style={{ background: "#FFFFFF", border: "1px solid #E4E4E7", borderRadius: 28, padding: "clamp(24px,3.2vw,40px)", minWidth: 0 }}>
+          {svc === "accounting" && (
+            <div>
+              <PrStep n={1} first title="Are these a company's books, or your own?">
+                <OptionPills label="Whose books" items={A4_MANAGED_OFFER.map((l) => l.name)} value={entityIdx} onPick={setEntityIdx} min={160} />
+                <p style={{ margin: "14px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.55, color: muted }}>
                   {A4_MANAGED_OFFER[entityIdx]?.tagline} {A4_MANAGED_OFFER[entityIdx]?.detail}
                 </p>
+              </PrStep>
 
-                <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
-                  <div className="a4-font-body text-[14px] font-semibold text-white">
-                    About how much do you spend a month?
-                  </div>
-                  {/* One line under the question; the definition sits behind a
-                      native disclosure — the paragraph-per-question density was
-                      this calculator's biggest legibility gap against the
-                      simplest competitor estimators (review of 26 Aug). */}
-                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
+              <PrStep
+                n={2}
+                title="About how much do you spend a month?"
+                hint={
+                  <>
+                    {/* One line under the question; the definition sits behind a
+                        native disclosure — the paragraph-per-question density was
+                        this calculator's biggest legibility gap against the
+                        simplest competitor estimators (review of 26 Aug). */}
                     The money that leaves the business in a typical month. It sets your bookkeeping price — a rough figure is fine.
-                  </p>
-                  <details className="mt-[6px]">
-                    <summary className="a4-font-body text-[12px] font-semibold text-[var(--a4-primary)] cursor-pointer">
-                      What counts as spend?
-                    </summary>
-                    <p className="a4-font-body text-[12.5px] leading-[1.55] text-[var(--a4-stone)] mt-[6px]">
-                      Supplier bills, wages, rent, software — everything you spend. Excludes VAT, loan repayments,
-                      and transfers between your own accounts. New or seasonal? Use your last three months&apos;
-                      average. It is not the transaction count the VAT and audit tabs ask for.
-                    </p>
-                  </details>
-                  {/* Nothing pre-selected: `expensesIdx` starts at -1, which
-                      matches no chip, so every chip renders unpicked. */}
-                  <PrChip items={PR_EXPENSE_LABELS} value={expensesIdx} set={setExpensesIdx} cols={3} />
-                  <p className="a4-font-body text-[13px] mt-[12px] tabular-nums" style={{ color: bookRate == null ? "#E8C08A" : "var(--a4-on-dark-mute)" }}>
-                    {bookRate == null
-                      ? "Pick a band and we price this instantly — we do not assume one for you."
-                      : `${prEuro(bookRate)} / month — ${A4_MANAGED_OFFER[entityIdx]?.name ?? ""} at ${PR_EXPENSE_LABELS[expensesIdx]} a month.`}
-                  </p>
-                </div>
+                    <details style={{ marginTop: 6 }}>
+                      <summary style={{ cursor: "pointer", fontWeight: 600, color: INDIGO }}>What counts as spend?</summary>
+                      <p style={{ margin: "6px 0 0", fontSize: 13.5, lineHeight: 1.55, color: "#71717A" }}>
+                        Supplier bills, wages, rent, software — everything you spend. Excludes VAT, loan repayments,
+                        and transfers between your own accounts. New or seasonal? Use your last three months&apos;
+                        average. It is not the transaction count the VAT and audit tabs ask for.
+                      </p>
+                    </details>
+                  </>
+                }
+              >
+                {/* Nothing pre-selected: `expensesIdx` starts at -1, which
+                    matches no chip, so every chip renders unpicked. */}
+                <OptionPills label="Monthly spend" items={PR_EXPENSE_LABELS} value={expensesIdx} onPick={setExpensesIdx} min={230} />
+                <p style={{ margin: "14px 0 0", fontFamily: BODY, fontSize: 14, fontWeight: bookRate == null ? 600 : 500, fontVariantNumeric: "tabular-nums", color: bookRate == null ? INDIGO : muted }}>
+                  {bookRate == null
+                    ? "Pick a band and we price this instantly — we do not assume one for you."
+                    : `${prEuro(bookRate)} / month — ${A4_MANAGED_OFFER[entityIdx]?.name ?? ""} at ${PR_EXPENSE_LABELS[expensesIdx]} a month.`}
+                </p>
+              </PrStep>
 
-                <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
-                  <div className="a4-font-body text-[14px] font-semibold text-white">
-                    About how many transactions a month?
-                  </div>
-                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    The count, not the amount. Busy bands add to the bookkeeping fee — the two lowest add nothing.
+              <PrStep n={3} title="About how many transactions a month?" hint="The count, not the amount. Busy bands add to the bookkeeping fee — the two lowest add nothing.">
+                <OptionPills label="Transactions a month" items={BOOK_TXN_LABELS} value={bookTxnIdx} onPick={setBookTxnIdx} min={120} />
+              </PrStep>
+
+              <PrStep
+                n={4}
+                title="Bank accounts"
+                hint={`Every account is reconciled separately. The first is included in the bookkeeping fee; each extra account is €${BANK_ACCOUNT.baseMonthly} a month plus ${Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee.`}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <Stepper label="Bank accounts" value={bookBanks} onChange={setBookBanks} min={1} max={8} />
+                  <span style={{ fontFamily: BODY, fontSize: 15, fontWeight: 500, color: muted }}>{bookBanks === 1 ? "account" : "accounts"}</span>
+                </div>
+              </PrStep>
+
+              <PrStep n={5} htmlFor="pr-start" title="From which month do you need us?" hint="Pick the earliest month that still needs doing — months before it are catch-up, charged once at the same rate.">
+                <input id="pr-start" type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} className="a4k-input" style={{ maxWidth: 280 }} />
+                {!startOk ? (
+                  /* Honest gate: the panel already prices from the band —
+                     the month only decides the catch-up line and unlocks
+                     the send. Do not claim the price is withheld. */
+                  <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 14, fontWeight: 600, color: INDIGO }}>
+                    Everything above is already priced — pick the month and we can add any catch-up and send the quote.
                   </p>
-                  <PrChip items={BOOK_TXN_LABELS} value={bookTxnIdx} set={setBookTxnIdx} cols={4} />
-                  <div className="a4-font-body text-[14px] font-semibold text-white mt-[16px]">Bank accounts</div>
-                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    Every account is reconciled separately. The first is included in the bookkeeping fee; each extra account is €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee.
+                ) : catchUpMonths > 0 ? (
+                  /* The catch-up split, read back from the month just
+                     picked — the second question this tab used to ask. */
+                  <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 14, lineHeight: 1.55, color: muted, fontVariantNumeric: "tabular-nums" }}>
+                    {catchUpMonths} {catchUpMonths === 1 ? "month" : "months"} of catch-up, charged once at the same monthly rate. Then ongoing from this month.
+                    {expenses == null ? "" : ` ${catchUpLabel(catchUpMonths, entity, expenses, BOOK_TXN_BANDS[bookTxnIdx], bookBanks, isPromoActive())}`}
                   </p>
-                  <div className="flex items-center gap-4 mt-[10px]">
-                    <input
-                      type="range"
-                      min={1}
-                      max={8}
-                      step={1}
-                      value={bookBanks}
-                      onChange={(e) => setBookBanks(+e.target.value)}
-                      aria-label="Bank accounts"
-                      className="flex-1"
-                      style={{ accentColor: "var(--a4-primary)", cursor: "pointer" }}
-                    />
-                    <span className="a4-font-body text-[14px] font-semibold text-white tabular-nums min-w-[92px] text-right">
-                      {bookBanks} {bookBanks === 1 ? "account" : "accounts"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-[18px] pt-[18px]" style={{ borderTop: "1px solid var(--a4-hairline-dark)" }}>
-                  <label htmlFor="pr-start" className="a4-font-body text-[14px] font-semibold text-white block">
-                    From which month do you need us?
-                  </label>
-                  <p className="a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[4px]">
-                    Pick the earliest month that still needs doing — months before it are catch-up, charged once at the same rate.
+                ) : (
+                  <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 14, color: muted }}>
+                    Nothing to catch up — we pick the books up there and keep them from then on.
                   </p>
-                  <input
-                    id="pr-start"
-                    type="month"
-                    value={startMonth}
-                    onChange={(e) => setStartMonth(e.target.value)}
-                    className="mt-[10px] rounded-[var(--a4-r-md)] px-3 py-2.5 a4-font-body text-[13.5px] outline-none"
-                    style={{
-                      background: "var(--a4-surface-deep)",
-                      color: "#fff",
-                      border: "1px solid var(--a4-hairline-dark)",
-                      colorScheme: "dark",
-                    }}
-                  />
-                  {!startOk ? (
-                    /* Honest gate: the panel already prices from the band —
-                       the month only decides the catch-up line and unlocks
-                       the send. Do not claim the price is withheld. */
-                    <p className="a4-font-body text-[12.5px] mt-[8px]" style={{ color: "#E8C08A" }}>
-                      Everything above is already priced — pick the month and we can add any catch-up and send the quote.
-                    </p>
-                  ) : catchUpMonths > 0 ? (
-                    /* The catch-up split, read back from the month just
-                       picked — the second question this tab used to ask. */
-                    <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px] tabular-nums">
-                      {catchUpMonths} {catchUpMonths === 1 ? "month" : "months"} of catch-up, charged once at the same monthly rate. Then ongoing from this month.
-                      {expenses == null ? "" : ` ${catchUpLabel(catchUpMonths, entity, expenses, BOOK_TXN_BANDS[bookTxnIdx], bookBanks, isPromoActive())}`}
-                    </p>
-                  ) : (
-                    <p className="a4-font-body text-[13px] text-[var(--a4-on-dark-mute)] mt-[12px]">
-                      Nothing to catch up — we pick the books up there and keep them from then on.
-                    </p>
-                  )}
-                </div>
+                )}
+              </PrStep>
 
+              <p style={{ margin: "28px 0 0", paddingTop: 20, borderTop: "1px solid #E4E4E7", fontFamily: BODY, fontSize: 13.5, lineHeight: 1.55, color: "#71717A" }}>{MANAGED_CAVEAT}</p>
+            </div>
+          )}
+          {svc === "vat" && (
+            <PrStep n={1} first title="Transactions a month">
+              <OptionPills label="Transactions a month" items={VAT_LABELS} value={vatVol} onPick={setVatVol} min={140} />
+              <p style={{ margin: "18px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: muted }}>
+                Every VAT return prepared and filed with the CFR, reviewed before submission. The fee is a monthly one
+                set by your transaction volume, whatever your filing frequency. Art. 11 small-exempt businesses instead
+                pay one flat €{VAT_RULES.art11FlatYearly}/yr declaration.
+              </p>
+            </PrStep>
+          )}
+          {svc === "audit" && (
+            <PrStep n={1} first title="Transactions a month">
+              <OptionPills label="Transactions a month" items={PR_VOLUME_LABELS} value={turn} onPick={setTurn} min={140} />
+              <p style={{ margin: "18px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: muted }}>
+                A standard statutory audit of your financial statements, signed by a licensed audit firm. Where a review
+                engagement is enough instead, it is 55% of this fee. Groups and regulated entities are scoped on a call.
+              </p>
+            </PrStep>
+          )}
+          {svc === "incorporation" && (
+            <div>
+              <PrStep n={1} first title={`Company formation — from ${prEuro(INCORPORATION_FROM)} one-off`} hint={`One individual shareholder and one director, filed with the MBR. ${PRICING_VAT_NOTE}`} />
+              <div style={{ marginTop: 18 }}>
+                <PrRow label="Shareholders" sub={`Each beyond the first is €${INCORPORATION.extraShareholder}`}>
+                  <Stepper label="Shareholders" value={incShareholders} onChange={setIncShareholders} />
+                </PrRow>
+                <PrRow label="Directors" sub={`Each beyond the first is €${INCORPORATION.extraDirector}`}>
+                  <Stepper label="Directors" value={incDirectors} onChange={setIncDirectors} />
+                </PrRow>
+                <PrRow label="VAT and tax registrations" sub={`Filed with the incorporation · €${INCORPORATION.vatTaxRegistrations}`}>
+                  <Switch label="VAT and tax registrations" on={incRegistrations} onChange={setIncRegistrations} />
+                </PrRow>
+                <PrRow label="Bank account assistance" sub={`Introductions and application support · €${INCORPORATION.bankAssistance}`}>
+                  <Switch label="Bank account assistance" on={incBank} onChange={setIncBank} />
+                </PrRow>
+                <PrRow label="Registered office" sub={`Statutory address, post passed to you · €${INCORPORATION.registeredOfficeYearly}/yr`}>
+                  <Switch label="Registered office" on={incRegOffice} onChange={setIncRegOffice} />
+                </PrRow>
+                <PrRow label="Company secretary" sub={`Registers, minutes and MBR filings · €${INCORPORATION.companySecretaryYearly}/yr`}>
+                  <Switch label="Company secretary" on={incSecretary} onChange={setIncSecretary} />
+                </PrRow>
+              </div>
+              <p style={{ margin: 0, paddingTop: 16, borderTop: "1px solid #E4E4E7", fontFamily: BODY, fontSize: 13.5, lineHeight: 1.55, color: "#71717A" }}>
+                Corporate shareholders add €{INCORPORATION.corporateShareholderChecks} for checks on each company in the
+                structure; regulated sectors add €{INCORPORATION.regulatedOnboarding} onboarding. {INCORPORATION_MGA_NOTE}
+              </p>
+            </div>
+          )}
+        </div>
 
-                <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[16px]">
-                  {MANAGED_CAVEAT}
-                </p>
-              </div>
-            )}
-            {svc === "vat" && (
-              <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">Transactions a month</div>
-                <PrChip items={VAT_LABELS} value={vatVol} set={setVatVol} cols={2} />
-                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
-                  Every VAT return prepared and filed with the CFR, reviewed before submission. The fee is a monthly one
-                  set by your transaction volume, whatever your filing frequency. Art. 11 small-exempt businesses instead
-                  pay one flat €{VAT_RULES.art11FlatYearly}/yr declaration.
-                </p>
-              </div>
-            )}
-            {svc === "audit" && (
-              <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">Transactions a month</div>
-                <PrChip items={PR_VOLUME_LABELS} value={turn} set={setTurn} cols={2} />
-                <p className="a4-font-body text-[13.5px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[18px]">
-                  A standard statutory audit of your financial statements, signed by a licensed audit firm. Where a review
-                  engagement is enough instead, it is 55% of this fee. Groups and regulated entities are scoped on a call.
-                </p>
-              </div>
-            )}
-            {svc === "incorporation" && (
-              <div>
-                <div className="a4-font-body text-[14px] font-semibold text-white">
-                  Company formation — from {prEuro(INCORPORATION_FROM)} one-off
-                </div>
-                <p className="a4-font-body text-[13px] text-[var(--a4-stone)] mt-[6px]">
-                  One individual shareholder and one director, filed with the MBR. {PRICING_VAT_NOTE}
-                </p>
-                <div className="mt-2">
-                  <PrRow label="Shareholders" sub={`Each beyond the first is €${INCORPORATION.extraShareholder}`}>
-                    <PrStepper value={incShareholders} set={setIncShareholders} />
-                  </PrRow>
-                  <PrRow label="Directors" sub={`Each beyond the first is €${INCORPORATION.extraDirector}`}>
-                    <PrStepper value={incDirectors} set={setIncDirectors} />
-                  </PrRow>
-                  <PrRow label="VAT and tax registrations" sub={`Filed with the incorporation · €${INCORPORATION.vatTaxRegistrations}`}>
-                    <PrToggle on={incRegistrations} set={setIncRegistrations} />
-                  </PrRow>
-                  <PrRow label="Bank account assistance" sub={`Introductions and application support · €${INCORPORATION.bankAssistance}`}>
-                    <PrToggle on={incBank} set={setIncBank} />
-                  </PrRow>
-                  <PrRow label="Registered office" sub={`Statutory address, post passed to you · €${INCORPORATION.registeredOfficeYearly}/yr`}>
-                    <PrToggle on={incRegOffice} set={setIncRegOffice} />
-                  </PrRow>
-                  <PrRow label="Company secretary" sub={`Registers, minutes and MBR filings · €${INCORPORATION.companySecretaryYearly}/yr`}>
-                    <PrToggle on={incSecretary} set={setIncSecretary} />
-                  </PrRow>
-                </div>
-                <p className="a4-font-body text-[12.5px] leading-[1.55] text-[var(--a4-stone)] mt-[14px]">
-                  Corporate shareholders add €{INCORPORATION.corporateShareholderChecks} for checks on each company in the
-                  structure; regulated sectors add €{INCORPORATION.regulatedOnboarding} onboarding. {INCORPORATION_MGA_NOTE}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div
-            className="a4-sum rounded-[var(--a4-r-lg)]"
-            style={{
-              background: complex ? "var(--a4-surface-elevated)" : "#fff",
-              padding: "clamp(24px,3vw,30px)",
-              position: "sticky",
-              top: 88,
-              border: complex ? "1px solid var(--a4-hairline-dark)" : "none",
-            }}
-          >
-            {complex ? (
-              <div className="text-center py-2">
-                <span
-                  className="w-[50px] h-[50px] rounded-full grid place-items-center mx-auto"
-                  style={{ background: "rgba(73,79,223,.16)" }}
-                >
-                  <Icon name="calendar" size={24} color="var(--a4-primary-bright)" />
-                </span>
-                <div className="a4-font-display font-medium text-[22px] text-white mt-4">Let&apos;s scope it together</div>
-                <p className="a4-font-body text-[14px] leading-[1.55] text-[var(--a4-on-dark-mute)] mt-[10px]">
-                  At this size your audit fee depends on complexity. Book a short call for a fixed quote.
-                </p>
-                <Button variant="primary" size="md" href="#complex" style={{ width: "100%", marginTop: 20 }}>
-                  Book a call <Icon name="arrow-right" size={16} color="#000" />
-                </Button>
-              </div>
-            ) : (
-              <div>
-                <div className="a4-font-body text-[11px] uppercase tracking-[.12em] text-[var(--a4-mute)]">
-                  Your fixed price
-                </div>
+        {/* Right: the quote document */}
+        <div className="a4-sum a4k-sticky" style={{ minWidth: 0 }}>
+          {complex ? (
+            <div data-fx="rise" style={{ borderRadius: 28, padding: "clamp(28px,3.4vw,40px)", background: DARK_CARD, border: "1px solid rgba(255,255,255,.08)", color: "#FFFFFF", boxShadow: "0 50px 120px rgba(9,9,11,.22)" }}>
+              <span aria-hidden="true" style={{ width: 52, height: 52, display: "grid", placeItems: "center", borderRadius: 999, background: "rgba(139,143,247,.16)" }}>
+                <Icon name="calendar" size={24} color={PERI} />
+              </span>
+              <div style={{ marginTop: 22, fontSize: "clamp(26px,2.4vw,32px)", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.1 }}>Let&apos;s scope it together</div>
+              <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.55, color: "#A1A1AA" }}>
+                At this size your audit fee depends on complexity. Book a short call for a fixed quote.
+              </p>
+              <PillLink href="#complex" variant="light" style={{ marginTop: 26, width: "100%", height: 58 }}>
+                Book a call
+              </PillLink>
+            </div>
+          ) : (
+            <Doc d={120}>
+              <DocHead compact k="Your fixed price" title={svcLabel} />
+              <div style={{ padding: "22px 28px 24px" }}>
                 {/* B1: no band, no figure — not the headline, not the
                     struck-through "before discount" price, not the line items.
                     A number on screen is what a visitor anchors on, and this
                     one would have been someone else's price. */}
                 {noExpenses ? (
                   <>
-                    <div className="a4-font-display font-medium text-[32px] text-[var(--a4-ink)] leading-none mt-[10px]" style={{ letterSpacing: "-1px" }}>
-                      Tell us your spend
-                    </div>
-                    <p className="a4-font-body text-[13px] leading-[1.55] text-[var(--a4-mute)] mt-[10px]">
+                    <div style={{ fontSize: "clamp(30px,3vw,38px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.05, color: INK }}>Tell us your spend</div>
+                    <p style={{ margin: "10px 0 0", fontFamily: BODY, fontSize: 14, lineHeight: 1.55, color: muted }}>
                       Pick a monthly-spend band above and your full itemised price appears here straight away. We do not assume a band — it is what sets the bookkeeping fee.
                     </p>
                   </>
                 ) : (
                   <>
-                    <div className="flex flex-wrap items-baseline gap-2 mt-[10px]">
-                      {unit !== "/ mo" && <span className="a4-font-body text-[17px] text-[var(--a4-mute)]">from</span>}
-                      <span
-                        className="a4-font-display font-medium text-[52px] text-[var(--a4-ink)] leading-none"
-                        style={{ letterSpacing: "-2px" }}
-                      >
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 8 }}>
+                      {unit !== "/ mo" && <span style={{ fontFamily: BODY, fontSize: 17, fontWeight: 500, color: muted }}>from</span>}
+                      <span style={{ fontSize: "clamp(46px,4.6vw,60px)", fontWeight: 600, letterSpacing: "-0.045em", lineHeight: 1.05, paddingBottom: ".04em", fontVariantNumeric: "tabular-nums", ...gradText }}>
                         {prEuro(price)}
                       </span>
-                      {discounted && (
-                        <span className="a4-font-body text-[17px] text-[var(--a4-mute)] line-through">{prEuro(gross)}</span>
-                      )}
-                      <span className="a4-font-body text-[14px] text-[var(--a4-mute)]">{unit}</span>
+                      {discounted && <span style={{ fontFamily: BODY, fontSize: 17, color: muted, textDecoration: "line-through" }}>{prEuro(gross)}</span>}
+                      <span style={{ fontFamily: BODY, fontSize: 15, fontWeight: 500, color: muted }}>{unitLabel(unit)}</span>
                     </div>
-                    {discounted && (
-                      <div className="a4-font-body text-[12px] font-semibold text-[var(--a4-primary)] mt-2">
-                        {LAUNCH_PROMO.label}
-                      </div>
-                    )}
+                    {discounted && <div style={{ marginTop: 8, fontFamily: BODY, fontSize: 13, fontWeight: 600, color: INDIGO }}>{LAUNCH_PROMO.label}</div>}
                   </>
                 )}
-                <div className="h-px bg-[var(--a4-hairline-light)] my-5" />
-                <div className="flex flex-col gap-[9px]">
-                  {lines.map((l) => (
-                    <div key={l.label} className="flex justify-between gap-3">
-                      <span className="a4-font-body text-[13.5px] text-[var(--a4-mute)]">{l.label}</span>
-                      <span className="a4-font-body text-[13.5px] font-semibold text-[var(--a4-ink)] whitespace-nowrap">
-                        {prEuro(l.amount)}
-                        {l.cadence === "monthly" ? "/mo" : l.cadence === "yearly" ? "/yr" : " one-off"}
-                      </span>
-                    </div>
-                  ))}
+              </div>
+
+              {lines.map((l, i) => (
+                <div key={l.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16, padding: "14px 28px", borderTop: "1px solid #E4E4E7" }}>
+                  <span style={{ display: "flex", gap: 12, minWidth: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: INDIGO }}>{pad2(i + 1)}</span>
+                    <span style={{ fontFamily: BODY, fontSize: 14.5, lineHeight: 1.45, color: "#3F3F46" }}>{l.label}</span>
+                  </span>
+                  <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em", color: INK, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                    {prEuro(l.amount)}
+                    <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: "#71717A" }}>
+                      {l.cadence === "monthly" ? "/mo" : l.cadence === "yearly" ? "/yr" : " one-off"}
+                    </span>
+                  </span>
                 </div>
+              ))}
 
-                {/* Onboarding rides in the basket with no figure on it, so it
-                    is named here too — an unpriced item nobody mentioned reads
-                    as "included, free". Same sentence the quotation carries. */}
-                {totals.hasUnpricedOnboarding && (
-                  <p className="a4-font-body text-[11.5px] leading-[1.5] text-[var(--a4-mute)] mt-3 mb-0">
-                    {ONBOARDING_UNPRICED_NOTE}
-                  </p>
-                )}
+              {/* Onboarding rides in the basket with no figure on it, so it
+                  is named here too — an unpriced item nobody mentioned reads
+                  as "included, free". Same sentence the quotation carries. */}
+              {totals.hasUnpricedOnboarding && (
+                <p style={{ margin: 0, padding: "12px 28px 0", fontFamily: BODY, fontSize: 12.5, lineHeight: 1.5, color: "#71717A" }}>{ONBOARDING_UNPRICED_NOTE}</p>
+              )}
 
-                {/* The independence consequence of the tab they are on, said
-                    before they send it — not discovered later. */}
-                {independenceText && (
-                  <div
-                    role="note"
-                    className="mt-5 p-3 rounded-[var(--a4-r-md)]"
-                    style={{ background: "rgba(73,79,223,.07)", border: "1px solid rgba(73,79,223,.28)" }}
-                  >
-                    <span className="block a4-font-body text-[10.5px] font-bold uppercase tracking-[.1em] text-[var(--a4-primary)]">
-                      Independence
-                    </span>
-                    <span className="block a4-font-body text-[12.5px] leading-[1.55] text-[var(--a4-mute)] mt-1">
-                      {independenceText}
-                    </span>
-                  </div>
-                )}
+              {/* The independence consequence of the tab they are on, said
+                  before they send it — not discovered later. */}
+              {independenceText && (
+                <div role="note" style={{ margin: "16px 28px 0", padding: "14px 16px", borderRadius: 16, background: "rgba(79,85,241,.06)", border: "1px solid rgba(79,85,241,.22)" }}>
+                  <span style={{ ...kicker, display: "block", color: INDIGO }}>Independence</span>
+                  <span style={{ display: "block", marginTop: 5, fontFamily: BODY, fontSize: 13.5, lineHeight: 1.55, color: "#3F3F46" }}>{independenceText}</span>
+                </div>
+              )}
 
+              <div style={{ marginTop: 24, padding: "24px 28px 28px", borderTop: "1px solid #E4E4E7", background: "#FAFAFA" }}>
                 {isLeadPath ? (
                   // Company formation is not on the instant-quote fee schedule —
                   // shareholder structure decides the real price, so a person
                   // scopes it. Same figures, different route.
-                  <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)]">
-                    <Button variant="dark" size="md" href="/contact" style={{ width: "100%" }}>
-                      Request this incorporation <Icon name="arrow-right" size={16} color="#fff" />
-                    </Button>
-                    <p className="a4-font-body text-[11.5px] leading-[1.5] text-[var(--a4-mute)] text-center mt-2.5">
+                  <>
+                    <PillLink href="/contact" variant="ink" style={{ width: "100%" }}>
+                      Request this incorporation
+                    </PillLink>
+                    <p style={{ margin: "12px 0 0", textAlign: "center", fontFamily: BODY, fontSize: 13, lineHeight: 1.5, color: "#71717A" }}>
                       Company formation is confirmed by a director before anything is filed.
                     </p>
-                  </div>
+                  </>
                 ) : sent ? (
-                  <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)] text-center">
-                    <p className="a4-font-body text-[14px] font-semibold text-[var(--a4-ink)] m-0">{sent.message}</p>
+                  <div role="status" style={{ textAlign: "center" }}>
+                    <p style={{ margin: 0, fontSize: 17, fontWeight: 600, letterSpacing: "-0.015em", color: INK }}>{sent.message}</p>
                     {sent.status === "quoted" && (
-                      <p className="a4-font-body text-[12.5px] leading-[1.5] text-[var(--a4-mute)] mt-2 mb-0">
+                      <p style={{ margin: "8px 0 0", fontFamily: BODY, fontSize: 13.5, lineHeight: 1.5, color: muted }}>
                         Quotation {sent.reference} — the email links to your quotation page, where you can switch services on or off and accept online.
                       </p>
                     )}
                   </div>
                 ) : (
-                  <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)]">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Your name"
-                        className="w-full rounded-[var(--a4-r-md)] border border-[var(--a4-hairline-light)] px-3 py-2.5 a4-font-body text-[13.5px] text-[var(--a4-ink)] outline-none"
-                      />
-                      <input
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        type="email"
-                        placeholder="Work email"
-                        className="w-full rounded-[var(--a4-r-md)] border border-[var(--a4-hairline-light)] px-3 py-2.5 a4-font-body text-[13.5px] text-[var(--a4-ink)] outline-none"
-                      />
+                  <>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 10 }}>
+                      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" aria-label="Your name" autoComplete="name" className="a4k-input" />
+                      <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Work email" aria-label="Work email" autoComplete="email" className="a4k-input" />
                     </div>
-                    <Button
-                      variant="dark"
-                      size="md"
+                    <button
+                      type="button"
                       onClick={send}
-                      style={{ width: "100%", marginTop: 12, opacity: canSend && !sending ? 1 : 0.6, pointerEvents: canSend && !sending ? "auto" : "none" }}
+                      disabled={!canSend || sending}
+                      className="a4-btn a4-btn-ink"
+                      style={{ marginTop: 12, width: "100%", opacity: canSend && !sending ? 1 : 0.55, cursor: canSend && !sending ? "pointer" : "default" }}
                     >
                       {sending ? "Sending your quote…" : "Email me this quote"}
-                      {!sending && <Icon name="arrow-right" size={16} color="#fff" />}
-                    </Button>
-                    <LocalizedLink
-                      href="/contact"
-                      className="block text-center mt-3 a4-font-body text-[13px] font-semibold no-underline"
-                      style={{ color: "var(--a4-link)" }}
-                    >
+                    </button>
+                    <LocalizedLink href="/contact" style={{ display: "block", marginTop: 14, textAlign: "center", fontSize: 14.5, fontWeight: 600, color: INDIGO, textDecoration: "none" }}>
                       Prefer to talk? Request information →
                     </LocalizedLink>
-                  </div>
+                  </>
                 )}
 
-                {/* The differentiator, said out loud: competitor calculators
-                    end in an "estimated starting price" and a demo booking —
-                    this one ends in the invoiced figure (review of 26 Aug). */}
-                <p className="a4-font-body text-[12px] font-semibold text-[var(--a4-ink)] text-center mt-4">
-                  The price you see is the price we invoice — itemised, and never gated behind an email.
-                </p>
-                <div className="flex items-center justify-center gap-[7px] mt-2">
-                  <Icon name="shield-check" size={13} color="var(--a4-stone)" />
-                  <span className="a4-font-body text-[11.5px] text-[var(--a4-mute)]">
-                    Fixed fee · service begins upon KYC approval
-                  </span>
+                <div style={{ marginTop: 18, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <Icon name="shield-check" size={14} color="#71717A" />
+                  <span style={{ fontFamily: BODY, fontSize: 12.5, color: "#71717A" }}>Fixed fee · service begins upon KYC approval</span>
                 </div>
-                <p className="a4-font-body text-[11.5px] leading-[1.5] text-[var(--a4-mute)] text-center mt-2">
+                <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: BODY, fontSize: 12.5, lineHeight: 1.5, color: "#71717A" }}>
                   {PRICING_VAT_NOTE} {PRICING_GOV_NOTE}
                   {promo ? ` ${LAUNCH_PROMO.note}` : ""}
                 </p>
-                <LocalizedLink
-                  href="/pricing-info"
-                  className="block text-center mt-3 a4-font-body text-[13px] font-semibold no-underline"
-                  style={{ color: "var(--a4-link)" }}
-                >
+                <LocalizedLink href="/pricing-info" style={{ display: "block", marginTop: 12, textAlign: "center", fontSize: 14.5, fontWeight: 600, color: INDIGO, textDecoration: "none" }}>
                   How is this price calculated? →
                 </LocalizedLink>
               </div>
-            )}
-          </div>
+            </Doc>
+          )}
         </div>
-      </Container>
-    </section>
+      </div>
+    </Band>
   );
 }
 
-function PricingComplex() {
-  const href = useLocalizedHref();
-  const items = [
-    { icon: "layers", t: "Groups & consolidations", s: "Multiple entities, intercompany and consolidated accounts." },
-    { icon: "shield-check", t: "Regulated entities", s: "iGaming, financial services and other regulated audits." },
-    { icon: "globe", t: "Cross-border & advisory", s: "International structures, restructuring and special projects." },
-  ];
-
-  return (
-    <section id="complex" className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-      <Container>
-        <div className="pr-complex grid items-center gap-11" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <div>
-            <Eyebrow>Complex work</Eyebrow>
-            <h2
-              className="a4-font-display font-medium text-[var(--a4-ink)] mt-4"
-              style={{
-                fontSize: "clamp(30px,4vw,52px)",
-                lineHeight: 1.04,
-                letterSpacing: "-.025em",
-                textWrap: "balance",
-              }}
-            >
-              Bigger or unusual? Let&apos;s talk.
-            </h2>
-            <p
-              className="a4-font-body text-[var(--a4-mute)] mt-4 max-w-[440px]"
-              style={{ fontSize: 17, lineHeight: 1.6, textWrap: "pretty" }}
-            >
-              Some engagements need a human to scope properly. Book a free 30-minute call and we&apos;ll give you a clear,
-              fixed quote — no surprises.
-            </p>
-            <Button variant="dark" size="lg" href={href("/contact")} style={{ marginTop: 28 }}>
-              Book a consultation <Icon name="arrow-right" size={18} color="#fff" />
-            </Button>
-            <div className="mt-5">
-              <LocalizedLink
-                href="/pricing-info"
-                className="a4-font-body text-[14px] font-semibold no-underline inline-flex items-center gap-1.5"
-                style={{ color: "var(--a4-link)" }}
-              >
-                Read our full pricing guide <Icon name="arrow-right" size={14} color="var(--a4-link)" />
-              </LocalizedLink>
-            </div>
-          </div>
-          <div className="flex flex-col gap-3">
-            {items.map((it) => (
-              <div
-                key={it.t}
-                className="flex items-center gap-4 bg-[var(--a4-surface-card)] border border-[var(--a4-hairline-light)] rounded-[var(--a4-r-lg)] py-5 px-[22px]"
-              >
-                <span className="w-[46px] h-[46px] rounded-[var(--a4-r-md)] bg-[var(--a4-surface-soft)] grid place-items-center shrink-0">
-                  <Icon name={it.icon} size={22} color="var(--a4-primary)" stroke={1.75} />
-                </span>
-                <div>
-                  <h3 className="a4-font-display font-medium text-[19px] text-[var(--a4-ink)] m-0" style={{ letterSpacing: "-.2px" }}>
-                    {it.t}
-                  </h3>
-                  <p className="a4-font-body text-[14px] leading-[1.5] text-[var(--a4-mute)] mt-1" style={{ textWrap: "pretty" }}>
-                    {it.s}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Container>
-    </section>
-  );
-}
+/* ────────────────────────────────────────────────────────────────────────── */
+/* 03 Incorporation — the fee schedule as a quote document                    */
+/* ────────────────────────────────────────────────────────────────────────── */
 
 /**
  * Incorporation fee table — the full itemised list from quote pack
@@ -1206,59 +891,129 @@ function PricingComplex() {
  */
 function PricingIncorporation() {
   return (
-    <section id="incorporation" className="bg-black border-t border-[var(--a4-hairline-dark)]" style={{ padding: "clamp(48px,6vw,80px) 0" }}>
-      <Container>
-        <Reveal style={{ textAlign: "center", maxWidth: 660, margin: "0 auto" }}>
-          <Eyebrow dark>Incorporation</Eyebrow>
-          <h2
-            className="a4-font-display font-medium text-white mt-4"
-            style={{ fontSize: "clamp(28px,3.6vw,44px)", lineHeight: 1.06, letterSpacing: "-.025em", textWrap: "balance" }}
-          >
-            A Malta company, from {prEuro(INCORPORATION_FROM)} one-off.
-          </h2>
-          <p className="a4-font-body text-[var(--a4-on-dark-mute)] mt-4" style={{ fontSize: 16.5, lineHeight: 1.6, textWrap: "pretty" }}>
+    <Band surface="white" sec="incorporation" id="incorporation">
+      <Head
+        n="03"
+        eyebrow="Incorporation"
+        maxWidth={760}
+        title={
+          <>
+            A Malta company, from {prEuro(INCORPORATION_FROM)} <G>one-off.</G>
+          </>
+        }
+        sub={
+          <>
             One individual shareholder and one director, filed with the MBR. Everything beyond that is itemised — no
             bundles you did not ask for. A partnership adds €{INCORPORATION.typeSurcharge.partner}; a branch of a foreign
             company adds €{INCORPORATION.typeSurcharge.branch}.
-          </p>
-        </Reveal>
+          </>
+        }
+      />
 
-        <Reveal delay={80}>
-          <div className="mx-auto max-w-[760px] mt-10 rounded-[var(--a4-r-lg)] overflow-hidden" style={{ border: "1px solid var(--a4-hairline-dark)", background: "var(--a4-surface-elevated)" }}>
-            <div className="flex items-baseline justify-between gap-4 px-5 py-4" style={{ borderBottom: "1px solid var(--a4-hairline-dark)" }}>
-              <span className="a4-font-body text-[14.5px] font-semibold text-white">
-                Incorporation — one shareholder, one director
-              </span>
-              <span className="a4-font-body text-[14.5px] font-semibold text-white whitespace-nowrap tabular-nums">
-                {prEuro(INCORPORATION.base)} one-off
-              </span>
+      <Doc rise={false} style={{ marginTop: "clamp(48px,6vw,72px)" }}>
+        <DocHead rise k="Incorporation" title={`From ${prEuro(INCORPORATION_FROM)}`} />
+        <div style={{ height: 28 }} />
+        <DocRow
+          rise
+          n="01"
+          word="Incorporation — one shareholder, one director"
+          aside={
+            <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.03em", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+              {prEuro(INCORPORATION.base)} <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: "#71717A" }}>one-off</span>
             </div>
-            {INCORPORATION_ADDONS.map((a) => (
-              <div key={a.label} className="flex items-start justify-between gap-4 px-5 py-3.5" style={{ borderBottom: "1px solid var(--a4-hairline-dark)" }}>
-                <span className="min-w-0">
-                  <span className="block a4-font-body text-[14px] text-white">{a.label}</span>
-                  <span className="block a4-font-body text-[12.5px] text-[var(--a4-stone)] mt-[2px]">{a.detail}</span>
-                </span>
-                <span className="a4-font-body text-[14px] font-semibold text-[var(--a4-on-dark-mute)] whitespace-nowrap tabular-nums shrink-0">
-                  +{prEuro(a.amount)} {a.cadence === "yearly" ? "/yr" : "one-off"}
-                </span>
+          }
+          compact
+        />
+        {INCORPORATION_ADDONS.map((a, i) => (
+          <DocRow
+            key={a.label}
+            rise
+            n={pad2(i + 2)}
+            word={a.label}
+            line={a.detail}
+            compact
+            aside={
+              <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: "-0.02em", color: "#3F3F46", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                +{prEuro(a.amount)} <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: "#71717A" }}>{a.cadence === "yearly" ? "/yr" : "one-off"}</span>
               </div>
-            ))}
-            <p className="a4-font-body text-[12.5px] leading-[1.6] text-[var(--a4-stone)] px-5 py-4 m-0">
-              {INCORPORATION_MGA_NOTE} {PRICING_VAT_NOTE} {PRICING_GOV_NOTE} The launch discount does not apply to
-              incorporation — it is a one-off fee.
-            </p>
-          </div>
-        </Reveal>
-      </Container>
-    </section>
+            }
+          />
+        ))}
+        <DocFoot style={{ alignItems: "center" }}>
+          <DocChip>
+            {PRICING_VAT_NOTE} {PRICING_GOV_NOTE}
+          </DocChip>
+          <p style={{ margin: 0, maxWidth: 560, fontFamily: BODY, fontSize: 13.5, lineHeight: 1.6, color: "#52525B" }}>
+            {INCORPORATION_MGA_NOTE} The launch discount does not apply to incorporation — it is a one-off fee.
+          </p>
+        </DocFoot>
+      </Doc>
+    </Band>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* 04 Complex work — the dark closing band                                    */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function PricingComplex() {
+  const items = [
+    { icon: "layers", t: "Groups & consolidations", s: "Multiple entities, intercompany and consolidated accounts." },
+    { icon: "shield-check", t: "Regulated entities", s: "iGaming, financial services and other regulated audits." },
+    { icon: "globe", t: "Cross-border & advisory", s: "International structures, restructuring and special projects." },
+  ];
+
+  return (
+    <DarkCta
+      id="complex"
+      sec="complex"
+      n="04"
+      eyebrow="Complex work"
+      typed="Bigger or unusual?"
+      words={[{ t: "Let's talk.", g: true }]}
+      label="Bigger or unusual? Let's talk."
+      lead={
+        <>
+          Some engagements need a human to scope properly. Book a free 30-minute call and we&apos;ll give you a clear,
+          fixed quote — no surprises.
+        </>
+      }
+      below={
+        <div data-fx="rise" data-d="820" style={{ marginTop: 22 }}>
+          <LocalizedLink href="/pricing-info" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 16, fontWeight: 600, color: PERI, textDecoration: "none" }}>
+            Read our full pricing guide <Icon name="arrow-right" size={15} color={PERI} />
+          </LocalizedLink>
+        </div>
+      }
+    >
+      <CtaCard>
+        <NumberedRows dark items={items.map((it) => ({ key: it.t, t: it.t, body: it.s }))} />
+        <PillLink href="/contact" variant="light" style={{ marginTop: 28, width: "100%", height: 64, fontSize: 19 }}>
+          Book a consultation
+        </PillLink>
+      </CtaCard>
+    </DarkCta>
   );
 }
 
 export function PricingCalculatorContent() {
   return (
     <div className="a4-pricing-page">
-      <PricingHero />
+      <PageHero
+        eyebrow="Transparent pricing · Malta"
+        title="A fixed price,"
+        accent="in seconds."
+        sub="Build a price for your everyday accounting, VAT and audit work below. Something more complex? We'll scope it on a quick call."
+      >
+        <Pills>
+          <PillLink href="#calc" variant="light">
+            Build your quote
+          </PillLink>
+          <PillLink href="/pricing-info" variant="ghost">
+            How pricing works
+          </PillLink>
+        </Pills>
+      </PageHero>
       <PricingStartingTiers />
       <PricingCalc />
       <PricingIncorporation />

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { FadeInUp } from "../common/Animations";
+import { BODY, Band, Eyebrow, G, NumberedRows, ProseWithList } from "@/app/[locale]/services/components/SiteKit";
 
 interface SectionItem {
   title?: string;
@@ -16,66 +16,52 @@ interface ContentSectionProps {
   children?: React.ReactNode;
 }
 
+/** "A Branded Interface for Client Interaction" → last word on the gradient. */
+function withGradEnd(text: string) {
+  const cut = text.trim().lastIndexOf(" ");
+  if (cut <= 0) return <G>{text}</G>;
+  return (
+    <>
+      {text.slice(0, cut + 1)}
+      <G>{text.slice(cut + 1)}</G>
+    </>
+  );
+}
+
+/**
+ * Long-form partner content in the design's terms layout: the heading and
+ * introduction held on the left, every section as a numbered row on the right.
+ */
 const ContentSection = ({ title, description, sections, children }: ContentSectionProps) => {
   return (
-    <section className="py-16 md:py-24 bg-background">
-      <div className="max-w-4xl mx-auto px-4 md:px-6">
-        <FadeInUp>
-          <div className="mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-text-heading mb-6 relative inline-block">
-              {title}
-              <span className="absolute -bottom-2 left-0 w-1/3 h-1 bg-primary-blue rounded-full"></span>
-            </h2>
-            {description && (
-              <p className="text-lg text-text-gray leading-relaxed">
-                {description}
-              </p>
-            )}
-          </div>
-        </FadeInUp>
-
-        <div className="space-y-12 md:space-y-16">
-          {sections.map((section, index) => (
-            <FadeInUp key={index} delay={index * 0.1}>
-              <div className="bg-white rounded-2xl p-8 md:p-10 shadow-sm border border-gray-100/50 hover:shadow-md transition-shadow duration-300">
-                {section.title && (
-                  <h3 className="text-xl md:text-2xl font-bold text-text-heading mb-4">
-                    {section.title}
-                  </h3>
-                )}
-                
-                <div className="space-y-4">
-                  {section.content.map((paragraph, idx) => (
-                    <p key={idx} className="text-text-gray leading-relaxed">
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-
-                {section.list && section.list.length > 0 && (
-                  <ul className="mt-6 space-y-3">
-                    {section.list.map((item, idx) => (
-                      <li key={idx} className="flex items-start gap-3 text-text-gray">
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary-blue flex-shrink-0" />
-                        <span className="leading-relaxed">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </FadeInUp>
-          ))}
+    <Band surface="light" sec="content">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 400px), 1fr))", gap: "48px 72px", alignItems: "start" }}>
+        <div className="a4k-sticky">
+          <Eyebrow n="01">Overview</Eyebrow>
+          <h2
+            data-fx="rise"
+            data-d="100"
+            style={{ margin: "18px 0 0", fontSize: "clamp(36px,4.2vw,64px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.04, textWrap: "balance" }}
+          >
+            {withGradEnd(title)}
+          </h2>
+          {description ? (
+            <p data-fx="rise" data-d="200" style={{ margin: "24px 0 0", maxWidth: 520, fontFamily: BODY, fontSize: 17, lineHeight: 1.65, color: "#52525B", textWrap: "pretty" }}>
+              {description}
+            </p>
+          ) : null}
         </div>
-        
-        {children && (
-            <div className="mt-12">
-                <FadeInUp delay={0.3}>
-                    {children}
-                </FadeInUp>
-            </div>
-        )}
+        <NumberedRows
+          d={150}
+          items={sections.map((section, index) => ({
+            key: section.title ?? String(index),
+            t: section.title,
+            body: <ProseWithList content={section.content} list={section.list} />,
+          }))}
+        />
       </div>
-    </section>
+      {children ? <div data-fx="rise" style={{ marginTop: 56 }}>{children}</div> : null}
+    </Band>
   );
 };
 

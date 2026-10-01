@@ -1,7 +1,7 @@
 import React from "react";
 import { Metadata } from "next";
-import PageHeader from "@/components/common/PageHeader";
-import ContentSection from "@/components/partners/ContentSection";
+import "@/components/a4-landing/styles.css";
+import WhiteLabelPortalPage from "@/components/partners/WhiteLabelPortalPage";
 
 export const metadata: Metadata = {
   title: "White Label Client Portal | A4",
@@ -70,22 +70,14 @@ const ClientPortalPage = () => {
   ];
 
   return (
-    <main>
-      <PageHeader
-        title="White Label Client Portal"
-        breadcrumbs={[
-          { label: "Partners", href: "/partners" },
-          { label: "White Label", href: "/partners/white-label" },
-          { label: "Client Portal" }
-        ]}
-      />
-
-      <ContentSection
-        title="A Branded Interface for Client Interaction"
-        description="The White Label Client Portal provides firms with a secure, branded interface through which clients interact with their accounting, audit, or advisory engagements. The portal operates fully under the partner firm’s brand and identity."
-        sections={sections}
-      />
-    </main>
+    <WhiteLabelPortalPage
+      crumb="Client Portal"
+      pageTitle="White Label Client Portal"
+      heroSub="A secure, branded interface for client interaction under your firm's identity."
+      title="A Branded Interface for Client Interaction"
+      description="The White Label Client Portal provides firms with a secure, branded interface through which clients interact with their accounting, audit, or advisory engagements. The portal operates fully under the partner firm’s brand and identity."
+      sections={sections}
+    />
   );
 };
 

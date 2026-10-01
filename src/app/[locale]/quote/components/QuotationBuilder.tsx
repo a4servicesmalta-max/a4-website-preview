@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Button, Container, Icon, Reveal, SectionHead } from "@/components/a4-landing/Primitives";
 import {
   buildQuote,
   euro,
@@ -23,44 +22,54 @@ import {
   type ManagedEntity,
   type TxnBand,
 } from "@/data/a4QuotePack";
+import {
+  BODY,
+  Band,
+  Check,
+  Doc,
+  DocHead,
+  G,
+  Head,
+  INDIGO,
+  INK,
+  PillLink,
+  gradText,
+  kicker,
+  pad2,
+} from "@/app/[locale]/services/components/SiteKit";
 
-const panel: React.CSSProperties = {
-  background: "var(--a4-surface-card)",
-  border: "1px solid var(--a4-hairline-light)",
-  borderRadius: "var(--a4-r-lg)",
-};
+/** Field label — Outfit 15 / 600, as the design's "Full name". */
 const label: React.CSSProperties = {
   display: "block",
-  fontFamily: "var(--a4-font-body)",
-  fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: ".1em",
-  color: "var(--a4-mute)",
   marginBottom: 8,
+  fontFamily: "var(--a4x-display)",
+  fontSize: 15,
+  fontWeight: 600,
+  letterSpacing: "-0.01em",
+  color: "#3F3F46",
 };
+/** Helper under a field; `ask` marks a question still to answer (indigo, never amber). */
+const help = (ask = false): React.CSSProperties => ({
+  display: "block",
+  marginTop: 8,
+  fontFamily: BODY,
+  fontSize: 13,
+  lineHeight: 1.5,
+  fontWeight: ask ? 600 : 500,
+  color: ask ? INDIGO : "#71717A",
+});
 /** The two "which one is ours?" pills — the same affordance the homepage uses. */
 const choicePill: React.CSSProperties = {
-  height: 30,
-  padding: "0 13px",
-  borderRadius: "var(--a4-r-full)",
+  height: 40,
+  padding: "0 18px",
+  borderRadius: 999,
   cursor: "pointer",
-  border: "1px solid var(--a4-primary)",
-  background: "var(--a4-primary)",
-  color: "#fff",
-  fontFamily: "var(--a4-font-body)",
-  fontSize: 11.5,
+  border: 0,
+  background: INDIGO,
+  color: "#FFFFFF",
+  fontFamily: "var(--a4x-display)",
+  fontSize: 14.5,
   fontWeight: 600,
-};
-const field: React.CSSProperties = {
-  width: "100%",
-  background: "var(--a4-surface-card)",
-  border: "1px solid var(--a4-hairline-light)",
-  borderRadius: "var(--a4-r-md)",
-  padding: "12px 14px",
-  color: "var(--a4-ink)",
-  fontFamily: "var(--a4-font-body)",
-  fontSize: 14,
-  outline: "none",
 };
 
 function download(b64: string, name: string) {
@@ -314,301 +323,282 @@ export function QuotationBuilder() {
       setBusy(false);
     }
   };
+  const conflictNote = independence.route === "conflict";
 
   return (
-    <section id="instant-quote" style={{ background: "var(--a4-surface-soft)", padding: "clamp(64px,8vw,96px) 0" }}>
-      <Container>
-        <Reveal>
-          <SectionHead
-            align="center"
-            eyebrow="Instant quotation"
-            title={<>Build your indicative quote in&nbsp;60&nbsp;seconds</>}
-            sub="Pick your services and get an instant, transparent estimate — downloaded as a written quotation, confirmed by our team within 24 hours."
-            maxWidth={640}
-          />
-        </Reveal>
+    <Band surface="muted" id="instant-quote" sec="builder">
+      <Head
+        n="01"
+        eyebrow="Instant quotation"
+        maxWidth={640}
+        title={
+          <>
+            Build your indicative quote in&nbsp;60&nbsp;<G>seconds</G>
+          </>
+        }
+        sub="Pick your services and get an instant, transparent estimate — downloaded now, with your formal quotation following by email, ready to accept online."
+      />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.2fr .9fr", gap: 20, marginTop: 44 }} className="max-[900px]:!grid-cols-1">
-          {/* Left: inputs */}
-          <Reveal delay={60} style={{ ...panel, padding: "26px 24px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }} className="max-[640px]:!grid-cols-1">
-              <div>
-                <span style={label}>Company name *</span>
-                <input value={company} onChange={(e) => priced(setCompany)(e.target.value)} placeholder="Your company Ltd" style={field} />
-              </div>
-              <div>
-                <span style={label}>MBR registration (optional)</span>
-                <input value={regNo} onChange={(e) => priced(setRegNo)(e.target.value)} placeholder="C 12345" style={field} />
-              </div>
-              <div>
-                <span style={label}>What the company does *</span>
-                <select value={sector} onChange={(e) => priced(setSector)(e.target.value)} style={{ ...field, cursor: "pointer" }}>
-                  {/* Unselected by default — see `expenses` below. */}
-                  <option value="">Select the closest match…</option>
-                  {SECTORS.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.label}
-                    </option>
-                  ))}
-                </select>
-                {!sector && (
-                  <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
-                    Sets the risk tier on VAT and the audit — the same list every A4 calculator uses.
-                  </span>
-                )}
-              </div>
-              <div>
-                <span style={label}>Transactions a month *</span>
-                <select value={txn} onChange={(e) => priced(setTxn)(e.target.value as TxnBand | "")} style={{ ...field, cursor: "pointer" }}>
-                  <option value="">Select a volume…</option>
-                  {TXN_BANDS.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.label} — {b.hint}
-                    </option>
-                  ))}
-                </select>
-                {!txn && (
-                  <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
-                    The count, not the amount. Prices VAT and the audit, and adds to the bookkeeping fee at busy volumes.
-                  </span>
-                )}
-              </div>
-              <div>
-                <span style={label}>Bank accounts</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={QUOTE_MAX_BANKS}
-                  step={1}
-                  value={banks}
-                  onChange={(e) => priced(setBanks)(Math.min(QUOTE_MAX_BANKS, Math.max(1, Math.floor(Number(e.target.value) || 1))))}
-                  style={field}
-                  aria-label="How many bank accounts do you have?"
-                />
-                <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                  Every account is reconciled separately. The first is included in the bookkeeping fee; each extra account is €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee.
-                </span>
-              </div>
-              <div>
-                <span style={label}>Whose books *</span>
-                <select value={entity} onChange={(e) => setEntityAndSync(e.target.value as ManagedEntity)} style={{ ...field, cursor: "pointer" }}>
-                  {MANAGED_ENTITY_OPTIONS.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label} — {o.sub}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                {/* Distinct from the revenue band above: revenue scales audit,
-                    tax and payroll; monthly SPEND is what prices the books. */}
-                <span style={label}>Monthly expenses *</span>
-                <select
-                  value={expenses}
-                  onChange={(e) => priced(setExpenses)(e.target.value as ExpenseBand | "")}
-                  style={{ ...field, cursor: "pointer" }}
-                >
-                  {/* Unselected by default, and it stays a real option so the
-                      visitor can put it back. Without this the first band would
-                      be pre-selected by the browser and we would be back to
-                      pricing an answer nobody gave. */}
-                  <option value="">Select your monthly spend…</option>
-                  {EXPENSE_BANDS.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.label} — {b.hint}
-                    </option>
-                  ))}
-                </select>
-                {!expenses && (
-                  <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "#8A6100" }}>
-                    Needed before we can price the bookkeeping — we do not assume a band.
-                  </span>
-                )}
-              </div>
-              {/* ONE field, not two. The "earlier months" select that used to
-                  sit beside this asked for the same fact a second time: a start
-                  month in the past IS the count of months still to do, so the
-                  count is derived from it and read back below. */}
-              <div>
-                <span style={label}>Start from *</span>
-                <input
-                  type="month"
-                  value={startMonth}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    priced(setStartMonth)(v);
-                    priced(setCatchUpMonths)(catchUpMonthsFrom(v));
-                  }}
-                  style={{ ...field, cursor: "pointer" }}
-                  aria-label="From which month do you need us?"
-                />
-                <span style={{ display: "block", marginTop: 6, fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)" }}>
-                  The earliest month that still needs doing.{" "}
-                  {catchUpMonths > 0
-                    ? `${catchUpMonths} ${catchUpMonths === 1 ? "month" : "months"} of catch-up at the same monthly rate — no premium, no cap — then ongoing from this month.`
-                    : "Anything before this month would be catch-up at the same monthly rate."}
-                </span>
-              </div>
+      <div className="a4k-calc" style={{ marginTop: 44 }}>
+        {/* Left: inputs (the panel stays put; its two blocks rise in) */}
+        <div style={{ minWidth: 0, background: "#FFFFFF", border: "1px solid #E4E4E7", borderRadius: 28, padding: "clamp(24px,3.2vw,40px)" }}>
+          <div data-fx="rise" data-dy="30" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))", gap: "24px 16px" }}>
+            <div>
+              <label htmlFor="qb-company" style={label}>Company name *</label>
+              <input id="qb-company" value={company} onChange={(e) => priced(setCompany)(e.target.value)} placeholder="Your company Ltd" className="a4k-input" />
             </div>
+            <div>
+              <label htmlFor="qb-reg" style={label}>MBR registration (optional)</label>
+              <input id="qb-reg" value={regNo} onChange={(e) => priced(setRegNo)(e.target.value)} placeholder="C 12345" className="a4k-input" />
+            </div>
+            <div>
+              <label htmlFor="qb-sector" style={label}>What the company does *</label>
+              <select id="qb-sector" value={sector} onChange={(e) => priced(setSector)(e.target.value)} className="a4k-input">
+                {/* Unselected by default — see `expenses` below. */}
+                <option value="">Select the closest match…</option>
+                {SECTORS.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.label}
+                  </option>
+                ))}
+              </select>
+              {!sector && <span style={help(true)}>Sets the risk tier on VAT and the audit — the same list every A4 calculator uses.</span>}
+            </div>
+            <div>
+              <label htmlFor="qb-txn" style={label}>Transactions a month *</label>
+              <select id="qb-txn" value={txn} onChange={(e) => priced(setTxn)(e.target.value as TxnBand | "")} className="a4k-input">
+                <option value="">Select a volume…</option>
+                {TXN_BANDS.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label} — {b.hint}
+                  </option>
+                ))}
+              </select>
+              {!txn && <span style={help(true)}>The count, not the amount. Prices VAT and the audit, and adds to the bookkeeping fee at busy volumes.</span>}
+            </div>
+            <div>
+              <label htmlFor="qb-banks" style={label}>Bank accounts</label>
+              <input
+                id="qb-banks"
+                type="number"
+                min={1}
+                max={QUOTE_MAX_BANKS}
+                step={1}
+                value={banks}
+                onChange={(e) => priced(setBanks)(Math.min(QUOTE_MAX_BANKS, Math.max(1, Math.floor(Number(e.target.value) || 1))))}
+                className="a4k-input"
+                aria-label="How many bank accounts do you have?"
+              />
+              <span style={help()}>
+                Every account is reconciled separately. The first is included in the bookkeeping fee; each extra account is €{BANK_ACCOUNT.baseMonthly} a month plus {Math.round(BANK_ACCOUNT.pctOfBookkeeping * 100)}% of the bookkeeping fee.
+              </span>
+            </div>
+            <div>
+              <label htmlFor="qb-entity" style={label}>Whose books *</label>
+              <select id="qb-entity" value={entity} onChange={(e) => setEntityAndSync(e.target.value as ManagedEntity)} className="a4k-input">
+                {MANAGED_ENTITY_OPTIONS.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label} — {o.sub}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              {/* Distinct from the revenue band above: revenue scales audit,
+                  tax and payroll; monthly SPEND is what prices the books. */}
+              <label htmlFor="qb-expenses" style={label}>Monthly expenses *</label>
+              <select id="qb-expenses" value={expenses} onChange={(e) => priced(setExpenses)(e.target.value as ExpenseBand | "")} className="a4k-input">
+                {/* Unselected by default, and it stays a real option so the
+                    visitor can put it back. Without this the first band would
+                    be pre-selected by the browser and we would be back to
+                    pricing an answer nobody gave. */}
+                <option value="">Select your monthly spend…</option>
+                {EXPENSE_BANDS.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label} — {b.hint}
+                  </option>
+                ))}
+              </select>
+              {!expenses && <span style={help(true)}>Needed before we can price the bookkeeping — we do not assume a band.</span>}
+            </div>
+            {/* ONE field, not two. The "earlier months" select that used to
+                sit beside this asked for the same fact a second time: a start
+                month in the past IS the count of months still to do, so the
+                count is derived from it and read back below. */}
+            <div>
+              <label htmlFor="qb-start" style={label}>Start from *</label>
+              <input
+                id="qb-start"
+                type="month"
+                value={startMonth}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  priced(setStartMonth)(v);
+                  priced(setCatchUpMonths)(catchUpMonthsFrom(v));
+                }}
+                className="a4k-input"
+                aria-label="From which month do you need us?"
+              />
+              <span style={help()}>
+                The earliest month that still needs doing.{" "}
+                {catchUpMonths > 0
+                  ? `${catchUpMonths} ${catchUpMonths === 1 ? "month" : "months"} of catch-up at the same monthly rate — no premium, no cap — then ongoing from this month.`
+                  : "Anything before this month would be catch-up at the same monthly rate."}
+              </span>
+            </div>
+          </div>
 
-            <div style={{ marginTop: 22 }}>
-              <span style={label}>Services needed</span>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="max-[640px]:!grid-cols-1">
-                {catalog.map((s) => {
-                  const on = services.has(s.id);
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => toggle(s.id)}
-                      style={{
-                        textAlign: "left",
-                        padding: "13px 14px",
-                        borderRadius: "var(--a4-r-md)",
-                        border: `1px solid ${on ? "var(--a4-primary)" : "var(--a4-hairline-light)"}`,
-                        background: on ? "rgba(73,79,223,.06)" : "var(--a4-surface-card)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <span style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "var(--a4-font-body)", fontSize: 14, fontWeight: 600, color: "var(--a4-ink)" }}>
-                        <span
-                          style={{
-                            width: 16,
-                            height: 16,
-                            borderRadius: 4,
-                            border: `1.5px solid ${on ? "var(--a4-primary)" : "var(--a4-stone)"}`,
-                            background: on ? "var(--a4-primary)" : "transparent",
-                            display: "inline-grid",
-                            placeItems: "center",
-                          }}
-                        >
-                          {on && <Icon name="check" size={11} color="#fff" stroke={3} />}
-                        </span>
-                        {s.name}
-                      </span>
-                      <span style={{ display: "block", marginTop: 5, fontFamily: "var(--a4-font-body)", fontSize: 12, color: "var(--a4-mute)" }}>{s.hint}</span>
-                    </button>
-                  );
-                })}
+          <div data-fx="rise" data-dy="30" style={{ marginTop: 32, paddingTop: 28, borderTop: "1px solid #E4E4E7" }}>
+            <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em", color: INK }}>Services needed</div>
+            <div role="group" aria-label="Services needed" style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))", gap: 10 }}>
+              {catalog.map((s) => {
+                const on = services.has(s.id);
+                return (
+                  <button key={s.id} type="button" onClick={() => toggle(s.id)} className="a4k-svc" aria-pressed={on}>
+                    <span className="a4k-check" aria-hidden="true">
+                      {on ? <Check size={13} /> : null}
+                    </span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: "block", fontFamily: "var(--a4x-display)", fontSize: 16, fontWeight: 600, letterSpacing: "-0.015em", color: INK }}>{s.name}</span>
+                      <span style={{ display: "block", marginTop: 4, fontFamily: BODY, fontSize: 13, lineHeight: 1.45, color: "#71717A" }}>{s.hint}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {independenceText ? (
+              <div
+                role="note"
+                style={{
+                  marginTop: 14,
+                  padding: "14px 16px",
+                  borderRadius: 16,
+                  background: conflictNote ? INK : "rgba(79,85,241,.06)",
+                  border: `1px solid ${conflictNote ? INK : "rgba(79,85,241,.22)"}`,
+                }}
+              >
+                <span style={{ ...kicker, display: "block", color: conflictNote ? "#8B8FF7" : INDIGO }}>Independence</span>
+                <span style={{ display: "block", marginTop: 5, fontFamily: BODY, fontSize: 13.5, lineHeight: 1.55, color: conflictNote ? "#E4E4E7" : "#3F3F46" }}>
+                  {independenceText}
+                </span>
               </div>
-              {independenceText ? (
-                <div
-                  role="note"
-                  style={{
-                    marginTop: 12,
-                    padding: "12px 14px",
-                    borderRadius: "var(--a4-r-md)",
-                    background: independence.route === "conflict" ? "#FFF7E9" : "rgba(73,79,223,.06)",
-                    border: `1px solid ${independence.route === "conflict" ? "#E8D2A4" : "rgba(73,79,223,.25)"}`,
-                  }}
-                >
-                  <span style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: independence.route === "conflict" ? "#8A6100" : "var(--a4-primary-deep)" }}>
-                    Independence
-                  </span>
-                  <span style={{ display: "block", marginTop: 4, fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-body)" }}>
-                    {independenceText}
+            ) : null}
+          </div>
+        </div>
+
+        {/* Right: live estimate + capture — the quote document */}
+        <div className="a4k-sticky" style={{ minWidth: 0 }}>
+          <Doc d={120}>
+            <DocHead compact k="Your indicative estimate" title={company.trim() || "Your company"} />
+            {quote ? (
+              <>
+                <div style={{ height: 18 }} />
+                {quote.lines.map((l, i) => (
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16, padding: "14px 28px", borderTop: "1px solid #E4E4E7" }}>
+                    <span style={{ display: "flex", gap: 12, minWidth: 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: INDIGO }}>{pad2(i + 1)}</span>
+                      <span style={{ fontFamily: BODY, fontSize: 14.5, lineHeight: 1.45, color: "#3F3F46" }}>{l.name}</span>
+                    </span>
+                    <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em", color: INK, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{l.display}</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "baseline", gap: "6px 16px", padding: "22px 28px 0", borderTop: "1px solid #E4E4E7" }}>
+                  <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-0.015em", color: INK }}>First-year total</span>
+                  <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                    <span style={{ fontSize: "clamp(34px,3.4vw,44px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.1, paddingBottom: ".04em", fontVariantNumeric: "tabular-nums", ...gradText }}>
+                      {euro(quote.indicativeAnnualEur)}
+                    </span>
+                    {quote.hasOnRequestLines ? <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: "#71717A" }}>+ on request</span> : null}
                   </span>
                 </div>
-              ) : null}
-            </div>
-          </Reveal>
+                <p style={{ margin: 0, padding: "10px 28px 0", fontFamily: BODY, fontSize: 12.5, lineHeight: 1.5, color: "#71717A" }}>
+                  Indicative. All fees exclude VAT. {PRICING_GOV_NOTE} Your formal quotation follows by email — no obligation.
+                </p>
+              </>
+            ) : (
+              /* Nothing priced, and nothing to download. The way out sits
+                 where the figures would have been, so the visitor is never
+                 simply refused — they pick, and the quotation appears. */
+              <div style={{ padding: "22px 28px 0" }}>
+                <p style={{ margin: 0, fontFamily: BODY, fontSize: 14.5, lineHeight: 1.6, color: "#3F3F46" }}>
+                  Nothing is priced yet. Tell us which of the two is ours and the itemised quotation appears here, in full, straight away.
+                </p>
+                <div style={{ marginTop: 16, padding: "18px 18px 16px", borderRadius: 20, background: "rgba(79,85,241,.06)", border: "1px solid rgba(79,85,241,.22)" }}>
+                  <span style={{ display: "block", fontSize: 17, fontWeight: 600, letterSpacing: "-0.015em", color: INK }}>Which one is ours?</span>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                    <button type="button" onClick={() => dropService("audit")} style={choicePill}>
+                      Keep the bookkeeping with us
+                    </button>
+                    <button type="button" onClick={() => dropService("accounts")} style={choicePill}>
+                      Take the audit or review with us
+                    </button>
+                  </div>
+                  <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 13, lineHeight: 1.55, color: "#3F3F46" }}>
+                    Pick one and the quotation prices itself. Not sure which? Request information instead and we work it out with you.
+                  </p>
+                </div>
+              </div>
+            )}
 
-          {/* Right: live estimate + capture */}
-          <Reveal delay={120} style={{ ...panel, padding: "26px 24px", display: "flex", flexDirection: "column" }}>
-            <span style={label}>Your indicative estimate</span>
-            <div style={{ flex: 1 }}>
-              {quote ? (
-                <>
-                  {quote.lines.map((l) => (
-                    <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderBottom: "1px solid var(--a4-hairline-light)" }}>
-                      <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, color: "var(--a4-ink)" }}>{l.name}</span>
-                      <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, fontWeight: 700, color: "var(--a4-ink)", whiteSpace: "nowrap" }}>{l.display}</span>
-                    </div>
-                  ))}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 16 }}>
-                    <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--a4-mute)" }}>
-                      First-year total
-                    </span>
-                    <span style={{ fontFamily: "var(--a4-font-display)", fontSize: 30, fontWeight: 600, color: "var(--a4-primary)", letterSpacing: "-.5px" }}>
-                      {euro(quote.indicativeAnnualEur)}
-                      {quote.hasOnRequestLines ? <span style={{ fontSize: 13, color: "var(--a4-mute)" }}> + on request</span> : null}
-                    </span>
-                  </div>
-                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11.5, color: "var(--a4-mute)", marginTop: 8, lineHeight: 1.5 }}>
-                    Indicative. All fees exclude VAT. {PRICING_GOV_NOTE} Confirmed in writing within 24 hours — no obligation.
+            <div style={{ marginTop: 24, padding: "24px 28px 28px", borderTop: "1px solid #E4E4E7", background: "#FAFAFA" }}>
+              {done ? (
+                <div role="status" style={{ textAlign: "center" }}>
+                  <span style={{ width: 48, height: 48, display: "inline-grid", placeItems: "center", borderRadius: 999, background: INDIGO, boxShadow: "0 16px 40px rgba(79,85,241,.35)" }}>
+                    <Check size={22} width={3} />
+                  </span>
+                  <p style={{ margin: "14px 0 0", fontSize: 17, fontWeight: 600, letterSpacing: "-0.015em", lineHeight: 1.35, color: INK }}>
+                    {portalResult?.status === "quoted"
+                      ? `Your quotation has downloaded — and quotation ${portalResult.reference} is on its way to ${email}.`
+                      : "Your quotation has downloaded — and our team has it too."}
                   </p>
-                </>
+                  <p style={{ margin: "8px 0 0", fontFamily: BODY, fontSize: 14, lineHeight: 1.55, color: "#52525B" }}>
+                    {portalResult?.status === "quoted"
+                      ? "Open the email to see your quotation page — switch services on or off and accept online."
+                      : "Prefer to talk it through? Request information and our team will follow up with next steps."}
+                  </p>
+                  <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 18 }}>
+                    <PillLink href="/contact" variant="ink" size="md">
+                      Request information
+                    </PillLink>
+                    <button type="button" className="a4-btn a4-btn-outline" style={{ height: 48, padding: "0 24px", fontSize: 16 }} onClick={() => download(done.pdfBase64, done.pdfName)}>
+                      Download PDF again
+                    </button>
+                  </div>
+                </div>
               ) : (
-                /* Nothing priced, and nothing to download. The way out sits
-                   where the figures would have been, so the visitor is never
-                   simply refused — they pick, and the quotation appears. */
                 <>
-                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13.5, lineHeight: 1.6, color: "var(--a4-body)", margin: 0 }}>
-                    Nothing is priced yet. Tell us which of the two is ours and the itemised quotation appears here, in full, straight away.
-                  </p>
-                  <div style={{ marginTop: 14, padding: "13px 14px", borderRadius: "var(--a4-r-md)", background: "rgba(73,79,223,.06)", border: "1px solid rgba(73,79,223,.25)" }}>
-                    <span style={{ display: "block", fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 700, color: "var(--a4-primary-deep)" }}>Which one is ours?</span>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-                      <button type="button" onClick={() => dropService("audit")} style={choicePill}>Keep the bookkeeping with us</button>
-                      <button type="button" onClick={() => dropService("accounts")} style={choicePill}>Take the audit or review with us</button>
-                    </div>
-                    <p style={{ margin: "10px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 11.5, lineHeight: 1.55, color: "var(--a4-primary-deep)" }}>
-                      Pick one and the quotation prices itself. Not sure which? Request information instead and we work it out with you.
-                    </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 10 }}>
+                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name *" aria-label="Your name" autoComplete="name" className="a4k-input" />
+                    <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Work email *" aria-label="Work email" autoComplete="email" type="email" className="a4k-input" />
                   </div>
+                  {error ? (
+                    <p role="alert" style={{ display: "flex", gap: 10, margin: "12px 0 0", fontFamily: BODY, fontSize: 13.5, lineHeight: 1.5, fontWeight: 600, color: INK }}>
+                      <span className="a4-bullet" style={{ marginTop: 6 }} />
+                      <span>{error}</span>
+                    </p>
+                  ) : null}
+                  {/* Inert on a conflict: there is no priced quotation behind
+                      it, and a PDF is the one artefact that outlives the page. */}
+                  <button
+                    type="button"
+                    onClick={() => { if (!busy && !conflict) submit(); }}
+                    aria-disabled={busy || conflict}
+                    className="a4-btn a4-btn-ink"
+                    style={{ marginTop: 12, width: "100%", opacity: busy || conflict ? 0.55 : 1, cursor: busy || conflict ? "default" : "pointer" }}
+                  >
+                    {busy ? "Preparing your quotation…" : "Download my quotation (PDF)"}
+                  </button>
+                  <p style={{ margin: "12px 0 0", textAlign: "center", fontFamily: BODY, fontSize: 12.5, lineHeight: 1.5, color: "#71717A" }}>
+                    {conflict
+                      ? "Pick which of the two is ours above and this unlocks."
+                      : "Your formal quotation follows by email, ready to accept online."}
+                  </p>
                 </>
               )}
             </div>
-
-            {done ? (
-              <div style={{ marginTop: 18, borderTop: "1px solid var(--a4-hairline-light)", paddingTop: 18, textAlign: "center" }}>
-                <span style={{ display: "inline-grid", placeItems: "center", width: 44, height: 44, borderRadius: 999, background: "var(--a4-surface-soft)" }}>
-                  <Icon name="check" size={22} color="var(--a4-accent-teal)" stroke={2.4} />
-                </span>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 14.5, color: "var(--a4-ink)", margin: "12px 0 0", fontWeight: 600 }}>
-                  {portalResult?.status === "quoted"
-                    ? `Your quotation has downloaded — and quotation ${portalResult.reference} is on its way to ${email}.`
-                    : "Your quotation has downloaded — and our team has it too."}
-                </p>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)", margin: "6px 0 0" }}>
-                  {portalResult?.status === "quoted"
-                    ? "Open the email to see your quotation page — switch services on or off and accept online."
-                    : "Prefer to talk it through? Request information and our team will follow up with next steps."}
-                </p>
-                <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 14 }}>
-                  <Button variant="dark" size="md" href="/contact">
-                    Request information <Icon name="arrow-right" size={15} color="#fff" />
-                  </Button>
-                  <Button variant="outline-light" size="md" onClick={() => download(done.pdfBase64, done.pdfName)}>
-                    Download PDF again
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ marginTop: 18, borderTop: "1px solid var(--a4-hairline-light)", paddingTop: 18 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="max-[640px]:!grid-cols-1">
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name *" style={field} />
-                  <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Work email *" type="email" style={field} />
-                </div>
-                {error ? (
-                  <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, color: "var(--accent-danger, #d33)", margin: "10px 0 0" }}>{error}</p>
-                ) : null}
-                {/* Inert on a conflict: there is no priced quotation behind
-                    it, and a PDF is the one artefact that outlives the page. */}
-                <Button variant="dark" size="lg" onClick={() => { if (!busy && !conflict) submit(); }} style={{ width: "100%", marginTop: 12, justifyContent: "center", opacity: busy || conflict ? 0.55 : 1, pointerEvents: busy || conflict ? "none" : "auto" }}>
-                  {busy ? "Preparing your quotation…" : "Download my quotation (PDF)"}
-                  {!busy && <Icon name="arrow-right" size={16} color="#fff" />}
-                </Button>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, color: "var(--a4-mute)", marginTop: 10, textAlign: "center" }}>
-                  {conflict
-                    ? "Pick which of the two is ours above and this unlocks."
-                    : "We'll also send it to our team so a person confirms it within 24h."}
-                </p>
-              </div>
-            )}
-          </Reveal>
+          </Doc>
         </div>
-      </Container>
-    </section>
+      </div>
+    </Band>
   );
 }

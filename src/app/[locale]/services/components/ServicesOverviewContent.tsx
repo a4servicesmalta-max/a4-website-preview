@@ -1,8 +1,6 @@
 "use client";
 
 import React from "react";
-import LocalizedLink from "@/components/common/LocalizedLink";
-import { Button, Container, Icon, Reveal } from "@/components/a4-landing/Primitives";
 import {
   A4_SERVICES_DATA,
   A4_SERVICES_LEFT,
@@ -10,52 +8,53 @@ import {
   SERVICE_KEY_TO_SLUG,
   type ServiceKey,
 } from "@/data/a4ServicesSiteData";
+import LocalizedLink from "@/components/common/LocalizedLink";
+import { Icon } from "@/components/a4-landing/Primitives";
+import { LIGHT_GLOW } from "@/components/fx/primitives";
 import { PageHero } from "./PageHero";
 import { ServiceClosing } from "./ServiceClosing";
 import { ServicePortalBand } from "./ServicePortalBand";
-import { useLocalizedHref } from "./useLocalizedHref";
+import { BODY, Band, G, GRID3, Head, INDIGO, PillLink, Pills, WordCard, kicker, type CardFx } from "./SiteKit";
 
-function ServiceColumn({ slugs }: { slugs: ServiceKey[] }) {
-  return (
-    <div className="flex flex-col gap-[14px]">
-      {slugs.map((key, i) => {
-        const s = A4_SERVICES_DATA[key];
-        const slug = SERVICE_KEY_TO_SLUG[key];
-        const teaser = s.lead.split(" — ")[0].split(". ")[0].replace(/\.$/, "") + ".";
-        return (
-          <Reveal key={key} delay={i * 50}>
-            <LocalizedLink
-              href={`/services/${slug}`}
-              className="flex items-center gap-4 bg-[var(--a4-surface-card)] border border-[var(--a4-hairline-light)] rounded-[var(--a4-r-lg)] py-5 px-[22px] no-underline hover:border-[var(--a4-hairline-strong)] transition-colors duration-150"
-            >
-              <span className="w-12 h-12 rounded-[var(--a4-r-md)] bg-[var(--a4-surface-soft)] grid place-items-center shrink-0">
-                <Icon name={s.icon} size={22} color="var(--a4-primary)" stroke={1.75} />
-              </span>
-              <span className="flex-1 min-w-0">
-                <span
-                  className="block a4-font-display font-medium text-[var(--a4-ink)] text-[19px]"
-                  style={{ letterSpacing: "-.2px" }}
-                >
-                  {s.name}
-                </span>
-                <span
-                  className="block a4-font-body text-[var(--a4-mute)] mt-[3px]"
-                  style={{ fontSize: 13.5, lineHeight: 1.5, textWrap: "pretty" }}
-                >
-                  {teaser}
-                </span>
-              </span>
-              <Icon name="arrow-right" size={18} color="var(--a4-mute)" />
-            </LocalizedLink>
-          </Reveal>
-        );
-      })}
-    </div>
-  );
+/**
+ * The big card word for each service and the letter effect it plays — short
+ * on purpose, like the design's "Accounting" / "Tax" / "Audit" cards. The
+ * full name sits in the card's foot.
+ */
+const CARD_WORD: Record<ServiceKey, [string, CardFx]> = {
+  "accounting-finance": ["Accounting", "scatter"],
+  "tax-compliance": ["Tax", "type"],
+  "audit-assurance": ["Audit", "tighten"],
+  "corporate-csp": ["Corporate", "zoom"],
+  "regulated-licensing": ["Licensing", "cascade"],
+  "advisory-growth": ["Advisory", "type"],
+  "company-structure": ["Structure", "stack"],
+  "liquidation-winddown": ["Wind-down", "cascade"],
+  "international-structures": ["International", "scatter"],
+  "crypto-digital-assets": ["Crypto", "zoom"],
+  "audit-readiness": ["Readiness", "tighten"],
+  "group-consolidation": ["Consolidation", "stack"],
+  "banking-payments": ["Banking", "cascade"],
+  "corporate-transactions": ["Transactions", "scatter"],
+  bookkeeping: ["Bookkeeping", "scatter"],
+  "vat-payroll": ["VAT & Payroll", "stack"],
+  legal: ["Legal", "type"],
+  outsourcing: ["Outsourcing", "zoom"],
+};
+
+/** The two published columns, read across — the order the old two-column list showed. */
+function overviewOrder(): ServiceKey[] {
+  const out: ServiceKey[] = [];
+  const n = Math.max(A4_SERVICES_LEFT.length, A4_SERVICES_RIGHT.length);
+  for (let i = 0; i < n; i++) {
+    if (A4_SERVICES_LEFT[i]) out.push(A4_SERVICES_LEFT[i]);
+    if (A4_SERVICES_RIGHT[i]) out.push(A4_SERVICES_RIGHT[i]);
+  }
+  return out;
 }
 
 export function ServicesOverviewContent() {
-  const href = useLocalizedHref();
+  const keys = overviewOrder();
 
   return (
     <div className="a4-services-page">
@@ -64,27 +63,92 @@ export function ServicesOverviewContent() {
         title="One licensed firm. Every obligation covered."
         sub="Assurance-led accounting, tax, corporate and audit services for businesses in and through Malta — scoped clearly, priced transparently, delivered through one portal."
       >
-        <div className="flex gap-3 justify-center flex-wrap mt-8">
-          <Button variant="primary" size="lg" href={href("/contact")}>
-            Book a consultation <Icon name="arrow-right" size={18} color="#000" />
-          </Button>
-          <Button variant="outline-dark" size="lg" href={href("/pricing")}>
+        <Pills>
+          <PillLink href="/contact" variant="light">
+            Book a consultation
+          </PillLink>
+          <PillLink href="/pricing" variant="ghost">
             How pricing works
-          </Button>
-        </div>
+          </PillLink>
+        </Pills>
       </PageHero>
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,96px) 0" }}>
-        <Container>
-          <div
-            className="two-col grid gap-[14px] items-start"
-            style={{ gridTemplateColumns: "1fr 1fr" }}
+      <Band surface="light" sec="services" id="services">
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 28 }}>
+          <Head
+            n="01"
+            eyebrow="All services"
+            title={
+              <>
+                Accounting, audit &amp; corporate <G>services.</G>
+              </>
+            }
+          />
+          <span data-fx="rise" data-d="160" className="a4-chip a4-chip-light">
+            {keys.length} services
+          </span>
+        </div>
+
+        <div style={{ ...GRID3, marginTop: 40 }}>
+          {keys.map((key, i) => {
+            const s = A4_SERVICES_DATA[key];
+            const slug = SERVICE_KEY_TO_SLUG[key];
+            const [word, fx] = CARD_WORD[key] ?? [s.name, "scatter"];
+            const teaser = s.lead.split(" — ")[0].split(". ")[0].replace(/\.$/, "") + ".";
+            const dark = i % 2 === 1;
+            return (
+              <WordCard
+                key={key}
+                href={`/services/${slug}`}
+                ariaLabel={s.name}
+                i={i}
+                total={keys.length}
+                word={word}
+                fx={fx}
+                icon={s.icon}
+                line={teaser}
+                dark={dark}
+                d={(i % 3) * 80}
+                foot={
+                  <span style={{ display: "block", fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", color: dark ? "#FFFFFF" : "#09090B", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {s.name}
+                  </span>
+                }
+                go={<Icon name="arrow-right" size={15} color="currentColor" />}
+              />
+            );
+          })}
+          {/* Closes the last row (16 cards in threes leave two cells; in twos
+              it runs full width): the pricing guide, in /pricing's words. */}
+          <LocalizedLink
+            href="/pricing-info"
+            className="a4k-card a4k-span2"
+            data-fx="rise"
+            data-d="160"
+            style={{ minHeight: 330, justifyContent: "space-between", background: LIGHT_GLOW }}
           >
-            <ServiceColumn slugs={A4_SERVICES_LEFT} />
-            <ServiceColumn slugs={A4_SERVICES_RIGHT} />
-          </div>
-        </Container>
-      </section>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <span style={{ ...kicker, color: INDIGO }}>Pricing</span>
+              <span aria-hidden="true" style={{ width: 44, height: 44, display: "grid", placeItems: "center", borderRadius: 999, background: "rgba(79,85,241,.08)" }}>
+                <Icon name="info" size={20} color={INDIGO} stroke={1.8} />
+              </span>
+            </div>
+            <div>
+              <div style={{ fontSize: "clamp(34px,3.4vw,52px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.05 }}>
+                How our pricing <G>works</G>
+              </div>
+              <p style={{ margin: "14px 0 0", maxWidth: 520, fontFamily: BODY, fontSize: 16, lineHeight: 1.55, color: "#52525B" }}>
+                Fixed monthly plans for bookkeeping and VAT — plus how we quote audit and complex work.
+              </p>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid #E4E4E7" }}>
+              <span className="a4k-go">
+                Read pricing guide <Icon name="arrow-right" size={14} color="currentColor" />
+              </span>
+            </div>
+          </LocalizedLink>
+        </div>
+      </Band>
 
       <ServicePortalBand serviceName="any of our services" />
       <ServiceClosing serviceName="your business" />

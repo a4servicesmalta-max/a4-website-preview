@@ -1,68 +1,128 @@
 "use client";
 
 import React from "react";
-import LocalizedLink from "@/components/common/LocalizedLink";
-import { Button, Container, Icon, Reveal, SectionHead } from "@/components/a4-landing/Primitives";
+import { Icon } from "@/components/a4-landing/Primitives";
 import { PARTNER_CRITERIA, PARTNER_MODELS } from "@/data/a4PartnersSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
-import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import {
+  Band,
+  CtaCard,
+  DarkCta,
+  Eyebrow,
+  G,
+  GRID2,
+  Head,
+  NumberedRows,
+  PillLink,
+  Pills,
+  WordCard,
+  type CardFx,
+} from "@/app/[locale]/services/components/SiteKit";
 
+/** The big card word per model (the design's "Accounting" / "Audit" cards). */
+const MODEL_WORD: Record<string, [string, CardFx]> = {
+  "/partners/service-delivery": ["Delivery", "scatter"],
+  "/partners/white-label": ["White-label", "tighten"],
+  "/partners/technology-support": ["Integration", "cascade"],
+  "/partners/reseller-program": ["Reseller", "zoom"],
+};
+
+/**
+ * /partners — hero, 01 the four partnership models as the design's card grid,
+ * the portal tour, 02 how partners are evaluated as numbered rows, and the
+ * dark closing band.
+ */
 export function PartnersInfoContent() {
-  const href = useLocalizedHref();
-
   return (
-    <div className="a4-site-page">
+    <div className="a4-site-page" style={{ background: "#09090B" }}>
       <PageHero eyebrow="Partnerships" title="Partner with A4" sub="Grow your firm with A4 — whether you want us to deliver work, run on our technology, integrate our platform, or earn by referring clients.">
-        <div className="flex gap-3 justify-center flex-wrap mt-[30px]">
-          <Button variant="primary" size="lg" href={href("/contact")}>Become a partner <Icon name="arrow-right" size={18} color="#000" /></Button>
-          <Button variant="outline-dark" size="lg" href={href("/partners-platform")}>Partner platform</Button>
-        </div>
+        <Pills>
+          <PillLink href="/contact" variant="light">
+            Become a partner
+          </PillLink>
+          <PillLink href="/partners-platform" variant="ghost">
+            Partner platform
+          </PillLink>
+        </Pills>
       </PageHero>
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <Container>
-          <Reveal><SectionHead align="center" eyebrow="Partnership models" title="Four ways to work with us" maxWidth={600} /></Reveal>
-          <div className="two-col grid gap-5 mt-[52px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            {PARTNER_MODELS.map((m, i) => (
-              <Reveal key={m.t} delay={i * 80} style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", padding: "clamp(26px,3vw,36px)" }}>
-                <span className="w-12 h-12 rounded-[var(--a4-r-md)] bg-[var(--a4-surface-soft)] grid place-items-center inline-grid">
-                  <Icon name={m.icon} size={23} color="var(--a4-primary)" stroke={1.75} />
-                </span>
-                <h3 className="a4-font-display font-medium text-[var(--a4-ink)] mt-5" style={{ fontSize: "clamp(20px,2.4vw,25px)", letterSpacing: "-.3px" }}>{m.t}</h3>
-                <p className="a4-font-body text-[var(--a4-mute)] mt-[10px] text-[15px] leading-[1.6]" style={{ textWrap: "pretty" }}>{m.s}</p>
-                {m.href && (
-                  <LocalizedLink href={m.href} className="inline-flex items-center gap-1.5 mt-4 a4-font-body text-[14.5px] font-semibold no-underline" style={{ color: "var(--a4-link)" }}>
-                    Learn more <Icon name="arrow-right" size={15} color="var(--a4-link)" />
-                  </LocalizedLink>
-                )}
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
-
-      <section className="bg-black" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <Container>
-          <Reveal><SectionHead dark align="center" eyebrow="How we evaluate partnerships" title="We choose partners carefully" sub="Our clients trust us — so we hold every partner to the same standard we hold ourselves." maxWidth={620} /></Reveal>
-          <div className="grid gap-5 mt-[52px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px,1fr))" }}>
-            {PARTNER_CRITERIA.map((c, i) => (
-              <Reveal key={c.t} delay={i * 60} style={{ background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "26px 24px" }}>
-                <Icon name={c.icon} size={24} color="var(--a4-primary-bright)" stroke={1.75} />
-                <h3 className="a4-font-display font-medium text-white mt-4 text-[19px]" style={{ letterSpacing: "-.2px" }}>{c.t}</h3>
-                <p className="a4-font-body text-[var(--a4-on-dark-mute)] mt-2 text-[14.5px] leading-[1.5]" style={{ textWrap: "pretty" }}>{c.s}</p>
-              </Reveal>
-            ))}
-          </div>
-          <Reveal delay={120}>
-            <div className="text-center mt-11">
-              <Button variant="primary" size="lg" href={href("/contact")}>Start a conversation <Icon name="arrow-right" size={18} color="#000" /></Button>
-            </div>
-          </Reveal>
-        </Container>
-      </section>
+      {/* 01 — PARTNERSHIP MODELS */}
+      <Band surface="light" sec="models">
+        <Head
+          n="01"
+          eyebrow="Partnership models"
+          title={
+            <>
+              Four ways to work <G>with us.</G>
+            </>
+          }
+        />
+        <div style={{ ...GRID2, marginTop: 40 }}>
+          {PARTNER_MODELS.map((m, i) => {
+            const [word, fx] = MODEL_WORD[m.href] ?? [m.t, "scatter"];
+            const dark = i % 2 === 1;
+            return (
+              <WordCard
+                key={m.t}
+                href={m.href}
+                ariaLabel={m.t}
+                i={i}
+                total={PARTNER_MODELS.length}
+                word={word}
+                fx={fx}
+                icon={m.icon}
+                line={m.s}
+                dark={dark}
+                d={(i % 2) * 80}
+                foot={<span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", color: dark ? "#FFFFFF" : "#09090B" }}>{m.t}</span>}
+                go={
+                  <>
+                    Learn more <Icon name="arrow-right" size={14} color="currentColor" />
+                  </>
+                }
+              />
+            );
+          })}
+        </div>
+      </Band>
 
       <ServicePortalBand serviceName="partner engagements" />
+
+      {/* 02 — HOW WE EVALUATE PARTNERSHIPS */}
+      <Band surface="white" sec="criteria">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: "56px 72px", alignItems: "start" }}>
+          <div>
+            <Eyebrow n="02">How we evaluate partnerships</Eyebrow>
+            <h2 style={{ margin: "18px 0 0", fontSize: "clamp(40px,5.2vw,84px)", lineHeight: 1.05, letterSpacing: "-0.035em" }}>
+              <span data-fx="rise" data-d="100" style={{ display: "block", fontWeight: 500 }}>
+                We choose
+              </span>
+              <span data-fx="rise" data-d="200" style={{ display: "block", fontWeight: 600, letterSpacing: "-0.04em", paddingBottom: ".08em" }}>
+                <G>partners carefully.</G>
+              </span>
+            </h2>
+            <p data-fx="rise" data-d="300" style={{ margin: "24px 0 0", maxWidth: 460, fontFamily: "var(--a4x-body)", fontSize: 17, lineHeight: 1.6, color: "#52525B", textWrap: "pretty" }}>
+              Our clients trust us — so we hold every partner to the same standard we hold ourselves.
+            </p>
+          </div>
+          <NumberedRows d={150} items={PARTNER_CRITERIA.map((c) => ({ key: c.t, t: c.t, body: c.s }))} />
+        </div>
+      </Band>
+
+      <DarkCta sec="cta" typed="Start a" words={[{ t: "conversation.", g: true }]} label="Start a conversation.">
+        <CtaCard>
+          <p style={{ margin: 0, fontSize: "clamp(19px,1.7vw,22px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.45, color: "#E4E4E7", textWrap: "pretty" }}>
+            Grow your firm with A4 — whether you want us to deliver work, run on our technology, integrate our platform, or earn by referring clients.
+          </p>
+          <PillLink href="/contact" variant="light" style={{ marginTop: 28, width: "100%", height: 64, fontSize: 19 }}>
+            Become a partner
+          </PillLink>
+          <PillLink href="/partners-platform" variant="ghost" style={{ marginTop: 12, width: "100%" }}>
+            Partner platform
+          </PillLink>
+        </CtaCard>
+      </DarkCta>
     </div>
   );
 }

@@ -2,16 +2,41 @@
 
 import React, { useState } from "react";
 import FormStatusModal from "@/components/common/FormStatusModal";
-import { Button, Container, Icon, Reveal, SectionHead } from "@/components/a4-landing/Primitives";
 import { QUOTE_SERVICE_OPTS, QUOTE_STEPS } from "@/data/a4QuoteSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
+import {
+  BODY,
+  Band,
+  Check,
+  CtaCard,
+  Eyebrow,
+  G,
+  Head,
+  INDIGO,
+  PillLink,
+  Pills,
+  Statement,
+  Timeline,
+} from "@/app/[locale]/services/components/SiteKit";
 import { QuotationBuilder } from "./QuotationBuilder";
-import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
 import { trackConversion } from "@/lib/analytics";
 
+/** Field label on the dark form card — the design's "Full name". */
+const fieldLabel: React.CSSProperties = { display: "block", marginBottom: 10, fontFamily: "var(--a4x-display)", fontSize: 15, fontWeight: 600, color: "#E4E4E7" };
+/** Validation message on dark: white and bold, as the design's failure note. */
+const fieldError: React.CSSProperties = { display: "flex", gap: 10, marginTop: 8, fontFamily: BODY, fontSize: 13.5, fontWeight: 600, lineHeight: 1.45, color: "#FFFFFF" };
+
+function ErrorNote({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <span id={id} role="alert" style={fieldError}>
+      <span className="a4-bullet" style={{ marginTop: 6, background: "#8B8FF7" }} />
+      <span>{children}</span>
+    </span>
+  );
+}
+
 function QuoteForm() {
-  const href = useLocalizedHref();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -93,25 +118,18 @@ function QuoteForm() {
 
   if (sent) {
     return (
-      <div
-        className="text-center bg-[var(--a4-surface-card)] border border-[var(--a4-hairline-light)] rounded-[var(--a4-r-lg)]"
-        style={{ padding: "clamp(36px,5vw,56px)" }}
-      >
-        <span className="w-16 h-16 rounded-full bg-[var(--a4-surface-soft)] inline-grid place-items-center">
-          <Icon name="check" size={30} color="var(--a4-accent-teal)" stroke={2.2} />
+      <CtaCard d={0} style={{ textAlign: "center" }}>
+        <span style={{ width: 64, height: 64, display: "inline-grid", placeItems: "center", borderRadius: 999, background: INDIGO, boxShadow: "0 24px 60px rgba(79,85,241,.45)" }}>
+          <Check size={30} width={3} />
         </span>
-        <h3 className="a4-font-display font-medium text-[var(--a4-ink)] mt-[22px] m-0" style={{ fontSize: "clamp(22px,2.8vw,30px)", letterSpacing: "-.3px" }}>
-          Request received.
-        </h3>
-        <p className="a4-font-body text-[var(--a4-mute)] mt-3 mx-auto max-w-[420px]" style={{ fontSize: 16, lineHeight: 1.6, textWrap: "pretty" }}>
+        <h3 style={{ margin: "24px 0 0", fontSize: "clamp(26px,2.8vw,34px)", fontWeight: 600, letterSpacing: "-0.03em", color: "#FFFFFF" }}>Request received.</h3>
+        <p role="status" style={{ margin: "12px auto 0", maxWidth: 420, fontFamily: BODY, fontSize: 16, lineHeight: 1.6, color: "#D4D4D8", textWrap: "pretty" }}>
           Thank you — your tailored quote is on its way. We&apos;ll respond within 24 hours, with no obligation on your side.
         </p>
-        <div className="mt-[26px]">
-          <Button variant="dark" size="md" href={href("/services")}>
-            Browse services <Icon name="arrow-right" size={16} color="#fff" />
-          </Button>
-        </div>
-      </div>
+        <PillLink href="/services" variant="light" style={{ marginTop: 28 }}>
+          Browse services
+        </PillLink>
+      </CtaCard>
     );
   }
 
@@ -124,157 +142,182 @@ function QuoteForm() {
         message={statusMessage}
         onClose={() => setStatusOpen(false)}
       />
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-[18px] bg-[var(--a4-surface-card)] border border-[var(--a4-hairline-light)] rounded-[var(--a4-r-lg)]"
-        style={{ padding: "clamp(26px,3.4vw,40px)" }}
-      >
-        <div className="q-grid grid gap-[18px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <label className="flex flex-col gap-2">
-            <span className="a4-font-body text-[13.5px] font-semibold text-[var(--a4-charcoal)]">Business name</span>
-            <input
-              className="q-input"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (errors.name) setErrors({ ...errors, name: "" });
-              }}
-              placeholder="Your company or your name"
-            />
-            {errors.name && <span className="a4-font-body text-[13px] text-red-500">{errors.name}</span>}
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="a4-font-body text-[13.5px] font-semibold text-[var(--a4-charcoal)]">Email address</span>
-            <input
-              className="q-input"
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (errors.email) setErrors({ ...errors, email: "" });
-              }}
-              placeholder="you@company.com"
-            />
-            {errors.email && <span className="a4-font-body text-[13px] text-red-500">{errors.email}</span>}
-          </label>
-        </div>
-        <label className="flex flex-col gap-2">
-          <span className="a4-font-body text-[13.5px] font-semibold text-[var(--a4-charcoal)]">
-            Phone <span className="font-normal text-[var(--a4-mute)]">optional</span>
-          </span>
-          <input
-            className="q-input"
-            type="tel"
-            autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+356 …"
-          />
-        </label>
-        {/* Honeypot — real visitors never see this field. Bots that
-            auto-fill every input on the form trip it; a filled value is
-            rejected both here (no network call) and server-side in
-            /api/quote. Matches vacei.com's `company_website` field exactly. */}
-        <input
-          type="text"
-          name="company_website"
-          value={companyWebsite}
-          onChange={(e) => setCompanyWebsite(e.target.value)}
-          tabIndex={-1}
-          autoComplete="off"
-          aria-hidden="true"
-          style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
-        />
-        <div>
-          <span className="block a4-font-body text-[13.5px] font-semibold text-[var(--a4-charcoal)] mb-[10px]">Services needed</span>
-          <div className="flex gap-2 flex-wrap">
-            {QUOTE_SERVICE_OPTS.map((s) => {
-              const on = sel.includes(s);
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => {
-                    toggle(s);
-                    if (errors.services) setErrors({ ...errors, services: "" });
-                  }}
-                  className="a4-font-body text-[13.5px] font-semibold cursor-pointer rounded-[var(--a4-r-full)] py-[9px] px-4 transition-all duration-150"
-                  style={{
-                    border: `1px solid ${on ? "var(--a4-ink)" : "var(--a4-hairline-strong)"}`,
-                    background: on ? "var(--a4-ink)" : "transparent",
-                    color: on ? "#fff" : "var(--a4-charcoal)",
-                  }}
-                >
-                  {s}
-                </button>
-              );
-            })}
+      <CtaCard d={200}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 290px), 1fr))", gap: 18 }}>
+            <div>
+              <label htmlFor="qf-name" style={fieldLabel}>
+                Business name
+              </label>
+              <input
+                id="qf-name"
+                className="a4-input-dark"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (errors.name) setErrors({ ...errors, name: "" });
+                }}
+                placeholder="Your company or your name"
+                autoComplete="organization"
+                aria-invalid={errors.name ? true : undefined}
+                aria-describedby={errors.name ? "qf-name-err" : undefined}
+              />
+              {errors.name && <ErrorNote id="qf-name-err">{errors.name}</ErrorNote>}
+            </div>
+            <div>
+              <label htmlFor="qf-email" style={fieldLabel}>
+                Email address
+              </label>
+              <input
+                id="qf-email"
+                className="a4-input-dark"
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) setErrors({ ...errors, email: "" });
+                }}
+                placeholder="you@company.com"
+                autoComplete="email"
+                aria-invalid={errors.email ? true : undefined}
+                aria-describedby={errors.email ? "qf-email-err" : undefined}
+              />
+              {errors.email && <ErrorNote id="qf-email-err">{errors.email}</ErrorNote>}
+            </div>
           </div>
-          {errors.services && <p className="a4-font-body text-[13px] text-red-500 mt-2">{errors.services}</p>}
-        </div>
-        <label className="flex flex-col gap-2">
-          <span className="a4-font-body text-[13.5px] font-semibold text-[var(--a4-charcoal)]">Message</span>
-          <textarea
-            className="q-input resize-y"
-            rows={4}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Tell us briefly about your business — entity type, activity, and what you need."
+          <div>
+            <label htmlFor="qf-phone" style={fieldLabel}>
+              Phone <span style={{ fontWeight: 500, color: "#A1A1AA" }}>optional</span>
+            </label>
+            <input id="qf-phone" className="a4-input-dark" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+356 …" />
+          </div>
+          {/* Honeypot — real visitors never see this field. Bots that
+              auto-fill every input on the form trip it; a filled value is
+              rejected both here (no network call) and server-side in
+              /api/quote. Matches vacei.com's `company_website` field exactly. */}
+          <input
+            type="text"
+            name="company_website"
+            value={companyWebsite}
+            onChange={(e) => setCompanyWebsite(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
           />
-        </label>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <span className="inline-flex items-center gap-2 a4-font-body text-[13.5px] text-[var(--a4-mute)]">
-            <Icon name="clock" size={15} color="var(--a4-accent-teal)" /> Response within 24 hours — no obligation.
-          </span>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="h-12 px-[26px] rounded-[var(--a4-r-full)] bg-black text-white a4-font-body text-[16px] font-semibold inline-flex items-center gap-2 cursor-pointer border-0 disabled:opacity-50"
-          >
-            {isSubmitting ? "Sending…" : "Request my quote"} <Icon name="arrow-right" size={16} color="#fff" />
-          </button>
-        </div>
-      </form>
+          <div>
+            <span id="qf-services" style={fieldLabel}>
+              Services needed
+            </span>
+            <div role="group" aria-labelledby="qf-services" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {QUOTE_SERVICE_OPTS.map((s) => {
+                const on = sel.includes(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    className="a4k-opt"
+                    aria-pressed={on}
+                    onClick={() => {
+                      toggle(s);
+                      if (errors.services) setErrors({ ...errors, services: "" });
+                    }}
+                    style={{ minHeight: 44 }}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.services && <ErrorNote id="qf-services-err">{errors.services}</ErrorNote>}
+          </div>
+          <div>
+            <label htmlFor="qf-message" style={fieldLabel}>
+              Message
+            </label>
+            <textarea
+              id="qf-message"
+              className="a4-input-dark"
+              rows={4}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Tell us briefly about your business — entity type, activity, and what you need."
+            />
+          </div>
+          <div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="a4-btn a4-btn-light"
+              style={{ width: "100%", height: 64, fontSize: 19, opacity: isSubmitting ? 0.55 : 1 }}
+            >
+              {isSubmitting ? "Sending…" : "Request my quote"}
+            </button>
+            <p style={{ margin: "16px 0 0", textAlign: "center", fontFamily: BODY, fontSize: 14, lineHeight: 1.5, color: "#A1A1AA" }}>
+              Response within 24 hours — no obligation.
+            </p>
+          </div>
+        </form>
+      </CtaCard>
     </>
   );
 }
 
+/**
+ * /quote — hero, 01 the instant quotation builder (the design's configurator
+ * and quote document), 02 the request form as the design's dark accept card,
+ * 03 how quotes work as the timeline, then the portal tour.
+ */
 export function QuoteContent() {
   return (
-    <div className="a4-site-page">
+    <div className="a4-site-page" style={{ background: "#09090B" }}>
       <PageHero
         eyebrow="Get instant quote"
         title="A tailored quote, with no obligation"
         sub="Build an instant indicative quote below — or tell us what you need and we'll come back within 24 hours with a clear, written quote."
-      />
+      >
+        <Pills>
+          <PillLink href="#instant-quote" variant="light">
+            Build your quote
+          </PillLink>
+          <PillLink href="#request" variant="ghost">
+            Request my quote
+          </PillLink>
+        </Pills>
+      </PageHero>
 
       <QuotationBuilder />
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(56px,8vw,88px) 0" }}>
-        <Container style={{ maxWidth: 860 }}>
-          <Reveal>
-            <QuoteForm />
-          </Reveal>
-        </Container>
-      </section>
-
-      <section className="relative overflow-hidden bg-black" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <div aria-hidden="true" className="hero-bg" />
-        <Container style={{ position: "relative" }}>
-          <Reveal>
-            <SectionHead dark align="center" eyebrow="How quotes work" title="From first chat to confirmed quote" maxWidth={560} />
-          </Reveal>
-          <div className="grid gap-5 mt-[52px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))" }}>
-            {QUOTE_STEPS.map((s, i) => (
-              <Reveal key={s.n} delay={i * 70} style={{ background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "26px 24px" }}>
-                <div className="w-10 h-10 rounded-full border border-[var(--a4-hairline-dark)] grid place-items-center a4-font-display font-medium text-[16px] text-white">{s.n}</div>
-                <h3 className="a4-font-display font-medium text-[19px] text-white mt-[18px] m-0 tracking-[-.2px]">{s.t}</h3>
-                <p className="a4-font-body text-[var(--a4-on-dark-mute)] mt-2 m-0 text-[14.5px] leading-[1.5]" style={{ textWrap: "pretty" }}>{s.s}</p>
-              </Reveal>
-            ))}
+      {/* 02 — THE REQUEST FORM, as the design's dark accept card */}
+      <Band surface="dark" id="request" sec="request" glow={{ left: "-10%", top: "-20%", strength: 0.26 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "56px 72px", alignItems: "center" }}>
+          <div>
+            <Eyebrow n="02" dark style={{ marginBottom: 22 }}>
+              Request a tailored quote
+            </Eyebrow>
+            <Statement dark size="cta" per={45} typed="Tell us what" words={[{ t: "you need.", g: true }]} label="Tell us what you need." />
+            <p data-fx="rise" data-d="700" style={{ margin: "28px 0 0", maxWidth: 520, fontSize: "clamp(18px,1.8vw,24px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.4, color: "#A1A1AA", textWrap: "pretty" }}>
+              We&apos;ll come back within 24 hours with a clear, written quote.
+            </p>
           </div>
-        </Container>
-      </section>
+          <QuoteForm />
+        </div>
+      </Band>
+
+      {/* 03 — HOW QUOTES WORK */}
+      <Band surface="light" sec="how">
+        <Head
+          n="03"
+          eyebrow="How quotes work"
+          size="lg"
+          title={
+            <>
+              From first chat to confirmed <G>quote</G>
+            </>
+          }
+        />
+        <Timeline steps={QUOTE_STEPS.map((s) => ({ key: s.n, t: s.t, s: s.s }))} />
+      </Band>
 
       <ServicePortalBand serviceName="your quote" />
     </div>

@@ -1,145 +1,142 @@
 "use client";
 
 import React from "react";
-import LocalizedLink from "@/components/common/LocalizedLink";
-import { Button, Container, Eyebrow, Icon, Reveal, SectionHead } from "@/components/a4-landing/Primitives";
 import { WL_STEPS, WL_USE_CASES, WL_WHAT, WL_WHY } from "@/data/a4WhiteLabelPlatformSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
-import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { DARK_CARD } from "@/components/fx/primitives";
+import {
+  BODY,
+  Band,
+  CtaCard,
+  Eyebrow,
+  G,
+  GRID3,
+  Head,
+  NumberedRows,
+  PERI,
+  PillLink,
+  Pills,
+  Timeline,
+  WordCard,
+  kicker,
+  pad2,
+  type CardFx,
+} from "@/app/[locale]/services/components/SiteKit";
 
+/** The big card word for each part of the platform, and its letter effect. */
+const WHAT_WORD: Record<string, [string, CardFx]> = {
+  "Fully branded platform": ["Branded", "scatter"],
+  "Client portals": ["Portals", "tighten"],
+  "Engagement management": ["Engagements", "cascade"],
+  "Document requests": ["Documents", "stack"],
+  "Compliance calendar": ["Calendar", "zoom"],
+};
+
+/**
+ * /white-label-platform — hero, 01 what you get as the card grid, 02 the three
+ * steps as the timeline on dark, 03 why firms choose it as numbered rows with
+ * the use-case card, then the portal tour.
+ */
 export function WhiteLabelPlatformContent() {
-  const href = useLocalizedHref();
-
   return (
-    <div className="a4-site-page">
+    <div className="a4-site-page" style={{ background: "#09090B" }}>
       <PageHero
         eyebrow="White-label platform"
         title="Launch your own branded client platform"
         sub="Run your firm on A4's technology — your brand on the outside, our secure, structured platform on the inside."
       >
-        <div className="flex gap-3 justify-center flex-wrap mt-[30px]">
-          <Button variant="primary" size="lg" href={href("/contact")}>
-            Request a demo <Icon name="arrow-right" size={18} color="#000" />
-          </Button>
-          <Button variant="outline-dark" size="lg" href={href("/partners-platform")}>
+        <Pills>
+          <PillLink href="/contact" variant="light">
+            Request a demo
+          </PillLink>
+          <PillLink href="/partners-platform" variant="ghost">
             Partner platform
-          </Button>
-        </div>
+          </PillLink>
+        </Pills>
       </PageHero>
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <Container>
-          <Reveal>
-            <SectionHead align="center" eyebrow="What you get" title="A complete platform, in your name" maxWidth={600} />
-          </Reveal>
-          <div className="grid gap-5 mt-[52px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
-            {WL_WHAT.map((w, i) => (
-              <Reveal
+      {/* 01 — WHAT YOU GET */}
+      <Band surface="light" sec="what">
+        <Head
+          n="01"
+          eyebrow="What you get"
+          title={
+            <>
+              A complete platform, <G>in your name</G>
+            </>
+          }
+        />
+        <div style={{ ...GRID3, marginTop: 40 }}>
+          {WL_WHAT.map((w, i) => {
+            const [word, fx] = WHAT_WORD[w.t] ?? [w.t, "scatter"];
+            const dark = i % 2 === 1;
+            return (
+              <WordCard
                 key={w.t}
-                delay={i * 60}
-                style={{
-                  background: "var(--a4-surface-card)",
-                  border: "1px solid var(--a4-hairline-light)",
-                  borderRadius: "var(--a4-r-lg)",
-                  padding: "clamp(24px,3vw,32px)",
-                }}
+                i={i}
+                total={WL_WHAT.length}
+                word={word}
+                fx={fx}
+                icon={w.icon}
+                line={w.t}
+                dark={dark}
+                d={(i % 3) * 80}
+                minHeight={340}
               >
-                <span className="w-12 h-12 rounded-[var(--a4-r-md)] bg-[var(--a4-surface-soft)] grid place-items-center inline-grid">
-                  <Icon name={w.icon} size={23} color="var(--a4-primary)" stroke={1.75} />
-                </span>
-                <h3 className="a4-font-display font-medium text-[var(--a4-ink)] mt-[18px] text-[20px] tracking-[-.2px]">{w.t}</h3>
-                <p className="a4-font-body text-[var(--a4-mute)] mt-2 text-[14.5px] leading-[1.55]" style={{ textWrap: "pretty" }}>
-                  {w.s}
-                </p>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
+                <p style={{ margin: 0, fontFamily: BODY, fontSize: 16, lineHeight: 1.55, color: dark ? "#A1A1AA" : "#52525B", textWrap: "pretty" }}>{w.s}</p>
+              </WordCard>
+            );
+          })}
+        </div>
+      </Band>
 
-      <section className="bg-black" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <Container>
-          <Reveal>
-            <SectionHead dark align="center" eyebrow="How it works" title="Live in three steps" maxWidth={560} />
-          </Reveal>
-          <div className="grid gap-5 mt-[52px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-            {WL_STEPS.map((s, i) => (
-              <Reveal
-                key={s.n}
-                delay={i * 80}
-                style={{
-                  background: "var(--a4-surface-elevated)",
-                  border: "1px solid var(--a4-hairline-dark)",
-                  borderRadius: "var(--a4-r-lg)",
-                  padding: "30px 28px",
-                }}
-              >
-                <span className="a4-font-display font-medium text-[30px] text-[var(--a4-primary-bright)] tracking-[-1px]">{s.n}</span>
-                <h3 className="a4-font-display font-medium text-white mt-[14px] text-[21px] tracking-[-.2px]">{s.t}</h3>
-                <p className="a4-font-body text-[var(--a4-on-dark-mute)] mt-2 text-[14.5px] leading-[1.55]" style={{ textWrap: "pretty" }}>
-                  {s.s}
-                </p>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
+      {/* 02 — HOW IT WORKS, the timeline on dark */}
+      <Band surface="dark" sec="how" glow={{ left: "40%", top: "-10%", strength: 0.24 }}>
+        <Head n="02" eyebrow="How it works" dark size="lg" title={<>Live in three <G>steps</G></>} />
+        <Timeline dark steps={WL_STEPS.map((s) => ({ key: s.n, t: s.t, s: s.s }))} />
+      </Band>
 
-      <section className="bg-[var(--a4-canvas-light)]" style={{ padding: "clamp(64px,9vw,104px) 0" }}>
-        <Container>
-          <div className="two-col grid items-center gap-12" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <Reveal>
-              <Eyebrow>Why firms choose white-label</Eyebrow>
-              <h2
-                className="a4-font-display font-medium text-[var(--a4-ink)] mt-4 mb-6"
-                style={{ fontSize: "clamp(28px,3.6vw,46px)", lineHeight: 1.05, letterSpacing: "-.025em", textWrap: "balance" }}
-              >
-                Your brand, our engine.
-              </h2>
-              <div className="flex flex-col gap-[14px]">
-                {WL_WHY.map((w) => (
-                  <div
-                    key={w.t}
-                    className="flex gap-[14px] bg-[var(--a4-surface-card)] border border-[var(--a4-hairline-light)] rounded-[var(--a4-r-lg)] py-[18px] px-5"
-                  >
-                    <span className="w-[42px] h-[42px] rounded-[var(--a4-r-md)] bg-[var(--a4-surface-soft)] grid place-items-center shrink-0">
-                      <Icon name={w.icon} size={20} color="var(--a4-primary)" stroke={1.75} />
-                    </span>
-                    <div>
-                      <h3 className="a4-font-display font-medium text-[18px] text-[var(--a4-ink)] m-0">{w.t}</h3>
-                      <p className="a4-font-body text-[14px] leading-[1.5] text-[var(--a4-mute)] mt-[3px] mb-0">{w.s}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Reveal>
-            <Reveal
-              delay={100}
-              style={{ background: "#000", borderRadius: "var(--a4-r-xl)", padding: "clamp(28px,3.4vw,40px)" }}
-            >
-              <div className="a4-font-body text-[11px] font-bold tracking-[.12em] uppercase text-[var(--a4-stone)]">Use cases</div>
-              <div className="flex flex-col gap-3 mt-[18px]">
-                {WL_USE_CASES.map((u) => (
-                  <div key={u} className="flex items-center gap-3 border-b border-[var(--a4-hairline-dark)] pb-[14px]">
-                    <Icon name="check-circle" size={20} color="var(--a4-accent-teal)" />
-                    <span className="a4-font-display font-medium text-[20px] text-white tracking-[-.2px]">{u}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 p-[18px_20px] bg-[var(--a4-surface-elevated)] rounded-[var(--a4-r-md)]">
-                <div className="a4-font-body text-[13px] font-semibold text-[var(--a4-on-dark-mute)]">Pricing</div>
-                <p className="a4-font-body text-[14.5px] leading-[1.5] text-white mt-[6px] mb-0">
-                  Custom to your firm, with full access to the platform. Talk to us for a tailored proposal.
-                </p>
-              </div>
-              <Button variant="primary" size="md" href={href("/contact")} style={{ width: "100%", marginTop: 18 }}>
-                Get a proposal <Icon name="arrow-right" size={16} color="#000" />
-              </Button>
-            </Reveal>
+      {/* 03 — WHY FIRMS CHOOSE WHITE-LABEL */}
+      <Band surface="white" sec="why">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 440px), 1fr))", gap: "56px 72px", alignItems: "start" }}>
+          <div>
+            <Eyebrow n="03">Why firms choose white-label</Eyebrow>
+            <h2 style={{ margin: "18px 0 0", fontSize: "clamp(40px,5.2vw,84px)", lineHeight: 1.05, letterSpacing: "-0.035em" }}>
+              <span data-fx="rise" data-d="100" style={{ display: "block", fontWeight: 500 }}>
+                Your brand,
+              </span>
+              <span data-fx="rise" data-d="200" style={{ display: "block", fontWeight: 600, letterSpacing: "-0.04em", paddingBottom: ".08em" }}>
+                <G>our engine.</G>
+              </span>
+            </h2>
+            <div style={{ marginTop: 40 }}>
+              <NumberedRows d={250} items={WL_WHY.map((w) => ({ key: w.t, t: w.t, body: w.s }))} />
+            </div>
           </div>
-        </Container>
-      </section>
+
+          <CtaCard d={150} style={{ background: DARK_CARD, boxShadow: "0 50px 120px rgba(9,9,11,.22)" }}>
+            <div style={{ ...kicker, color: "#A1A1AA" }}>Use cases</div>
+            <ol style={{ listStyle: "none", margin: "14px 0 0", padding: 0 }}>
+              {WL_USE_CASES.map((u, i) => (
+                <li key={u} style={{ display: "flex", alignItems: "baseline", gap: 14, padding: "16px 0", borderBottom: "1px solid rgba(255,255,255,.1)" }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: PERI }}>{pad2(i + 1)}</span>
+                  <span style={{ fontSize: "clamp(22px,2vw,26px)", fontWeight: 600, letterSpacing: "-0.03em" }}>{u}</span>
+                </li>
+              ))}
+            </ol>
+            <div style={{ marginTop: 26, padding: "18px 20px", borderRadius: 18, background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)" }}>
+              <div style={{ ...kicker, color: "#A1A1AA" }}>Pricing</div>
+              <p style={{ margin: "8px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.55, color: "#E4E4E7" }}>
+                Custom to your firm, with full access to the platform. Talk to us for a tailored proposal.
+              </p>
+            </div>
+            <PillLink href="/contact" variant="light" style={{ marginTop: 22, width: "100%", height: 64, fontSize: 19 }}>
+              Get a proposal
+            </PillLink>
+          </CtaCard>
+        </div>
+      </Band>
 
       <ServicePortalBand serviceName="white-label platform" />
     </div>

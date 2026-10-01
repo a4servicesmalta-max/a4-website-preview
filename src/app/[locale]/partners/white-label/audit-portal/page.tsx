@@ -1,7 +1,7 @@
 import React from "react";
 import { Metadata } from "next";
-import PageHeader from "@/components/common/PageHeader";
-import ContentSection from "@/components/partners/ContentSection";
+import "@/components/a4-landing/styles.css";
+import WhiteLabelPortalPage from "@/components/partners/WhiteLabelPortalPage";
 
 export const metadata: Metadata = {
   title: "White Label Audit Portal | A4",
@@ -76,22 +76,14 @@ const AuditPortalPage = () => {
   ];
 
   return (
-    <main>
-      <PageHeader
-        title="White Label Audit Portal"
-        breadcrumbs={[
-          { label: "Partners", href: "/partners" },
-          { label: "White Label", href: "/partners/white-label" },
-          { label: "Audit Portal" }
-        ]}
-      />
-
-      <ContentSection
-        title="Structured Delivery for Internal Teams"
-        description="The White Label Audit Portal is an internal delivery environment used by the firm’s teams to plan, execute, review, and complete accounting, audit, or related professional engagements."
-        sections={sections}
-      />
-    </main>
+    <WhiteLabelPortalPage
+      crumb="Audit Portal"
+      pageTitle="White Label Audit Portal"
+      heroSub="Internal delivery environment for teams to plan, execute, review, and complete engagements."
+      title="Structured Delivery for Internal Teams"
+      description="The White Label Audit Portal is an internal delivery environment used by the firm’s teams to plan, execute, review, and complete accounting, audit, or related professional engagements."
+      sections={sections}
+    />
   );
 };
 
