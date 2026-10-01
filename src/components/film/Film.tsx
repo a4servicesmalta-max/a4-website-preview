@@ -128,8 +128,8 @@ function prefersReduced() {
 
 export function Film({
   scenes,
-  per = 0.5,
-  tail = 0.8,
+  per = 0.3,
+  tail = 0.4,
   lead = 0,
   base = "#FFFFFF",
   label,
@@ -138,7 +138,7 @@ export function Film({
   id,
 }: {
   scenes: SceneDef[];
-  /** Screen heights of scroll per film second. */
+  /** Screen heights of scroll per film second (0.3 keeps chapters short). */
   per?: number;
   /** Seconds of scroll that hold the last frame before the section releases. */
   tail?: number;

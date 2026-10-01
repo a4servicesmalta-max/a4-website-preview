@@ -100,8 +100,9 @@ const Wire = ({ id }: { id: string }) => (
         <stop offset="1" stopColor={PERI} />
       </linearGradient>
     </defs>
-    <path d="M0 20 H 660" stroke={`url(#${id})`} strokeWidth="3" strokeDasharray="14 12" strokeLinecap="round" opacity="0.8" />
-    <path d="M 690 20 l -22 -11 v 22 z" fill={PERI} />
+    {/* Cards are 440 wide, so the visible run is 220..680; the arrow stops short of the next card. */}
+    <path d="M0 20 H 600" stroke={`url(#${id})`} strokeWidth="3" strokeDasharray="14 12" strokeLinecap="round" opacity="0.8" />
+    <path d="M 628 20 l -22 -11 v 22 z" fill={PERI} />
   </svg>
 );
 
@@ -122,14 +123,17 @@ const JOURNEY_CSS = `
       radial-gradient(900px 700px at 18% 92%, rgba(161,161,170,.16), rgba(161,161,170,0) 70%),
       #F4F4F5;
   }
+  /* Bigger cards (owner, 1 Oct): 440 x ~330 design units, art 220 tall. */
+  .a4-jf--home .a4-jf__track { height: 380svh; }
   .a4-jf--home .a4-jf__node {
-    gap: 16px; border-radius: 24px; background: #FFFFFF; border: 1px solid #E4E4E7;
-    box-shadow: 0 30px 80px rgba(9,9,11,.08);
+    width: 440px; padding: 30px; gap: 20px; border-radius: 28px; background: #FFFFFF; border: 1px solid #E4E4E7;
+    box-shadow: 0 40px 100px rgba(9,9,11,.10);
     transition: border-color .45s, box-shadow .45s;
   }
+  .a4-jf--home .a4-jf__nodeArt { height: 220px; }
   .a4-jf--home .a4-jf__node[data-on="true"] { border-color: rgba(79,85,241,.45); box-shadow: 0 24px 60px rgba(79,85,241,.16); }
   .a4-jf--home .a4-jf__nodeLabel {
-    font-family: var(--a4x-display); font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+    font-family: var(--a4x-display); font-size: 20px; font-weight: 600; letter-spacing: -0.015em;
     color: ${INK}; transition: color .45s;
   }
   .a4-jf--home .a4-jf__node[data-on="true"] .a4-jf__nodeLabel { color: ${INDIGO}; }
@@ -151,7 +155,7 @@ const JOURNEY_CSS = `
   .a4-jf--home .a4-jf__rail span[data-on="true"] { background: ${INDIGO}; }
   @media (min-width: 1024px) {
     .a4-jf--home .a4-jf__scrim {
-      width: min(60%, 860px);
+      width: min(52%, 760px);
       background: linear-gradient(90deg, #F4F4F5 0%, #F4F4F5 48%, rgba(244,244,245,.9) 66%, rgba(244,244,245,0) 100%);
     }
     .a4-jf--home .a4-jf__panel { left: max(clamp(20px,5vw,72px), calc((100% - 1280px) / 2 + 72px)); width: min(480px, 38vw); }
@@ -194,10 +198,12 @@ export function ComplianceJourney() {
       // Framing: how large the world is drawn, and where the focused node sits.
       // Divisors are the visible world size in design units — smaller = larger
       // artwork (owner 2026-08-27: the nodes read too small at /1500).
+      // (owner 2026-10-01: bigger again — the cards are 440 units wide now, and the
+      // camera sits a little right so the copy column's fade never covers a card.)
       const scale = narrow
-        ? Math.min(vp.clientWidth / 660, vp.clientHeight / 1480)
+        ? Math.min(vp.clientWidth / 540, vp.clientHeight / 1280)
         : Math.min(vp.clientWidth / 1180, vp.clientHeight / 780);
-      const anchorX = narrow ? vp.clientWidth * 0.5 : vp.clientWidth * 0.65;
+      const anchorX = narrow ? vp.clientWidth * 0.5 : vp.clientWidth * 0.68;
       const anchorY = narrow ? vp.clientHeight * 0.28 : vp.clientHeight * 0.5;
 
       // Place every cluster for a given camera-x. Each carries its own

@@ -198,6 +198,14 @@ function useAB(name: string): [number, number, number] {
   return [a, b, T];
 }
 const cue = (Q: Record<string, number>, k: string) => Q[k] ?? Infinity;
+/** Start of the cue that follows `k` in this chapter (Infinity when `k` is last or absent). */
+const nextAfter = (Q: Record<string, number>, k: string) => {
+  const a = Q[k];
+  if (a == null) return Infinity;
+  let b = Infinity;
+  for (const n in Q) if (Q[n] > a && Q[n] < b) b = Q[n];
+  return b;
+};
 
 /** Extra frame space around the 1920×1080 box (portrait phones, ultra-wide screens). */
 function useExtra() {
@@ -240,7 +248,7 @@ export function SOpen() {
   const wp = M.enter(T, w, 0.42);
   const k = 0.577 * ey;
   return (
-    <Scene from={g} to={cue(Q, "Spreadsheets")}>
+    <Scene from={g} to={nextAfter(Q, "Wipe")}>
       <div
         style={{
           position: "absolute",
@@ -505,9 +513,9 @@ export function SRepeat() {
 
 export function SNow() {
   const { T, Q, pt } = useFilm();
-  const a = cue(Q, "AndNow");
   const n = cue(Q, "Now");
-  const b = cue(Q, "TimeFor");
+  const a = Q.AndNow ?? n;
+  const b = nextAfter(Q, "Now");
   const zp = M.enter(T, n, 0.45);
   const x = M.exit(T, b - 0.25, 0.25);
   return (
@@ -539,7 +547,7 @@ export function SNewWay() {
   const { T, Q, pt } = useFilm();
   const a = cue(Q, "TimeFor");
   const w = cue(Q, "NewWay");
-  const b = cue(Q, "Meet");
+  const b = nextAfter(Q, "NewWay");
   const x = M.exit(T, b - 0.3, 0.3);
   const sp = M.enter(T, a, 0.55);
   return (
@@ -599,7 +607,7 @@ export function SBlurThrough() {
   const { T, Q } = useFilm();
   const { ex, ey } = useExtra();
   const a = cue(Q, "BlurThrough");
-  const b = cue(Q, "Reveal");
+  const b = nextAfter(Q, "BlurThrough");
   const p = pr(T, a, b - a);
   return (
     <Scene from={a} to={b} bg="zinc" push={0}>
@@ -642,7 +650,7 @@ export function SReveal() {
   const bar = M.enter(T, a + 0.38, 0.4);
   const wp = M.enter(T, a + 0.45, 0.55);
   return (
-    <Scene from={a} to={cue(Q, "Home")} wrap={{ opacity: 1 - out }} push={0.04}>
+    <Scene from={a} to={Q.PushIn != null ? nextAfter(Q, "PushIn") : nextAfter(Q, "Reveal")} wrap={{ opacity: 1 - out }} push={0.04}>
       <div style={{ ...CENTER, flexDirection: "column", gap: 64, transform: `scale(${1 + out * 5})`, filter: blurF(out * 20), transformOrigin: "42% 46%" }}>
         <Lockup size={240} l={l} r={r} bar={bar} spread={lerp(0.45, 0, wp)} wordStyle={{ opacity: Math.min(1, wp * 2), filter: blurF((1 - wp) * 20) }} />
         <div style={{ fontSize: 46 * tb, fontWeight: 500, letterSpacing: "-0.015em", color: C.zinc6, textAlign: "center", maxWidth: 1700, ...fx(T, a + 0.75, null, { dy: 24, blur: 8 }) }}>{COPY.tagline}</div>
@@ -656,7 +664,7 @@ export function SReveal() {
 export function SHome() {
   const { T, Q } = useFilm();
   const a = cue(Q, "PushIn");
-  const b = cue(Q, "Headline");
+  const b = nextAfter(Q, "Home");
   const H = COPY.home;
   const [fX, fY] = H.focus;
   const [kx, ky] = H.click;
@@ -1146,9 +1154,11 @@ function PortalPill({ P, T, t0, tout }: { P: PortalBeat; T: number; t0: number; 
 
 export function SPortal({ i }: { i: number }) {
   const [a, b, T] = useAB("P" + (i + 1));
-  const { tb, portrait } = useFilm();
+  const { tb, portrait, Q } = useFilm();
   const P = PORTALS[i];
-  const x = P.holdOut ? 0 : M.exit(T, b - 0.3, 0.3);
+  // 01 hands its zoomed camera straight to 02 when 02 follows in this chapter.
+  const holdOut = !!P.holdOut && !!PORTALS[i + 1]?.noEnter && Q["P" + (i + 2)] === b;
+  const x = holdOut ? 0 : M.exit(T, b - 0.3, 0.3);
   const e = P.noEnter ? 1 : M.enter(T, a + 0.2, 0.75);
   const cam = camAt(T, a, P.keys);
   const tx = (1 - e) * 820 - x * 300;
@@ -1201,7 +1211,7 @@ export function SPortal({ i }: { i: number }) {
           <div style={{ marginTop: 30, width: portrait ? 1400 : 460, fontSize: 28 * k, fontWeight: 500, lineHeight: 1.3, letterSpacing: "-0.01em", color: C.mute, ...fx(T, a + 0.5, null, { dy: 24, blur: 6 }) }}>{P.caption}</div>
         </div>
       ) : null}
-      <PortalPill P={P} T={T} t0={a + P.pillIn} tout={P.holdOut ? b - 0.25 : b - 0.3} />
+      <PortalPill P={P} T={T} t0={a + P.pillIn} tout={holdOut ? b - 0.25 : b - 0.3} />
       <SampleTag on={zoomed * (1 - x)} />
     </Scene>
   );
@@ -1355,7 +1365,7 @@ export function SClose() {
   const { T, Q, portrait, pt } = useFilm();
   const a = cue(Q, "Close");
   const l2 = cue(Q, "LineToLogo");
-  const b = cue(Q, "Glitch");
+  const b = nextAfter(Q, "LineToLogo");
   const draw = M.glide(T, a + 0.15, 1.85);
   const erase = M.glide(T, l2 + 0.25, 1.0);
   const tail = M.glide(T, l2, 1.45);

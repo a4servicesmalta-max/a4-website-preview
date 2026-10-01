@@ -7,18 +7,13 @@ import {
   COPY,
   PORTALS,
   SAINative,
-  SBlurThrough,
   SChase,
   SClose,
   SEvidenced,
   SExplained,
   SFiled,
-  SFlash,
   SHeadline,
-  SHome,
-  SLine,
   SMachines,
-  SMeet,
   SNewWay,
   SNow,
   SOldWay,
@@ -27,7 +22,6 @@ import {
   SPortalHead,
   SReconcile,
   SRekey,
-  SReminder,
   SRepeat,
   SReveal,
   SService,
@@ -35,31 +29,25 @@ import {
 } from "./scenes";
 
 /**
- * The teaser film, cut into chapters for the homepage. Each chapter is a scroll film
- * (Film.tsx) with the film's own cue lengths; the opening glow is shortened so the
- * first frame isn't empty for long.
+ * The teaser film, cut into short chapters (owner, 1 Oct: motion graphics must not run
+ * long). Each chapter keeps only its strongest beats, cut a little tighter than the film,
+ * and a film second is 0.3 of a screen of scroll (Film.tsx).
  */
 
 const OLD_WAY: SceneDef[] = [
-  { name: "Glow", dur: 0.4 },
+  { name: "Glow", dur: 0.2 },
   { name: "Typewriter", dur: 0.5 },
   { name: "Wipe", dur: 0.5 },
-  { name: "Spreadsheets", dur: 0.5 },
-  { name: "Line", dur: 1 },
-  { name: "OldWay", dur: 2 },
-  { name: "Reminder", dur: 1.5 },
-  { name: "Flash", dur: 0.5 },
-  { name: "Chase", dur: 1 },
-  { name: "Rekey", dur: 1 },
-  { name: "Reconcile", dur: 1 },
-  { name: "Repeat", dur: 1 },
-  { name: "AndNow", dur: 0.5 },
-  { name: "Now", dur: 0.5 },
+  { name: "Spreadsheets", dur: 0.6 },
+  { name: "OldWay", dur: 1.8 },
+  { name: "Chase", dur: 0.9 },
+  { name: "Rekey", dur: 0.9 },
+  { name: "Reconcile", dur: 0.9 },
+  { name: "Repeat", dur: 0.9 },
+  { name: "Now", dur: 0.6 },
   { name: "TimeFor", dur: 0.5 },
-  { name: "NewWay", dur: 1.5 },
-  { name: "Meet", dur: 1 },
-  { name: "BlurThrough", dur: 0.5 },
-  { name: "Reveal", dur: 1.5 },
+  { name: "NewWay", dur: 1.2 },
+  { name: "Reveal", dur: 1.4 },
 ];
 
 /** Act 1 and 2: the old way, the turn, and the A4 reveal. */
@@ -70,44 +58,37 @@ export function OldWayFilm() {
       label="The old way, and a new way to work"
       transcript={
         <>
-          <p>You&apos;ve been running on spreadsheets and endless email threads. Send reminder, for the third time.</p>
+          <p>You&apos;ve been running on spreadsheets and endless email threads.</p>
           <p>Chase. Re-key. Reconcile. Repeat.</p>
-          <p>And now, it&apos;s time for a new way to work. Meet A4 Services: {COPY.tagline}</p>
+          <p>Now it&apos;s time for a new way to work. A4 Services: {COPY.tagline}</p>
         </>
       }
     >
       <SOpen />
       <SSheets />
-      <SLine />
       <SOldWay />
-      <SReminder />
-      <SFlash />
       <SChase />
       <SRekey />
       <SReconcile />
       <SRepeat />
       <SNow />
       <SNewWay />
-      <SMeet />
-      <SBlurThrough />
       <SReveal />
     </Film>
   );
 }
 
 const SERVICES: SceneDef[] = [
-  { name: "PushIn", dur: 0.5 },
-  { name: "Home", dur: 2.5 },
-  { name: "Headline", dur: 1.5 },
-  { name: "S1", dur: 1 },
-  { name: "S2", dur: 1 },
-  { name: "S3", dur: 1 },
-  { name: "S4", dur: 1 },
-  { name: "S5", dur: 1 },
-  { name: "S6", dur: 1 },
+  { name: "Headline", dur: 1.3 },
+  { name: "S1", dur: 0.85 },
+  { name: "S2", dur: 0.85 },
+  { name: "S3", dur: 0.85 },
+  { name: "S4", dur: 0.85 },
+  { name: "S5", dur: 0.85 },
+  { name: "S6", dur: 0.85 },
 ];
 
-/** Into the client portal, then every service, one beat each. */
+/** Every service. One portal. Then every service, one beat each. */
 export function ServicesFilm() {
   return (
     <Film
@@ -126,7 +107,6 @@ export function ServicesFilm() {
         </>
       }
     >
-      <SHome />
       <SHeadline />
       {COPY.services.map((_, i) => (
         <SService key={i} i={i} />
@@ -136,8 +116,8 @@ export function ServicesFilm() {
 }
 
 const AI_NATIVE: SceneDef[] = [
-  { name: "AINative", dur: 2 },
-  { name: "Machines", dur: 2 },
+  { name: "AINative", dur: 1.7 },
+  { name: "Machines", dur: 1.8 },
 ];
 
 /** AI-native audit; the machines do the volume, our people do the judgement. */
@@ -162,13 +142,9 @@ export function AiNativeFilm() {
   );
 }
 
-const PORTAL: SceneDef[] = [
-  { name: "PortalHead", dur: 1.5 },
-  { name: "P1", dur: 3 },
-  { name: "P2", dur: 4 },
-  { name: "P3", dur: 3.5 },
-  { name: "P4", dur: 3 },
-];
+/** Two of the film's four portal beats: 01 at a glance, 03 upload once. */
+const PORTAL_BEATS = [0, 2];
+const PORTAL: SceneDef[] = [{ name: "PortalHead", dur: 1.2 }, ...PORTAL_BEATS.map((i) => ({ name: "P" + (i + 1), dur: i === 2 ? 3.2 : 3 }))];
 
 /** Your own portal: four beats inside the client portal (sample data, fictional companies). */
 export function PortalFilm() {
@@ -181,9 +157,9 @@ export function PortalFilm() {
         <>
           <p>Your own portal. For every engagement. Powered by Vacei.</p>
           <ol>
-            {PORTALS.map((p) => (
-              <li key={p.n}>
-                {p.title} {p.sub}: {p.caption}
+            {PORTAL_BEATS.map((i) => (
+              <li key={PORTALS[i].n}>
+                {PORTALS[i].title} {PORTALS[i].sub}: {PORTALS[i].caption}
               </li>
             ))}
           </ol>
@@ -192,7 +168,7 @@ export function PortalFilm() {
       }
     >
       <SPortalHead />
-      {PORTALS.map((_, i) => (
+      {PORTAL_BEATS.map((i) => (
         <SPortal key={i} i={i} />
       ))}
     </Film>
@@ -200,9 +176,9 @@ export function PortalFilm() {
 }
 
 const PROOF: SceneDef[] = [
-  { name: "Explained", dur: 1 },
-  { name: "Evidenced", dur: 1.5 },
-  { name: "Filed", dur: 1.5 },
+  { name: "Explained", dur: 0.9 },
+  { name: "Evidenced", dur: 1.4 },
+  { name: "Filed", dur: 1.4 },
 ];
 
 /** Every entry explained, every figure evidenced, every return filed: ON TIME. */
