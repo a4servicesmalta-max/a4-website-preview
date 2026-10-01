@@ -1,6 +1,6 @@
 export const PARTNER_MODELS = [
   { icon: "handshake", t: "Service delivery", s: "Refer client work to A4 and we deliver it to a high professional standard under your relationship — accounting, tax, corporate and audit.", href: "/partners/service-delivery" },
-  { icon: "palette", t: "White-label solutions", s: "Run your own branded client portal and engagement workflow on A4's technology, with your logo and your client experience.", href: "/partners/white-label" },
+  { icon: "palette", t: "White-label solutions", s: "Run your own branded client portal and engagement workflow on A4's technology, with your logo and your client experience.", href: "/white-label-platform" },
   { icon: "plug", t: "Technology integration", s: "Connect A4's platform and automation into your existing systems and processes to streamline how your firm delivers.", href: "/partners/technology-support" },
   { icon: "percent", t: "Reseller program", s: "Introduce clients and earn recurring commission on every engagement they take up — tracked transparently in your portal.", href: "/partners/reseller-program" },
 ];
