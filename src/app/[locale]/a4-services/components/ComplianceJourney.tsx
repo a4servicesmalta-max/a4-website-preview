@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Eyebrow } from "@/components/a4-landing/Primitives";
 import { gradText } from "@/components/fx/primitives";
 import { INDIGO, INK, PERI } from "@/lib/fx/engine";
+import { setImmersive } from "@/lib/immersive";
 
 /**
  * "From shoebox to signed" — the homepage scroll film, in the A4 design
@@ -151,12 +152,18 @@ const JOURNEY_CSS = `
     letter-spacing: -0.035em; line-height: 1.04; color: ${INK}; text-wrap: balance;
   }
   .a4-jf--home .a4-jf__body { margin: 16px 0 0; font-family: var(--a4x-body); font-size: 17px; line-height: 1.6; color: #52525B; }
+  .a4-jf--home .a4-jf__rail {
+    padding: 10px 8px; border-radius: 999px; background: rgba(244,244,245,.94);
+    border: 1px solid #E4E4E7; box-shadow: 0 10px 30px rgba(9,9,11,.08); z-index: 2;
+  }
   .a4-jf--home .a4-jf__rail span { background: #D4D4D8; }
   .a4-jf--home .a4-jf__rail span[data-on="true"] { background: ${INDIGO}; }
   @media (min-width: 1024px) {
+    /* The copy column's ground follows the panel: solid under the text, fading out in
+       the 140px after it, and ending before the card's left edge. */
     .a4-jf--home .a4-jf__scrim {
-      width: min(52%, 760px);
-      background: linear-gradient(90deg, #F4F4F5 0%, #F4F4F5 48%, rgba(244,244,245,.9) 66%, rgba(244,244,245,0) 100%);
+      width: calc(max(clamp(20px,5vw,72px), calc((100% - 1280px) / 2 + 72px)) + min(480px, 38vw) + 140px);
+      background: linear-gradient(90deg, #F4F4F5 0%, #F4F4F5 calc(100% - 160px), rgba(244,244,245,.88) calc(100% - 110px), rgba(244,244,245,0) 100%);
     }
     .a4-jf--home .a4-jf__panel { left: max(clamp(20px,5vw,72px), calc((100% - 1280px) / 2 + 72px)); width: min(480px, 38vw); }
   }
@@ -201,7 +208,7 @@ export function ComplianceJourney() {
       // (owner 2026-10-01: bigger again — the cards are 440 units wide now, and the
       // camera sits a little right so the copy column's fade never covers a card.)
       const scale = narrow
-        ? Math.min(vp.clientWidth / 540, vp.clientHeight / 1280)
+        ? Math.min(vp.clientWidth / 540, vp.clientHeight / 1050)
         : Math.min(vp.clientWidth / 1180, vp.clientHeight / 780);
       const anchorX = narrow ? vp.clientWidth * 0.5 : vp.clientWidth * 0.68;
       const anchorY = narrow ? vp.clientHeight * 0.28 : vp.clientHeight * 0.5;
@@ -209,14 +216,18 @@ export function ComplianceJourney() {
       // Place every cluster for a given camera-x. Each carries its own
       // transform, so no single layer approaches the texture limit. The node
       // the camera has arrived at lights up (border + label in indigo).
+      // A wire fades once the camera has passed it, so during a hold the incoming
+      // wire never runs into the copy column (only the way ahead is drawn).
       const place = (camX: number) => {
         for (const c of clusterEls) {
+          const rel = Number(c.dataset.x) - camX;
           gsap.set(c, {
-            x: anchorX + (Number(c.dataset.x) - camX) * scale,
+            x: anchorX + rel * scale,
             y: anchorY + (Number(c.dataset.y) - 320) * scale,
             scale,
             xPercent: -50,
             yPercent: -50,
+            ...(c.dataset.jfWire != null ? { opacity: Math.min(1, Math.max(0, (rel + 300) / 300)) } : null),
           });
         }
         for (const node of nodeEls) {
@@ -228,6 +239,9 @@ export function ComplianceJourney() {
 
       const cam = { x: STAGES[0].focus };
       place(cam.x);
+      // Centring is set here, not left to GSAP parsing the CSS translateY(-50%): at some
+      // panel heights that parse drops the -50% and the copy sits half its height low.
+      gsap.set(panelEls, { yPercent: narrow ? 0 : -50 });
       gsap.set(panelEls, { opacity: 0, y: 18 });
       gsap.set(panelEls[0], { opacity: 1, y: 0 });
 
@@ -238,6 +252,7 @@ export function ComplianceJourney() {
           end: "bottom bottom",
           scrub: true, // Lenis already smooths — never a number here
           invalidateOnRefresh: true,
+          onToggle: (self) => setImmersive("journey", self.isActive),
           onUpdate: (self) => {
             const i = Math.min(STAGES.length - 1, Math.floor(self.progress * STAGES.length));
             for (let n = 0; n < tickEls.length; n++) {
@@ -256,7 +271,8 @@ export function ComplianceJourney() {
             cam,
             {
               x: s.focus,
-              duration: 1,
+              // Phones: the cards are wider than the screen apart, so travel is quick.
+              duration: narrow ? 0.6 : 1,
               ease: "power2.inOut",
               onUpdate: () => place(cam.x),
             },
@@ -268,6 +284,7 @@ export function ComplianceJourney() {
       });
 
       return () => {
+        setImmersive("journey", false);
         tl.scrollTrigger?.kill();
         tl.kill();
         gsap.set([...clusterEls, ...panelEls], { clearProps: "all" });
@@ -322,7 +339,7 @@ export function ComplianceJourney() {
           {/* ---- the world (decorative; the copy panels carry the meaning) ---- */}
           <div className="a4-jf__world" aria-hidden="true">
             {[600, 1500, 2400, 3300].map((x) => (
-              <div key={x} className="a4-jf__cluster" data-jf-cluster="" data-x={x} data-y="320">
+              <div key={x} className="a4-jf__cluster" data-jf-cluster="" data-jf-wire="" data-x={x} data-y="320">
                 <Wire id={`a4-jf-wire-${x}`} />
               </div>
             ))}

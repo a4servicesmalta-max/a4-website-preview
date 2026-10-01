@@ -35,9 +35,10 @@ import {
  */
 
 const OLD_WAY: SceneDef[] = [
-  { name: "Glow", dur: 0.2 },
-  { name: "Typewriter", dur: 0.5 },
-  { name: "Wipe", dur: 0.5 },
+  { name: "Glow", dur: 0.2, still: false },
+  // The opening clause holds a beat before the wipe takes it.
+  { name: "Typewriter", dur: 0.8, hold: 0.7 },
+  { name: "Wipe", dur: 0.5, still: false },
   { name: "Spreadsheets", dur: 0.6 },
   { name: "OldWay", dur: 1.8 },
   { name: "Chase", dur: 0.9 },
@@ -80,12 +81,12 @@ export function OldWayFilm() {
 
 const SERVICES: SceneDef[] = [
   { name: "Headline", dur: 1.3 },
-  { name: "S1", dur: 0.85 },
-  { name: "S2", dur: 0.85 },
-  { name: "S3", dur: 0.85 },
-  { name: "S4", dur: 0.85 },
-  { name: "S5", dur: 0.85 },
-  { name: "S6", dur: 0.85 },
+  { name: "S1", dur: 0.9 },
+  { name: "S2", dur: 0.9 },
+  { name: "S3", dur: 0.9 },
+  { name: "S4", dur: 0.9 },
+  { name: "S5", dur: 0.9 },
+  { name: "S6", dur: 0.9 },
 ];
 
 /** Every service. One portal. Then every service, one beat each. */
@@ -117,7 +118,7 @@ export function ServicesFilm() {
 
 const AI_NATIVE: SceneDef[] = [
   { name: "AINative", dur: 1.7 },
-  { name: "Machines", dur: 1.8 },
+  { name: "Machines", dur: 1.3 },
 ];
 
 /** AI-native audit; the machines do the volume, our people do the judgement. */
@@ -144,7 +145,11 @@ export function AiNativeFilm() {
 
 /** Two of the film's four portal beats: 01 at a glance, 03 upload once. */
 const PORTAL_BEATS = [0, 2];
-const PORTAL: SceneDef[] = [{ name: "PortalHead", dur: 1.2 }, ...PORTAL_BEATS.map((i) => ({ name: "P" + (i + 1), dur: i === 2 ? 3.2 : 3 }))];
+// 03 runs until its upload has landed (and holds there under reduced motion).
+const PORTAL: SceneDef[] = [
+  { name: "PortalHead", dur: 1.2 },
+  ...PORTAL_BEATS.map((i) => (i === 2 ? { name: "P3", dur: 3.4, hold: 3.25 } : { name: "P" + (i + 1), dur: 3 })),
+];
 
 /** Your own portal: four beats inside the client portal (sample data, fictional companies). */
 export function PortalFilm() {
@@ -168,8 +173,8 @@ export function PortalFilm() {
       }
     >
       <SPortalHead />
-      {PORTAL_BEATS.map((i) => (
-        <SPortal key={i} i={i} />
+      {PORTAL_BEATS.map((i, idx) => (
+        <SPortal key={i} i={i} n={idx + 1} />
       ))}
     </Film>
   );
@@ -178,7 +183,7 @@ export function PortalFilm() {
 const PROOF: SceneDef[] = [
   { name: "Explained", dur: 0.9 },
   { name: "Evidenced", dur: 1.4 },
-  { name: "Filed", dur: 1.4 },
+  { name: "Filed", dur: 1.15 },
 ];
 
 /** Every entry explained, every figure evidenced, every return filed: ON TIME. */
@@ -186,7 +191,6 @@ export function ProofFilm() {
   return (
     <Film
       scenes={PROOF}
-      lead={0.3}
       label="Every return filed on time"
       transcript={<p>Every entry explained. Every figure evidenced. Every return filed, on time.</p>}
     >

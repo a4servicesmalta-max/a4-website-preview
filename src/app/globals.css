@@ -1255,3 +1255,15 @@ body {
   outline: 3px solid rgba(79, 85, 241, 0.55);
   outline-offset: 2px;
 }
+
+/* Immersive scenes (src/lib/immersive.ts): floating controls step aside while a pinned
+   scroll film or the homepage journey fills the screen. */
+[data-floating-chrome] {
+  transition: opacity 0.3s ease, visibility 0s linear 0s;
+}
+html[data-immersive] [data-floating-chrome] {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}

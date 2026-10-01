@@ -101,7 +101,14 @@ export function fx(T: number, tin: number, tout: number | null, o: FxOpts = {}):
   return { opacity: Math.min(1, a * 1.6) * (1 - b), transform: `translate(${dx}px,${dy}px) scale(${sc})`, filter: blurF(bl) };
 }
 
-export type SceneDef = { name: string; dur: number };
+export type SceneDef = {
+  name: string;
+  dur: number;
+  /** Reduced motion: seconds into the cue to hold (default: 80% of it). */
+  hold?: number;
+  /** Reduced motion: false for a transitional cue (a wipe, an empty glow) — show the next cue instead. */
+  still?: boolean;
+};
 
 /** Cue start times from scene durations, plus the total length. */
 export function cueSheet(scenes: SceneDef[]) {

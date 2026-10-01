@@ -662,7 +662,8 @@ export function SReveal() {
 /* ── ACT 3: the firm ──────────────────────────────────────────────────────── */
 
 export function SHome() {
-  const { T, Q } = useFilm();
+  const { T, Q, tb, portrait } = useFilm();
+  const tbHome = portrait ? tb : 1;
   const a = cue(Q, "PushIn");
   const b = nextAfter(Q, "Home");
   const H = COPY.home;
@@ -705,7 +706,7 @@ export function SHome() {
           </Screen>
         </div>
       </div>
-      <SampleTag on={clamp((s - 1.1) / 0.3, 0, 1) * (1 - x)} />
+      <SampleTag on={clamp((s - 1.1) / 0.3, 0, 1) * (1 - x)} k={tbHome} />
     </Scene>
   );
 }
@@ -757,14 +758,15 @@ export function SService({ i }: { i: number }) {
   const [a, b, T] = useAB("S" + (i + 1));
   const { tb } = useFilm();
   const S = COPY.services[i];
-  const x = M.exit(T, b - 0.22, 0.22);
+  // Short beats: the caption arrives early and the exit is quick, so each beat holds.
+  const x = M.exit(T, b - 0.15, 0.15);
   const dark = S.bg === "dark";
   const col = dark ? "#fff" : C.ink;
   let word: React.ReactNode;
   if (S.fx === "scatter")
     word = (
       <div style={{ ...CENTER, top: -80 }}>
-        <Scatter T={T} a={a} word={S.w} color={col} size={250} />
+        <Scatter T={T} a={a} word={S.w} color={col} size={250} stagger={0.022} />
       </div>
     );
   else if (S.fx === "tighten")
@@ -815,7 +817,7 @@ export function SService({ i }: { i: number }) {
           <span>/ 06</span>
         </div>
         {word}
-        <Caption size={46} color={dark ? "#E4E4E7" : "#3F3F46"} style={{ top: 760, ...fx(T, a + 0.28, null, { dy: 26, blur: 8, din: 0.4 }) }}>
+        <Caption size={46} color={dark ? "#E4E4E7" : "#3F3F46"} style={{ top: 760, ...fx(T, a + 0.12, null, { dy: 26, blur: 8, din: 0.3 }) }}>
           {S.line}
         </Caption>
       </div>
@@ -890,11 +892,11 @@ export function SPortalHead() {
 }
 
 function PortalHeadPowered({ a, x, T }: { a: number; x: number; T: number }) {
-  const { FW: W, FH: H } = useFilm();
+  const { FW: W, FH: H, tb } = useFilm();
   return (
     <div style={{ position: "absolute", left: (W - 1920) / 2, top: (H - 1080) / 2 + 800, width: 1920, display: "flex", justifyContent: "center", opacity: 1 - x, filter: blurF(x * 10) }}>
-      <div style={fx(T, a + 0.85, null, { dy: 30, blur: 8 })}>
-        <PoweredBy h={52} />
+      <div style={fx(T, a + 0.45, null, { dy: 30, blur: 8, din: 0.4 })}>
+        <PoweredBy h={52 * Math.min(tb, 1.8)} />
       </div>
     </div>
   );
@@ -1118,8 +1120,9 @@ function camAt(T: number, a: number, keys: number[][]) {
   return { cx: at(1), cy: at(2), fx: at(3), fy: at(4), s: at(5), ry: at(6) };
 }
 
-function PortalPill({ P, T, t0, tout }: { P: PortalBeat; T: number; t0: number; tout: number | null }) {
+function PortalPill({ P, num, T, t0, tout }: { P: PortalBeat; num: string; T: number; t0: number; tout: number | null }) {
   const { tb, portrait } = useFilm();
+  const { ey } = useExtra();
   const e = M.enter(T, t0, 0.5);
   const x = tout == null ? 0 : M.exit(T, tout, 0.25);
   if (e <= 0.001 || x >= 0.999) return null;
@@ -1130,7 +1133,8 @@ function PortalPill({ P, T, t0, tout }: { P: PortalBeat; T: number; t0: number; 
         position: "absolute",
         left: 64,
         right: portrait ? 64 : undefined,
-        bottom: 60,
+        // Phones: in the empty band under the shot, not over it.
+        bottom: portrait ? 60 - ey + 120 : 60,
         zIndex: 30,
         padding: "24px 34px 26px",
         borderRadius: 26,
@@ -1143,31 +1147,41 @@ function PortalPill({ P, T, t0, tout }: { P: PortalBeat; T: number; t0: number; 
       }}
     >
       <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "0 18px" }}>
-        <span style={{ fontSize: 52 * k, fontWeight: 600, letterSpacing: "-0.04em", ...GT }}>{P.n}</span>
+        <span style={{ fontSize: 52 * k, fontWeight: 600, letterSpacing: "-0.04em", ...GT }}>{num}</span>
         <span style={{ fontSize: 46 * k, fontWeight: 600, letterSpacing: "-0.03em", color: C.ink }}>{P.title}</span>
         <span style={{ fontSize: 46 * k, fontWeight: 500, letterSpacing: "-0.03em", color: C.zinc6 }}>{P.sub}</span>
       </div>
-      <div style={{ marginTop: 8, fontSize: 26 * k, fontWeight: 500, letterSpacing: "-0.01em", color: C.mute }}>{P.caption}</div>
+      <div style={{ marginTop: 8, fontSize: 26 * (portrait ? tb : k), fontWeight: 500, letterSpacing: "-0.01em", color: C.mute }}>{P.caption}</div>
     </div>
   );
 }
 
-export function SPortal({ i }: { i: number }) {
+/** One portal beat. `n` is its number within the chapter (a chapter may show a subset). */
+export function SPortal({ i, n }: { i: number; n?: number }) {
   const [a, b, T] = useAB("P" + (i + 1));
   const { tb, portrait, Q } = useFilm();
+  const { ey } = useExtra();
   const P = PORTALS[i];
+  const num = n == null ? P.n : String(n).padStart(2, "0");
   // 01 hands its zoomed camera straight to 02 when 02 follows in this chapter.
   const holdOut = !!P.holdOut && !!PORTALS[i + 1]?.noEnter && Q["P" + (i + 2)] === b;
   const x = holdOut ? 0 : M.exit(T, b - 0.3, 0.3);
   const e = P.noEnter ? 1 : M.enter(T, a + 0.2, 0.75);
-  const cam = camAt(T, a, P.keys);
+  let cam = camAt(T, a, P.keys);
+  if (portrait) {
+    // Phones: the screen flies in centred below the title, and the zoomed shots go in
+    // closer so the portal's own text reads.
+    const zf = clamp((cam.s - 0.9) / 0.6, 0, 1);
+    const intro = 1 - clamp((cam.s - 0.7) / 0.6, 0, 1);
+    cam = { ...cam, cx: 960, cy: cam.cy + 0.45 * ey * intro, s: cam.s * (1 + 0.55 * zf) };
+  }
   const tx = (1 - e) * 820 - x * 300;
   const h = P.h || FH - BAR;
   const mix = P.src2 ? pr(T, a + 1.25, 0.35) : 0;
   const zoomed = clamp((cam.s - 0.9) / 0.4, 0, 1);
   const tOut = P.titleOut == null ? -1 : a + P.titleOut;
   const tx2 = P.titleOut == null ? 1 : M.exit(T, tOut, 0.3);
-  const k = Math.min(tb, 1.6);
+  const k = Math.min(tb, 2);
   return (
     <Scene from={a} to={b} bg={P.bg} push={0}>
       <div style={{ position: "absolute", inset: 0, perspective: 2400, perspectiveOrigin: "1300px 560px", opacity: Math.min(1, e * 1.4) * (1 - x), filter: blurF((1 - e) * 14 + x * 10) }}>
@@ -1205,14 +1219,14 @@ export function SPortal({ i }: { i: number }) {
             transform: `translateX(${-x * 160 - tx2 * 200}px)`,
           }}
         >
-          <div style={{ fontSize: 150, fontWeight: 600, letterSpacing: "-0.05em", lineHeight: 0.9, ...GT, ...fx(T, a, null, { dy: 80, ds: 0.3 }) }}>{P.n}</div>
+          <div style={{ fontSize: 150, fontWeight: 600, letterSpacing: "-0.05em", lineHeight: 0.9, ...GT, ...fx(T, a, null, { dy: 80, ds: 0.3 }) }}>{num}</div>
           <div style={{ marginTop: 26, fontSize: 60 * k, fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.02, color: C.ink, whiteSpace: "nowrap", ...fx(T, a + 0.08, null, { dy: 50 }) }}>{P.title}</div>
           <div style={{ fontSize: 60 * k, fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.02, color: C.zinc6, whiteSpace: "nowrap", ...fx(T, a + 0.16, null, { dy: 50 }) }}>{P.sub}</div>
-          <div style={{ marginTop: 30, width: portrait ? 1400 : 460, fontSize: 28 * k, fontWeight: 500, lineHeight: 1.3, letterSpacing: "-0.01em", color: C.mute, ...fx(T, a + 0.5, null, { dy: 24, blur: 6 }) }}>{P.caption}</div>
+          <div style={{ marginTop: 30, width: portrait ? 1600 : 460, fontSize: 28 * (portrait ? tb : k), fontWeight: 500, lineHeight: 1.3, letterSpacing: "-0.01em", color: C.mute, ...fx(T, a + 0.5, null, { dy: 24, blur: 6 }) }}>{P.caption}</div>
         </div>
       ) : null}
-      <PortalPill P={P} T={T} t0={a + P.pillIn} tout={holdOut ? b - 0.25 : b - 0.3} />
-      <SampleTag on={zoomed * (1 - x)} />
+      <PortalPill P={P} num={num} T={T} t0={a + P.pillIn} tout={holdOut ? b - 0.25 : b - 0.3} />
+      <SampleTag on={zoomed * (1 - x)} k={portrait ? tb : 1} />
     </Scene>
   );
 }

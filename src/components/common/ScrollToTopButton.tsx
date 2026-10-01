@@ -35,6 +35,7 @@ const ScrollToTopButton = () => {
           transition={{ duration: 0.25 }}
           className="fixed bottom-28 right-4 left-auto z-[55] flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-[rgba(9,9,11,0.88)] text-white shadow-[0_24px_60px_rgba(9,9,11,0.35)] backdrop-blur-md hover:bg-[#27272A] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4F55F1] focus-visible:ring-offset-2 lg:left-8 lg:right-auto"
           aria-label="Scroll to top"
+          data-floating-chrome=""
         >
           <svg
             className="w-4 h-4"

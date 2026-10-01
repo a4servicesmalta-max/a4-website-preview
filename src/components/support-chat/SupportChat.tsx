@@ -24,7 +24,7 @@ export default function SupportChat() {
 
   return (
     <>
-      <div className="fixed bottom-6 left-6 z-50">
+      <div className="fixed bottom-6 left-6 z-50" data-floating-chrome="">
         <div className="relative">
           <AnimatePresence>
             {greetingOpen && (

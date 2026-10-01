@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { setImmersive } from "@/lib/immersive";
 import { FONT, FRAME_H, FRAME_W, clamp, cueSheet, pr, type SceneDef } from "./core";
 
 /**
@@ -156,6 +157,7 @@ export function Film({
   const [T, setT] = useState(0);
   const [dims, setDims] = useState({ W: FRAME_W, H: FRAME_H });
   const [still, setStill] = useState(false);
+  const immersiveKey = "film" + useId();
 
   // Frame size follows the stage.
   useEffect(() => {
@@ -182,12 +184,14 @@ export function Film({
       const p = span > 0 ? clamp(-r.top / span, 0, 1) : 0;
       return Math.min(total, lead + p * (total - lead + tail));
     };
-    // Reduced motion: hold each cue at a settled frame.
+    // Reduced motion: hold each cue at a settled frame (transitional cues show the next one).
     const hold = (tg: number) => {
       let i = 0;
       while (i + 1 < starts.length && starts[i + 1] <= tg) i++;
+      while (scenes[i]?.still === false && i + 1 < scenes.length) i++;
       const d = scenes[i]?.dur ?? 0;
-      return Math.min(total, starts[i] + Math.min(d * 0.8, Math.max(0, d - 0.05)));
+      const h = scenes[i]?.hold ?? Math.min(d * 0.8, Math.max(0, d - 0.05));
+      return Math.min(total, starts[i] + h);
     };
     let cur = target();
     if (reduced) cur = hold(cur);
@@ -195,9 +199,15 @@ export function Film({
     let raf = 0;
     let last = 0;
     let running = false;
+    const pinnedCheck = () => {
+      const r = sec.getBoundingClientRect();
+      const vh = window.innerHeight || 800;
+      setImmersive(immersiveKey, r.top <= 1 && r.bottom >= vh - 1);
+    };
     const tick = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
+      pinnedCheck();
       const tg = target();
       let next: number;
       if (reduced) next = hold(tg);
@@ -225,8 +235,9 @@ export function Film({
       cancelAnimationFrame(raf);
       window.removeEventListener("scroll", kick);
       window.removeEventListener("resize", kick);
+      setImmersive(immersiveKey, false);
     };
-  }, [Q, scenes, total, tail, lead]);
+  }, [Q, scenes, total, tail, lead, immersiveKey]);
 
   const { W, H } = dims;
   const u = Math.min(W / FRAME_W, H / FRAME_H);

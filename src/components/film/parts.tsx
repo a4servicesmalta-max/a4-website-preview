@@ -179,10 +179,15 @@ export function Rise({
   color?: string;
   wrap?: boolean;
 }) {
+  // Wrapping (portrait phones): split each unit into words so a long unit can break;
+  // the words of one unit keep that unit's timing.
+  const parts = wrap
+    ? units.flatMap((u, i) => (u.t.match(/\S+\s*|\s+/g) || [u.t]).map((t) => ({ ...u, t, i })))
+    : units.map((u, i) => ({ ...u, i }));
   return (
     <div style={{ display: "flex", gap: `0 ${gap}`, flexWrap: wrap ? "wrap" : "nowrap", alignItems: "baseline", justifyContent: "inherit" }}>
-      {units.map((u, i) => (
-        <span key={i} style={{ display: "inline-block", whiteSpace: "pre", ...(u.g ? GT : { color: u.c || color }), ...fx(T, t0 + i * stagger, tout, o) }}>
+      {parts.map((u, k) => (
+        <span key={k} style={{ display: "inline-block", whiteSpace: "pre", ...(u.g ? GT : { color: u.c || color }), ...fx(T, t0 + u.i * stagger, tout, o) }}>
           {u.t}
         </span>
       ))}
@@ -227,11 +232,28 @@ export function Cascade({ T, a, x, word, top = 610, xoff = 0, color = C.ink }: {
 }
 
 /** Letters fly in from everywhere and assemble ("re-key", Accounting). */
-export function Scatter({ T, a, word, color = "#fff", size = 290, accent }: { T: number; a: number; word: string; color?: string; size?: number; accent?: string }) {
+export function Scatter({
+  T,
+  a,
+  word,
+  color = "#fff",
+  size = 290,
+  accent,
+  stagger = 0.035,
+}: {
+  T: number;
+  a: number;
+  word: string;
+  color?: string;
+  size?: number;
+  accent?: string;
+  /** Seconds between letters landing. */
+  stagger?: number;
+}) {
   return (
     <div style={{ display: "flex", fontSize: size, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1 }}>
       {word.split("").map((ch, i) => {
-        const p = M.enter(T, a + 0.05 + i * 0.035, 0.5);
+        const p = M.enter(T, a + 0.05 + i * stagger, 0.5);
         const dx = (rnd(i, 1) - 0.5) * 1700;
         const dy = (rnd(i, 2) - 0.5) * 820;
         const s0 = 0.3 + rnd(i, 3) * 2.4;
@@ -484,7 +506,7 @@ export function camStyle(fx0: number, fy0: number, s: number, rx: number, rz: nu
 }
 
 /** Frame-level sample label for zoomed shots, where the window's own label is off frame. */
-export function SampleTag({ on }: { on: number }) {
+export function SampleTag({ on, k = 1 }: { on: number; /** Text boost on phones. */ k?: number }) {
   if (on <= 0.01) return null;
   return (
     <div
@@ -496,7 +518,7 @@ export function SampleTag({ on }: { on: number }) {
         borderRadius: 999,
         background: "rgba(9,9,11,.78)",
         color: "#fff",
-        fontSize: 20,
+        fontSize: 20 * k,
         fontWeight: 500,
         fontFamily: FONT,
         opacity: on,

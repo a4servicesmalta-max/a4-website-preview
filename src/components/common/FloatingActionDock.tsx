@@ -118,6 +118,7 @@ export default function FloatingActionDock() {
         right: "max(1rem, env(safe-area-inset-right, 0px))",
       }}
       aria-label="Quick actions"
+      data-floating-chrome=""
       onMouseLeave={() => setHovered(null)}
     >
       <AnimatePresence mode="wait">
