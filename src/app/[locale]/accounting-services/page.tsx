@@ -22,7 +22,7 @@ const faqPage = {
 
 export default function AccountingServicesPage() {
   return (
-    <div className="a4-landing-page pt-24 sm:pt-28">
+    <div className="a4-landing-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }} />
       <AccountingApp />
     </div>

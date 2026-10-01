@@ -1,19 +1,12 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
 import "@/components/a4-landing/styles.css";
 import { AuditApp } from "./components/AuditParts";
 
 import { pageMetadata } from "@/lib/page-metadata";
 
-// The fee calculator sets money, step numbers and step tags in JetBrains Mono,
-// as vacei.com/services/audit does. Loaded here rather than in the root layout
-// so no other page downloads it.
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "600"],
-  variable: "--font-jetbrains-mono",
-  display: "swap",
-});
+// The fee calculator used to set money and step numbers in JetBrains Mono (the
+// vacei.com/services/audit look). It is in the A4 design language now — Outfit
+// for figures — so the extra font is no longer loaded here.
 
 export const metadata: Metadata = pageMetadata(
   "Audit & Assurance in Malta",
@@ -22,7 +15,7 @@ export const metadata: Metadata = pageMetadata(
 
 export default function AuditServicesPage() {
   return (
-    <div className={`a4-landing-page pt-24 sm:pt-28 ${mono.variable}`}>
+    <div className="a4-landing-page">
       <AuditApp />
     </div>
   );

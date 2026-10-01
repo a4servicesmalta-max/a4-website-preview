@@ -10,6 +10,7 @@ const auditParts = read("../../app/[locale]/audit-services/components/AuditParts
 const auditEstimator = read("../../app/[locale]/audit-services/components/AuditEstimator.tsx");
 const bookkeepingLanding = read("../../app/[locale]/automated-bookkeeping/components/LandingParts.tsx");
 const bookkeepingPage = read("../../app/[locale]/automated-bookkeeping/page.tsx");
+const paidKit = read("../../app/[locale]/accounting-services/components/PaidLandingKit.tsx");
 const quotePack = read("../../data/a4QuotePack.ts");
 
 describe("paid landing page message contracts", () => {
@@ -25,16 +26,25 @@ describe("paid landing page message contracts", () => {
     expect(auditParts.match(/href="\/book-a-call"/g)).toHaveLength(2);
   });
 
-  it("keeps the audit landing page on the merged palette — lime accents on the black estimator, blue fee panel", () => {
-    // The 27-Aug design pass (a4-website-preview #41, deployed) made the
-    // estimator section black with a BLUE fee panel; this branch's lime/charcoal
-    // accents survive on the controls. The blue hexes are therefore allowed
-    // again, but only on the fee panel.
-    expect(auditParts).toContain('className="a4-audit-page"');
-    expect(auditEstimator).toContain("#DDF72A");
-    expect(auditEstimator).toContain("#171A16");
-    expect(auditEstimator).toContain('background: "#000"');
-    expect(auditEstimator).toContain('className="af-panel" style={{ background: "linear-gradient(180deg, #4f55f1 0%, #494fdf 50%, #3a40c4 100%)"');
+  it("keeps the audit landing page on the A4 indigo palette — no page-scoped lime theme", () => {
+    // Owner, Oct 2026: one design language site-wide. The page-scoped
+    // lime/charcoal theme (`.a4-audit-page`, which re-pointed --a4-primary at
+    // lime) is gone, and so is the Vacei teal of the old calculator. The
+    // estimator is the design's quote builder: ink choice pills, the indigo
+    // step rail, and the fee in a white quote document with the gradient total.
+    expect(auditParts).not.toContain("a4-audit-page");
+    for (const lime of ["#DDF72A", "#E7FA62", "#B7CC12", "#171A16"]) {
+      expect(auditParts.toUpperCase()).not.toContain(lime);
+      expect(auditEstimator.toUpperCase()).not.toContain(lime);
+    }
+    expect(auditEstimator).not.toContain("#33646E");
+    expect(auditEstimator).toContain("background: MUTED_GLOW");
+    expect(auditEstimator).toContain("<StepRail");
+    expect(auditEstimator).toMatch(/<FeeDoc[\s\S]*?gradient=\{!q\.refer\}/);
+    // The fee document: the af-panel column, the indigo gradient total.
+    expect(paidKit).toContain('import { INDIGO, INK, PERI } from "@/lib/fx/engine"');
+    expect(paidKit).toContain('className = "af-panel"');
+    expect(paidKit).toContain("...(gradient ? gradText : { color: INK })");
   });
 
   it("matches paid bookkeeping and audit price messages to the quote pack", () => {

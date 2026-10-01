@@ -1,14 +1,18 @@
 "use client";
 
 import React from "react";
-import { Button, Icon, Container, SectionHead, Reveal } from "@/components/a4-landing/Primitives";
+import { Button, Icon } from "@/components/a4-landing/Primitives";
 import { PortalMockup } from "@/components/a4-landing/PortalMockup";
 import { LandingPlan } from "@/components/a4-landing/LandingPlan";
 import { HealthCheckPromo } from "@/components/a4-landing/HealthCheckPromo";
+import { DARK_CARD, GRAD } from "@/components/fx/primitives";
+import {
+  BODY, CardGrid, CtaBand, G, Head, INDIGO, INK, InfoCard, KitStyles, PERI, PaidHero, Section, SkewMark, Timeline, ctaPill, kicker, pad2,
+} from "@/app/[locale]/accounting-services/components/PaidLandingKit";
 // for the automated-bookkeeping conversion landing page. Reuses Primitives
-// and PortalMockup from the main app.
+// and PortalMockup from the main app, set in the A4 design language
+// (docs/DESIGN-LANGUAGE.md).
 
-import { CLIENT_ONBOARDING_URL } from "@/lib/external-links";
 import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
 
 // export function LandingNav() {
@@ -45,96 +49,86 @@ import { BOOKKEEPING_COMPANY, BOOKKEEPING_FROM } from "@/data/a4QuotePack";
 //   );
 // }
 
-export function LandingHero({ accent = "#494fdf" }) {
+export function LandingHero() {
   return (
-    <section style={{ background: "#000", padding: "clamp(48px,7vw,92px) 0 clamp(56px,8vw,104px)", position: "relative", overflow: "hidden" }}>
-      <div aria-hidden="true" className="hero-bg" />
-      <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(90deg, rgba(0,0,0,.74) 0%, rgba(0,0,0,.34) 38%, transparent 62%), linear-gradient(180deg, transparent 58%, rgba(0,0,0,.6) 100%)" }} />
-      <Container style={{ position: "relative", display: "flex", gap: 60, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ flex: "1 1 440px", minWidth: 300 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ width: 26, height: 1, background: "var(--a4-hairline-strong)" }} />
-            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12.5, fontWeight: 600, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--a4-on-dark-mute)" }}>Malta accounting &amp; audit firm</span>
-          </div>
-          <h1 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(44px,6vw,80px)", lineHeight: 1.0, letterSpacing: "-.03em", margin: "20px 0 0", textWrap: "balance" }}>
-            Bookkeeping<br />from <span style={{ color: "var(--a4-primary-bright)" }}>€{BOOKKEEPING_FROM}</span>/month.
-          </h1>
-          <p style={{ fontFamily: "var(--a4-font-body)", color: "var(--a4-on-dark-mute)", fontSize: 19, lineHeight: 1.6, maxWidth: 480, margin: "24px 0 0", textWrap: "pretty" }}>
-            <strong style={{ color: "#fff", fontWeight: 600 }}>A4 Services is a licensed accounting &amp; audit firm in Malta.</strong> Upload your invoices and receipts to your A4 portal — it syncs with Sage, QuickBooks and Xero, automation does the heavy lifting, and our licensed audit firm reviews everything. Clean books — without the price tag.
-          </p>
-          <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
-            <Button variant="primary" size="lg" href="#pricing">See your price <Icon name="arrow-right" size={18} color="#000" /></Button>
-            <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
-          </div>
-          <div style={{ display: "flex", gap: 22, marginTop: 32, flexWrap: "wrap" }}>
-            {["No setup fee", "No long contracts", "Cancel anytime"].map((t) => (
-              <div key={t} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Icon name="check" size={16} color="var(--a4-accent-teal)" stroke={2.4} />
-                <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 14, color: "var(--a4-on-dark)" }}>{t}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 26, flexWrap: "wrap" }}>
-            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Syncs with</span>
+    <PaidHero
+      eyebrow="Malta accounting & audit firm"
+      first="Bookkeeping"
+      accent={<>from €{BOOKKEEPING_FROM}/month.</>}
+      lead={
+        <>
+          <strong style={{ color: "#fff", fontWeight: 600 }}>A4 Services is a licensed accounting &amp; audit firm in Malta.</strong> Upload your invoices and receipts to your A4 portal — it syncs with Sage, QuickBooks and Xero, automation does the heavy lifting, and our licensed audit firm reviews everything. Clean books — without the price tag.
+        </>
+      }
+      chips={["No setup fee", "No long contracts", "Cancel anytime"]}
+      actions={
+        <>
+          <Button variant="primary" size="lg" href="#pricing">See your price <Icon name="arrow-right" size={18} color="#09090B" /></Button>
+          <Button variant="outline-dark" size="lg" href="/contact">Request information</Button>
+        </>
+      }
+      after={
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <span style={{ ...kicker, color: "#A1A1AA" }}>Syncs with</span>
+            {/* Third-party marks, set in monochrome so the hero stays on the A4 palette. */}
             {[["/assets/logo-xero.png", "Xero"], ["/assets/logo-quickbooks.png", "QuickBooks"], ["/assets/logo-sage.png", "Sage"]].map(([src, alt]) => (
-              <img key={alt} src={src} alt={alt} style={{ height: 26, width: "auto", display: "block" }} />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={alt} src={src} alt={alt} style={{ height: 26, width: "auto", display: "block", filter: "grayscale(1) brightness(1.15)", opacity: 0.85 }} />
             ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px 14px", marginTop: 24, flexWrap: "wrap" }}>
-            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Full-service firm:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px 10px", flexWrap: "wrap" }}>
+            <span style={{ ...kicker, color: "#A1A1AA", marginRight: 4 }}>Full-service firm:</span>
             {["Accounting", "Audit", "Tax", "VAT", "Payroll", "Bookkeeping"].map((s) => (
-              <span key={s} style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 500, color: "var(--a4-on-dark)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-full)", padding: "5px 13px" }}>{s}</span>
+              <span key={s} className="a4-chip a4-chip-dark" style={{ height: 32, padding: "0 13px", fontSize: 14 }}>{s}</span>
             ))}
           </div>
-        </div>
-        <div style={{ flex: "1 1 380px", display: "flex", justifyContent: "center", minWidth: 300 }}>
-          <PortalMockup />
-        </div>
-      </Container>
-    </section>
+        </>
+      }
+      aside={<PortalMockup />}
+    />
   );
 }
 
 export function Integrations() {
   const tools = ["Sage", "QuickBooks", "Xero", "Revolut", "Stripe"];
   return (
-    <section style={{ background: "#000", padding: "0 0 clamp(48px,7vw,72px)" }}>
-      <Container>
-        <div style={{ borderTop: "1px solid var(--a4-hairline-dark)", paddingTop: "clamp(32px,4vw,48px)", display: "flex", alignItems: "center", justifyContent: "center", gap: "16px 40px", flexWrap: "wrap" }}>
-          <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--a4-stone)" }}>Connects with</span>
-          {tools.map((t) => (
-            <span key={t} style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "var(--a4-on-dark-mute)", letterSpacing: "-.3px" }}>{t}</span>
-          ))}
-        </div>
-      </Container>
-    </section>
+    <Section surface="dark" tight glow={{ left: "20%", top: "-60%", strength: 0.18 }}>
+      <div data-fx="rise" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px 32px", flexWrap: "wrap" }}>
+        <span style={{ ...kicker, color: "#A1A1AA" }}>Connects with</span>
+        {tools.map((t, i) => (
+          <React.Fragment key={t}>
+            {i > 0 ? (
+              <span className="pk-sep" aria-hidden="true" style={{ display: "inline-flex" }}>
+                <SkewMark color={PERI} size={8} />
+              </span>
+            ) : null}
+            <span style={{ fontWeight: 500, fontSize: "clamp(22px,2.2vw,30px)", letterSpacing: "-0.03em", color: "#E4E4E7" }}>{t}</span>
+          </React.Fragment>
+        ))}
+      </div>
+    </Section>
   );
 }
 
 export function HowItWorks() {
   const steps = [
-    { icon: "upload-cloud", t: "Upload or connect", s: "Drop invoices and receipts into your secure portal — or connect your bank and accounting software directly." },
-    { icon: "cpu", t: "Automation does the work", s: "Documents are read, categorised and synced to Sage, QuickBooks or Xero — no manual data entry." },
-    { icon: "badge-check", t: "Reviewed & finalised", s: "Our qualified accountants reconcile and finalise your books, and you get clean monthly reports." },
+    { title: "Upload or connect", body: "Drop invoices and receipts into your secure portal — or connect your bank and accounting software directly." },
+    { title: "Automation does the work", body: "Documents are read, categorised and synced to Sage, QuickBooks or Xero — no manual data entry." },
+    { title: "Reviewed & finalised", body: "Our qualified accountants reconcile and finalise your books, and you get clean monthly reports." },
   ];
   return (
-    <section style={{ background: "var(--a4-canvas-light)", padding: "clamp(64px,9vw,104px) 0" }}>
-      <Container>
-        <Reveal><SectionHead align="center" eyebrow="How it works" title="Three steps to clean books" sub="Designed to take minutes of your time each month — the automation and our team handle the rest." maxWidth={560} /></Reveal>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginTop: 52 }}>
-          {steps.map((s, i) => (
-            <Reveal key={s.t} delay={i * 90} style={{ background: "var(--a4-surface-card)", border: "1px solid var(--a4-hairline-light)", borderRadius: "var(--a4-r-lg)", padding: "clamp(26px,3vw,34px)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ width: 46, height: 46, borderRadius: "var(--a4-r-md)", background: "var(--a4-surface-soft)", display: "grid", placeItems: "center" }}><Icon name={s.icon} size={22} color="var(--a4-primary)" stroke={1.75} /></span>
-                <span style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 15, color: "var(--a4-faint)" }}>0{i + 1}</span>
-              </div>
-              <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 21, color: "var(--a4-ink)", margin: "22px 0 0", letterSpacing: "-.2px" }}>{s.t}</h3>
-              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 15, lineHeight: 1.55, color: "var(--a4-mute)", margin: "9px 0 0", textWrap: "pretty" }}>{s.s}</p>
-            </Reveal>
-          ))}
-        </div>
-      </Container>
-    </section>
+    <Section surface="light">
+      <Head
+        n="01"
+        eyebrow="How it works"
+        title={<>Three steps to <G>clean books</G></>}
+        sub="Designed to take minutes of your time each month — the automation and our team handle the rest."
+      />
+      <div style={{ marginTop: "clamp(56px,7vw,96px)" }}>
+        <Timeline steps={steps} min={260} />
+      </div>
+    </Section>
   );
 }
 
@@ -145,21 +139,33 @@ export function Why() {
     { icon: "refresh-cw", t: "Synced with your tools", s: "Works with Sage, QuickBooks and Xero — no double entry." },
     { icon: "shield-check", t: "Reviewed by professionals", s: "A licensed audit firm checks and finalises every set of books." },
   ];
+  const [lead, ...rest] = items;
   return (
-    <section style={{ background: "#000", padding: "clamp(64px,9vw,104px) 0" }}>
-      <Container>
-        <Reveal><SectionHead dark align="center" eyebrow="Why A4" title="Affordable, because it's automated" sub="The price of a subscription, the rigour of a professional firm." maxWidth={560} /></Reveal>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginTop: 52 }}>
-          {items.map((it, i) => (
-            <Reveal key={it.t} delay={i * 80} style={{ background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "28px 26px" }}>
-              <Icon name={it.icon} size={24} color="var(--a4-primary-bright)" stroke={1.75} />
-              <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 19, color: "#fff", margin: "20px 0 0", letterSpacing: "-.2px" }}>{it.t}</h3>
-              <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 14.5, lineHeight: 1.5, color: "var(--a4-on-dark-mute)", margin: "9px 0 0", textWrap: "pretty" }}>{it.s}</p>
-            </Reveal>
-          ))}
+    <Section surface="light">
+      <Head n="03" eyebrow="Why A4" title={<>Affordable, because it&apos;s <G>automated</G></>} sub="The price of a subscription, the rigour of a professional firm." />
+      {/* The pricing card carries the most text, so it runs the full width. */}
+      <div
+        data-fx="rise"
+        className="a4-dark-card a4-card-dark"
+        style={{ marginTop: "clamp(48px,6vw,80px)", borderRadius: 24, padding: "clamp(28px,3.6vw,44px)", background: DARK_CARD, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: "24px 56px", alignItems: "end", transition: "border-color .35s, box-shadow .35s" }}
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: ".02em", color: PERI }}>{pad2(1)}</span>
+            <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 14, display: "grid", placeItems: "center", background: "rgba(139,143,247,.14)" }}>
+              <Icon name={lead.icon} size={20} color={PERI} stroke={1.75} />
+            </span>
+          </div>
+          <h3 style={{ margin: "clamp(28px,4vw,56px) 0 0", fontSize: "clamp(30px,3vw,44px)", fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.08, color: "#FFFFFF" }}>{lead.t}</h3>
         </div>
-      </Container>
-    </section>
+        <p style={{ margin: 0, fontFamily: BODY, fontSize: 16.5, lineHeight: 1.65, color: "#D4D4D8", textWrap: "pretty" }}>{lead.s}</p>
+      </div>
+      <CardGrid min={300} style={{ marginTop: 16 }}>
+        {rest.map((it, i) => (
+          <InfoCard key={it.t} i={i + 1} dark={i % 2 === 1} icon={it.icon} title={it.t} body={it.s} minHeight={260} />
+        ))}
+      </CardGrid>
+    </Section>
   );
 }
 
@@ -169,67 +175,67 @@ export function ReviewedByTeam() {
     { icon: "users", t: "Our accountants review every posting", s: "A qualified A4 accountant checks the categorisation, fixes anomalies, reconciles your accounts and signs off — so your numbers are right, not just fast." },
   ];
   return (
-    <section style={{ background: "#000", padding: "clamp(64px,9vw,104px) 0" }}>
-      <Container>
-        <Reveal><SectionHead
-          dark align="center"
-          eyebrow="Automation + experts"
-          title={<>Automation, checked by<br className="a4-br" /> real accountants</>}
-          sub="You're never trusting software on its own. Every transaction our automation processes is reviewed and reconciled by a qualified accountant before your books are finalised."
-          maxWidth={640}
-        /></Reveal>
-        <div className="rbt-grid" style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 18, alignItems: "stretch", marginTop: 52, maxWidth: 960, marginLeft: "auto", marginRight: "auto" }}>
-          {[{ ...pillars[0], label: "The software", accent: "var(--a4-primary-bright)", bg: "rgba(73,79,223,.16)" }, { ...pillars[1], label: "The team", accent: "var(--a4-accent-teal)", bg: "rgba(0,168,126,.16)" }].map((p, i) => (
-            <React.Fragment key={p.t}>
-              {i === 1 && (
-                <div className="rbt-plus" style={{ display: "grid", placeItems: "center" }}>
-                  <span style={{ width: 50, height: 50, borderRadius: 999, background: "var(--a4-surface-deep)", border: "1px solid var(--a4-hairline-dark)", display: "grid", placeItems: "center", color: "#fff", fontFamily: "var(--a4-font-display)", fontSize: 26, fontWeight: 500, lineHeight: 1 }}>+</span>
-                </div>
-              )}
-              <Reveal delay={i * 90} style={{ position: "relative", background: "var(--a4-surface-elevated)", border: "1px solid var(--a4-hairline-dark)", borderRadius: "var(--a4-r-lg)", padding: "clamp(26px,3vw,36px)", overflow: "hidden" }}>
-                <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: p.accent }} />
-                <span style={{ width: 54, height: 54, borderRadius: "var(--a4-r-md)", background: p.bg, display: "grid", placeItems: "center" }}><Icon name={p.icon} size={26} color={p.accent} stroke={1.75} /></span>
-                <div style={{ fontFamily: "var(--a4-font-body)", fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--a4-stone)", marginTop: 18 }}>{p.label}</div>
-                <h3 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, fontSize: 22, color: "#fff", margin: "8px 0 0", letterSpacing: "-.3px", textWrap: "balance" }}>{p.t}</h3>
-                <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 15, lineHeight: 1.55, color: "var(--a4-on-dark-mute)", margin: "12px 0 0", textWrap: "pretty" }}>{p.s}</p>
-              </Reveal>
-            </React.Fragment>
-          ))}
-        </div>
-        <Reveal delay={140}>
-          <div className="rbt-equals" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 13, flexWrap: "wrap", margin: "18px auto 0", maxWidth: 960, background: "rgba(0,168,126,.08)", border: "1px solid rgba(0,168,126,.22)", borderRadius: "var(--a4-r-lg)", padding: "18px 24px" }}>
-            <span style={{ width: 32, height: 32, borderRadius: 999, background: "var(--a4-accent-teal)", display: "grid", placeItems: "center", color: "#fff", fontFamily: "var(--a4-font-display)", fontSize: 18, fontWeight: 500, flexShrink: 0 }}>=</span>
-            <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 15.5, fontWeight: 500, lineHeight: 1.5, color: "#fff", textWrap: "pretty" }}>
-              Books that are right, not just fast — speed from automation, accuracy from a licensed team, at a subscription price.
-            </span>
-          </div>
-        </Reveal>
-      </Container>
-    </section>
+    <Section surface="dark" sweep glow={{ left: "-10%", top: "-20%", strength: 0.24 }}>
+      <Head
+        dark
+        n="02"
+        eyebrow="Automation + experts"
+        title={<>Automation, checked by<br className="a4-br" /> <G>real accountants</G></>}
+        sub="You're never trusting software on its own. Every transaction our automation processes is reviewed and reconciled by a qualified accountant before your books are finalised."
+      />
+      <div className="rbt-grid" style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 18, alignItems: "stretch", marginTop: "clamp(48px,6vw,80px)" }}>
+        {[{ ...pillars[0], label: "The software" }, { ...pillars[1], label: "The team" }].map((p, i) => (
+          <React.Fragment key={p.t}>
+            {i === 1 && (
+              <div className="rbt-plus" style={{ display: "grid", placeItems: "center" }}>
+                <span aria-hidden="true" style={{ width: 56, height: 56, borderRadius: 999, background: INK, border: "1px solid rgba(255,255,255,.18)", display: "grid", placeItems: "center", color: "#fff", fontSize: 28, fontWeight: 500, lineHeight: 1 }}>+</span>
+              </div>
+            )}
+            <div
+              data-fx="rise"
+              data-d={i * 120}
+              style={{ position: "relative", overflow: "hidden", background: "rgba(24,24,27,.92)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 28, padding: "clamp(28px,3.4vw,40px)", boxShadow: "0 40px 100px rgba(0,0,0,.45)" }}
+            >
+              <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: GRAD }} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <span style={{ ...kicker, color: "#A1A1AA" }}>{p.label}</span>
+                <span aria-hidden="true" style={{ width: 52, height: 52, borderRadius: 16, background: "rgba(139,143,247,.14)", display: "grid", placeItems: "center" }}>
+                  <Icon name={p.icon} size={24} color={PERI} stroke={1.75} />
+                </span>
+              </div>
+              <h3 style={{ margin: "28px 0 0", fontSize: "clamp(24px,2.2vw,30px)", fontWeight: 600, color: "#fff", letterSpacing: "-0.03em", lineHeight: 1.15, textWrap: "balance" }}>{p.t}</h3>
+              <p style={{ fontFamily: BODY, fontSize: 16, lineHeight: 1.6, color: "#A1A1AA", margin: "12px 0 0", textWrap: "pretty" }}>{p.s}</p>
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+      <div
+        data-fx="rise"
+        data-d="200"
+        className="rbt-equals"
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, flexWrap: "wrap", marginTop: 18, background: "rgba(79,85,241,.12)", border: "1px solid rgba(139,143,247,.3)", borderRadius: 24, padding: "20px 26px" }}
+      >
+        <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 999, background: INDIGO, display: "grid", placeItems: "center", color: "#fff", fontSize: 19, fontWeight: 600, flexShrink: 0 }}>=</span>
+        <span style={{ fontFamily: BODY, fontSize: 16.5, fontWeight: 500, lineHeight: 1.5, color: "#fff", textWrap: "pretty" }}>
+          Books that are right, not just fast — speed from automation, accuracy from a licensed team, at a subscription price.
+        </span>
+      </div>
+    </Section>
   );
 }
 
 export function FinalCTA() {
   return (
-    <section style={{ background: "var(--a4-surface-soft)", padding: "clamp(64px,9vw,104px) 0" }}>
-      <Container>
-        <div style={{ background: "#000", borderRadius: "var(--a4-r-xl)", padding: "clamp(40px,6vw,72px)", textAlign: "center", position: "relative", overflow: "hidden" }}>
-          <div aria-hidden="true" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "90%", height: 360, background: "radial-gradient(50% 50% at 50% 50%, rgba(73,79,223,.22), transparent 72%)", pointerEvents: "none" }} />
-          <div style={{ position: "relative" }}>
-            <h2 style={{ fontFamily: "var(--a4-font-display)", fontWeight: 500, color: "#fff", fontSize: "clamp(32px,4.6vw,58px)", lineHeight: 1.04, letterSpacing: "-.025em", margin: 0, textWrap: "balance", maxWidth: 700, marginInline: "auto" }}>
-              Ready for clean books from €{BOOKKEEPING_FROM}/month?
-            </h2>
-            <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 18, lineHeight: 1.6, color: "var(--a4-on-dark-mute)", margin: "20px auto 0", maxWidth: 540, textWrap: "pretty" }}>
-              Create your account and request services in minutes — or book a quick call and we&apos;ll set everything up with you.
-            </p>
-            <div style={{ display: "flex", gap: 12, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
-              <Button variant="primary" size="lg" href="/contact">Request information <Icon name="arrow-right" size={18} color="#000" /></Button>
-              <Button variant="outline-dark" size="lg" href="#pricing">See your price</Button>
-            </div>
-          </div>
-        </div>
-      </Container>
-    </section>
+    <CtaBand
+      first="Ready for clean books"
+      accent={<>from €{BOOKKEEPING_FROM}/month?</>}
+      lead={<>Create your account and request services in minutes — or book a quick call and we&apos;ll set everything up with you.</>}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Button variant="primary" size="lg" href="/contact" style={ctaPill}>Request information <Icon name="arrow-right" size={18} color="#09090B" /></Button>
+        <Button variant="outline-dark" size="lg" href="#pricing" style={ctaPill}>See your price</Button>
+      </div>
+    </CtaBand>
   );
 }
 
@@ -253,6 +259,7 @@ export function LandingApp() {
     <div>
       {/* <LandingNav /> */}
       <main id="main-content">
+        <KitStyles />
         <LandingHero />
         <HealthCheckPromo />
         <Integrations />

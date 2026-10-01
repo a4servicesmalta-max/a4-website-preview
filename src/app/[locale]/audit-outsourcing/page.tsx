@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function AuditOutsourcingPage() {
   return (
-    <div className="a4-landing-page pt-24 sm:pt-28">
+    <div className="a4-landing-page">
       <OutsourceApp />
     </div>
   );
