@@ -252,7 +252,7 @@ export function ComplianceJourney() {
           end: "bottom bottom",
           scrub: true, // Lenis already smooths — never a number here
           invalidateOnRefresh: true,
-          onToggle: (self) => setImmersive("journey", self.isActive),
+          onToggle: narrow ? undefined : (self) => setImmersive("journey", self.isActive),
           onUpdate: (self) => {
             const i = Math.min(STAGES.length - 1, Math.floor(self.progress * STAGES.length));
             for (let n = 0; n < tickEls.length; n++) {
@@ -262,6 +262,17 @@ export function ComplianceJourney() {
           },
         },
       });
+
+      // Phones: the bottom sheet is on screen a little before the pin starts and after it
+      // ends, so the floating buttons step aside over that whole range.
+      const sheetRange = narrow
+        ? ScrollTrigger.create({
+            trigger: tr,
+            start: "top 35%",
+            end: "bottom 85%",
+            onToggle: (self) => setImmersive("journey", self.isActive),
+          })
+        : null;
 
       // Hold on each node, then travel to the next — the A4 Books cadence.
       STAGES.forEach((s, i) => {
@@ -285,6 +296,7 @@ export function ComplianceJourney() {
 
       return () => {
         setImmersive("journey", false);
+        sheetRange?.kill();
         tl.scrollTrigger?.kill();
         tl.kill();
         gsap.set([...clusterEls, ...panelEls], { clearProps: "all" });

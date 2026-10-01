@@ -506,19 +506,19 @@ export function camStyle(fx0: number, fy0: number, s: number, rx: number, rz: nu
 }
 
 /** Frame-level sample label for zoomed shots, where the window's own label is off frame. */
-export function SampleTag({ on, k = 1 }: { on: number; /** Text boost on phones. */ k?: number }) {
+export function SampleTag({ on, px, top = 36 }: { on: number; /** Font size in frame units (phones). */ px?: number; top?: number }) {
   if (on <= 0.01) return null;
   return (
     <div
       style={{
         position: "absolute",
         right: 40,
-        top: 36,
+        top,
         padding: "8px 16px",
         borderRadius: 999,
         background: "rgba(9,9,11,.78)",
         color: "#fff",
-        fontSize: 20 * k,
+        fontSize: px ?? 20,
         fontWeight: 500,
         fontFamily: FONT,
         opacity: on,

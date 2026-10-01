@@ -147,8 +147,8 @@ export function AiNativeFilm() {
 const PORTAL_BEATS = [0, 2];
 // 03 runs until its upload has landed (and holds there under reduced motion).
 const PORTAL: SceneDef[] = [
-  { name: "PortalHead", dur: 1.2 },
-  ...PORTAL_BEATS.map((i) => (i === 2 ? { name: "P3", dur: 3.4, hold: 3.25 } : { name: "P" + (i + 1), dur: 3 })),
+  { name: "PortalHead", dur: 1.35 },
+  ...PORTAL_BEATS.map((i) => (i === 2 ? { name: "P3", dur: 3.4, hold: 3.35 } : { name: "P" + (i + 1), dur: 3 })),
 ];
 
 /** Your own portal: four beats inside the client portal (sample data, fictional companies). */
