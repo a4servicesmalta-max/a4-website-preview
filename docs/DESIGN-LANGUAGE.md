@@ -123,7 +123,33 @@ sub). Reduced motion is handled centrally — do not add your own checks for ent
 9. **Numbered terms / FAQ list** — left: eyebrow + big two-line heading (second line
    gradient); right: numbered rows with hairlines.
 10. **Dark CTA** — "Accept your / quotation." style heading left, card or pills right.
-11. **Closing glitch lockup** — in the footer already; do not repeat on pages.
+11. **Closing glitch lockup** — the footer opens on it as the film's end card (full
+    screen, tagline, Powered by Vacei, Get a quote / Book a consultation); do not repeat
+    it on pages.
+
+## Scroll films — the teaser, played by scroll (`src/components/film`)
+
+The site borrows its big moments from the A4 Services teaser film
+(`handoff/A4 Services Teaser/`, `a4-teaser.jsx`). A **scroll film** pins a full-screen
+stage while the film's playhead follows the scroll, so scrolling plays the scenes forwards
+and backwards like scrubbing a video.
+
+- `Film` (`Film.tsx`) — the pinned stage. Props: `scenes` (cue names and lengths in film
+  seconds), `per` (screen heights of scroll per film second, default 0.5), `lead` (start a
+  little into the first cue), `tail` (hold the last frame), `label` and a `transcript`
+  (the stage is `aria-hidden`; the transcript carries the words). Reduced motion holds a
+  settled frame per cue.
+- Scenes (`scenes.tsx`) are the film's own, laid out in its 1920×1080 frame; the frame
+  grows to the screen's shape, and phones get larger, wrapping statements (`pt`) and
+  readable captions (`tb`).
+- Chapters (`chapters.tsx`): `OldWayFilm` (the old way → Meet A4), `ServicesFilm` (into the
+  portal, Every service. One portal., 01–06), `AiNativeFilm`, `PortalFilm` (four portal
+  beats, sample data), `ProofFilm` (explained / evidenced / ON TIME), `CloseFilm` (licensed
+  firm in Malta → the A4 mark).
+- To add one to a page, place the chapter right after the hero (or open a section with it).
+  Use the film's copy (checked against a4.com.mt in the handoff's SCRIPT.md); new lines
+  follow the copy rules below.
+- The navbar tucks away while scrolling down so films play full screen.
 
 ## Rules
 
