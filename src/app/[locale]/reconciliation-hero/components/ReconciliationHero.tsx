@@ -3,8 +3,13 @@
 import React, { useEffect, useRef } from "react";
 import LocalizedLink from "@/components/common/LocalizedLink";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import { TypeText, gradText } from "@/components/fx/primitives";
 
-/** Animated reconciliation hero from New website Reconciliation Hero.html */
+/**
+ * Animated reconciliation hero (from "New website Reconciliation Hero.html"), in the A4 design
+ * language: ink canvas, zinc points that line up and turn periwinkle as the indigo sweep
+ * verifies them, Outfit headline typed with its gradient second line.
+ */
 export function ReconciliationHero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const href = useLocalizedHref();
@@ -18,17 +23,17 @@ export function ReconciliationHero() {
     const cvs: HTMLCanvasElement = canvasEl;
     const gfx: CanvasRenderingContext2D = ctxRaw;
 
-    const NAVY = "#0E1117";
-    const NAVY_HI = "#141B27";
-    const AMBER = [224, 162, 59] as const;
-    const DOT = [150, 170, 200] as const;
+    const INK = "#09090B";
+    const INK_HI = "#14141F";
+    const PERI = [139, 143, 247] as const;
+    const DOT = [161, 161, 170] as const;
     const LOOP_MS = 14000;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let W = 0;
     let H = 0;
     let DPR = 1;
-    let t0 = performance.now();
+    const t0 = performance.now();
     let raf = 0;
 
     const N = 64;
@@ -100,8 +105,8 @@ export function ReconciliationHero() {
 
     function draw(phase: number) {
       const g = gfx.createRadialGradient(W * 0.5, H * 0.46, 0, W * 0.5, H * 0.46, Math.max(W, H) * 0.78);
-      g.addColorStop(0, NAVY_HI);
-      g.addColorStop(1, NAVY);
+      g.addColorStop(0, INK_HI);
+      g.addColorStop(1, INK);
       gfx.fillStyle = g;
       gfx.fillRect(0, 0, W, H);
 
@@ -109,7 +114,7 @@ export function ReconciliationHero() {
       const rows = 11;
       for (let i = 1; i < rows; i++) {
         const y = (H / rows) * i;
-        gfx.strokeStyle = `rgba(150,170,200,${0.016 + 0.01 * Math.sin(i)})`;
+        gfx.strokeStyle = `rgba(161,161,170,${0.016 + 0.01 * Math.sin(i)})`;
         gfx.beginPath();
         gfx.moveTo(0, y);
         gfx.lineTo(W, y);
@@ -142,7 +147,7 @@ export function ReconciliationHero() {
           if (d2 < linkDist * linkDist) {
             const d = Math.sqrt(d2);
             const al = (1 - d / linkDist) * (0.04 + align * 0.15);
-            gfx.strokeStyle = `rgba(150,170,200,${al})`;
+            gfx.strokeStyle = `rgba(161,161,170,${al})`;
             gfx.beginPath();
             gfx.moveTo(a.x, a.y);
             gfx.lineTo(b.x, b.y);
@@ -154,12 +159,12 @@ export function ReconciliationHero() {
       if (sweepOn > 0.002) {
         const bandW = W * 0.2;
         const sg = gfx.createLinearGradient(sweepX - bandW, 0, sweepX + bandW, 0);
-        sg.addColorStop(0, "rgba(224,162,59,0)");
-        sg.addColorStop(0.5, `rgba(224,162,59,${0.055 * sweepOn})`);
-        sg.addColorStop(1, "rgba(224,162,59,0)");
+        sg.addColorStop(0, "rgba(79,85,241,0)");
+        sg.addColorStop(0.5, `rgba(79,85,241,${0.09 * sweepOn})`);
+        sg.addColorStop(1, "rgba(79,85,241,0)");
         gfx.fillStyle = sg;
         gfx.fillRect(0, 0, W, H);
-        gfx.strokeStyle = `rgba(224,162,59,${0.11 * sweepOn})`;
+        gfx.strokeStyle = `rgba(139,143,247,${0.16 * sweepOn})`;
         gfx.lineWidth = 1.5;
         gfx.beginPath();
         gfx.moveTo(sweepX, 0);
@@ -174,7 +179,7 @@ export function ReconciliationHero() {
         const verified = ease(nearSweep) * sweepOn;
         const baseR = p.r * (1 + align * 0.4);
         const glowR = baseR * 6;
-        const col = DOT.map((c, k) => Math.round(lerp(c, AMBER[k], verified)));
+        const col = DOT.map((c, k) => Math.round(lerp(c, PERI[k], verified)));
         const aCore = (0.3 + 0.3 * tw) * (0.6 + 0.4 * align) + verified * 0.4;
         const rg = gfx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
         rg.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${0.14 + verified * 0.24})`);
@@ -213,48 +218,38 @@ export function ReconciliationHero() {
   }, []);
 
   return (
-    <section className="relative w-full min-h-[100vh] overflow-hidden" style={{ background: "#0E1117", color: "#EDEFF3" }}>
+    <section data-hero="" className="relative w-full min-h-[100vh] overflow-hidden" style={{ background: "#09090B", color: "#FFFFFF" }}>
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" aria-hidden="true" />
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "linear-gradient(90deg, rgba(8,11,16,.55) 0%, rgba(8,11,16,.18) 34%, transparent 60%), radial-gradient(120% 90% at 50% 50%, transparent 40%, rgba(8,11,16,.55) 100%), linear-gradient(180deg, rgba(8,11,16,.35) 0%, transparent 22%, transparent 70%, rgba(8,11,16,.55) 100%)",
+            "linear-gradient(90deg, rgba(9,9,11,.6) 0%, rgba(9,9,11,.2) 34%, transparent 60%), radial-gradient(120% 90% at 50% 50%, transparent 40%, rgba(9,9,11,.55) 100%), linear-gradient(180deg, rgba(9,9,11,.35) 0%, transparent 22%, transparent 70%, rgba(9,9,11,.6) 100%)",
         }}
       />
-      <div className="relative z-10 flex flex-col items-start justify-center min-h-[100vh] px-[9vw] pointer-events-none">
-        <div
-          className="mb-[1.4rem] opacity-90 uppercase tracking-[0.32em] text-[0.78rem]"
-          style={{ fontFamily: "ui-monospace, monospace", color: "#E0A23B" }}
-        >
+      <div
+        data-hero-exit=""
+        className="relative z-10 flex flex-col items-start justify-center min-h-[100vh] pointer-events-none"
+        style={{ maxWidth: 1280, margin: "0 auto", padding: "clamp(128px,14vw,168px) clamp(20px,5vw,72px) clamp(72px,8vw,112px)", gap: "clamp(22px,2.8vw,36px)" }}
+      >
+        <div data-fx="rise" data-d="100" style={{ display: "flex", alignItems: "baseline", gap: 12, fontSize: "clamp(16px,1.5vw,22px)", fontWeight: 600, letterSpacing: ".02em", color: "#8B8FF7" }}>
+          <span aria-hidden="true" style={{ display: "inline-block", width: 10, height: 10, borderRadius: 1, background: "#8B8FF7", transform: "skewX(-30deg)", alignSelf: "center" }} />
           A4 Services · Malta
         </div>
-        <h1
-          className="font-normal leading-[1.08] tracking-[-0.01em] max-w-[16ch] mb-[1.6rem]"
-          style={{ fontFamily: "Georgia, 'Libre Baskerville', serif", fontSize: "clamp(2.4rem,5.4vw,4.6rem)" }}
-        >
-          Clarity, brought to <em style={{ color: "#E0A23B", fontStyle: "italic" }}>every figure.</em>
+        <h1 style={{ margin: 0, maxWidth: 1000, fontSize: "clamp(40px,5.8vw,96px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.03, textWrap: "balance" }}>
+          <TypeText segments={[{ t: "Clarity, brought to", c: "#FFFFFF" }]} per={34} d={260} />
+          <div data-fx="rise" data-d="1030" data-dy="60" style={{ fontWeight: 600, paddingBottom: ".08em", marginBottom: "-.08em", ...gradText }}>
+            every figure.
+          </div>
         </h1>
-        <p
-          className="leading-[1.6] max-w-[46ch] mb-[2.4rem]"
-          style={{ fontSize: "clamp(1rem,1.4vw,1.18rem)", color: "#8C94A3", fontFamily: "Montserrat, sans-serif" }}
-        >
+        <p data-fx="rise" data-d="1210" style={{ margin: 0, maxWidth: 640, fontSize: "clamp(18px,1.7vw,24px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.45, color: "#A1A1AA", textWrap: "pretty" }}>
           Audit and accounting that reconciles the detail and reports with precision — so the numbers tell the truth, plainly.
         </p>
-        <LocalizedLink
-          href={href("/contact")}
-          className="pointer-events-auto inline-flex items-center gap-[0.7rem] uppercase tracking-[0.12em] no-underline transition-transform hover:-translate-y-0.5"
-          style={{
-            fontFamily: "ui-monospace, monospace",
-            fontSize: "0.82rem",
-            color: "#0E1117",
-            background: "#E0A23B",
-            padding: "0.95rem 1.7rem",
-            borderRadius: 2,
-          }}
-        >
-          Book a consultation →
-        </LocalizedLink>
+        <div data-fx="rise" data-d="1350">
+          <LocalizedLink href={href("/contact")} className="a4-btn a4-btn-light pointer-events-auto" style={{ textDecoration: "none" }}>
+            Book a consultation <span aria-hidden="true">→</span>
+          </LocalizedLink>
+        </div>
       </div>
     </section>
   );
