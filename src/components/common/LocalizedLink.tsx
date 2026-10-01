@@ -6,12 +6,13 @@ import { useLocale } from "@/contexts/LocaleContext";
 import { isExternalHref } from "@/lib/external-links";
 import { withLocale } from "@/lib/localized-path";
 
-type Props = Omit<LinkProps, "href"> & {
-  href: string;
-  children: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-};
+type Props = Omit<LinkProps, "href"> &
+  Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps | "href"> & {
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+    style?: React.CSSProperties;
+  };
 
 const LocalizedLink = forwardRef<HTMLAnchorElement, Props>(function LocalizedLink(
   { href, children, className, style, ...rest },

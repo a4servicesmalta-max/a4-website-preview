@@ -1242,3 +1242,16 @@ body {
     transform: none;
   }
 }
+.a4-btn-soft {
+  background: #f4f4f5;
+  color: #09090b;
+  border: 1px solid #e4e4e7;
+  font-weight: 600;
+}
+.a4-btn-soft:hover {
+  background: #e4e4e7;
+}
+.a4-btn:focus-visible {
+  outline: 3px solid rgba(79, 85, 241, 0.55);
+  outline-offset: 2px;
+}

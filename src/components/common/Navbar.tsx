@@ -1,1089 +1,448 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { usePathname } from "next/navigation";
+import { ArrowRight, ArrowUpRight, Linkedin } from "lucide-react";
 import LocalizedLink from "@/components/common/LocalizedLink";
-
+import { A4Mark, DARK_CARD, DARK_GRID } from "@/components/fx/primitives";
 import { stripLocaleFromPathname } from "@/lib/localized-path";
 import { defaultLocale, isLocale, type Locale } from "@/lib/i18n-config";
-import { cn } from "@/lib/utils";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
-import {
-  ArrowRight,
-  ShieldCheck,
-  BookOpen,
-  Layers,
-  Linkedin,
-} from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
-import { useReduceMotion, usePerformance } from "@/contexts/ReduceMotionContext";
 import { A4_SERVICES_VISIBLE } from "@/data/a4ServicesSiteData";
 import { RESOURCE_CARDS } from "@/data/a4ResourcesSiteData";
-import {
-  CONTACT_EMAIL,
-  CONTACT_EMAIL_HREF,
-  CONTACT_PHONES,
-  LINKEDIN_COMPANY_URL,
-} from "@/lib/contact";
-import { CLIENT_LOGIN_URL, CLIENT_ONBOARDING_URL } from "@/lib/external-links";
+import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONES, LINKEDIN_COMPANY_URL } from "@/lib/contact";
+import { CLIENT_LOGIN_URL } from "@/lib/external-links";
 
-// Logo path from assets
-const Logo = "/assets/images/a4-logo-new.webp";
-const LogoMarkWhite = "/assets/a4-mark-white.png";
+/**
+ * Site navigation in the A4 design language (the "A4 Quotation" landing):
+ * a fixed 72px bar — transparent over a dark hero, ink with blur once the
+ * page moves — the A4 mark + wordmark, dark-glass dropdowns, a white pill CTA,
+ * and a full-screen dark menu below lg.
+ */
 
 type NavDropdownId = "platform" | "services" | "resources";
+type NavLink = { id: string; label: string; href: string; dropdown?: NavDropdownId };
+
+const HIDE_CHROME = ["/privacy-policy", "/terms-and-conditions", "/cookie-policy"];
+const BAR_H = 72;
+const SANS = "var(--a4x-display)";
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ transform: `rotate(${open ? 180 : 0}deg)`, transition: "transform .35s cubic-bezier(.16,1,.3,1)" }}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
 
 const Navbar = () => {
   const pathname = usePathname();
   const { t } = useTranslation("common");
   const barePath = stripLocaleFromPathname(pathname);
-
   const activeLocale: Locale = useMemo(() => {
     const seg = pathname.split("/").filter(Boolean)[0];
     return seg && isLocale(seg) ? seg : defaultLocale;
   }, [pathname]);
-  const widenNavForI18n = activeLocale !== "en";
-  const [portalsOpen, setPortalsOpen] = useState(false);
-  const [servicesOpen, setServicesOpen] = useState(false);
-  const [resourcesOpen, setResourcesOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [hamburgerHover, setHamburgerHover] = useState(false);
-  const [isDarkBackground, setIsDarkBackground] = useState(false); // Default to light background
-  const { isIPhone, isLowPerformance } = usePerformance();
+  const compact = activeLocale !== "en";
 
-  // Check if mobile screen
-  const [isMobile, setIsMobile] = useState(false);
+  const [open, setOpen] = useState<NavDropdownId | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSection, setMobileSection] = useState<NavDropdownId | null>(null);
+  const [solid, setSolid] = useState(false);
+  const [darkTop, setDarkTop] = useState(true);
+  const closeTimer = useRef<number | null>(null);
 
-  const hideChromeRoutes = [
-    "/privacy-policy",
-    "/terms-and-conditions",
-    "/cookie-policy",
-  ];
-  const shouldHideChrome = hideChromeRoutes.includes(barePath);
+  // Transparent at the top only over a dark hero; anything else gets the bar.
+  useEffect(() => {
+    const check = () => {
+      setSolid((window.scrollY || 0) > 30);
+    };
+    const detectHero = () => {
+      const first = document.querySelector("main [data-hero], #main-content [data-hero], [data-hero]");
+      setDarkTop(!!first && first.getBoundingClientRect().top < 120);
+    };
+    check();
+    const t1 = window.setTimeout(detectHero, 0);
+    const t2 = window.setTimeout(detectHero, 600);
+    window.addEventListener("scroll", check, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", check);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [pathname]);
+
+  // Route change closes everything.
+  useEffect(() => {
+    setOpen(null);
+    setMobileOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
     };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(null);
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Prevent scrolling when mobile menu is open
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [mobileMenuOpen]);
-
-  // Detect dark/light background behind navbar on scroll
-  useEffect(() => {
-    const getClassName = (element: HTMLElement): string => {
-      // Safely convert className to string (handles DOMTokenList, SVGAnimatedString, etc.)
-      if (typeof element.className === 'string') {
-        return element.className;
-      }
-      if (element.className && typeof element.className === 'object') {
-        const classNameObj = element.className as any;
-        // Handle DOMTokenList
-        if ('value' in classNameObj) {
-          return String(classNameObj.value);
-        }
-        // Handle SVGAnimatedString
-        if ('baseVal' in classNameObj) {
-          return String(classNameObj.baseVal);
-        }
-      }
-      // Fallback to getAttribute
-      return element.getAttribute('class') || '';
-    };
-
-    const checkBackground = (element: HTMLElement | null): boolean => {
-      if (!element || element === document.body) return false;
-
-      const bgColor = window.getComputedStyle(element).backgroundColor;
-      const bgClass = getClassName(element);
-
-      // Check for dark background classes first
-      const isDarkClass = bgClass.includes('bg-hero') ||
-        bgClass.includes('bg-[#000000]') ||
-        bgClass.includes('bg-card') ||
-        bgClass.includes('bg-gradient-container') ||
-        bgClass.includes('bg-hero-dark') ||
-        bgClass.includes('bg-[#111111]') ||
-        bgClass.includes('bg-[#222222]') ||
-        bgClass.includes('bg-[#1e1e2f]');
-
-      if (isDarkClass) return true;
-
-      // Check for light background classes
-      const isLightClass = bgClass.includes('bg-background') ||
-        bgClass.includes('bg-white') ||
-        bgClass.includes('bg-section-light') ||
-        bgClass.includes('bg-[#ecf0f0]') ||
-        bgClass.includes('bg-[#d8e5e5]');
-
-      if (isLightClass) return false;
-
-      // Check background color luminance
-      const rgbMatch = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-      if (rgbMatch && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-        const r = parseInt(rgbMatch[1]);
-        const g = parseInt(rgbMatch[2]);
-        const b = parseInt(rgbMatch[3]);
-        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-        if (luminance < 0.5) return true; // Dark
-        if (luminance > 0.7) return false; // Light
-      }
-
-      // Recursively check parent
-      return checkBackground(element.parentElement);
-    };
-
-    const handleScroll = () => {
-      const navbar = document.querySelector('nav');
-      if (!navbar) {
-        setIsDarkBackground(false);
-        return;
-      }
-
-      const scrollY = window.scrollY || window.pageYOffset;
-
-      // Homepage uses a light hero: keep nav in “dark text on light bar” until well past the hero
-      if (barePath === "/" || barePath === "") {
-        if (scrollY < 200) {
-          setIsDarkBackground(false);
-          return;
-        }
-      }
-
-      // PERFORMANCE: Skip expensive background detection on iPhone/low-performance devices
-      if (isIPhone || isLowPerformance) {
-        // Light hero at top: use dark link text (isDarkBackground false). Past hero, allow contrast flip.
-        setIsDarkBackground(scrollY >= 200);
-        return;
-      }
-
-      const navbarRect = navbar.getBoundingClientRect();
-      const isAtTop = scrollY < 10; // Consider "at top" if scrolled less than 10px
-
-      // At the top of the page, check navbar's own background and body background
-      if (isAtTop) {
-        // Check navbar's own background first
-        const navElement = navbar as HTMLElement;
-        const navBgColor = window.getComputedStyle(navElement).backgroundColor;
-        const navBgClass = getClassName(navElement);
-
-        // Check if navbar has explicit light background classes
-        const hasLightClass = navBgClass.includes('bg-white') ||
-          navBgClass.includes('bg-background') ||
-          navBgClass.includes('bg-white/');
-
-        if (hasLightClass) {
-          setIsDarkBackground(false);
-          return;
-        }
-
-        // Check navbar background color luminance
-        const rgbMatch = navBgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-        if (rgbMatch) {
-          const r = parseInt(rgbMatch[1]);
-          const g = parseInt(rgbMatch[2]);
-          const b = parseInt(rgbMatch[3]);
-          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-          // If navbar background is light, use dark text
-          if (luminance > 0.6) {
-            setIsDarkBackground(false);
-            return;
-          }
-        }
-
-        // Check body background as fallback
-        const bodyBgColor = window.getComputedStyle(document.body).backgroundColor;
-        const bodyRgbMatch = bodyBgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-        if (bodyRgbMatch) {
-          const r = parseInt(bodyRgbMatch[1]);
-          const g = parseInt(bodyRgbMatch[2]);
-          const b = parseInt(bodyRgbMatch[3]);
-          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-          if (luminance > 0.6) {
-            setIsDarkBackground(false);
-            return;
-          }
-        }
-
-        // Default to light background (dark text) at top
-        setIsDarkBackground(false);
-        return;
-      }
-
-      // When scrolled, check what's below the navbar
-      const checkY = navbarRect.bottom + 20;
-
-      // Check multiple points for better accuracy
-      const checkPoints = [
-        window.innerWidth / 2, // Center
-        window.innerWidth * 0.25, // Left quarter
-        window.innerWidth * 0.75, // Right quarter
-      ];
-
-      let darkCount = 0;
-      let lightCount = 0;
-
-      for (const checkX of checkPoints) {
-        const elementAtPoint = document.elementFromPoint(checkX, checkY);
-
-        if (!elementAtPoint) {
-          lightCount++;
-          continue;
-        }
-
-        // Skip navbar elements
-        if ((elementAtPoint as HTMLElement).closest('nav')) {
-          continue;
-        }
-
-        const isDark = checkBackground(elementAtPoint as HTMLElement);
-        if (isDark) {
-          darkCount++;
-        } else {
-          lightCount++;
-        }
-      }
-
-      // Use majority vote, default to light if uncertain
-      setIsDarkBackground(darkCount > lightCount);
-    };
-
-    // Throttle scroll events for performance
-    let ticking = false;
-    const throttledHandleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll();
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    // Initial check - run immediately and also after a short delay to ensure DOM is ready
-    handleScroll(); // Immediate check
-    const initialCheck = setTimeout(() => {
-      handleScroll();
-    }, 100);
-
-    window.addEventListener('scroll', throttledHandleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll, { passive: true });
-
-    return () => {
-      clearTimeout(initialCheck);
-      window.removeEventListener('scroll', throttledHandleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [barePath, isIPhone, isLowPerformance]);
-
-  const navLinks = useMemo(
+  const links: NavLink[] = useMemo(
     () => [
-      {
-        id: "home",
-        dropdownId: undefined,
-        label: t("nav.home"),
-        href: "/",
-        hasDropdown: false,
-        isOpen: undefined,
-        setIsOpen: undefined,
-      },
-      {
-        id: "about",
-        dropdownId: undefined,
-        label: t("nav.resource.about"),
-        href: "/about",
-        hasDropdown: false,
-        isOpen: undefined,
-        setIsOpen: undefined,
-      },
-      {
-        id: "platform",
-        dropdownId: "platform" as NavDropdownId,
-        label: t("nav.platform"),
-        href: "/#platform",
-        hasDropdown: true,
-        isOpen: portalsOpen,
-        setIsOpen: setPortalsOpen,
-      },
-      {
-        id: "services",
-        dropdownId: "services" as NavDropdownId,
-        label: t("nav.services"),
-        href: "/services",
-        hasDropdown: true,
-        isOpen: servicesOpen,
-        setIsOpen: setServicesOpen,
-      },
-      {
-        id: "partners",
-        dropdownId: undefined,
-        label: t("nav.partners"),
-        href: "/partners",
-        hasDropdown: false,
-        isOpen: undefined,
-        setIsOpen: undefined,
-      },
-      {
-        id: "pricing",
-        dropdownId: undefined,
-        label: t("nav.pricing"),
-        href: "/pricing",
-        hasDropdown: false,
-        isOpen: undefined,
-        setIsOpen: undefined,
-      },
-      {
-        id: "resources",
-        dropdownId: "resources" as NavDropdownId,
-        label: t("nav.resources"),
-        href: "/resources",
-        hasDropdown: true,
-        isOpen: resourcesOpen,
-        setIsOpen: setResourcesOpen,
-      },
-    ],
-    [t, portalsOpen, servicesOpen, resourcesOpen]
-  );
-
-  const servicesList = useMemo(
-    () =>
-      A4_SERVICES_VISIBLE.map((service) => ({
-        id: service.key,
-        slug: service.slug,
-        title: service.name,
-      })),
-    []
-  );
-
-  const resourceLinks = useMemo(
-    () =>
-      RESOURCE_CARDS.filter((card) => card.href !== "/about").map((card) => ({
-        label: card.t,
-        href: card.href,
-      })),
-    []
-  );
-
-  const portalLinks = useMemo(
-    () => [
-      { label: t("nav.portal.client"), href: "/portal/client-portal" },
-      { label: t("nav.portal.accounting"), href: "/portal/accounting-portal" },
-      { label: t("nav.portal.audit"), href: "/portal/audit-portal" },
+      { id: "home", label: t("nav.home"), href: "/" },
+      { id: "about", label: t("nav.resource.about"), href: "/about" },
+      { id: "platform", label: t("nav.platform"), href: "/portal/client-portal", dropdown: "platform" },
+      { id: "services", label: t("nav.services"), href: "/services", dropdown: "services" },
+      { id: "partners", label: t("nav.partners"), href: "/partners" },
+      { id: "pricing", label: t("nav.pricing"), href: "/pricing" },
+      { id: "resources", label: t("nav.resources"), href: "/resources", dropdown: "resources" },
     ],
     [t]
   );
 
-  if (shouldHideChrome) {
-    return null;
-  }
+  const services = useMemo(
+    () => A4_SERVICES_VISIBLE.map((s) => ({ id: s.key, href: `/services/${s.slug}`, label: s.name })),
+    []
+  );
+  const resources = useMemo(
+    () => RESOURCE_CARDS.filter((c) => c.href !== "/about").map((c) => ({ href: c.href, label: c.t })),
+    []
+  );
+  const portals = useMemo(
+    () => [
+      { href: "/portal/client-portal", label: t("nav.portal.client") },
+      { href: "/portal/accounting-portal", label: t("nav.portal.accounting") },
+      { href: "/portal/audit-portal", label: t("nav.portal.audit") },
+    ],
+    [t]
+  );
 
-  // Keep dynamic dark/light navbar on desktop, force solid white navbar on mobile.
-  const useDarkNavbarTheme = !isMobile && isDarkBackground;
+  const openNow = useCallback((id: NavDropdownId) => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    setOpen(id);
+  }, []);
+  const closeSoon = useCallback(() => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setOpen(null), 140);
+  }, []);
+
+  if (HIDE_CHROME.includes(barePath)) return null;
+
+  const filled = solid || !darkTop || open !== null;
+  const isActive = (href: string) => (href === "/" ? barePath === "/" || barePath === "" : barePath.startsWith(href));
+
+  const linkStyle = (active: boolean): React.CSSProperties => ({
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    height: 40,
+    padding: "0 2px",
+    fontFamily: SANS,
+    fontSize: 15,
+    fontWeight: 500,
+    color: active ? "#FFFFFF" : "#D4D4D8",
+    background: "transparent",
+    border: 0,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    textDecoration: "none",
+    transition: "color .25s",
+  });
 
   return (
     <>
-      <div className="flex justify-center w-full relative z-[60]">
-        <nav
-          className={cn(
-            "fixed top-2 sm:top-4 w-full px-3 sm:px-4 lg:px-8 pointer-events-none",
-            widenNavForI18n
-              ? "max-w-[min(128rem,calc(100%-0.5rem))] xl:max-w-[138rem] 2xl:max-w-[148rem]"
-              : "max-w-7xl"
-          )}
+      <header
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 60,
+          height: BAR_H,
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          padding: "0 clamp(16px,4vw,48px)",
+          background: filled ? "rgba(9,9,11,.82)" : "rgba(9,9,11,0)",
+          borderBottom: `1px solid ${filled ? "rgba(255,255,255,.08)" : "rgba(255,255,255,0)"}`,
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          transition: "background .4s, border-color .4s",
+          color: "#FFFFFF",
+          fontFamily: SANS,
+        }}
+        onMouseLeave={closeSoon}
+      >
+        <LocalizedLink href="/" aria-label="A4 Services — home" style={{ display: "flex", alignItems: "center", textDecoration: "none", color: "#FFFFFF", flexShrink: 0 }}>
+          <A4Mark size={26} />
+          <span style={{ width: 1.5, height: 21, margin: "0 10px", background: "#FFFFFF", opacity: 0.35 }} />
+          <span style={{ fontSize: 18, fontWeight: 500, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>A4 Services</span>
+        </LocalizedLink>
+        {/* The firm/software split, above the fold: A4 is the firm, Vacei the software we build. */}
+        <a
+          href="https://vacei.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="A4 Services is the firm behind Vacei, the software platform"
+          className="hidden xl:inline-flex"
+          style={{ alignItems: "center", gap: 6, lineHeight: "28px", padding: "0 12px", borderRadius: 999, border: "1px solid rgba(255,255,255,.14)", color: "#A1A1AA", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", textDecoration: "none" }}
         >
-          {/* Navbar Container – sleek floating pill layout */}
-          <motion.div
-            initial={false}
-            className={`relative pointer-events-auto w-full mx-auto rounded-full ${isMobile
-              ? "bg-white border border-gray-200/80 text-black"
-              : useDarkNavbarTheme
-                ? `bg-white/10 ${isIPhone || isLowPerformance ? "" : "backdrop-blur-xl"} border border-white/20 text-white`
-                : `bg-white/80 ${isIPhone || isLowPerformance ? "" : "backdrop-blur-xl"} border border-gray-200/60 text-black`
-              } shadow-lg shadow-black/5 px-4  sm:px-6 lg:px-8 transition-all duration-300`}
-          >
-            <div className="flex items-center justify-between min-h-[56px] sm:min-h-[64px] lg:min-h-[80px]">
-              {/* Logo - smaller on mobile */}
-              <LocalizedLink href="/" className="flex items-center gap-2 shrink-0" onClick={() => setMobileMenuOpen(false)}>
-                <div className="flex items-center justify-center">
-                  <Image
-                    src={Logo}
-                    alt="A4"
-                    width={100}
-                    height={70}
-                    className={cn(
-                      "object-contain w-20 h-12 sm:w-24 sm:h-14 lg:w-[100px] lg:h-[70px] transition-all duration-300",
-                      useDarkNavbarTheme ? "brightness-0 invert" : ""
-                    )}
-                  />
-                </div>
-              </LocalizedLink>
-              {/* The firm/software split, above the fold: A4 is the firm, Vacei is the software we build. */}
-              <a
-                href="https://vacei.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`hidden sm:inline-flex items-center gap-1.5 ml-3 px-3 py-1 rounded-full border text-[11px] font-medium tracking-wide whitespace-nowrap transition-colors ${useDarkNavbarTheme
-                  ? "border-white/30 text-white/85 hover:text-white hover:border-white/60"
-                  : "border-black/15 text-black/70 hover:text-black hover:border-black/40"
-                  }`}
-                aria-label="A4 Services is the firm behind Vacei, the software platform"
-              >
-                <span>The firm behind</span>
-                <span className="font-semibold">Vacei</span>
-                <span aria-hidden="true">&#8599;</span>
-              </a>
+          The firm behind <span style={{ color: "#FFFFFF" }}>Vacei</span>
+          <ArrowUpRight size={13} aria-hidden="true" />
+        </a>
 
-              {/* Desktop Navigation Links - Tight spacing with responsive font */}
-              <div className="hidden lg:flex items-center gap-6 xl:gap-8 flex-1 justify-center px-4">
-                {navLinks.map((link) => (
-                  <div
-                    key={link.id}
-                    className="group h-full flex items-center static"
-                    onMouseEnter={() =>
-                      link.hasDropdown && link.setIsOpen?.(true)
-                    }
-                    onMouseLeave={() =>
-                      link.hasDropdown && link.setIsOpen?.(false)
-                    }
-                  >
-                    <LocalizedLink
-                      href={link.href}
-                      className={`${useDarkNavbarTheme ? "text-white" : "text-black"} font-normal text-[15px] ${useDarkNavbarTheme ? "hover:text-primary-blue/80" : "hover:text-primary-blue"} transition-colors flex items-center gap-1 ${link.isOpen ? (useDarkNavbarTheme ? "text-primary-blue/80" : "text-primary-blue") : ""}`}
-                      onClick={(e) => {
-                        if (link.hasDropdown) {
-                          e.preventDefault();
-                          link.setIsOpen?.(!link.isOpen);
-                        }
-                      }}
-                    >
-                      {link.label}
-                      {link.hasDropdown && (
-                        <motion.svg
-                          animate={{ rotate: link.isOpen ? 180 : 0 }}
-                          className="w-3.5 h-3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </motion.svg>
-                      )}
-                    </LocalizedLink>
-
-                    {/* Mega Menu Dropdown */}
-                    <AnimatePresence>
-                      {link.hasDropdown && link.isOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 15, scale: 0.98 }}
-                          transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-                          className="absolute top-full left-1/2 -translate-x-1/2 pt-6 z-50 origin-top pointer-events-auto"
-                        >
-                          <div
-                            className={cn(
-                              `bg-white/95 ${isIPhone || isLowPerformance ? "" : "backdrop-blur-xl"} rounded-3xl shadow-[0_30px_60px_rgba(0,0,0,0.12)] border border-white/60 p-6 overflow-hidden w-max flex gap-8`,
-                              widenNavForI18n
-                                ? "min-w-[860px] max-w-[min(94vw,98rem)]"
-                                : "min-w-[650px] max-w-[90vw]"
-                            )}
-                          >
-                            {link.dropdownId === "services" ? (
-                              <>
-                                <div className="flex-1 min-w-[280px]">
-                                  <LocalizedLink
-                                    href="/services"
-                                    className="block px-4 py-3 mb-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors group/hub"
-                                    onClick={() => link.setIsOpen?.(false)}
-                                  >
-                                    <div className="text-[15px] font-semibold text-black group-hover/hub:text-primary-blue transition-colors">
-                                      {t("nav.ourServices")}
-                                    </div>
-                                    <div className="text-xs text-gray-500 mt-0.5">
-                                      {t("nav.viewAllServices")}
-                                    </div>
-                                  </LocalizedLink>
-                                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 pl-3">
-                                    {t("nav.browseByService")}
-                                  </h3>
-                                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                    {servicesList.map((service) => (
-                                      <LocalizedLink
-                                        key={service.id}
-                                        href={`/services/${service.slug}`}
-                                        className="block px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group/item"
-                                        onClick={() => link.setIsOpen?.(false)}
-                                      >
-                                        <div className="text-[14px] font-medium text-black group-hover/item:text-primary-blue transition-colors">
-                                          {service.title}
-                                        </div>
-                                      </LocalizedLink>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="hidden sm:flex w-[240px] lg:w-[280px] shrink-0 rounded-2xl p-6 bg-linear-to-br from-zinc-50 to-zinc-100 border border-zinc-100 flex-col justify-between relative overflow-hidden group">
-                                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-zinc-500/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
-                                  <div className="relative z-10">
-                                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-zinc-600 shadow-sm mb-4">
-                                      <Layers className="w-5 h-5" />
-                                    </div>
-                                    <h4 className="text-[15px] font-bold text-slate-900 mb-2">{t("nav.unifiedServices")}</h4>
-                                    <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                                      {t("nav.unifiedServicesBody")}
-                                    </p>
-                                  </div>
-                                  <LocalizedLink href="/services" className="relative z-10 flex items-center gap-2 text-xs font-bold text-zinc-600 group-hover:gap-3 transition-all" onClick={() => link.setIsOpen?.(false)}>
-                                    {t("nav.exploreMethodology")} <ArrowRight className="w-4 h-4" />
-                                  </LocalizedLink>
-                                </div>
-                              </>
-                            ) : link.dropdownId === "platform" ? (
-                              <>
-                                <div className="flex-1 min-w-[240px]">
-                                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 pl-3">{t("nav.portals")}</h3>
-                                  <div className="grid grid-cols-1 gap-1">
-                                    {portalLinks.map((item) => (
-                                      <LocalizedLink
-                                        key={item.href}
-                                        href={item.href}
-                                        className="block px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors group/item"
-                                        onClick={() => link.setIsOpen?.(false)}
-                                      >
-                                        <div className="text-[15px] font-medium text-black group-hover/item:text-primary-blue transition-colors">
-                                          {item.label}
-                                        </div>
-                                      </LocalizedLink>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="hidden sm:flex w-[240px] lg:w-[280px] shrink-0 rounded-2xl p-6 bg-[#020410] border border-zinc-900/30 flex-col justify-between relative overflow-hidden group">
-                                  <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-zinc-600/20 to-transparent blur-xl group-hover:opacity-100 opacity-50 transition-opacity duration-500 pointer-events-none" />
-                                  <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-5">
-                                      <div className="w-10 h-10 rounded-xl bg-zinc-600 flex items-center justify-center text-white shadow-lg shadow-zinc-500/20">
-                                        <ShieldCheck className="w-5 h-5" />
-                                      </div>
-                                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">{t("nav.systemOk")}</span>
-                                      </div>
-                                    </div>
-                                    <h4 className="text-[15px] font-bold text-white mb-2">{t("nav.securePlatform")}</h4>
-                                    <p className="text-xs text-slate-400 leading-relaxed mb-6">
-                                      {t("nav.securePlatformBody")}
-                                    </p>
-                                  </div>
-                                  <LocalizedLink href="/portal/client-portal" className="relative z-10 flex items-center justify-center w-full py-2.5 rounded-xl bg-zinc-600 text-white text-xs font-bold hover:bg-zinc-500 transition-colors shadow-sm" onClick={() => link.setIsOpen?.(false)}>
-                                    {t("nav.goToDashboard")}
-                                  </LocalizedLink>
-                                </div>
-                              </>
-                            ) : link.dropdownId === "resources" ? (
-                              <>
-                                <div className="flex-1 min-w-[280px]">
-                                  <LocalizedLink
-                                    href="/resources"
-                                    className="block px-4 py-3 mb-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors group/hub"
-                                    onClick={() => link.setIsOpen?.(false)}
-                                  >
-                                    <div className="text-[15px] font-semibold text-black group-hover/hub:text-primary-blue transition-colors">
-                                      {t("nav.resources")}
-                                    </div>
-                                    <div className="text-xs text-gray-500 mt-0.5">
-                                      {t("nav.viewResourcesHub")}
-                                    </div>
-                                  </LocalizedLink>
-                                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 pl-3">
-                                    {t("nav.browseResources")}
-                                  </h3>
-                                  <div className="nav-resources-scrollbar max-h-[min(380px,58vh)] overflow-y-auto overscroll-contain pr-2">
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                      {resourceLinks.map((item) => (
-                                        <LocalizedLink
-                                          key={item.href}
-                                          href={item.href}
-                                          className="block px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group/item"
-                                          onClick={() => link.setIsOpen?.(false)}
-                                        >
-                                          <div className="text-[14px] font-medium text-black group-hover/item:text-primary-blue transition-colors">
-                                            {item.label}
-                                          </div>
-                                        </LocalizedLink>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="hidden sm:flex w-[240px] lg:w-[280px] shrink-0 rounded-2xl p-6 bg-slate-50 border border-slate-200 flex-col justify-between group">
-                                  <div>
-                                    <div className="flex items-center gap-3 mb-4">
-                                      <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
-                                        <BookOpen className="w-5 h-5" />
-                                      </div>
-                                      <span className="text-[9px] font-bold text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-1 rounded-full border border-orange-100/50 hidden lg:block">{t("nav.newGuide")}</span>
-                                    </div>
-                                    <h4 className="text-[15px] font-bold text-slate-900 mb-2 group-hover:text-zinc-600 transition-colors">{t("nav.auditReadiness")}</h4>
-                                    <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                                      {t("nav.auditReadinessBody")}
-                                    </p>
-                                  </div>
-                                  <LocalizedLink href="/insights" className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 px-4 py-2.5 rounded-xl w-max hover:bg-slate-50 hover:text-zinc-600 transition-all shadow-sm" onClick={() => link.setIsOpen?.(false)}>
-                                    {t("nav.readNow")}
-                                  </LocalizedLink>
-                                </div>
-                              </>
-                            ) : null}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ))}
-              </div>
-
-              {/* Right Side Actions - Tight spacing */}
-              <div className="flex items-center gap-3 lg:gap-4 shrink-0">
-                <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-
-                  <a
-                    href={CLIENT_LOGIN_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`flex items-center justify-center ${useDarkNavbarTheme
-                      ? "text-white/90 hover:text-white"
-                      : "text-black/90 hover:text-primary-blue"
-                      } font-medium text-[15px] transition-colors px-2`}
-                  >
-                    <span>{t("nav.login")}</span>
-                  </a>
-
-                </div>
-
-                {/* Mobile: hamburger opens full-screen menu. Desktop: hamburger opens sidebar. */}
-                <button
-                  className="w-11 h-11 sm:w-12 sm:h-12 flex flex-col items-center justify-center gap-1.5 relative lg:w-10 lg:gap-1.5 rounded-lg active:bg-black/5 lg:active:bg-transparent -m-1 lg:m-0"
-                  onClick={() => {
-                    if (isMobile) {
-                      setMobileMenuOpen(!mobileMenuOpen);
-                      setSidebarOpen(false);
-                    } else {
-                      setSidebarOpen(!sidebarOpen);
-                      setMobileMenuOpen(false);
-                    }
-                  }}
-                  onMouseEnter={() => !isMobile && setHamburgerHover(true)}
-                  onMouseLeave={() => !isMobile && setHamburgerHover(false)}
-                  aria-label="Menu"
-                >
-                  <motion.div
-                    animate={{ rotate: mobileMenuOpen ? 45 : 0, y: mobileMenuOpen ? 8 : 0 }}
-                    className={`h-0.5 ${useDarkNavbarTheme ? "bg-white" : "bg-black"} w-6`}
-                  />
-                  <motion.div
-                    animate={{ opacity: mobileMenuOpen ? 0 : 1 }}
-                    className="relative w-6 h-0.5"
-                  >
-                    <div
-                      className={`absolute left-0 h-full ${useDarkNavbarTheme ? "bg-white" : "bg-black"} transition-all duration-300 ease-out`}
-                      style={{ width: !isMobile && hamburgerHover ? 24 : 16.8 }}
-                    />
-                  </motion.div>
-                  <motion.div
-                    animate={{ rotate: mobileMenuOpen ? -45 : 0, y: mobileMenuOpen ? -8 : 0 }}
-                    className={`h-0.5 ${useDarkNavbarTheme ? "bg-white" : "bg-black"} w-6`}
-                  />
-                </button>
-              </div>
-            </div>
-
-          </motion.div>
-        </nav>
-      </div>
-
-      {/* Mobile full-screen overlay menu: slides in from right, over homepage, with close option */}
-      <AnimatePresence>
-        {mobileMenuOpen && isMobile && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[65] bg-black/30 lg:hidden"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-hidden
-            />
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed inset-0 z-[70] w-full h-full lg:hidden flex flex-col bg-white shadow-2xl"
-            >
-              {/* Header: logo + close */}
-              <div className="flex items-center justify-between shrink-0 px-4 py-4 sm:px-6 border-b border-gray-200/80">
-                <LocalizedLink href="/" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                  <Image
-                    src={Logo}
-                    alt="A4"
-                    width={120}
-                    height={56}
-                    className="object-contain h-10 w-auto"
-                  />
-                </LocalizedLink>
+        <nav aria-label="Main" className="hidden lg:flex" style={{ flex: 1, justifyContent: "center", alignItems: "center", gap: compact ? 18 : 26 }}>
+          {links.map((link) =>
+            link.dropdown ? (
+              <div key={link.id} onMouseEnter={() => openNow(link.dropdown!)} style={{ position: "relative" }}>
                 <button
                   type="button"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-11 h-11 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                  aria-label="Close menu"
+                  aria-expanded={open === link.dropdown}
+                  aria-haspopup="true"
+                  onClick={() => setOpen(open === link.dropdown ? null : link.dropdown!)}
+                  style={linkStyle(open === link.dropdown || isActive(link.href))}
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  {link.label}
+                  <Chevron open={open === link.dropdown} />
                 </button>
               </div>
-              {/* Scrollable menu links */}
-              <div className="nav-drawer-scrollbar flex-1 overflow-y-auto py-4 px-4 sm:px-6">
-                {navLinks.map((link) => (
-                  <div key={link.id} className="border-b border-gray-100 last:border-none">
-                    <div className="flex items-center justify-between py-3">
-                      <LocalizedLink
-                        href={link.href}
-                        className="text-black font-medium text-base hover:text-primary-blue transition-colors flex-1"
-                        onClick={(e) => {
-                          if (link.hasDropdown) {
-                            e.preventDefault();
-                            link.setIsOpen?.(!link.isOpen);
-                          } else {
-                            setMobileMenuOpen(false);
-                          }
-                        }}
-                      >
-                        {link.label}
-                      </LocalizedLink>
-                      {link.hasDropdown && (
-                        <button
-                          type="button"
-                          onClick={() => link.setIsOpen?.(!link.isOpen)}
-                          className="p-2 -mr-2 rounded-lg text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                          aria-expanded={link.isOpen}
-                        >
-                          <motion.svg
-                            animate={{ rotate: link.isOpen ? 180 : 0 }}
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </motion.svg>
-                        </button>
-                      )}
-                    </div>
-                    <AnimatePresence>
-                      {link.hasDropdown && link.isOpen && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="pl-3 pb-3 overflow-hidden"
-                        >
-                          <div className="rounded-xl bg-gray-50 border border-gray-200/80 p-2.5 space-y-0.5">
-                            {link.dropdownId === "services" && (
-                              <>
-                                <LocalizedLink
-                                  href="/services"
-                                  className="block py-2.5 px-3 mb-1 text-sm font-semibold text-black hover:text-primary-blue rounded-lg bg-white border border-gray-200/80 transition-colors"
-                                  onClick={() => setMobileMenuOpen(false)}
-                                >
-                                  {t("nav.ourServices")}
-                                </LocalizedLink>
-                                {servicesList.map((service) => (
-                                  <LocalizedLink
-                                    key={service.id}
-                                    href={`/services/${service.slug}`}
-                                    className="block py-2.5 text-sm font-medium text-black hover:text-primary-blue rounded-lg pl-3 transition-colors"
-                                    onClick={() => setMobileMenuOpen(false)}
-                                  >
-                                    {service.title}
-                                  </LocalizedLink>
-                                ))}
-                              </>
-                            )}
-                            {link.dropdownId === "platform" &&
-                              portalLinks.map((item) => (
-                                <LocalizedLink
-                                  key={item.href}
-                                  href={item.href}
-                                  className="block py-2.5 text-sm font-medium text-black hover:text-primary-blue rounded-lg pl-3 transition-colors"
-                                  onClick={() => setMobileMenuOpen(false)}
-                                >
-                                  {item.label}
-                                </LocalizedLink>
-                              ))}
-                            {link.dropdownId === "resources" && (
-                              <>
-                                <LocalizedLink
-                                  href="/resources"
-                                  className="block py-2.5 px-3 mb-1 text-sm font-semibold text-black hover:text-primary-blue rounded-lg bg-white border border-gray-200/80 transition-colors"
-                                  onClick={() => setMobileMenuOpen(false)}
-                                >
-                                  {t("nav.resources")}
-                                </LocalizedLink>
-                                <div className="nav-resources-scrollbar max-h-[min(320px,45vh)] overflow-y-auto overscroll-contain pl-3 pr-2">
-                                  {resourceLinks.map((item) => (
-                                    <LocalizedLink
-                                      key={item.href}
-                                      href={item.href}
-                                      className="block py-2.5 text-sm font-medium text-black hover:text-primary-blue rounded-lg transition-colors"
-                                      onClick={() => setMobileMenuOpen(false)}
-                                    >
-                                      {item.label}
-                                    </LocalizedLink>
-                                  ))}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ))}
-                <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
-                  <a
-                    href={CLIENT_LOGIN_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white py-3 text-[15px] font-medium text-black transition-colors hover:border-primary-blue/40 hover:text-primary-blue"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {t("nav.login")}
-                  </a>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            ) : (
+              <LocalizedLink key={link.id} href={link.href} style={linkStyle(isActive(link.href))} onMouseEnter={closeSoon}>
+                {link.label}
+              </LocalizedLink>
+            )
+          )}
+        </nav>
+        <div className="lg:hidden" style={{ flex: 1 }} />
 
-      {/* Sidebar Overlay & Panel - Only for desktop */}
-      {sidebarOpen && !isMobile && (
-        <>
-          {/* Overlay with blur effect */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className={`fixed inset-0 z-60 ${isIPhone || isLowPerformance ? "" : "backdrop-blur-md"} bg-black/20`}
-            onClick={() => setSidebarOpen(false)}
-          />
-
-          {/* Sidebar Panel with smooth slide animation */}
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed top-4 bottom-4 right-0 w-full lg:w-[450px] z-70 overflow-hidden"
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <a
+            href={CLIENT_LOGIN_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex"
+            style={{ alignItems: "center", height: 40, padding: "0 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,.18)", background: "rgba(255,255,255,.06)", color: "#FFFFFF", fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", textDecoration: "none" }}
           >
-            {/* Sidebar Container with gradient background, border radius, and hidden scrollbar */}
+            {t("nav.login")}
+          </a>
+          <LocalizedLink
+            href="/quote"
+            style={{ display: "inline-flex", alignItems: "center", height: 40, padding: "0 18px", borderRadius: 999, background: "#FFFFFF", color: "#09090B", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", textDecoration: "none" }}
+          >
+            Get a quote
+          </LocalizedLink>
+          <button
+            type="button"
+            className="lg:hidden"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((v) => !v)}
+            style={{ width: 44, height: 40, display: "grid", placeItems: "center", borderRadius: 999, border: "1px solid rgba(255,255,255,.18)", background: "rgba(255,255,255,.06)", color: "#FFFFFF", cursor: "pointer" }}
+          >
+            <span aria-hidden="true" style={{ position: "relative", width: 18, height: 12 }}>
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: i * 5,
+                    height: 2,
+                    borderRadius: 1,
+                    background: "#FFFFFF",
+                    transform: mobileOpen ? (i === 0 ? "translateY(5px) rotate(45deg)" : i === 2 ? "translateY(-5px) rotate(-45deg)" : "scaleX(0)") : "none",
+                    transition: "transform .35s cubic-bezier(.16,1,.3,1)",
+                  }}
+                />
+              ))}
+            </span>
+          </button>
+        </div>
+
+        {/* Dropdown panel — dark glass, under the bar. */}
+        {open ? (
+          <div
+            onMouseEnter={() => openNow(open)}
+            onMouseLeave={closeSoon}
+            className="hidden lg:block"
+            style={{ position: "absolute", top: BAR_H, left: 0, right: 0, display: "flex", justifyContent: "center", padding: "10px 16px 0", pointerEvents: "none" }}
+          >
             <div
-              className="nav-sidebar-scrollbar h-full w-full rounded-l-3xl overflow-y-auto pr-1.5 sm:pr-2"
+              key={open}
               style={{
-                background:
-                  "linear-gradient(135deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%)",
+                pointerEvents: "auto",
+                width: "min(1040px, 100%)",
+                display: "grid",
+                gridTemplateColumns: "1fr 300px",
+                gap: 16,
+                padding: 16,
+                borderRadius: 24,
+                background: "rgba(24,24,27,.96)",
+                border: "1px solid rgba(255,255,255,.1)",
+                boxShadow: "0 40px 100px rgba(0,0,0,.45)",
+                animation: "a4-drop .45s cubic-bezier(.16,1,.3,1) both",
               }}
             >
-              <div className="p-6 lg:p-8 space-y-8 min-h-full pb-24 relative">
-                {/* Header with Logo and Close Button */}
-                <div className="flex items-center justify-between">
-                  <LocalizedLink
-                    href="/"
-                    className="flex items-center gap-3"
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <Image
-                      src={LogoMarkWhite}
-                      alt="A4 Services"
-                      width={44}
-                      height={44}
-                      className="object-contain shrink-0"
-                    />
-                    <span className="text-white font-medium text-lg tracking-tight">
-                      A4 Services
-                    </span>
-                  </LocalizedLink>
-                  <button
-                    onClick={() => setSidebarOpen(false)}
-                    className="w-9 h-9 flex items-center justify-center text-white rounded-full border-2 border-primary-blue bg-black/20 hover:bg-white/10 transition-colors"
-                    aria-label="Close sidebar"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
+              <div style={{ padding: "10px 8px" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, padding: "0 10px 12px", fontSize: 15, fontWeight: 600, color: "#A1A1AA" }}>
+                  <span style={{ color: "#8B8FF7" }}>
+                    {open === "services" ? "01" : open === "platform" ? "02" : "03"}
+                  </span>
+                  {open === "services" ? t("nav.browseByService") : open === "platform" ? t("nav.portals") : t("nav.browseResources")}
                 </div>
-
-                {/* Description Text */}
-                <div className="text-white text-sm leading-relaxed opacity-90">
-                  <p>{t("nav.sidebar.description")}</p>
-                </div>
-
-                {/* Sidebar Quick Links Section (static) */}
-                <div className="space-y-4">
-                  <h3 className="text-white font-bold text-lg">{t("nav.sidebar.quickActions")}</h3>
-                  <div className="space-y-3">
-                    <a
-                      href={CLIENT_ONBOARDING_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => setSidebarOpen(false)}
-                      className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 transition-all"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {t("nav.sidebar.requestQuoteTitle")}
-                        </p>
-                        <p className="text-xs text-white/70">
-                          {t("nav.sidebar.requestQuoteSubtitle")}
-                        </p>
-                      </div>
-                      <span className="ml-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary-blue">
-                        <svg
-                          className="w-4 h-4 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </span>
-                    </a>
-
+                <div
+                  className="nav-resources-scrollbar"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: open === "platform" ? "1fr" : "1fr 1fr",
+                    gap: 2,
+                    maxHeight: "min(420px, 60vh)",
+                    overflowY: "auto",
+                  }}
+                >
+                  {(open === "services" ? services : open === "platform" ? portals : resources).map((item) => (
                     <LocalizedLink
-                      href="/services"
-                      onClick={() => setSidebarOpen(false)}
-                      className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/15 transition-all"
+                      key={item.href}
+                      href={item.href}
+                      className="a4-nav-item"
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "11px 12px", borderRadius: 12, color: "#E4E4E7", fontSize: 15, fontWeight: 500, textDecoration: "none" }}
                     >
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {t("nav.sidebar.exploreServicesTitle")}
-                        </p>
-                        <p className="text-xs text-white/70">
-                          {t("nav.sidebar.exploreServicesSubtitle")}
-                        </p>
-                      </div>
-                      <span className="ml-3 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-blue">
-                        <svg
-                          className="w-4 h-4 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </span>
+                      <span>{item.label}</span>
+                      <ArrowRight size={15} aria-hidden="true" className="a4-nav-arrow" />
                     </LocalizedLink>
-                  </div>
+                  ))}
                 </div>
-
-                {/* Contact Info Section */}
-                <div className="space-y-4">
-                  <h3 className="text-white font-bold text-lg">{t("nav.sidebar.contactInfo")}</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-white text-sm mb-1 opacity-80">
-                        {t("nav.sidebar.phone")}
-                      </p>
-                      {CONTACT_PHONES.map((phone) => (
-                        <a
-                          key={phone.href}
-                          href={phone.href}
-                          className="block text-white text-base hover:text-primary-blue transition-colors"
-                        >
-                          {phone.display}
-                        </a>
-                      ))}
-                    </div>
-                    <div>
-                      <p className="text-white text-sm mb-1 opacity-80">
-                        {t("nav.sidebar.email")}
-                      </p>
-                      <a
-                        href={CONTACT_EMAIL_HREF}
-                        className="text-white text-base hover:text-primary-blue transition-colors"
-                      >
-                        {CONTACT_EMAIL}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Follow Us Section */}
-                <div className="space-y-4 pb-8">
-                  <h3 className="text-white font-bold text-lg">{t("nav.sidebar.followUs")}</h3>
-                  <div className="flex items-center gap-4">
-                    <a
-                      href={LINKEDIN_COMPANY_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-12 h-12 flex items-center justify-center rounded-full bg-primary-blue text-white hover:bg-primary-zinc-hover transition-colors"
-                      aria-label="LinkedIn"
-                    >
-                      <Linkedin className="w-5 h-5" strokeWidth={1.75} aria-hidden />
-                    </a>
-                  </div>
-                </div>
-
               </div>
+              <LocalizedLink
+                href={open === "services" ? "/services" : open === "platform" ? "/portal/client-portal" : "/resources"}
+                style={{ position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 260, padding: 22, borderRadius: 18, background: DARK_CARD, border: "1px solid rgba(255,255,255,.08)", color: "#FFFFFF", textDecoration: "none" }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: ".02em", color: "#8B8FF7" }}>
+                  {open === "services" ? t("nav.ourServices") : open === "platform" ? t("nav.securePlatform") : t("nav.resources")}
+                </span>
+                <span style={{ fontSize: 30, fontWeight: 600, letterSpacing: "-0.035em", lineHeight: 1.05 }}>
+                  {open === "services" ? (
+                    <>
+                      Every service.<br />
+                      <span className="a4-grad-text">One portal.</span>
+                    </>
+                  ) : open === "platform" ? (
+                    <>
+                      Your own <span className="a4-grad-text">portal.</span>
+                    </>
+                  ) : (
+                    <>
+                      Guides, tools <span className="a4-grad-text">and answers.</span>
+                    </>
+                  )}
+                </span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 600, color: "#E4E4E7" }}>
+                  {open === "services" ? t("nav.viewAllServices") : open === "platform" ? t("nav.goToDashboard") : t("nav.viewResourcesHub")}
+                  <ArrowRight size={15} aria-hidden="true" />
+                </span>
+              </LocalizedLink>
             </div>
-          </motion.div>
-        </>
-      )}
+          </div>
+        ) : null}
+      </header>
+
+      {/* Full-screen menu below lg — the dark grid, big Outfit links. */}
+      {mobileOpen ? (
+        <div
+          className="lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+          style={{ position: "fixed", inset: 0, zIndex: 59, background: DARK_GRID, color: "#FFFFFF", overflowY: "auto", paddingTop: BAR_H, fontFamily: SANS, animation: "a4-fade .35s ease both" }}
+        >
+          <div style={{ padding: "18px clamp(20px,5vw,48px) 40px", display: "flex", flexDirection: "column" }}>
+            {links.map((link, i) => (
+              <div key={link.id} style={{ borderBottom: "1px solid rgba(255,255,255,.08)", animation: `a4-rise .6s cubic-bezier(.16,1,.3,1) ${60 + i * 50}ms both` }}>
+                {link.dropdown ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setMobileSection(mobileSection === link.dropdown ? null : link.dropdown!)}
+                      aria-expanded={mobileSection === link.dropdown}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 0", background: "transparent", border: 0, color: "#FFFFFF", fontSize: 30, fontWeight: 600, letterSpacing: "-0.03em", cursor: "pointer", fontFamily: SANS }}
+                    >
+                      <span>{link.label}</span>
+                      <Chevron open={mobileSection === link.dropdown} />
+                    </button>
+                    {mobileSection === link.dropdown ? (
+                      <div style={{ display: "grid", gap: 2, paddingBottom: 16 }}>
+                        {(link.dropdown === "services" ? services : link.dropdown === "platform" ? portals : resources).map((item) => (
+                          <LocalizedLink key={item.href} href={item.href} onClick={() => setMobileOpen(false)} style={{ padding: "10px 0", color: "#D4D4D8", fontSize: 17, fontWeight: 500, textDecoration: "none" }}>
+                            {item.label}
+                          </LocalizedLink>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <LocalizedLink href={link.href} onClick={() => setMobileOpen(false)} style={{ display: "block", padding: "18px 0", color: "#FFFFFF", fontSize: 30, fontWeight: 600, letterSpacing: "-0.03em", textDecoration: "none" }}>
+                    {link.label}
+                  </LocalizedLink>
+                )}
+              </div>
+            ))}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 28 }}>
+              <LocalizedLink href="/quote" onClick={() => setMobileOpen(false)} className="a4-btn a4-btn-light" style={{ flex: "1 1 200px" }}>
+                Get a quote
+              </LocalizedLink>
+              <a href={CLIENT_LOGIN_URL} target="_blank" rel="noopener noreferrer" className="a4-btn a4-btn-ghost" style={{ flex: "1 1 200px" }}>
+                {t("nav.login")}
+              </a>
+            </div>
+            <div style={{ marginTop: 36, display: "grid", gap: 8, fontFamily: "var(--a4x-body)", fontSize: 15, color: "#A1A1AA" }}>
+              {CONTACT_PHONES.map((p) => (
+                <a key={p.href} href={p.href} style={{ color: "#E4E4E7", textDecoration: "none" }}>
+                  {p.display}
+                </a>
+              ))}
+              <a href={CONTACT_EMAIL_HREF} style={{ color: "#E4E4E7", textDecoration: "none" }}>
+                {CONTACT_EMAIL}
+              </a>
+              <a href={LINKEDIN_COMPANY_URL} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#E4E4E7", textDecoration: "none" }}>
+                <Linkedin size={16} aria-hidden="true" /> LinkedIn
+              </a>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <style>{`
+        @keyframes a4-drop { from { opacity: 0; transform: translateY(-8px) scale(.985); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+        @keyframes a4-fade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes a4-rise { from { opacity: 0; transform: translateY(24px); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+        .a4-nav-item:hover { background: rgba(255,255,255,.06); color: #FFFFFF !important; }
+        .a4-nav-item .a4-nav-arrow { opacity: 0; transform: translateX(-4px); transition: opacity .25s, transform .35s cubic-bezier(.16,1,.3,1); color: #8B8FF7; }
+        .a4-nav-item:hover .a4-nav-arrow { opacity: 1; transform: none; }
+        header a:hover, header nav button:hover { color: #FFFFFF; }
+      `}</style>
     </>
   );
 };

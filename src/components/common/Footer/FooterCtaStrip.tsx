@@ -2,37 +2,47 @@
 
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Container, Icon } from "@/components/a4-landing/Primitives";
-import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
+import LocalizedLink from "@/components/common/LocalizedLink";
+import { TypeText, Words } from "@/components/fx/primitives";
+import { BOOK_A_CALL_PATH } from "@/lib/external-links";
 
+/**
+ * The closing call to action every page ends on — the "Accept your
+ * quotation." band of the A4 design, pointed at the two ways to start.
+ */
 export default function FooterCtaStrip() {
   const { t } = useTranslation("common");
-  const href = useLocalizedHref();
-
   return (
-    <section
-      className="relative z-10 mb-12 md:mb-16 bg-black border-b border-[var(--a4-hairline-dark)]"
-      style={{ padding: "clamp(48px,6vw,72px) 0" }}
-    >
-      <Container>
-        <div className="flex flex-wrap items-center justify-between gap-10">
-          <h3
-            className="a4-font-display font-medium text-white m-0 max-w-[560px]"
-            style={{
-              fontSize: "clamp(26px,3.2vw,40px)",
-              lineHeight: 1.08,
-              letterSpacing: "-.02em",
-              textWrap: "balance",
-            }}
-          >
-            {t("footer.ctaStripTitle")}
-          </h3>
-          <Button variant="primary" size="lg" href={href("/contact")}>
-            {t("footer.ctaStripButton")}{" "}
-            <Icon name="arrow-right" size={18} color="#000" />
-          </Button>
+    <section style={{ position: "relative", padding: "clamp(110px,14vw,190px) clamp(20px,5vw,72px) clamp(64px,8vw,96px)" }}>
+      <div
+        style={{
+          position: "relative",
+          maxWidth: 1280,
+          margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))",
+          gap: "40px 72px",
+          alignItems: "end",
+        }}
+      >
+        <div style={{ fontSize: "clamp(44px,6.4vw,112px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.06 }}>
+          <TypeText segments={[{ t: "Ready when", c: "#FFFFFF" }]} per={45} caret="#8B8FF7" style={{ display: "inline-block" }} />
+          <Words d={560} style={{ fontWeight: 600 }} parts={[{ t: "you are.", g: true }]} />
         </div>
-      </Container>
+        <div data-fx="rise" data-d="300" style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          <p style={{ margin: 0, maxWidth: 560, fontSize: "clamp(18px,1.8vw,24px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.4, color: "#A1A1AA" }}>
+            {t("footer.ctaStripTitle")}
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <LocalizedLink href="/quote" className="a4-btn a4-btn-light">
+              Get a quote
+            </LocalizedLink>
+            <LocalizedLink href={BOOK_A_CALL_PATH} className="a4-btn a4-btn-ghost">
+              {t("footer.ctaStripButton")}
+            </LocalizedLink>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

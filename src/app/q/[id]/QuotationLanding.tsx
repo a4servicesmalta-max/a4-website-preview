@@ -19,6 +19,7 @@ import {
   Words,
   gradText,
 } from "@/components/fx/primitives";
+import { PortalShowcase } from "@/components/fx/PortalShowcase";
 import { trackConversion } from "@/lib/analytics";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
 import {
@@ -36,23 +37,12 @@ import {
   type QuotationSummary,
 } from "@/lib/quotation-page";
 
-/* ── The portal tour (same four screens and captions as the design) ── */
-const SCREENS = [
-  { n: "01", title: "Every engagement", sub: "at a glance", caption: "What's done, what's in progress and what's coming up.", src: "/brand/portal/portal-dashboard.jpg", alt: "Client portal dashboard", hideNote: false },
-  { n: "02", title: "Corporate services", sub: "with our CSP partners", caption: "The full package, requested and tracked in your portal.", src: "/brand/portal/portal-request.jpg", alt: "Corporate services request form", hideNote: true },
-  { n: "03", title: "Upload once", sub: "in one place", caption: "Collected once, not across a year of email attachments.", src: "/brand/portal/portal-audit-engagement.jpg", alt: "Audit engagement requests", hideNote: false },
-  { n: "04", title: "Ask about", sub: "your audit", caption: "Ask what's still needed, and see it in one answer.", src: "/brand/portal/portal-ask.jpg", alt: "Ask about your audit", hideNote: false },
-];
-
 const SANS = 'var(--a4x-display), Outfit, Inter, system-ui, sans-serif';
 const BODY = 'var(--a4x-body), Inter, system-ui, sans-serif';
 const GRAD = "linear-gradient(90deg,#4F55F1 0%,#6468F3 55%,#8B8FF7 100%)";
 
 const kicker: CSSProperties = { fontFamily: BODY, fontSize: 12, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#71717A" };
 const metaValue: CSSProperties = { marginTop: 6, fontSize: 19, fontWeight: 500, letterSpacing: "-0.015em" };
-
-const MARK_S = "M302.6,2 L359,2 L355.6,10 L58.1,514 L2,514.1 L60.7,413 L4.7,412 L30.5,368 L36,359.5 L93,358.7 Z";
-const MARK_F = "M394.9,2 L444.7,3 L444.7,359 L513.6,360 L482,412.6 L444.9,413 L444,514.5 L393.2,514 L393.2,418 L392,412.6 L152.4,412 Z M393,103.8 L240.2,359 L393.1,359 Z";
 
 function DocIcon() {
   return (
@@ -87,7 +77,6 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
 
   const [on, setOn] = useState<Set<string>>(() => new Set(cards.map((c) => c.key)));
   const [view, setView] = useState<FeeView>(hasMonthly ? (summary.acceptance?.billing === "annual" ? "year" : "monthly") : "year");
-  const [screen, setScreen] = useState(0);
   const [name, setName] = useState("");
   const [agree, setAgree] = useState(false);
   const [accepted, setAccepted] = useState(initial === "accepted");
@@ -107,9 +96,6 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
   const twRaf = useRef(0);
   const replayKey = useRef<string | null>(null);
   const seenRows = useRef<Set<string> | null>(null);
-  const userPicked = useRef(false);
-  const stageOn = useRef(false);
-  const firstScreen = useRef(true);
   const timers = useRef<number[]>([]);
 
   const q = useCallback((s: string) => rootRef.current?.querySelector<HTMLElement>(s) ?? null, []);
@@ -173,11 +159,6 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
       const cfg = q('[data-sec="config"]');
       const quote = q('[data-sec="quote"]');
       if (cfg && quote) setPillOn(cfg.getBoundingClientRect().top < vh * 0.5 && quote.getBoundingClientRect().top > vh * 0.55);
-      const st = q("[data-stage]");
-      if (st) {
-        const r = st.getBoundingClientRect();
-        stageOn.current = r.top < vh && r.bottom > 0;
-      }
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(check);
@@ -185,26 +166,14 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
     document.addEventListener("scroll", onScroll, { passive: true, capture: true });
     window.addEventListener("resize", onScroll);
     check();
-    const iv = window.setInterval(() => {
-      if (!userPicked.current && stageOn.current) setScreen((s) => (s + 1) % SCREENS.length);
-    }, 5200);
     const pending = timers.current;
     return () => {
       document.removeEventListener("scroll", onScroll, { capture: true });
       window.removeEventListener("resize", onScroll);
       cancelAnimationFrame(raf);
-      clearInterval(iv);
       pending.forEach((t) => clearTimeout(t));
     };
   }, [q]);
-
-  useEffect(() => {
-    if (firstScreen.current) {
-      firstScreen.current = false;
-      return;
-    }
-    replayFx(q("[data-portal-pill]"));
-  }, [screen, q]);
 
   /* ── the acceptance moment: stamp slams in, card jolts, rings ripple ── */
   useEffect(() => {
@@ -803,68 +772,7 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/a4/powered-by-vacei-ink.png" alt="Powered by Vacei" style={{ height: 32, width: "auto", display: "block" }} />
           </div>
-          <div data-fx="rise" style={{ marginTop: 56, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
-            {SCREENS.map((p, i) => {
-              const a = i === screen;
-              return (
-                <button
-                  key={p.n}
-                  onClick={() => {
-                    userPicked.current = true;
-                    setScreen(i);
-                  }}
-                  style={{ height: 48, padding: "0 20px", display: "flex", alignItems: "center", gap: 10, borderRadius: 999, border: `1px solid ${a ? "#E4E4E7" : "transparent"}`, background: a ? "#FFFFFF" : "transparent", color: a ? INK : "#52525B", boxShadow: a ? "0 10px 30px rgba(9,9,11,.08)" : "none", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "background .3s, color .3s, box-shadow .3s, border-color .3s" }}
-                >
-                  <span style={{ color: a ? INDIGO : "#A1A1AA" }}>{p.n}</span>
-                  {p.title}
-                </button>
-              );
-            })}
-          </div>
-          <div data-stage="" data-cw="1600" data-ch="980" style={{ position: "relative", marginTop: 40, width: "100%", aspectRatio: "1600 / 980", perspective: 2200 }}>
-            <div data-cam="" style={{ position: "absolute", left: 0, top: 0, width: 1600, height: 980, transformOrigin: "0 0", transform: "scale(.5)" }}>
-              <div style={{ position: "absolute", inset: 0, borderRadius: 18, overflow: "hidden", background: "#E5E8EA", border: "1px solid #E4E4E7", boxShadow: "0 50px 120px rgba(9,9,11,.28)" }}>
-                {SCREENS.map((p, i) => {
-                  const a = i === screen;
-                  return (
-                    <div key={p.n} style={{ position: "absolute", left: 0, top: 40, width: 1600, height: 940, overflow: "hidden", opacity: a ? 1 : 0, transform: `translateY(${a ? 0 : 28}px)`, transition: "opacity .6s cubic-bezier(.65,0,.35,1), transform .7s cubic-bezier(.16,1,.3,1)" }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.src} alt={p.alt} draggable={false} loading={i === 0 ? "eager" : "lazy"} style={{ position: "absolute", left: 0, top: 0, width: 1600, height: "auto", display: "block" }} />
-                      {p.hideNote ? <div style={{ position: "absolute", left: 480, top: 796, width: 640, height: 34, background: "#E5E8EA" }} /> : null}
-                    </div>
-                  );
-                })}
-                <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 40, zIndex: 2, display: "flex", alignItems: "center", gap: 8, padding: "0 18px", background: "#FAFAFA", borderBottom: "1px solid #E4E4E7" }}>
-                  <span style={{ width: 11, height: 11, borderRadius: 6, background: "#E4E4E7" }} />
-                  <span style={{ width: 11, height: 11, borderRadius: 6, background: "#E4E4E7" }} />
-                  <span style={{ width: 11, height: 11, borderRadius: 6, background: "#E4E4E7" }} />
-                  <span style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 10, height: 26, padding: "0 14px", borderRadius: 13, background: "#F4F4F5", fontSize: 14, fontWeight: 600, color: "#27272A", whiteSpace: "nowrap" }}>
-                    <svg viewBox="0 0 515.6 516.5" style={{ height: 14, width: 14, display: "block" }} aria-hidden="true">
-                      <path d={MARK_S} fill={INK} />
-                      <path d={MARK_F} fill={INK} fillRule="evenodd" />
-                    </svg>
-                    Your client portal<span style={{ fontWeight: 500, color: "#A1A1AA" }}>Powered by Vacei</span>
-                  </span>
-                </div>
-                <div style={{ position: "absolute", right: 24, top: 60, zIndex: 3, padding: "8px 16px", borderRadius: 999, background: "rgba(9,9,11,.78)", color: "#FFFFFF", fontSize: 18, fontWeight: 500 }}>
-                  Sample data · fictional companies
-                </div>
-              </div>
-            </div>
-            <div
-              data-portal-pill=""
-              data-fx="rise"
-              data-d="200"
-              style={{ position: "absolute", left: "clamp(10px,3vw,40px)", bottom: "clamp(-44px,-3.4vw,-20px)", zIndex: 4, maxWidth: "calc(100% - 20px)", padding: "18px 26px 20px", borderRadius: 22, background: "rgba(255,255,255,.96)", border: "1px solid #E4E4E7", boxShadow: "0 30px 80px rgba(9,9,11,.22)" }}
-            >
-              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 12px" }}>
-                <span style={{ fontSize: "clamp(24px,2.4vw,34px)", fontWeight: 600, letterSpacing: "-0.04em", ...gradText }}>{SCREENS[screen].n}</span>
-                <span style={{ fontSize: "clamp(20px,2.1vw,30px)", fontWeight: 600, letterSpacing: "-0.03em" }}>{SCREENS[screen].title}</span>
-                <span style={{ fontSize: "clamp(20px,2.1vw,30px)", fontWeight: 500, letterSpacing: "-0.03em", color: "#52525B" }}>{SCREENS[screen].sub}</span>
-              </div>
-              <div style={{ marginTop: 6, fontSize: "clamp(15px,1.3vw,18px)", fontWeight: 500, color: "#52525B" }}>{SCREENS[screen].caption}</div>
-            </div>
-          </div>
+          <PortalShowcase />
         </div>
       </section>
 

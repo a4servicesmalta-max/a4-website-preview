@@ -1,19 +1,21 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import * as LucideIcons from "lucide-react";
 import { useLocalizedHref } from "@/components/a4-site/useLocalizedHref";
 import { isExternalHref } from "@/lib/external-links";
-import { useReduceMotion } from "@/contexts/ReduceMotionContext";
+import { A4Mark } from "@/components/fx/primitives";
+
+/**
+ * Shared building blocks for every A4 page, in the A4 design language (the
+ * "A4 Quotation" landing): Outfit pill buttons, numbered eyebrows, rise-in
+ * reveals driven by FxRuntime (data-fx), the drawn A4 mark.
+ *
+ * The props are the ones pages already use — restyling here restyles the site.
+ */
 
 export function Logo({ height = 26, invert = false }: { height?: number; invert?: boolean }) {
-  return (
-    <img
-      src="/assets/a4-mark-white.png"
-      alt="A4 Services"
-      style={{ height, display: "block", filter: invert ? "invert(1)" : "none" }}
-    />
-  );
+  return <A4Mark size={height} color={invert ? "#09090B" : "#FFFFFF"} />;
 }
 
 type ButtonProps = {
@@ -27,24 +29,29 @@ type ButtonProps = {
   rel?: string;
 };
 
+const BUTTON_SIZES: Record<NonNullable<ButtonProps["size"]>, React.CSSProperties> = {
+  lg: { height: 58, padding: "0 30px", fontSize: 18 },
+  md: { height: 48, padding: "0 24px", fontSize: 16 },
+  sm: { height: 40, padding: "0 18px", fontSize: 14.5 },
+};
+
+const BUTTON_VARIANTS: Record<NonNullable<ButtonProps["variant"]>, string> = {
+  // White pill — the design's primary on dark.
+  primary: "a4-btn-light",
+  // Ink pill — the primary on light.
+  dark: "a4-btn-ink",
+  soft: "a4-btn-soft",
+  // White with a hairline — secondary on light.
+  "outline-light": "a4-btn-outline",
+  // Glass — secondary on dark.
+  "outline-dark": "a4-btn-ghost",
+  // Indigo with glow.
+  cobalt: "a4-btn-indigo",
+};
+
 export function Button({ variant = "primary", size = "md", children, onClick, style, href, target, rel }: ButtonProps) {
   const localizedHref = useLocalizedHref();
-  const resolvedHref = href
-    ? isExternalHref(href)
-      ? href
-      : localizedHref(href)
-    : undefined;
-  const baseClasses =
-    "border-0 cursor-pointer rounded-[var(--a4-r-full)] a4-font-body font-semibold tracking-[.24px] inline-flex items-center justify-center gap-2 transition-all duration-150 whitespace-nowrap decoration-none";
-  const sizes = { lg: "h-[56px] px-[32px] text-[18px]", md: "h-[48px] px-[26px] text-[16px]", sm: "h-[40px] px-[18px] text-[14.5px]" };
-  const variants = {
-    primary: "bg-[#fff] text-[#000]",
-    dark: "bg-[#000] text-[#fff]",
-    soft: "bg-[var(--a4-surface-soft)] text-[var(--a4-ink)]",
-    "outline-light": "bg-transparent text-[var(--a4-ink)] border border-[var(--a4-hairline-strong)]",
-    "outline-dark": "bg-transparent text-[#fff] border border-[rgba(255,255,255,.4)]",
-    cobalt: "bg-[var(--a4-primary)] text-[#fff]",
-  };
+  const resolvedHref = href ? (isExternalHref(href) ? href : localizedHref(href)) : undefined;
   const Tag = resolvedHref ? "a" : "button";
   return (
     <Tag
@@ -52,40 +59,95 @@ export function Button({ variant = "primary", size = "md", children, onClick, st
       onClick={onClick}
       target={target}
       rel={rel || (target === "_blank" ? "noopener noreferrer" : undefined)}
-      className={`${baseClasses} ${sizes[size]} ${variants[variant]} active:opacity-80`}
-      style={style}
+      className={`a4-btn ${BUTTON_VARIANTS[variant]}`}
+      style={{ ...BUTTON_SIZES[size], textDecoration: "none", ...style }}
     >
       {children}
     </Tag>
   );
 }
 
+/** Segmented-control pill (the design's Monthly / Annual switch). */
 export function Pill({ active, children, onClick, dark = true }: { active: boolean; children: React.ReactNode; onClick: () => void; dark?: boolean }) {
-  const bg = active ? (dark ? "#fff" : "#000") : dark ? "var(--a4-surface-elevated)" : "var(--a4-surface-soft)";
-  const color = active ? (dark ? "#000" : "#fff") : dark ? "#fff" : "var(--a4-ink)";
+  const bg = active ? (dark ? "#FFFFFF" : "#09090B") : dark ? "rgba(255,255,255,.06)" : "#F4F4F5";
+  const color = active ? (dark ? "#09090B" : "#FFFFFF") : dark ? "#E4E4E7" : "#52525B";
   return (
-    <button onClick={onClick} className="h-[38px] px-[18px] rounded-[var(--a4-r-full)] border-0 cursor-pointer a4-font-body font-semibold text-[14px] transition-colors duration-150" style={{ background: bg, color }}>
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      style={{
+        height: 44,
+        padding: "0 20px",
+        borderRadius: 999,
+        border: `1px solid ${active ? "transparent" : dark ? "rgba(255,255,255,.14)" : "#E4E4E7"}`,
+        cursor: "pointer",
+        fontFamily: "var(--a4x-display)",
+        fontWeight: 600,
+        fontSize: 15,
+        background: bg,
+        color,
+        transition: "background .3s, color .3s, border-color .3s",
+      }}
+    >
       {children}
     </button>
   );
 }
 
+/** Small status chip ("Included" in the design). */
 export function Badge({ feature, children, dark = false }: { feature?: boolean; children: React.ReactNode; dark?: boolean }) {
-  const bg = feature ? "var(--a4-primary)" : dark ? "rgba(255,255,255,.08)" : "var(--a4-surface-soft)";
-  const color = feature ? "#fff" : dark ? "var(--a4-on-dark-mute)" : "var(--a4-ink)";
+  const bg = feature ? (dark ? "rgba(139,143,247,.18)" : "rgba(79,85,241,.1)") : dark ? "rgba(255,255,255,.06)" : "#F4F4F5";
+  const color = feature ? (dark ? "#FFFFFF" : "#4F55F1") : dark ? "#A1A1AA" : "#3F3F46";
   return (
-    <span className="rounded-[var(--a4-r-full)] text-[12px] leading-[1.4] py-[5px] px-[13px] a4-font-body font-semibold tracking-[.24px] inline-flex items-center gap-[7px]" style={{ background: bg, color }}>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        height: 30,
+        padding: "0 13px",
+        borderRadius: 999,
+        fontFamily: "var(--a4x-display)",
+        fontSize: 13,
+        fontWeight: 600,
+        background: bg,
+        color,
+        border: feature ? "1px solid transparent" : `1px solid ${dark ? "rgba(255,255,255,.14)" : "#E4E4E7"}`,
+      }}
+    >
       {children}
     </span>
   );
 }
 
-export function Eyebrow({ children, dark = false, color }: { children: React.ReactNode; dark?: boolean; color?: string }) {
-  const textColor = color || (dark ? "var(--a4-on-dark-mute)" : "var(--a4-mute)");
+/**
+ * "01  Build your quote" — the design's section eyebrow. Without a number it
+ * leads with the skewed indigo mark used for the design's scope bullets.
+ */
+export function Eyebrow({ children, dark = false, color, n }: { children: React.ReactNode; dark?: boolean; color?: string; n?: string }) {
+  const textColor = color || (dark ? "#A1A1AA" : "#52525B");
   return (
-    <div className="a4-font-body font-semibold text-[13px] tracking-[.18em] uppercase flex items-center gap-[10px]" style={{ color: textColor }}>
-      <span className="w-[18px] h-[1px] bg-current opacity-50" />
-      {children}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        gap: 12,
+        fontFamily: "var(--a4x-display)",
+        fontSize: 18,
+        fontWeight: 600,
+        letterSpacing: ".02em",
+        color: textColor,
+      }}
+    >
+      {n ? (
+        <span style={{ color: dark ? "#8B8FF7" : "#4F55F1" }}>{n}</span>
+      ) : (
+        <span
+          aria-hidden="true"
+          style={{ display: "inline-block", width: 9, height: 9, borderRadius: 1, background: dark ? "#8B8FF7" : "#4F55F1", transform: "skewX(-30deg)", flexShrink: 0, alignSelf: "center" }}
+        />
+      )}
+      <span>{children}</span>
     </div>
   );
 }
@@ -100,9 +162,10 @@ export function Icon({ name, size = 24, color = "currentColor", stroke = 1.75, s
   return <IconComponent size={size} color={color} strokeWidth={stroke} style={{ display: "inline-flex", ...style }} />;
 }
 
+/** The design's content width: 1280px with clamp(20px,5vw,72px) gutters. */
 export function Container({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-[24px]" style={style}>
+    <div style={{ maxWidth: 1424, margin: "0 auto", paddingInline: "clamp(20px,5vw,72px)", ...style }}>
       {children}
     </div>
   );
@@ -115,6 +178,7 @@ export function SectionHead({
   dark = false,
   align = "left",
   maxWidth = 760,
+  n,
 }: {
   eyebrow?: string;
   title: React.ReactNode;
@@ -122,21 +186,50 @@ export function SectionHead({
   dark?: boolean;
   align?: "left" | "center";
   maxWidth?: number;
+  /** Section number for the eyebrow ("01"). */
+  n?: string;
 }) {
   return (
     <div style={{ textAlign: align, maxWidth: align === "center" ? maxWidth : "none", margin: align === "center" ? "0 auto" : 0 }}>
       {eyebrow && (
-        <div style={{ marginBottom: 18, display: "flex", justifyContent: align === "center" ? "center" : "flex-start" }}>
-          <Eyebrow dark={dark}>{eyebrow}</Eyebrow>
+        <div data-fx="rise" style={{ marginBottom: 16, display: "flex", justifyContent: align === "center" ? "center" : "flex-start" }}>
+          <Eyebrow dark={dark} n={n}>
+            {eyebrow}
+          </Eyebrow>
         </div>
       )}
-      <h2 className="a4-font-display font-medium text-[clamp(34px,4.4vw,56px)] leading-[1.05] tracking-[-0.02em] m-0" style={{ color: dark ? "var(--a4-on-dark)" : "var(--a4-ink)", textWrap: "balance" }}>
+      <h2
+        data-fx="rise"
+        data-d="100"
+        style={{
+          margin: 0,
+          fontFamily: "var(--a4x-display)",
+          fontSize: "clamp(36px,4.6vw,72px)",
+          fontWeight: 600,
+          letterSpacing: "-0.04em",
+          lineHeight: 1.03,
+          color: dark ? "#FFFFFF" : "#09090B",
+          textWrap: "balance",
+        }}
+      >
         {title}
       </h2>
       {sub && (
         <p
-          className="a4-font-body text-[19px] leading-[1.55] tracking-[-.1px] mt-[22px]"
-          style={{ maxWidth, color: dark ? "var(--a4-on-dark-mute)" : "var(--a4-mute)", marginLeft: align === "center" ? "auto" : 0, marginRight: align === "center" ? "auto" : 0, textWrap: "pretty" }}
+          data-fx="rise"
+          data-d="200"
+          style={{
+            marginTop: 20,
+            marginBottom: 0,
+            maxWidth,
+            marginLeft: align === "center" ? "auto" : 0,
+            marginRight: align === "center" ? "auto" : 0,
+            fontFamily: "var(--a4x-body)",
+            fontSize: 18,
+            lineHeight: 1.55,
+            color: dark ? "#A1A1AA" : "#52525B",
+            textWrap: "pretty",
+          }}
         >
           {sub}
         </p>
@@ -145,55 +238,14 @@ export function SectionHead({
   );
 }
 
+/**
+ * Rise-in reveal — the design's `rise` (lift + blur + fade, expo-out) bound
+ * by FxRuntime when the block scrolls into view. `delay` is milliseconds.
+ */
 export function Reveal({ children, delay = 0, style, className, as = "div" }: { children: React.ReactNode; delay?: number; style?: React.CSSProperties; className?: string; as?: React.ElementType }) {
-  const ref = useRef<HTMLElement>(null);
-  const reduceMotion = useReduceMotion();
-  // Start visible by default so content is never blank if JS/observer is slow
-  // or the animation never fires; only the on-scroll lift is opt-in.
-  const [shown, setShown] = useState(true);
-  useEffect(() => {
-    if (reduceMotion) {
-      setShown(true);
-      return;
-    }
-    const el = ref.current;
-    if (!el) return;
-    // Anything already in the first viewport stays put — only content the
-    // visitor scrolls to gets the lift (mirrors vacei.com's reveal).
-    if (el.getBoundingClientRect().top < window.innerHeight * 0.95) return;
-    // Begin from the pre-reveal state, then animate in when in view.
-    setShown(false);
-    const io = new IntersectionObserver(
-      (ents) => {
-        ents.forEach((e) => {
-          if (e.isIntersecting) {
-            setShown(true);
-            io.disconnect();
-          }
-        });
-      },
-      { threshold: 0.12 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [reduceMotion]);
   const Tag = as;
-  const animate = !reduceMotion && !shown;
   return (
-    <Tag
-      ref={ref}
-      data-areveal=""
-      className={className}
-      style={{
-        ...style,
-        // Reduced-motion renders fully opaque with no transform.
-        opacity: animate ? 0 : 1,
-        transform: animate ? "translateY(30px)" : "none",
-        transition: reduceMotion
-          ? "none"
-          : `opacity .7s ease ${delay}ms, transform .75s cubic-bezier(.22,.6,.2,1) ${delay}ms`,
-      }}
-    >
+    <Tag data-fx="rise" data-d={delay || undefined} className={className} style={style}>
       {children}
     </Tag>
   );
