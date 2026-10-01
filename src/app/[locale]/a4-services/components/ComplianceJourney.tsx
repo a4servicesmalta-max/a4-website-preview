@@ -265,11 +265,15 @@ export function ComplianceJourney() {
 
       // Phones: the bottom sheet is on screen a little before the pin starts and after it
       // ends, so the floating buttons step aside over that whole range.
+      // The range follows the sheet itself: on from when its top reaches the bottom of the
+      // screen, off once its bottom has cleared the buttons' row (~160px up).
+      const sheetH = () => Math.max(...panelEls.map((p) => p.offsetHeight), 0);
       const sheetRange = narrow
         ? ScrollTrigger.create({
             trigger: tr,
-            start: "top 35%",
-            end: "bottom 85%",
+            start: () => `top ${Math.round(window.innerHeight * 0.04 + sheetH())}px`,
+            end: () => `bottom ${Math.round(window.innerHeight - 160 + window.innerHeight * 0.04)}px`,
+            invalidateOnRefresh: true,
             onToggle: (self) => setImmersive("journey", self.isActive),
           })
         : null;

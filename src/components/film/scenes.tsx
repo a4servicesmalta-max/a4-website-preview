@@ -16,6 +16,7 @@ import {
   Rise,
   SampleTag,
   Scatter,
+  SAMPLE,
   Screen,
   Slab,
   Stack,
@@ -1167,6 +1168,8 @@ function PortalPill({ P, num, T, t0, tout }: { P: PortalBeat; num: string; T: nu
         <span style={{ fontSize: 46 * k, fontWeight: 500, letterSpacing: "-0.03em", color: C.zinc6 }}>{P.sub}</span>
       </div>
       <div style={{ marginTop: 8, fontSize: phone ? 14 / u : 26 * k, fontWeight: 500, letterSpacing: "-0.01em", color: C.mute }}>{P.caption}</div>
+      {/* Phones: the sample label lives in the pill, clear of the navbar. */}
+      {phone ? <div style={{ marginTop: 6, fontSize: 11 / u, fontWeight: 500, color: C.zinc4 }}>{SAMPLE}</div> : null}
     </div>
   );
 }
@@ -1189,7 +1192,9 @@ export function SPortal({ i, n }: { i: number; n?: number }) {
     // also go a little closer (x1.2, which still frames each beat's action end to end).
     const zf = clamp((cam.s - 0.9) / 0.6, 0, 1);
     const intro = 1 - clamp((cam.s - 0.7) / 0.6, 0, 1);
-    cam = { ...cam, cx: 960, cy: cam.cy + 0.45 * ey * intro, s: cam.s * (1 + (phone ? 0.2 : 0) * zf) };
+    // 01 keeps its framing (its grid spans the whole width); 03 goes x1.2 closer.
+    const boost = phone && P.upload ? 0.2 : 0;
+    cam = { ...cam, cx: 960, cy: cam.cy + 0.45 * ey * intro, s: cam.s * (1 + boost * zf) };
   }
   const tx = (1 - e) * 820 - x * 300;
   const h = P.h || FH - BAR;
@@ -1243,7 +1248,7 @@ export function SPortal({ i, n }: { i: number; n?: number }) {
       ) : null}
       <PortalPill P={P} num={num} T={T} t0={a + P.pillIn} tout={holdOut ? b - 0.25 : b - 0.3} />
       {/* Phones: readable, in the empty band above the shot. */}
-      <SampleTag on={zoomed * (1 - x)} px={phone ? 11 / u : undefined} top={phone ? 36 - ey + 90 : undefined} />
+      {phone ? null : <SampleTag on={zoomed * (1 - x)} />}
     </Scene>
   );
 }
