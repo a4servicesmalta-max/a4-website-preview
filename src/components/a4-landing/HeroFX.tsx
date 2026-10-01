@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 
-export function HeroFX({ accent = "#494fdf" }: { accent?: string }) {
+export function HeroFX({ accent = "#4F55F1" }: { accent?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -26,8 +26,8 @@ export function HeroFX({ accent = "#494fdf" }: { accent?: string }) {
     let W = 0,
       H = 0,
       DPR = 1,
-      raf = 0,
-      t0 = performance.now();
+      raf = 0;
+    const t0 = performance.now();
     const N = 54;
     let rng = 20260602;
     const rand = () => {
@@ -84,8 +84,8 @@ export function HeroFX({ accent = "#494fdf" }: { accent?: string }) {
     function draw(phase: number) {
       if (!ctx) return;
       const g = ctx.createRadialGradient(W * 0.42, H * 0.42, 0, W * 0.42, H * 0.42, Math.max(W, H) * 0.85);
-      g.addColorStop(0, "#0c0f16");
-      g.addColorStop(1, "#000000");
+      g.addColorStop(0, "#0d0d16");
+      g.addColorStop(1, "#09090B");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
       const rows = 9;

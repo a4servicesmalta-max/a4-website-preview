@@ -5,12 +5,18 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade, Pagination, Navigation } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
-import { Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
+import { Badge, Eyebrow } from "@/components/a4-landing/Primitives";
+import { DARK_CARD, DARK_GRID, DriftGlow, GRAD, MUTED_GLOW, gradText } from "@/components/fx/primitives";
 import { TESTIMONIALS, type Testimonial } from "@/data/a4TestimonialsData";
 
 import "swiper/css";
 import "swiper/css/effect-fade";
 import "swiper/css/pagination";
+
+const INK = "#09090B";
+const INDIGO = "#4F55F1";
+const PERI = "#8B8FF7";
+const BODY = "var(--a4x-body)";
 
 function initials(sector: string) {
   return sector
@@ -21,183 +27,163 @@ function initials(sector: string) {
     .toUpperCase();
 }
 
+/** One quote, set like the design's document card: 28px radius, hairline, big Outfit quote. */
 function TestimonialSlide({ t, dark }: { t: Testimonial; dark?: boolean }) {
-  const ink = dark ? "#fff" : "var(--a4-ink)";
-  const stone = dark ? "var(--a4-stone)" : "var(--a4-mute)";
-  const border = dark ? "var(--a4-hairline-dark)" : "var(--a4-hairline-light)";
-  const cardBg = dark ? "rgba(255,255,255,.04)" : "var(--a4-surface-card)";
-
+  const accent = dark ? PERI : INDIGO;
   return (
-    <div
-      className="flex flex-col h-full mx-auto max-w-[920px]"
+    <figure
       style={{
-        background: cardBg,
-        border: `1px solid ${border}`,
-        borderRadius: "var(--a4-r-lg)",
-        padding: "clamp(32px,4vw,48px)",
-        minHeight: 320,
         position: "relative",
         overflow: "hidden",
+        height: "100%",
+        maxWidth: 980,
+        minHeight: 340,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        padding: "clamp(28px,4.4vw,56px)",
+        borderRadius: 28,
+        background: dark ? DARK_CARD : "#FFFFFF",
+        border: `1px solid ${dark ? "rgba(255,255,255,.1)" : "#E4E4E7"}`,
+        boxShadow: dark ? "0 40px 100px rgba(0,0,0,.45)" : "0 50px 120px rgba(9,9,11,.12)",
+        color: dark ? "#FFFFFF" : INK,
       }}
     >
-      <div
-        aria-hidden="true"
-        className="absolute -top-20 -right-16 w-56 h-56 rounded-full pointer-events-none"
-        style={{ background: "rgba(73,79,223,.18)", filter: "blur(48px)" }}
-      />
-
-      <div className="relative flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-1">
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 3 }} aria-label="5 out of 5" role="img">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Star
-              key={i}
-              className="w-4 h-4 fill-[var(--a4-primary-bright)] text-[var(--a4-primary-bright)]"
-              strokeWidth={0}
-            />
+            <Star key={i} size={16} fill={accent} color={accent} strokeWidth={0} aria-hidden="true" />
           ))}
         </div>
-        <span
-          className="a4-font-body text-[11px] font-bold tracking-[.12em] uppercase rounded-full px-3 py-1.5"
-          style={{
-            color: "var(--a4-primary-bright)",
-            background: "rgba(73,79,223,.12)",
-            border: "1px solid rgba(73,79,223,.25)",
-          }}
-        >
+        <Badge feature dark={dark}>
           {t.sector}
-        </span>
-      </div>
-
-      <div style={{ marginTop: 24, opacity: 0.85 }}>
-        <Icon name="quote" size={32} color="var(--a4-primary-bright)" stroke={1.25} />
+        </Badge>
       </div>
 
       <blockquote
-        className="a4-font-display font-medium mt-6 flex-1"
         style={{
-          fontSize: "clamp(22px,2.8vw,30px)",
-          lineHeight: 1.35,
-          letterSpacing: "-.02em",
-          color: ink,
+          flex: 1,
+          margin: "clamp(24px,3vw,36px) 0 0",
+          fontFamily: "var(--a4x-display)",
+          fontSize: "clamp(22px,2.6vw,36px)",
+          fontWeight: 500,
+          letterSpacing: "-0.025em",
+          lineHeight: 1.3,
           textWrap: "pretty",
-          margin: "24px 0 0",
         }}
       >
         &ldquo;{t.quote}&rdquo;
       </blockquote>
 
-      <div
-        className="flex items-center gap-4 mt-8 pt-6"
-        style={{ borderTop: `1px solid ${border}` }}
+      <figcaption
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          marginTop: "clamp(28px,3vw,40px)",
+          paddingTop: 24,
+          borderTop: `1px solid ${dark ? "rgba(255,255,255,.1)" : "#E4E4E7"}`,
+        }}
       >
         <span
-          className="flex shrink-0 items-center justify-center rounded-full a4-font-display font-medium text-white"
+          aria-hidden="true"
           style={{
             width: 52,
             height: 52,
+            flexShrink: 0,
+            display: "grid",
+            placeItems: "center",
+            borderRadius: 999,
+            background: GRAD,
+            color: "#FFFFFF",
+            fontFamily: "var(--a4x-display)",
             fontSize: 16,
-            background: "linear-gradient(135deg, var(--a4-primary) 0%, #2d33a8 100%)",
-            boxShadow: "0 4px 20px rgba(73,79,223,.35)",
+            fontWeight: 600,
           }}
         >
           {initials(t.sector)}
         </span>
         <div>
-          <div className="a4-font-body text-[15px] font-semibold" style={{ color: ink }}>
-            {t.role}
-          </div>
-          <div className="a4-font-body text-[13.5px] mt-0.5" style={{ color: stone }}>
-            {t.sector}
-          </div>
+          <div style={{ fontFamily: "var(--a4x-display)", fontSize: 17, fontWeight: 600, letterSpacing: "-0.01em" }}>{t.role}</div>
+          <div style={{ fontFamily: BODY, fontSize: 14, marginTop: 2, color: dark ? "#A1A1AA" : "#71717A" }}>{t.sector}</div>
         </div>
-      </div>
-    </div>
+      </figcaption>
+    </figure>
   );
 }
 
 type TestimonialsSwiperProps = {
-  /** Dark full-bleed section (homepage) vs light inline (case studies) */
+  /** Dark full-bleed section vs the light (muted glow) surface */
   variant?: "dark" | "light";
   showHeader?: boolean;
   className?: string;
 };
 
-export function TestimonialsSwiper({
-  variant = "dark",
-  showHeader = true,
-  className = "",
-}: TestimonialsSwiperProps) {
+const SWIPER_CSS = `
+  .a4-tsw-nav { transition: background .3s, border-color .3s; }
+  .a4-tsw--dark .a4-tsw-nav:hover { background: rgba(255,255,255,.12) !important; border-color: rgba(255,255,255,.32) !important; }
+  .a4-tsw--light .a4-tsw-nav:hover { border-color: #A1A1AA !important; }
+  .a4-tsw-nav:focus-visible { outline: 3px solid rgba(79,85,241,.55); outline-offset: 2px; }
+  .a4-tsw--dark .a4-testimonial-bullet { background: rgba(255,255,255,.22); }
+  .a4-tsw--dark .a4-testimonial-bullet.a4-testimonial-bullet-active { background: ${PERI}; }
+  .a4-tsw--light .a4-testimonial-bullet { background: #D4D4D8; }
+  .a4-tsw--light .a4-testimonial-bullet.a4-testimonial-bullet-active { background: ${INDIGO}; }
+`;
+
+export function TestimonialsSwiper({ variant = "dark", showHeader = true, className = "" }: TestimonialsSwiperProps) {
   const swiperRef = useRef<SwiperType | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const dark = variant === "dark";
 
-  const sectionBg = dark
-    ? "#000"
-    : "linear-gradient(180deg, var(--a4-surface-soft) 0%, var(--a4-canvas-light) 100%)";
+  const navStyle: React.CSSProperties = dark
+    ? { background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.22)", color: "#FFFFFF" }
+    : { background: "#FFFFFF", border: "1px solid #E4E4E7", color: INK, boxShadow: "0 10px 30px rgba(9,9,11,.08)" };
 
   return (
     <section
-      className={`relative overflow-hidden ${className}`}
+      className={`a4-tsw ${dark ? "a4-tsw--dark" : "a4-tsw--light"} relative overflow-hidden ${className}`}
       style={{
-        background: sectionBg,
-        padding: "clamp(64px,9vw,108px) 0",
-        borderTop: dark ? "1px solid var(--a4-hairline-dark)" : "1px solid var(--a4-hairline-light)",
+        background: dark ? DARK_GRID : MUTED_GLOW,
+        padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px)",
+        color: dark ? "#FFFFFF" : INK,
+        fontFamily: "var(--a4x-display)",
       }}
     >
-      {dark && (
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 45% at 50% 0%, rgba(73,79,223,.14) 0%, transparent 65%)",
-          }}
-        />
-      )}
+      <style>{SWIPER_CSS}</style>
+      {dark ? <DriftGlow left="34%" top="-44%" strength={0.24} /> : null}
 
-      <Container style={{ position: "relative" }}>
+      <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
         {showHeader && (
-          <Reveal style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 48px" }}>
-            {dark ? <Eyebrow dark>Client voices</Eyebrow> : <Eyebrow>Client voices</Eyebrow>}
+          <div style={{ textAlign: "center", maxWidth: 940, margin: "0 auto clamp(48px,6vw,80px)" }}>
+            <div data-fx="rise" style={{ display: "flex", justifyContent: "center" }}>
+              <Eyebrow dark={dark}>Client voices</Eyebrow>
+            </div>
             <h2
-              className="a4-font-display font-medium mt-4"
-              style={{
-                fontSize: "clamp(30px,4vw,48px)",
-                lineHeight: 1.05,
-                letterSpacing: "-.02em",
-                color: dark ? "#fff" : "var(--a4-ink)",
-                textWrap: "balance",
-              }}
+              data-fx="rise"
+              data-d="100"
+              style={{ margin: "16px 0 0", fontSize: "clamp(36px,4.6vw,72px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.03, textWrap: "balance" }}
             >
-              What Malta businesses say about working with A4
+              What Malta businesses say about working with <span style={{ ...gradText, paddingBottom: ".06em" }}>A4</span>
             </h2>
             <p
-              className="a4-font-body mt-4"
-              style={{
-                fontSize: 17,
-                lineHeight: 1.6,
-                color: dark ? "var(--a4-on-dark-mute)" : "var(--a4-mute)",
-                textWrap: "pretty",
-              }}
+              data-fx="rise"
+              data-d="200"
+              style={{ margin: "20px auto 0", maxWidth: 620, fontFamily: BODY, fontSize: 17, lineHeight: 1.6, color: dark ? "#A1A1AA" : "#52525B", textWrap: "pretty" }}
             >
               Real feedback from directors and founders — anonymised, but representative of how we work.
             </p>
-          </Reveal>
+          </div>
         )}
 
-        <Reveal delay={60}>
-          <div className="relative px-0 sm:px-12">
+        <div data-fx="rise" data-d="120">
+          <div className="relative px-0 sm:px-16">
             {/* Custom nav */}
             <button
               type="button"
               aria-label="Previous testimonial"
               onClick={() => swiperRef.current?.slidePrev()}
-              className="absolute left-0 top-1/2 z-10 hidden sm:flex -translate-y-1/2 w-11 h-11 items-center justify-center rounded-full transition-all duration-200 hover:scale-105"
-              style={{
-                background: dark ? "rgba(255,255,255,.08)" : "var(--a4-surface-card)",
-                border: `1px solid ${dark ? "var(--a4-hairline-dark)" : "var(--a4-hairline-light)"}`,
-                color: dark ? "#fff" : "var(--a4-ink)",
-              }}
+              className="a4-tsw-nav absolute left-0 top-1/2 z-10 hidden sm:flex -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full"
+              style={navStyle}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -205,12 +191,8 @@ export function TestimonialsSwiper({
               type="button"
               aria-label="Next testimonial"
               onClick={() => swiperRef.current?.slideNext()}
-              className="absolute right-0 top-1/2 z-10 hidden sm:flex -translate-y-1/2 w-11 h-11 items-center justify-center rounded-full transition-all duration-200 hover:scale-105"
-              style={{
-                background: dark ? "rgba(255,255,255,.08)" : "var(--a4-surface-card)",
-                border: `1px solid ${dark ? "var(--a4-hairline-dark)" : "var(--a4-hairline-light)"}`,
-                color: dark ? "#fff" : "var(--a4-ink)",
-              }}
+              className="a4-tsw-nav absolute right-0 top-1/2 z-10 hidden sm:flex -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full"
+              style={navStyle}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -248,21 +230,15 @@ export function TestimonialsSwiper({
 
           {/* Counter + dots */}
           <div className="flex flex-col items-center gap-4 mt-10">
-            <div
-              className="a4-font-body text-[13px] font-semibold tabular-nums tracking-wide"
-              style={{ color: dark ? "var(--a4-stone)" : "var(--a4-mute)" }}
-            >
-              <span style={{ color: dark ? "#fff" : "var(--a4-ink)" }}>
-                {String(activeIndex + 1).padStart(2, "0")}
-              </span>
+            <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: ".02em", color: dark ? "#A1A1AA" : "#52525B", fontVariantNumeric: "tabular-nums" }}>
+              <span style={{ color: dark ? PERI : INDIGO }}>{String(activeIndex + 1).padStart(2, "0")}</span>
               {" / "}
               {String(TESTIMONIALS.length).padStart(2, "0")}
             </div>
             <div className="a4-testimonial-pagination flex items-center justify-center gap-2" />
           </div>
-        </Reveal>
-      </Container>
-
+        </div>
+      </div>
     </section>
   );
 }

@@ -50,10 +50,10 @@ function PMScreenRequest({ reduce }: { reduce: boolean }) {
       <div className="a4-font-display font-medium text-[23px] text-[#fff] tracking-[-.3px] mt-[4px]" style={pmRise(1, reduce)}>Request your services</div>
       <div className="flex flex-col gap-[10px] mt-[22px]">
         {services.map((s, i) => (
-          <div key={s.name} className="flex items-center gap-[13px] h-[52px] px-[15px] rounded-[var(--a4-r-md)]" style={{ background: s.on ? "rgba(73,79,223,.10)" : "var(--a4-surface-deep)", border: `1px solid ${s.on ? "rgba(73,79,223,.4)" : "var(--a4-hairline-dark)"}`, ...pmRise(2 + i, reduce) }}>
+          <div key={s.name} className="flex items-center gap-[13px] h-[52px] px-[15px] rounded-[var(--a4-r-md)]" style={{ background: s.on ? "rgba(79,85,241,.12)" : "var(--a4-surface-deep)", border: `1px solid ${s.on ? "rgba(139,143,247,.45)" : "var(--a4-hairline-dark)"}`, ...pmRise(2 + i, reduce) }}>
             <Icon name={s.icon} size={18} color={s.on ? "var(--a4-primary-bright)" : "var(--a4-stone)"} />
             <span className="flex-1 a4-font-body text-[14px] font-medium" style={{ color: s.on ? "#fff" : "var(--a4-on-dark-mute)" }}>{s.name}</span>
-            <span className="w-[22px] h-[22px] rounded-full grid place-items-center" style={{ background: s.on ? "var(--a4-primary)" : "transparent", border: s.on ? "none" : "1.5px solid #3a3d40" }}>
+            <span className="w-[22px] h-[22px] rounded-full grid place-items-center" style={{ background: s.on ? "var(--a4-primary)" : "transparent", border: s.on ? "none" : "1.5px solid #3F3F46" }}>
               {s.on && <Icon name="check" size={13} color="#fff" stroke={3} />}
             </span>
           </div>

@@ -1,33 +1,33 @@
-// @ts-nocheck
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Container, Eyebrow, Reveal } from "@/components/a4-landing/Primitives";
+import { Eyebrow } from "@/components/a4-landing/Primitives";
+import { DARK_CARD, DARK_GRID, DriftGlow, TypeText, Words } from "@/components/fx/primitives";
+import { INK, PERI } from "@/lib/fx/engine";
 import { usePrefersReducedMotion } from "@/contexts/ReduceMotionContext";
 
 const VIDEO_SRC = "/assets/videos/a4-advantages.mp4";
 const POSTER_SRC = "/assets/videos/a4-advantages-poster.jpg";
 
 /**
- * Scroll-expanding "Play intro" hero video — the antigravity.google /
- * fs.vacei.com pattern. A near-black card scales 0.9→1.0 while the inner
- * video wrapper widens 58%→100% as the card passes through the viewport.
- * The muted, looped preview autoplays (gated by an IntersectionObserver);
- * a "Play intro" pill follows the cursor; clicking opens a lightbox with the
- * same video unmuted, time-synced and with native controls.
+ * Scroll-expanding "Play intro" video, in the A4 design language: a dark
+ * section (grid + drifting indigo glow), the statement heading, and the video
+ * on a dark grid card that scales 0.9→1.0 while the inner video widens
+ * 58%→100% as the card passes through the viewport. The muted, looped preview
+ * autoplays (gated by an IntersectionObserver); a white "Play intro" pill
+ * follows the cursor; clicking opens a lightbox with the same video unmuted,
+ * time-synced and with native controls.
  */
 export function IntroVideo() {
-  // Real prefers-reduced-motion only (see TypeCycle) — the scroll-zoom is a
-  // cheap rAF transform and should run on phones and Safari too.
+  // Real prefers-reduced-motion only — the scroll-zoom is a cheap rAF
+  // transform and should run on phones and Safari too.
   const reduceMotion = usePrefersReducedMotion();
-  const cardRef = useRef(null);
-  const innerRef = useRef(null);
-  const videoRef = useRef(null);
-  const cursorRef = useRef(null);
-  const lightboxVideoRef = useRef(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
+  const lightboxVideoRef = useRef<HTMLVideoElement>(null);
   const [open, setOpen] = useState(false);
-
-  const easeInOutQuad = (p) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
 
   // ---- Scroll-driven scale (0.9→1.0) + inner width (58%→100%) ----
   useEffect(() => {
@@ -41,6 +41,7 @@ export function IntroVideo() {
       return;
     }
 
+    const easeInOutQuad = (p: number) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
     let raf = 0;
     const update = () => {
       raf = 0;
@@ -96,7 +97,7 @@ export function IntroVideo() {
     let ty = py;
     let hovering = false;
 
-    const onMove = (e) => {
+    const onMove = (e: MouseEvent) => {
       const r = card.getBoundingClientRect();
       tx = e.clientX - r.left;
       ty = e.clientY - r.top;
@@ -113,7 +114,7 @@ export function IntroVideo() {
       py += (ty - py) * 0.16;
       cursor.style.left = `${px}px`;
       cursor.style.top = `${py}px`;
-      cursor.style.opacity = hovering ? "1" : "0.92";
+      cursor.style.opacity = hovering ? "1" : "0.94";
       raf = requestAnimationFrame(loop);
     };
     card.addEventListener("mousemove", onMove);
@@ -126,17 +127,8 @@ export function IntroVideo() {
     };
   }, [reduceMotion]);
 
-  // ---- Open lightbox: unmute a second video, sync time, play with sound ----
-  const openLightbox = useCallback(() => {
-    setOpen(true);
-    const lv = lightboxVideoRef.current;
-    const preview = videoRef.current;
-    if (lv) {
-      lv.muted = false;
-      lv.currentTime = preview?.currentTime || 0;
-      lv.play().catch(() => {});
-    }
-  }, []);
+  // ---- Open lightbox: a second video, unmuted and synced to the preview ----
+  const openLightbox = useCallback(() => setOpen(true), []);
 
   const closeLightbox = useCallback(() => {
     const lv = lightboxVideoRef.current;
@@ -146,36 +138,48 @@ export function IntroVideo() {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => {
+    // The lightbox video only exists once it has rendered, so sync and start
+    // it here (still inside the click's user activation).
+    const lv = lightboxVideoRef.current;
+    if (lv) {
+      lv.muted = false;
+      lv.currentTime = videoRef.current?.currentTime || 0;
+      lv.play().catch(() => {});
+      lv.focus();
+    }
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeLightbox();
     };
     window.addEventListener("keydown", onKey);
-    // focus the lightbox video for immediate controls access
-    lightboxVideoRef.current?.focus?.();
     return () => window.removeEventListener("keydown", onKey);
   }, [open, closeLightbox]);
 
   return (
-    <section style={{ background: "#000", padding: "clamp(20px,4vw,56px) clamp(16px,4vw,44px) clamp(56px,8vw,110px)" }}>
-      <Container style={{ maxWidth: 1360, padding: 0 }}>
-        <Reveal style={{ textAlign: "center", marginBottom: "clamp(24px,4vw,44px)" }}>
-          <Eyebrow dark>See A4 in action</Eyebrow>
-          <h2
-            style={{
-              fontFamily: "var(--a4-font-display)",
-              fontWeight: 500,
-              color: "#fff",
-              fontSize: "clamp(28px,4vw,48px)",
-              lineHeight: 1.1,
-              letterSpacing: "-.02em",
-              margin: "14px auto 0",
-              maxWidth: 640,
-              textWrap: "balance",
-            }}
-          >
-            The A4 advantage, in two minutes.
+    <section
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        padding: "clamp(100px,13vw,180px) clamp(16px,4vw,44px) clamp(100px,12vw,170px)",
+        color: "#FFFFFF",
+        background: DARK_GRID,
+        fontFamily: "var(--a4x-display)",
+      }}
+    >
+      <DriftGlow left="-12%" top="-24%" strength={0.24} />
+
+      <div style={{ position: "relative", maxWidth: 1360, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: "clamp(40px,5vw,72px)", padding: "0 clamp(4px,1vw,28px)" }}>
+          <div data-fx="rise" style={{ display: "flex", justifyContent: "center" }}>
+            <Eyebrow dark>See A4 in action</Eyebrow>
+          </div>
+          <h2 style={{ margin: "18px 0 0", fontSize: "clamp(40px,6.4vw,112px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.08 }}>
+            <span className="sr-only">The A4 advantage, in two minutes.</span>
+            <div aria-hidden="true">
+              <TypeText segments={[{ t: "The A4 advantage,", c: "#FFFFFF" }]} per={42} caret={PERI} style={{ display: "inline-block" }} />
+              <Words d={820} style={{ fontWeight: 600 }} parts={[{ t: "in two" }, { t: "minutes.", g: true }]} />
+            </div>
           </h2>
-        </Reveal>
+        </div>
 
         {/* The scaling card */}
         <div
@@ -190,11 +194,14 @@ export function IntroVideo() {
           role="button"
           tabIndex={0}
           aria-label="Play the A4 intro video with sound"
+          className="a4-intro-card"
           style={{
             maxWidth: 1360,
             margin: "0 auto",
-            background: "#050505",
-            borderRadius: "clamp(20px,3vw,44px)",
+            background: DARK_CARD,
+            border: "1px solid rgba(255,255,255,.1)",
+            borderRadius: 28,
+            boxShadow: "0 50px 120px rgba(0,0,0,.45)",
             overflow: "hidden",
             cursor: reduceMotion ? "pointer" : "none",
             transform: "scale(0.9)",
@@ -206,13 +213,13 @@ export function IntroVideo() {
         >
           <div
             style={{
-              padding: "clamp(28px,5vw,72px) clamp(16px,4vw,56px)",
+              padding: "clamp(24px,5vw,72px) clamp(14px,4vw,56px)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
             }}
           >
-            <div ref={innerRef} style={{ width: "58%", minWidth: 300, maxWidth: "100%", willChange: "width" }}>
+            <div ref={innerRef} style={{ width: "58%", minWidth: 280, maxWidth: "100%", willChange: "width" }}>
               <video
                 ref={videoRef}
                 src={VIDEO_SRC}
@@ -227,10 +234,11 @@ export function IntroVideo() {
                   width: "100%",
                   aspectRatio: "16 / 9",
                   objectFit: "cover",
-                  borderRadius: 16,
-                  background: "#0B0B0D",
+                  borderRadius: 18,
+                  background: INK,
                   display: "block",
-                  boxShadow: "0 40px 120px -40px rgba(0,0,0,0.9)",
+                  border: "1px solid rgba(255,255,255,.08)",
+                  boxShadow: "0 40px 100px rgba(0,0,0,.5)",
                 }}
               />
             </div>
@@ -249,30 +257,35 @@ export function IntroVideo() {
               display: "inline-flex",
               alignItems: "center",
               gap: 12,
-              background: "#fff",
-              color: "#1F1F1F",
+              height: "clamp(48px,4vw,58px)",
+              padding: "0 clamp(20px,2.2vw,30px) 0 clamp(16px,1.8vw,24px)",
               borderRadius: 999,
-              padding: "clamp(12px,1.4vw,17px) clamp(20px,2.4vw,32px)",
-              fontFamily: "var(--a4-font-body)",
-              fontSize: "clamp(14px,1.2vw,18px)",
-              fontWeight: 500,
-              boxShadow: "0 18px 50px -12px rgba(0,0,0,0.6)",
+              background: "#FFFFFF",
+              color: INK,
+              fontSize: "clamp(15px,1.25vw,18px)",
+              fontWeight: 600,
+              boxShadow: "0 24px 60px rgba(9,9,11,.45)",
               whiteSpace: "nowrap",
               willChange: "left,top",
               transition: "opacity .25s ease",
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="#1F1F1F" aria-hidden="true">
-              <path d="M8 5v14l11-7z" />
-            </svg>
+            <span style={{ display: "grid", placeItems: "center", width: 30, height: 30, borderRadius: 15, background: INK }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true" style={{ marginLeft: 2 }}>
+                <path d="M7 4.5v15l12.5-7.5z" />
+              </svg>
+            </span>
             Play intro
           </div>
         </div>
-      </Container>
+      </div>
 
       {/* Lightbox modal — full video with sound + controls */}
       {open && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="A4 intro video"
           onClick={(e) => {
             if (e.target === e.currentTarget) closeLightbox();
           }}
@@ -280,7 +293,9 @@ export function IntroVideo() {
             position: "fixed",
             inset: 0,
             zIndex: 100,
-            background: "rgba(5,5,5,0.94)",
+            background: "rgba(9,9,11,.94)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -294,19 +309,20 @@ export function IntroVideo() {
               position: "absolute",
               top: "clamp(14px,3vw,28px)",
               right: "clamp(14px,3vw,28px)",
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               borderRadius: 999,
-              border: "1px solid rgba(255,255,255,.2)",
-              background: "rgba(255,255,255,.08)",
-              color: "#fff",
-              fontSize: 20,
+              border: "1px solid rgba(255,255,255,.22)",
+              background: "rgba(255,255,255,.06)",
+              color: "#FFFFFF",
               cursor: "pointer",
               display: "grid",
               placeItems: "center",
             }}
           >
-            ✕
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
           </button>
           <video
             ref={lightboxVideoRef}
@@ -318,13 +334,15 @@ export function IntroVideo() {
               maxWidth: 1200,
               maxHeight: "86vh",
               aspectRatio: "16 / 9",
-              borderRadius: 14,
-              background: "#000",
-              boxShadow: "0 60px 160px -40px rgba(0,0,0,0.9)",
+              borderRadius: 18,
+              background: INK,
+              border: "1px solid rgba(255,255,255,.1)",
+              boxShadow: "0 50px 120px rgba(0,0,0,.6)",
             }}
           />
         </div>
       )}
+      <style>{`.a4-intro-card:focus-visible { box-shadow: 0 0 0 3px rgba(79,85,241,.55), 0 50px 120px rgba(0,0,0,.45) !important; }`}</style>
     </section>
   );
 }

@@ -1,94 +1,60 @@
 "use client";
 
-import { Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
+import { Eyebrow, Icon } from "@/components/a4-landing/Primitives";
 import LocalizedLink from "@/components/common/LocalizedLink";
+import { DARK_CARD, DriftGlow, LIGHT_GLOW, TypeText, Words } from "@/components/fx/primitives";
 
+const INK = "#09090B";
+const PERI = "#8B8FF7";
+
+const TYPE_D = 300;
+const TYPE_PER = 30;
+const TYPE_LINE = "See exactly where your";
+
+/**
+ * The free health check, as the design's dark CTA — a dark grid card with a
+ * drifting indigo glow on a light surface: typewriter heading with one
+ * gradient word, the explanation, and a white pill.
+ */
 export function HealthCheckPromo() {
   return (
-    <section style={{ background: "var(--a4-surface-soft)", padding: "clamp(56px,8vw,88px) 0" }}>
-      <Container>
-        <Reveal
-          style={{
-            position: "relative",
-            overflow: "hidden",
-            background: "#000",
-            border: "1px solid var(--a4-hairline-dark)",
-            borderRadius: "var(--a4-r-xl)",
-            padding: "clamp(32px,4.5vw,52px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 28,
-            flexWrap: "wrap",
-          }}
-        >
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: 0,
-              transform: "translateY(-50%)",
-              width: 460,
-              height: 320,
-              background: "radial-gradient(50% 50% at 30% 50%, rgba(73,79,223,.22), transparent 72%)",
-              pointerEvents: "none",
-            }}
-          />
-          <div style={{ position: "relative", maxWidth: 560 }}>
+    <section style={{ position: "relative", padding: "clamp(72px,9vw,128px) clamp(20px,5vw,72px)", background: LIGHT_GLOW, fontFamily: "var(--a4x-display)" }}>
+      <div
+        data-fx="rise"
+        data-dy="70"
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          maxWidth: 1280,
+          margin: "0 auto",
+          borderRadius: 28,
+          background: DARK_CARD,
+          border: "1px solid rgba(255,255,255,.08)",
+          boxShadow: "0 50px 120px rgba(9,9,11,.18)",
+          color: "#FFFFFF",
+          padding: "clamp(32px,5vw,72px)",
+        }}
+      >
+        <DriftGlow left="-24%" top="-90%" strength={0.3} />
+        <div style={{ position: "relative", display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: "36px 56px" }}>
+          <div style={{ maxWidth: 760 }}>
             <Eyebrow dark>Free accounting &amp; FS health check</Eyebrow>
-            <h2
-              className="a4-font-display"
-              style={{
-                fontWeight: 500,
-                color: "#fff",
-                fontSize: "clamp(26px,3.4vw,40px)",
-                lineHeight: 1.06,
-                letterSpacing: "-.025em",
-                margin: "14px 0 0",
-                textWrap: "balance",
-              }}
-            >
-              See exactly where your accounting stands.
+            <h2 style={{ margin: "18px 0 0", fontSize: "clamp(34px,4.6vw,72px)", fontWeight: 500, letterSpacing: "-0.035em", lineHeight: 1.06 }}>
+              <span className="sr-only">See exactly where your accounting stands.</span>
+              <div aria-hidden="true">
+                <TypeText segments={[{ t: TYPE_LINE, c: "#FFFFFF" }]} per={TYPE_PER} d={TYPE_D} caret={PERI} style={{ display: "inline-block", textWrap: "balance" }} />
+                <Words d={TYPE_D + TYPE_LINE.length * TYPE_PER + 120} style={{ fontWeight: 600, textWrap: "balance" }} parts={[{ t: "accounting" }, { t: "stands.", g: true }]} />
+              </div>
             </h2>
-            <p
-              className="a4-font-body"
-              style={{
-                fontSize: 16.5,
-                lineHeight: 1.6,
-                color: "var(--a4-on-dark-mute)",
-                margin: "14px 0 0",
-                textWrap: "pretty",
-              }}
-            >
+            <p style={{ margin: "22px 0 0", maxWidth: 620, fontFamily: "var(--a4x-body)", fontSize: 17, lineHeight: 1.6, color: "#A1A1AA", textWrap: "pretty" }}>
               A two-minute score, then a real review of your trial balance or financial statements by A4&apos;s own engine — clarity on what to fix, no obligation.
             </p>
           </div>
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <LocalizedLink
-              href="/accounting-health-check"
-              className="a4-font-body"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                height: 56,
-                padding: "0 32px",
-                borderRadius: "var(--a4-r-full)",
-                background: "#fff",
-                color: "#000",
-                fontWeight: 600,
-                fontSize: 17,
-                letterSpacing: ".24px",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Run the free check <Icon name="arrow-right" size={18} color="#000" />
-            </LocalizedLink>
-          </div>
-        </Reveal>
-      </Container>
+          <LocalizedLink href="/accounting-health-check" className="a4-btn a4-btn-light" style={{ textDecoration: "none" }}>
+            Run the free check <Icon name="arrow-right" size={18} color={INK} />
+          </LocalizedLink>
+        </div>
+      </div>
     </section>
   );
 }

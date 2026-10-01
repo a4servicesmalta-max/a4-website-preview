@@ -255,11 +255,11 @@ const Navbar = () => {
           </LocalizedLink>
           <button
             type="button"
-            className="lg:hidden"
+            className="grid lg:hidden"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
-            style={{ width: 44, height: 40, display: "grid", placeItems: "center", borderRadius: 999, border: "1px solid rgba(255,255,255,.18)", background: "rgba(255,255,255,.06)", color: "#FFFFFF", cursor: "pointer" }}
+            style={{ width: 44, height: 40, placeItems: "center", borderRadius: 999, border: "1px solid rgba(255,255,255,.18)", background: "rgba(255,255,255,.06)", color: "#FFFFFF", cursor: "pointer" }}
           >
             <span aria-hidden="true" style={{ position: "relative", width: 18, height: 12 }}>
               {[0, 1, 2].map((i) => (
@@ -287,8 +287,8 @@ const Navbar = () => {
           <div
             onMouseEnter={() => openNow(open)}
             onMouseLeave={closeSoon}
-            className="hidden lg:block"
-            style={{ position: "absolute", top: BAR_H, left: 0, right: 0, display: "flex", justifyContent: "center", padding: "10px 16px 0", pointerEvents: "none" }}
+            className="hidden lg:flex"
+            style={{ position: "absolute", top: BAR_H, left: 0, right: 0, justifyContent: "center", padding: "10px 16px 0", pointerEvents: "none" }}
           >
             <div
               key={open}

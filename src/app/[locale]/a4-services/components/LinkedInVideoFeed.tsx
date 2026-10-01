@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { LinkedInFeedPost } from "@/lib/linkedin-feed";
 import { LINKEDIN_COMPANY_URL } from "@/lib/contact";
-import { Button, Container, Eyebrow, Icon, Reveal } from "@/components/a4-landing/Primitives";
+import { Button, Eyebrow, Icon } from "@/components/a4-landing/Primitives";
+import { DARK_CARD, DARK_GRID, DriftGlow, gradText } from "@/components/fx/primitives";
+import { INK, PERI } from "@/lib/fx/engine";
 import { LinkedInGlyph } from "./Insights";
 
 import "swiper/css";
@@ -20,6 +22,15 @@ type FeedResponse = {
 
 const EMBED_W = 504;
 const EMBED_H = 399;
+const BODY = "var(--a4x-body)";
+
+const FEED_CSS = `
+  .a4-li-card { transition: border-color .35s, box-shadow .35s; }
+  .a4-li-card:hover { border-color: rgba(139,143,247,.45) !important; box-shadow: 0 24px 60px rgba(9,9,11,.28); }
+  .a4-li-nav { transition: background .3s, border-color .3s; }
+  .a4-li-nav:hover { background: rgba(255,255,255,.12) !important; border-color: rgba(255,255,255,.32) !important; }
+  .a4-li-nav:focus-visible, .a4-li-card:focus-visible { outline: 3px solid rgba(79,85,241,.55); outline-offset: 2px; }
+`;
 
 function LinkedInEmbed({ src, title }: { src: string; title: string }) {
   const shellRef = useRef<HTMLDivElement>(null);
@@ -48,10 +59,10 @@ function LinkedInEmbed({ src, title }: { src: string; title: string }) {
       className="relative w-full overflow-hidden isolate"
       style={{
         height: shellH,
-        borderRadius: "var(--a4-r-lg)",
-        border: "1px solid var(--a4-hairline-dark)",
-        background: "#000",
-        clipPath: "inset(0 round var(--a4-r-lg))",
+        borderRadius: 24,
+        border: "1px solid rgba(255,255,255,.1)",
+        background: INK,
+        clipPath: "inset(0 round 24px)",
       }}
     >
       <iframe
@@ -87,66 +98,45 @@ function LinkedInVideoCard({ post }: { post: LinkedInFeedPost }) {
       href={post.url}
       target="_blank"
       rel="noopener noreferrer"
+      className="a4-li-card"
       style={{
         display: "flex",
         flexDirection: "column",
         textDecoration: "none",
-        borderRadius: "var(--a4-r-lg)",
+        borderRadius: 24,
         overflow: "hidden",
-        border: "1px solid var(--a4-hairline-dark)",
-        background: "var(--a4-surface-elevated)",
+        border: "1px solid rgba(255,255,255,.08)",
+        background: DARK_CARD,
         height: "100%",
-        transition: "border-color .2s",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "var(--a4-hairline-strong)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = "var(--a4-hairline-dark)";
+        color: "#FFFFFF",
       }}
     >
       <div
         style={{
           position: "relative",
           aspectRatio: post.thumbnail ? "1 / 1" : "16 / 10",
-          background: "#000",
+          background: INK,
           overflow: "hidden",
-          borderBottom: "1px solid var(--a4-hairline-dark)",
+          borderBottom: "1px solid rgba(255,255,255,.08)",
         }}
       >
         {post.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.thumbnail}
-            alt=""
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
+          <img src={post.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         ) : (
-          <>
-            <div
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                inset: 0,
-                backgroundImage: "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
-                backgroundSize: "24px 24px",
-              }}
-            />
-            <div
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                inset: 0,
-                background: "radial-gradient(60% 70% at 30% 30%, rgba(73,79,223,.26), transparent 70%)",
-              }}
-            />
-          </>
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(60% 70% at 30% 30%, rgba(79,85,241,.30), rgba(79,85,241,0) 70%), linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px) 0 0 / 32px 32px, linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px) 0 0 / 32px 32px",
+            }}
+          />
         )}
-        <div style={{ position: "absolute", top: 16, left: 16, display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <LinkedInGlyph size={18} color="#fff" />
-          <span style={{ fontFamily: "var(--a4-font-body)", fontSize: 12, fontWeight: 600, color: "#fff" }}>
-            A4 Services
-          </span>
+        <div style={{ position: "absolute", top: 16, left: 16, display: "inline-flex", alignItems: "center", gap: 8, height: 32, padding: "0 12px", borderRadius: 999, background: "rgba(9,9,11,.72)", border: "1px solid rgba(255,255,255,.12)" }}>
+          <LinkedInGlyph size={14} color="#FFFFFF" />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#FFFFFF" }}>A4 Services</span>
         </div>
         <div
           style={{
@@ -154,63 +144,47 @@ function LinkedInVideoCard({ post }: { post: LinkedInFeedPost }) {
             top: "50%",
             left: "50%",
             transform: "translate(-50%,-50%)",
-            width: 60,
-            height: 60,
+            width: 64,
+            height: 64,
             borderRadius: 999,
-            border: "1px solid rgba(255,255,255,.35)",
-            background: "rgba(255,255,255,.1)",
+            border: "1px solid rgba(255,255,255,.22)",
+            background: "rgba(255,255,255,.08)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
             display: "grid",
             placeItems: "center",
           }}
         >
-          <Icon name="play" size={24} color="#fff" stroke={1.6} />
+          <Icon name="play" size={24} color="#FFFFFF" stroke={1.6} />
         </div>
       </div>
-      <div style={{ padding: "20px 22px 22px", display: "flex", flexDirection: "column", flex: 1 }}>
-        <h3
-          style={{
-            fontFamily: "var(--a4-font-display)",
-            fontWeight: 500,
-            fontSize: 19,
-            lineHeight: 1.2,
-            color: "#fff",
-            margin: 0,
-            textWrap: "balance",
-          }}
-        >
-          {post.title}
-        </h3>
-        <p
-          style={{
-            fontFamily: "var(--a4-font-body)",
-            fontSize: 14.5,
-            lineHeight: 1.5,
-            color: "var(--a4-on-dark-mute)",
-            margin: "10px 0 0",
-            textWrap: "pretty",
-          }}
-        >
-          {post.blurb}
-        </p>
+      <div style={{ padding: "22px 24px 24px", display: "flex", flexDirection: "column", flex: 1 }}>
+        <h3 style={{ margin: 0, fontSize: 21, fontWeight: 600, letterSpacing: "-0.025em", lineHeight: 1.2, color: "#FFFFFF", textWrap: "balance" }}>{post.title}</h3>
+        <p style={{ margin: "10px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.55, color: "#A1A1AA", textWrap: "pretty" }}>{post.blurb}</p>
         <div
           style={{
             display: "inline-flex",
             alignItems: "center",
             gap: 7,
             marginTop: "auto",
-            paddingTop: 18,
-            fontFamily: "var(--a4-font-body)",
-            fontSize: 14,
+            paddingTop: 20,
+            fontSize: 15,
             fontWeight: 600,
-            color: "#fff",
+            color: "#FFFFFF",
           }}
         >
-          Watch on LinkedIn <Icon name="arrow-up-right" size={16} color="#fff" />
+          Watch on LinkedIn <Icon name="arrow-up-right" size={16} color={PERI} />
         </div>
       </div>
     </a>
   );
 }
+
+const NAV_BTN: CSSProperties = {
+  background: "rgba(255,255,255,.06)",
+  border: "1px solid rgba(255,255,255,.22)",
+  color: "#FFFFFF",
+};
 
 function LinkedInPostsSwiper({ posts }: { posts: LinkedInFeedPost[] }) {
   const swiperRef = useRef<SwiperType | null>(null);
@@ -241,19 +215,15 @@ function LinkedInPostsSwiper({ posts }: { posts: LinkedInFeedPost[] }) {
   const currentPage = Math.min(pageCount, Math.floor(activeIndex / slidesPerView) + 1);
 
   return (
-    <div className="relative mt-10 sm:mt-12 px-0 sm:px-12 mx-auto" style={{ maxWidth: 1080 }}>
+    <div className="relative mt-10 sm:mt-14 px-0 sm:px-16 mx-auto" style={{ maxWidth: 1180 }}>
       {posts.length > slidesPerView && (
         <>
           <button
             type="button"
             aria-label="Previous LinkedIn post"
             onClick={() => swiperRef.current?.slidePrev()}
-            className="absolute left-0 top-[42%] z-10 hidden sm:flex -translate-y-1/2 w-11 h-11 items-center justify-center rounded-full transition-all duration-200 hover:scale-105"
-            style={{
-              background: "rgba(255,255,255,.08)",
-              border: "1px solid var(--a4-hairline-dark)",
-              color: "#fff",
-            }}
+            className="a4-li-nav absolute left-0 top-[42%] z-10 hidden sm:flex -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full"
+            style={NAV_BTN}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -261,12 +231,8 @@ function LinkedInPostsSwiper({ posts }: { posts: LinkedInFeedPost[] }) {
             type="button"
             aria-label="Next LinkedIn post"
             onClick={() => swiperRef.current?.slideNext()}
-            className="absolute right-0 top-[42%] z-10 hidden sm:flex -translate-y-1/2 w-11 h-11 items-center justify-center rounded-full transition-all duration-200 hover:scale-105"
-            style={{
-              background: "rgba(255,255,255,.08)",
-              border: "1px solid var(--a4-hairline-dark)",
-              color: "#fff",
-            }}
+            className="a4-li-nav absolute right-0 top-[42%] z-10 hidden sm:flex -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full"
+            style={NAV_BTN}
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -275,11 +241,11 @@ function LinkedInPostsSwiper({ posts }: { posts: LinkedInFeedPost[] }) {
 
       <Swiper
         modules={[Navigation, Pagination]}
-        spaceBetween={22}
+        spaceBetween={16}
         slidesPerView={1}
         breakpoints={{
-          768: { slidesPerView: Math.min(2, posts.length), spaceBetween: 22 },
-          1024: { slidesPerView: Math.min(3, posts.length), spaceBetween: 24 },
+          768: { slidesPerView: Math.min(2, posts.length), spaceBetween: 16 },
+          1024: { slidesPerView: Math.min(3, posts.length), spaceBetween: 16 },
         }}
         loop={canLoop}
         watchOverflow
@@ -306,12 +272,9 @@ function LinkedInPostsSwiper({ posts }: { posts: LinkedInFeedPost[] }) {
       </Swiper>
 
       {posts.length > 1 && (
-        <div className="flex flex-col items-center gap-4 mt-8">
-          <div
-            className="a4-font-body text-[13px] font-semibold tabular-nums tracking-wide"
-            style={{ color: "var(--a4-stone)" }}
-          >
-            <span style={{ color: "#fff" }}>{String(currentPage).padStart(2, "0")}</span>
+        <div className="flex flex-col items-center gap-4 mt-10">
+          <div style={{ fontFamily: "var(--a4x-display)", fontSize: 17, fontWeight: 600, letterSpacing: ".02em", color: "#A1A1AA", fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ color: PERI }}>{String(currentPage).padStart(2, "0")}</span>
             {" / "}
             {String(pageCount).padStart(2, "0")}
           </div>
@@ -324,15 +287,15 @@ function LinkedInPostsSwiper({ posts }: { posts: LinkedInFeedPost[] }) {
 
 function LinkedInFeedSkeleton() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-[22px] mt-10 sm:mt-12">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-10 sm:mt-14">
       {[0, 1].map((i) => (
         <div
           key={i}
           style={{
             aspectRatio: `${EMBED_W} / ${EMBED_H}`,
-            borderRadius: "var(--a4-r-lg)",
-            background: "var(--a4-surface-elevated)",
-            border: "1px solid var(--a4-hairline-dark)",
+            borderRadius: 24,
+            background: DARK_CARD,
+            border: "1px solid rgba(255,255,255,.08)",
             opacity: 0.6,
           }}
         />
@@ -373,60 +336,44 @@ export function LinkedInVideoFeed() {
   return (
     <section
       style={{
-        background: "#000",
-        padding: "clamp(64px,9vw,104px) 0",
-        borderTop: "1px solid var(--a4-hairline-dark)",
+        position: "relative",
+        overflow: "hidden",
+        padding: "clamp(100px,13vw,180px) clamp(20px,5vw,72px) clamp(88px,11vw,150px)",
+        color: "#FFFFFF",
+        background: DARK_GRID,
+        fontFamily: "var(--a4x-display)",
       }}
     >
-      <Container>
-        <Reveal
-          className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-5 sm:gap-6"
-        >
-          <div className="min-w-0">
-            <Eyebrow dark>From our LinkedIn</Eyebrow>
+      <style>{FEED_CSS}</style>
+      <DriftGlow left="52%" top="-40%" strength={0.22} />
+      <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 28 }}>
+          <div style={{ flex: "1 1 560px", minWidth: 0, maxWidth: 840 }}>
+            <div data-fx="rise">
+              <Eyebrow dark>From our LinkedIn</Eyebrow>
+            </div>
             <h2
-              style={{
-                fontFamily: "var(--a4-font-display)",
-                fontWeight: 500,
-                color: "#fff",
-                fontSize: "clamp(32px,4.2vw,52px)",
-                lineHeight: 1.04,
-                letterSpacing: "-.02em",
-                margin: "18px 0 0",
-                textWrap: "balance",
-              }}
+              data-fx="rise"
+              data-d="100"
+              style={{ margin: "16px 0 0", fontSize: "clamp(40px,5.6vw,92px)", fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.02, textWrap: "balance" }}
             >
-              Watch our latest videos
+              Watch our latest <span style={{ ...gradText, paddingBottom: ".06em" }}>videos</span>
             </h2>
-            <p
-              style={{
-                fontFamily: "var(--a4-font-body)",
-                fontSize: 17,
-                lineHeight: 1.55,
-                color: "var(--a4-on-dark-mute)",
-                margin: "14px 0 0",
-                maxWidth: 460,
-                textWrap: "pretty",
-              }}
-            >
+            <p data-fx="rise" data-d="200" style={{ margin: "20px 0 0", maxWidth: 480, fontFamily: BODY, fontSize: 17, lineHeight: 1.55, color: "#A1A1AA", textWrap: "pretty" }}>
               Short explainers and updates from the A4 team — auto-updated from our LinkedIn page.
             </p>
           </div>
-          <div className="w-full sm:w-auto shrink-0" style={{ maxWidth: 280 }}>
-            <Button variant="primary" size="md" href={LINKEDIN_COMPANY_URL} target="_blank" style={{ width: "100%" }}>
-              <LinkedInGlyph size={16} color="#000" /> Follow on LinkedIn
+          <div data-fx="rise" data-d="200" style={{ flexShrink: 0 }}>
+            <Button variant="primary" size="lg" href={LINKEDIN_COMPANY_URL} target="_blank">
+              <LinkedInGlyph size={17} color={INK} /> Follow on LinkedIn
             </Button>
           </div>
-        </Reveal>
+        </div>
 
-        <Reveal delay={60}>
-          {source === "loading" ? (
-            <LinkedInFeedSkeleton />
-          ) : posts.length > 0 ? (
-            <LinkedInPostsSwiper posts={posts} />
-          ) : null}
-        </Reveal>
-      </Container>
+        <div data-fx="rise" data-d="120">
+          {source === "loading" ? <LinkedInFeedSkeleton /> : posts.length > 0 ? <LinkedInPostsSwiper posts={posts} /> : null}
+        </div>
+      </div>
     </section>
   );
 }
