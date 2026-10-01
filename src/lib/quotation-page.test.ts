@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  acceptPlan,
   acceptedLineIndexes,
   buildCards,
   cardPrice,
   clientDisplayName,
+  computeRetainerTotals,
   computeTotals,
   pageState,
+  quoteRetainer,
   readLines,
+  retainerUnavailableText,
 } from "./quotation-page";
 
 // Fictional figures in the shape the portal backend issues.
@@ -87,6 +91,91 @@ describe("quotation page cards", () => {
     const c = buildCards(l);
     expect(c.map((x) => x.word)).toEqual(["Advisory", "Group"]);
     expect(cardPrice(c[0], "monthly")).toMatchObject({ amount: 600, per: "fixed fee" });
+  });
+});
+
+describe("quotation page retainer", () => {
+  const lines = readLines(ITEMS);
+  const cards = buildCards(lines);
+  const all = new Set(cards.map((c) => c.key));
+
+  it("prices every ticked service as one monthly retainer, with the rest outside", () => {
+    const t = computeRetainerTotals(lines, cards, all);
+    // Own fees a year: 219×12 + 715 + (150 − 100 registry) = 3,393 → ×95% ÷ 12 = 268.6 → €265 (step €5).
+    expect(t.retainer.offered).toBe(true);
+    expect(t.retainer.ownAnnual).toBe(3393);
+    expect(t.net).toBe(265);
+    expect(t.vat).toBe(47.7);
+    expect(t.total).toBe(312.7);
+    expect(t.per).toBe("/ mo");
+    expect(t.retainer.savingYearly).toBe(3393 - 265 * 12);
+    expect([...t.covered]).toEqual([0, 1, 2, 3, 4]);
+    // Outside: the registry part of the MBR line, and the catch-up.
+    expect(t.registryYearly).toBe(100);
+    expect(t.alsoYearly).toBe(100);
+    expect(t.alsoOneOff).toBe(522);
+    expect(t.firstYear).toBe(265 * 12 + 100 + 522);
+    // No VAT on the registry fee.
+    expect(t.firstYearVat).toBe(666.36);
+    expect(t.count).toBe(5);
+  });
+
+  it("matches the canonical vector B through the page's own line reader", () => {
+    const b = readLines([
+      { label: "Bookkeeping — managed (company)", amount: 69, cadence: "monthly" },
+      { label: "Bookkeeping — volume uplift", amount: 10, cadence: "monthly" },
+      { label: "Additional bank accounts (1 x EUR 52)", amount: 52, cadence: "monthly" },
+      { label: "VAT returns", amount: 45, cadence: "monthly" },
+      { label: "Payroll", amount: 36, cadence: "monthly" },
+      { label: "Annual tax return", amount: 331, cadence: "yearly" },
+      { label: "Registered office", amount: 1200, cadence: "yearly" },
+      { label: "Annual return — filed with the MBR", amount: 150, cadence: "yearly" },
+    ]);
+    const t = computeRetainerTotals(b, buildCards(b), new Set(buildCards(b).map((c) => c.key)));
+    expect(t.net).toBe(325);
+    expect(t.registryYearly).toBe(100);
+  });
+
+  it("follows the services switched on, and says why when it no longer applies", () => {
+    const acc = computeRetainerTotals(lines, cards, new Set(["acc"]));
+    expect(acc.retainer.offered).toBe(false);
+    expect(retainerUnavailableText(acc.retainer.reason)).toBe("The retainer needs at least two services.");
+    const yearlyOnly = computeRetainerTotals(lines, cards, new Set(["tax", "csp"]));
+    expect(yearlyOnly.retainer.reason).toBe("no-monthly-service");
+    expect(computeRetainerTotals(lines, cards, new Set(["catch"])).retainer.reason).toBe("nothing-recurring");
+    const accVat = computeRetainerTotals(lines, cards, new Set(["acc", "vat"]));
+    expect(accVat.retainer.offered).toBe(true);
+    expect(accVat.retainer.ownAnnual).toBe(219 * 12);
+    expect(accVat.alsoOneOff).toBe(0);
+  });
+
+  it("keeps audit fees outside, per year", () => {
+    const l = readLines([
+      { label: "Managed bookkeeping — Limited company", amount: 99, cadence: "monthly" },
+      { label: "VAT returns", amount: 45, cadence: "monthly" },
+      { label: "Financial audit (if applicable)", amount: 1450, cadence: "yearly" },
+    ]);
+    const c = buildCards(l);
+    const t = computeRetainerTotals(l, c, new Set(c.map((x) => x.key)));
+    expect(t.retainer.offered).toBe(true);
+    expect(t.auditYearly).toBe(1450);
+    expect(t.alsoYearly).toBe(1450);
+    expect(t.covered.has(2)).toBe(false);
+  });
+
+  it("reports lineItems indexes even when a malformed row was skipped", () => {
+    const l = readLines([null, ...ITEMS]);
+    expect(l[0].index).toBe(1);
+    const r = quoteRetainer(l, [1, 3, 6, 99]);
+    // Bookkeeping (1) + VAT (3) inside, the catch-up (6) outside; an unknown index is ignored.
+    expect(r.covered).toEqual([1, 3]);
+    expect(r.outside).toEqual([expect.objectContaining({ index: 6, reason: "one-off" })]);
+  });
+
+  it("records the plan and billing the client accepted in", () => {
+    expect(acceptPlan("retainer")).toEqual({ plan: "retainer", billing: "monthly" });
+    expect(acceptPlan("monthly")).toEqual({ plan: "separate", billing: "monthly" });
+    expect(acceptPlan("year")).toEqual({ plan: "separate", billing: "annual" });
   });
 });
 

@@ -144,13 +144,25 @@ export type A4Selections = {
    * before `WebsiteLead` grows a column for it.
    */
   independence: IndependenceFlags;
+  /**
+   * How the visitor would like to be billed (the /quote builder asks). Not
+   * priced and not repriced: the lines and totals stay itemised either way.
+   * The backend reads `plan === "retainer"` to mark the monthly-retainer offer
+   * it pins on the quotation as the one the visitor preferred
+   * (src/lib/retainer.ts). Absent unless the page asked.
+   */
+  plan?: QuotePlan;
 };
+
+/** Itemised services, or one monthly retainer for the recurring ones (src/lib/retainer.ts). */
+export type QuotePlan = "separate" | "retainer";
 
 /** Wrap priced items in the versioned envelope the backend evaluator expects. */
 export function buildA4Selections(
   items: A4Item[],
   risk: A4Risk = "standard",
-  serviceStartDate: ServiceStartMonth = ""
+  serviceStartDate: ServiceStartMonth = "",
+  plan?: QuotePlan
 ): A4Selections {
   const t = evaluateA4Items(items, risk);
   return {
@@ -160,6 +172,7 @@ export function buildA4Selections(
     serviceStartDate,
     items,
     independence: independenceFlags(t),
+    ...(plan === "separate" || plan === "retainer" ? { plan } : {}),
   };
 }
 
@@ -426,7 +439,36 @@ export type WebsiteQuoteInput = {
   sourceDetail?: string;
   /** Business name, when the page asked for one — shown on the quotation page. */
   company?: string;
+  /** Separate services or the monthly retainer — rides as `selections.plan`, never changes a price. */
+  plan?: QuotePlan;
+  /**
+   * WHERE the quote was captured — the backend's `provenance` object (every
+   * field optional there; nothing in it can produce a 400). This is what tells
+   * the surfaces apart: the backend's intake schema strips `sourceDetail`.
+   */
+  provenance?: WebsiteQuoteProvenance;
 };
+
+export type WebsiteQuoteProvenance = {
+  formName?: string;
+  formLabel?: string;
+  pageUrl?: string;
+};
+
+/** Trimmed and capped to the backend's limits; empty fields dropped, null when nothing is left. */
+export function cleanProvenance(p: WebsiteQuoteProvenance | undefined): WebsiteQuoteProvenance | null {
+  if (!p) return null;
+  const out: WebsiteQuoteProvenance = {};
+  const put = (k: keyof WebsiteQuoteProvenance, max: number) => {
+    const raw = p[k];
+    const v = typeof raw === "string" ? raw.trim().slice(0, max) : "";
+    if (v) out[k] = v;
+  };
+  put("formName", 80);
+  put("formLabel", 160);
+  put("pageUrl", 2048);
+  return Object.keys(out).length ? out : null;
+}
 
 export type WebsiteQuoteResult =
   | { status: "quoted"; reference: string; message: string }
@@ -456,7 +498,7 @@ export function buildQuoteRecord(
   return {
     pack: A4_QUOTE_PACK_VERSION,
     currency: PRICING_CURRENCY,
-    selections: buildA4Selections(input.items, risk, input.serviceStartDate ?? ""),
+    selections: buildA4Selections(input.items, risk, input.serviceStartDate ?? "", input.plan),
     monthly: totals.monthly,
     yearly: totals.yearly,
     oneOff: totals.oneOff,
@@ -501,6 +543,7 @@ export async function submitWebsiteQuotation(
   }
 
   const sourceDetail = input.sourceDetail?.trim();
+  const provenance = cleanProvenance(input.provenance);
 
   try {
     const res = await fetch(`${QUOTE_API_BASE}/public/website-quotations`, {
@@ -519,6 +562,7 @@ export async function submitWebsiteQuotation(
         // top-level fields are currently stripped by the intake schema.
         ...independenceFlags(totals),
         ...(sourceDetail && /^[a-z0-9][a-z0-9._-]*$/.test(sourceDetail) ? { sourceDetail } : {}),
+        ...(provenance ? { provenance } : {}),
       }),
     });
     if (!res.ok) return { status: "error", message: ERROR_MESSAGE };

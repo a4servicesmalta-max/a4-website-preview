@@ -6,7 +6,7 @@ import { QuoteContent } from "./components/QuoteContent";
 export const metadata: Metadata = {
   title: "Get Instant Quote — A4 Services",
   description:
-    "Tell us what you need and we'll come back within 24 hours with a clear, written quote — scoped to your business, with no hidden fees.",
+    "Pick what you need and see the price — bookkeeping, VAT, payroll, tax, corporate services and audit, line by line or as one monthly retainer. Your formal quotation follows by email.",
 };
 
 export default function QuotePage() {

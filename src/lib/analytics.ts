@@ -98,6 +98,8 @@ export type ConversionEvent =
   | "quote_request_home_calculator"
   /** /pricing calculator — quote submitted and accepted by the backend. */
   | "quote_request_pricing"
+  /** /quote full-page builder — quote submitted and accepted by the backend. */
+  | "quote_request_builder"
   /** /contact — the contact form posted successfully. */
   | "contact_form_submit"
   /** /quote — the quote request form posted successfully. */
@@ -123,6 +125,7 @@ export type ConversionEvent =
 const CONVERSION_LABELS: Record<ConversionEvent, string> = {
   quote_request_home_calculator: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_HOME_CALCULATOR),
   quote_request_pricing: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_PRICING),
+  quote_request_builder: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_QUOTE_BUILDER),
   contact_form_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_CONTACT),
   quote_form_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_QUOTE),
   financial_upload_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_UPLOAD),

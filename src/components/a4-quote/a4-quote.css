@@ -1,0 +1,187 @@
+/*
+ * The /quote builder — only what an inline style cannot express: focus rings,
+ * hover, disabled states and the phone layout. Scoped to `a4q-` classes.
+ * Everything else is the A4 design language inline (see
+ * src/app/q/[id]/QuotationLanding.tsx and services/components/site-kit.css).
+ */
+
+/* ── the Monthly / First year / Retainer switch ── */
+.a4q-view {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 27px;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  max-width: 100%;
+}
+.a4q-view button {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: #52525b;
+  font-family: var(--a4x-display);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s;
+}
+.a4q-view button:hover:not(:disabled) {
+  color: #09090b;
+}
+.a4q-view button[aria-pressed="true"] {
+  background: #09090b;
+  color: #ffffff;
+}
+.a4q-view button:disabled {
+  color: #a1a1aa;
+  cursor: not-allowed;
+}
+.a4q-view button:focus-visible {
+  outline: 3px solid rgba(79, 85, 241, 0.55);
+  outline-offset: 2px;
+}
+
+/* ── service cards: the card's own switch ── */
+.a4q-card {
+  cursor: pointer;
+  user-select: none;
+}
+.a4q-card[data-locked="true"] {
+  cursor: default;
+}
+.a4q-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.3s, opacity 0.3s;
+}
+.a4q-toggle:disabled {
+  cursor: default;
+}
+.a4q-toggle > span {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(9, 9, 11, 0.3);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.a4q-toggle[aria-checked="true"] > span {
+  transform: translateX(20px);
+}
+.a4q-toggle:focus-visible,
+.a4q-plan:has(input:focus-visible),
+.a4q-link:focus-visible {
+  outline: 3px solid rgba(79, 85, 241, 0.55);
+  outline-offset: 2px;
+}
+
+/* ── plan choice on the dark send card ── */
+.a4q-plan {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.3s, background 0.3s;
+}
+.a4q-plan:hover:not([data-disabled="true"]) {
+  border-color: rgba(255, 255, 255, 0.32);
+}
+.a4q-plan[data-on="true"] {
+  border-color: rgba(139, 143, 247, 0.7);
+  background: rgba(79, 85, 241, 0.14);
+}
+.a4q-plan[data-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.a4q-plan .a4q-dot {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1.5px solid #71717a;
+  display: inline-grid;
+  place-items: center;
+  transition: border-color 0.25s;
+}
+.a4q-plan[data-on="true"] .a4q-dot {
+  border-color: #8b8ff7;
+}
+.a4q-plan[data-on="true"] .a4q-dot::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8b8ff7;
+}
+
+/* The native radio stays in the tab order, visually replaced by the dot. */
+.a4q-plan input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+}
+.a4q-plan {
+  position: relative;
+}
+
+/* ── text buttons that read as links ── */
+.a4q-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: #4f55f1;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.a4k-dark .a4q-link {
+  color: #8b8ff7;
+}
+
+/* ── phones ── */
+@media (max-width: 560px) {
+  .a4q-view {
+    display: grid;
+    width: 100%;
+  }
+  .a4q-view button {
+    padding: 0 8px;
+    font-size: 14px;
+  }
+}
+@media (max-width: 420px) {
+  .a4q-hide-xs {
+    display: none !important;
+  }
+}

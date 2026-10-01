@@ -10,10 +10,13 @@
  *   - every fee in its own cadence — "/mo", "/yr", "one-off" — never a yearly
  *     fee dressed up as a monthly one;
  *   - VAT (18%) is added on top and said so; registry / government fees are
- *     passed through at cost and carry no VAT.
+ *     passed through at cost and carry no VAT;
+ *   - the monthly retainer is src/lib/retainer.ts, recomputed here for the
+ *     services the prospect has switched on.
  * Pure and dependency-light so it is unit-tested (quotation-page.test.ts).
  */
 import { MBR_ANNUAL_RETURN } from "@/data/a4QuotePack";
+import { retainerFor, type RetainerOutside, type RetainerResult } from "@/lib/retainer";
 
 export const QUOTE_API_BASE =
   process.env.NEXT_PUBLIC_QUOTE_API_BASE?.trim().replace(/\/+$/, "") ||
@@ -23,6 +26,8 @@ export const VAT_RATE = 0.18;
 
 export type Cadence = "monthly" | "yearly" | "one-off";
 export type FeeView = "monthly" | "year";
+/** The page's fee toggle: the two cadence views, plus the monthly retainer when offered. */
+export type QuoteView = FeeView | "retainer";
 export type LetterFx = "scatter" | "tighten" | "cascade" | "stack" | "zoom" | "type";
 
 /** GET /public/quotations/:id/summary → data (the fields this page reads). */
@@ -44,7 +49,38 @@ export interface QuotationSummary {
   organizationName: string | null;
   brand: "a4" | "vacei" | "combined";
   lineItems: unknown;
-  acceptance: { signerName: string | null; billing: "monthly" | "annual" | null; partial: boolean } | null;
+  /**
+   * The monthly-retainer offer pinned on an A4 quotation, computed by the
+   * backend over the current lines (the src/lib/retainer.ts rule). Absent or
+   * null when the quotation carries no offer (older backends, non-A4 quotes).
+   */
+  retainer?: RetainerOffer | null;
+  acceptance: {
+    signerName: string | null;
+    billing: "monthly" | "annual" | null;
+    partial: boolean;
+    /** How the client took it: fees as quoted, or one monthly retainer. */
+    plan?: "separate" | "retainer";
+    retainerMonthly?: number | null;
+  } | null;
+}
+
+/** summary.retainer — the backend's public shape of the offer. */
+export interface RetainerOffer {
+  offered: boolean;
+  reason: RetainerResult["reason"];
+  monthly: number;
+  separateMonthly: number;
+  ownAnnual: number;
+  retainerAnnual: number;
+  savingYearly: number;
+  savingPct: number;
+  registryYearly: number;
+  oneOff: number;
+  coveredLineIndexes: number[];
+  outside: { index: number; label: string; amount: number; cadence: Cadence | null; reason: RetainerOutside["reason"] }[];
+  minTermMonths: number;
+  preferred: boolean;
 }
 
 export interface QuoteLine {
@@ -371,6 +407,101 @@ export function acceptedLineIndexes(cards: ServiceCard[], on: ReadonlySet<string
     .filter((c) => on.has(c.key))
     .flatMap((c) => c.lines.map((l) => l.index))
     .sort((a, b) => a - b);
+}
+
+/* -------------------------------------------------------------------------- */
+/* The monthly retainer                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `retainerFor` (src/lib/retainer.ts, the canonical rule) over the page's
+ * lines. `selected` and every index in the result are lineItems positions
+ * (QuoteLine.index), which differ from array positions when the backend sent
+ * a malformed row the page skipped.
+ */
+export function quoteRetainer(lines: QuoteLine[], selected?: Iterable<number>): RetainerResult {
+  const pos = new Map(lines.map((l, i) => [l.index, i]));
+  const pick = selected
+    ? Array.from(selected)
+        .map((i) => pos.get(i))
+        .filter((p): p is number => p !== undefined)
+    : undefined;
+  const r = retainerFor(
+    lines.map((l) => ({ label: l.label, amount: l.amount, cadence: l.cadence })),
+    pick
+  );
+  const back = (p: number) => lines[p].index;
+  return { ...r, covered: r.covered.map(back), outside: r.outside.map((o) => ({ ...o, index: back(o.index) })) };
+}
+
+export interface RetainerTotals extends QuoteTotals {
+  retainer: RetainerResult;
+  /** lineItems indexes inside the retainer. */
+  covered: ReadonlySet<number>;
+  /** Registry fees passed through at cost, per year. */
+  registryYearly: number;
+  /** Audit / review fees per year — delivered separately, outside the retainer. */
+  auditYearly: number;
+  /** One-off items and fixed fees, outside the retainer. */
+  outsideOneOff: number;
+  /** A year of the retainer plus everything outside it, before VAT. */
+  firstYear: number;
+  /** VAT on that first year (registry fees carry none). */
+  firstYearVat: number;
+}
+
+/**
+ * The quote as one monthly retainer for the services switched on. Shaped like
+ * QuoteTotals so the headline, the pill and the accept panel read it the same
+ * way: net = the retainer per month with VAT on top; alsoYearly / alsoOneOff
+ * are what stays outside it (registry at cost and audit per year; one-offs).
+ */
+export function computeRetainerTotals(lines: QuoteLine[], cards: ServiceCard[], on: ReadonlySet<string>): RetainerTotals {
+  const base = computeTotals(lines, cards, on, "monthly");
+  const r = quoteRetainer(lines, acceptedLineIndexes(cards, on));
+  const outsideSum = (reason: RetainerOutside["reason"], perYear: boolean) =>
+    round2(
+      r.outside
+        .filter((o) => o.reason === reason)
+        .reduce((s, o) => s + (perYear && o.cadence === "monthly" ? o.amount * 12 : o.amount), 0)
+    );
+  const registryYearly = round2(r.registryYearly);
+  const auditYearly = outsideSum("audit", true);
+  const outsideOneOff = round2(r.oneOff + outsideSum("no-cadence", false));
+  const net = r.monthly;
+  const vat = round2(net * VAT_RATE);
+  const alsoYearly = round2(registryYearly + auditYearly);
+  const firstYear = round2(r.retainerAnnual + alsoYearly + outsideOneOff);
+  return {
+    ...base,
+    net,
+    vat,
+    total: round2(net + vat),
+    per: "/ mo",
+    alsoYearly,
+    alsoOneOff: outsideOneOff,
+    retainer: r,
+    covered: new Set(r.covered),
+    registryYearly,
+    auditYearly,
+    outsideOneOff,
+    firstYear,
+    firstYearVat: round2(Math.max(0, firstYear - registryYearly) * VAT_RATE),
+  };
+}
+
+/** Why the retainer option is switched off for the current selection — short, for under the toggle. */
+export function retainerUnavailableText(reason: RetainerResult["reason"]): string {
+  if (reason === "too-few-services") return "The retainer needs at least two services.";
+  if (reason === "no-monthly-service") return "The retainer needs a monthly service.";
+  if (reason === "nothing-recurring") return "The retainer needs recurring services.";
+  return "No retainer for this selection.";
+}
+
+/** What an acceptance records for the view the client accepted in. */
+export function acceptPlan(view: QuoteView): { plan: "separate" | "retainer"; billing: "monthly" | "annual" } {
+  if (view === "retainer") return { plan: "retainer", billing: "monthly" };
+  return { plan: "separate", billing: view === "year" ? "annual" : "monthly" };
 }
 
 /* -------------------------------------------------------------------------- */

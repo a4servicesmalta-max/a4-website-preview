@@ -24,17 +24,22 @@ import { trackConversion } from "@/lib/analytics";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
 import {
   QUOTE_API_BASE,
+  acceptPlan,
   acceptedLineIndexes,
   buildCards,
   cardPrice,
   clientDisplayName,
+  computeRetainerTotals,
   computeTotals,
   fmtDate,
   fmtEur,
   pageState,
   readLines,
+  retainerUnavailableText,
   type FeeView,
   type QuotationSummary,
+  type QuoteTotals,
+  type QuoteView,
 } from "@/lib/quotation-page";
 
 const SANS = 'var(--a4x-display), Outfit, Inter, system-ui, sans-serif';
@@ -85,8 +90,21 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
   const validUntil = fmtDate(summary.validUntil);
   const closed = initial === "expired" || initial === "declined";
 
+  // The monthly retainer: offered by the backend for this quotation, then
+  // recomputed here (src/lib/retainer.ts) for the services switched on.
+  const offer = summary.retainer?.offered ? summary.retainer : null;
+
   const [on, setOn] = useState<Set<string>>(() => new Set(cards.map((c) => c.key)));
-  const [view, setView] = useState<FeeView>(hasMonthly ? (summary.acceptance?.billing === "annual" ? "year" : "monthly") : "year");
+  const [view, setView] = useState<QuoteView>(() => {
+    if (!hasMonthly) return "year";
+    const a = summary.acceptance;
+    if (offer && (a ? a.plan === "retainer" : offer.preferred)) return "retainer";
+    return a?.billing === "annual" ? "year" : "monthly";
+  });
+  const [acceptedAs, setAcceptedAs] = useState(() => ({
+    retainer: summary.acceptance?.plan === "retainer",
+    monthly: summary.acceptance?.retainerMonthly ?? summary.retainer?.monthly ?? 0,
+  }));
   const [name, setName] = useState("");
   const [agree, setAgree] = useState(false);
   const [accepted, setAccepted] = useState(initial === "accepted");
@@ -100,7 +118,17 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
   const [navSolid, setNavSolid] = useState(false);
   const [pillOn, setPillOn] = useState(false);
 
-  const totals = useMemo(() => computeTotals(lines, cards, on, view), [lines, cards, on, view]);
+  const ret = useMemo(() => computeRetainerTotals(lines, cards, on), [lines, cards, on]);
+  const retainerOk = !!offer && ret.retainer.offered;
+  // A selection that no longer qualifies falls back to the monthly view; the
+  // retainer comes back by itself when it qualifies again.
+  const shownView: QuoteView = view === "retainer" && !retainerOk ? (hasMonthly ? "monthly" : "year") : view;
+  const isRet = shownView === "retainer";
+  const feeView: FeeView = shownView === "retainer" ? "monthly" : shownView;
+  const totals: QuoteTotals = useMemo(
+    () => (isRet ? ret : computeTotals(lines, cards, on, feeView)),
+    [isRet, ret, lines, cards, on, feeView]
+  );
   const [shown, setShown] = useState(totals.total);
   const shownRef = useRef(totals.total);
   const twRaf = useRef(0);
@@ -132,7 +160,8 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
     return () => cancelAnimationFrame(twRaf.current);
   }, [totals.total]);
 
-  /* ── rows that join the quote slide in; a re-enabled service re-types its word ── */
+  /* ── rows that join the quote slide in (a service switched on, or the retainer's
+        "outside" rows on a view change); a re-enabled service re-types its word ── */
   useEffect(() => {
     const rows = qa("[data-row]");
     if (seenRows.current && !prefersReducedMotion()) {
@@ -153,7 +182,7 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
       replayFx(q(`[data-word="${replayKey.current}"]`));
       replayKey.current = null;
     }
-  }, [on, q, qa]);
+  }, [on, shownView, q, qa]);
 
   /* ── nav, sticky pill and the portal stage, all read off scroll ── */
   useEffect(() => {
@@ -293,11 +322,14 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
     }
     setBusy(true);
     setFailure("");
+    // Monthly → monthly · First year → annual · Retainer → monthly + plan "retainer".
+    const { plan, billing } = acceptPlan(shownView);
     const body = JSON.stringify({
       token,
       signerName: name.trim(),
       ...(itemised ? { lineIndexes: acceptedLineIndexes(cards, on) } : {}),
-      billing: view === "year" ? "annual" : "monthly",
+      billing,
+      plan,
     });
     const post = (url: string) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
     let res: Response | null = null;
@@ -320,6 +352,7 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
     setAccepted(true);
     setAcceptedBy(name.trim());
     setAcceptedOn(today);
+    setAcceptedAs({ retainer: plan === "retainer", monthly: plan === "retainer" ? ret.net : 0 });
     setJustAccepted(true);
     trackConversion("quotation_accept");
   };
@@ -332,8 +365,17 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
   const pdfT = pdf === 1 ? "width 1.1s cubic-bezier(.65,0,.35,1)" : "width .3s ease";
   const hasAudit = cards.some((c) => (c.key === "aud" || c.key === "rev") && on.has(c.key));
   const hasCsp = cards.some((c) => c.key === "csp" || c.key === "inc");
+  const auditWord = ret.retainer.outside.some((o) => o.reason === "audit" && /review/i.test(o.label)) ? "review" : "audit";
+  const outsideParts = [
+    ret.registryYearly ? `${fmtEur(ret.registryYearly)} /yr registry at cost` : "",
+    ret.auditYearly ? `${fmtEur(ret.auditYearly)} /yr ${auditWord} + VAT` : "",
+    ret.outsideOneOff ? `${fmtEur(ret.outsideOneOff)} one-off + VAT` : "",
+  ].filter(Boolean);
+  const acceptedRetainer = acceptedAs.retainer
+    ? `Accepted as a monthly retainer${acceptedAs.monthly ? ` — ${fmtEur(acceptedAs.monthly)} /mo` : ""}`
+    : "";
   const acceptNote = accepted
-    ? `Accepted by ${acceptedBy || "you"}${acceptedOn ? ` on ${acceptedOn}` : ""}. We'll come back to you within one working day.`
+    ? `${acceptedRetainer ? `${acceptedRetainer}, by` : "Accepted by"} ${acceptedBy || "you"}${acceptedOn ? ` on ${acceptedOn}` : ""}. We'll come back to you within one working day.`
     : failure
       ? failure
       : tried && !canAccept
@@ -353,6 +395,11 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
     `This quotation is valid until ${validUntil || "the date shown"}. After that, fees may be reviewed.`,
     "Fees are shown before VAT, which is added at 18%. Registry and government fees are passed on at cost.",
     "Monthly services are billed monthly in advance, annual services once per financial year, and one-off items on completion.",
+    ...(offer
+      ? [
+          "The monthly retainer, if you choose it, is one fee for the recurring services it covers — billed monthly, 12-month minimum. Registry fees at cost and one-off items billed separately; audit and review engagements stay outside it.",
+        ]
+      : []),
     "Accepting starts onboarding: before we act for you, we complete our client due diligence and send the engagement letter.",
     ...(hasCsp ? ["Corporate services are delivered with licensed CSP partners."] : []),
     "Either side can end an engagement under the notice terms in the engagement letter. Work already done is billed.",
@@ -497,23 +544,44 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
             <div data-fx="rise" data-d="120" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
               {hasMonthly ? (
                 <div role="tablist" aria-label="Show fees" style={{ display: "flex", padding: 5, borderRadius: 999, background: "#F4F4F5", border: "1px solid #E4E4E7" }}>
-                  {(["monthly", "year"] as FeeView[]).map((v) => {
-                    const a = view === v;
+                  {(offer ? (["monthly", "year", "retainer"] as QuoteView[]) : (["monthly", "year"] as QuoteView[])).map((v) => {
+                    const a = shownView === v;
+                    const off = v === "retainer" && !retainerOk;
                     return (
                       <button
                         key={v}
                         role="tab"
                         aria-selected={a}
-                        onClick={() => setView(v)}
-                        style={{ height: 44, padding: "0 22px", borderRadius: 999, border: 0, background: a ? INK : "transparent", color: a ? "#FFFFFF" : "#52525B", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "background .3s, color .3s" }}
+                        aria-disabled={off || undefined}
+                        aria-describedby={off ? "q-ret-why" : undefined}
+                        onClick={() => {
+                          if (!off) setView(v);
+                        }}
+                        style={{ height: 44, padding: "0 clamp(14px,1.8vw,22px)", borderRadius: 999, border: 0, background: a ? INK : "transparent", color: a ? "#FFFFFF" : "#52525B", opacity: off ? 0.42 : 1, fontSize: 15, fontWeight: 600, cursor: off ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "background .3s, color .3s, opacity .3s" }}
                       >
-                        {v === "monthly" ? "Monthly" : "First year"}
+                        {v === "monthly" ? "Monthly" : v === "year" ? "First year" : "Retainer"}
                       </button>
                     );
                   })}
                 </div>
               ) : null}
-              <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: "#71717A" }}>Fees before VAT · registry fees at cost</span>
+              {offer && !retainerOk ? (
+                <span id="q-ret-why" style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: "#71717A", textAlign: "right" }}>
+                  {retainerUnavailableText(ret.retainer.reason)}
+                </span>
+              ) : (
+                <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: "#71717A", textAlign: "right" }}>
+                  {isRet ? "Billed monthly, 12-month minimum · fees before VAT" : "Fees before VAT · registry fees at cost"}
+                </span>
+              )}
+              {retainerOk && !isRet && !accepted ? (
+                <button
+                  onClick={() => setView("retainer")}
+                  style={{ padding: 0, border: 0, background: "transparent", fontFamily: BODY, fontSize: 14, fontWeight: 600, color: INDIGO, textAlign: "right", cursor: "pointer" }}
+                >
+                  Or one monthly retainer: {fmtEur(ret.net)} /mo for everything ticked →
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -523,8 +591,9 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
               const dark = i % 2 === 1;
               const n = Array.from(s.word).length;
               const colors = Array.from(s.word).map((_, j) => (isOn ? (dark ? "#FFFFFF" : gcol(n > 1 ? j / (n - 1) : 0)) : dark ? "#3F3F46" : "#D4D4D8"));
-              const price = cardPrice(s, view);
+              const price = cardPrice(s, feeView);
               const total = String(cards.length).padStart(2, "0");
+              const badge = !isOn ? "Add" : isRet ? (s.lines.some((l) => ret.covered.has(l.index)) ? "In retainer" : "Separate") : "Included";
               return (
                 <div
                   key={s.key}
@@ -590,7 +659,7 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
                         transition: "all .3s",
                       }}
                     >
-                      {isOn ? "Included" : "Add"}
+                      {badge}
                     </span>
                   </div>
                 </div>
@@ -624,7 +693,7 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
               <div><div style={kicker}>Prepared for</div><div style={{ ...metaValue, overflowWrap: "anywhere" }}>{client}</div></div>
               <div><div style={kicker}>Issued</div><div style={metaValue}>{issued || "—"}</div></div>
               <div><div style={kicker}>{closed ? (initial === "declined" ? "Declined" : "Expired") : "Valid until"}</div><div style={metaValue}>{validUntil || "—"}</div></div>
-              <div><div style={kicker}>Fees shown</div><div style={metaValue}>{view === "year" ? (hasMonthly ? "First year" : "Per year") : "Monthly"}</div></div>
+              <div><div style={kicker}>Fees shown</div><div style={metaValue}>{isRet ? "Monthly retainer" : feeView === "year" ? (hasMonthly ? "First year" : "Per year") : "Monthly"}</div></div>
             </div>
             {summary.description ? (
               <p style={{ margin: 0, padding: "0 clamp(24px,4vw,48px) 28px", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: "#52525B", maxWidth: 900 }}>{summary.description}</p>
@@ -644,7 +713,9 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
               .map((s, i) => ({ s, i }))
               .filter(({ s }) => on.has(s.key))
               .map(({ s, i }) => {
-                const price = cardPrice(s, view);
+                const price = cardPrice(s, feeView);
+                // Retainer view: a service inside it reads "Included", its list price struck.
+                const inRet = isRet && s.lines.some((l) => ret.covered.has(l.index));
                 // The priced lines themselves: every line when a service is made of
                 // several, and a lone line only when it carries its own arithmetic
                 // ("Catch-up: 3 months x EUR 238 = EUR 714").
@@ -671,24 +742,91 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
                       ))}
                     </div>
                     <div style={{ flex: "0 0 170px", textAlign: "right" }}>
-                      <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.03em" }}>{fmtEur(price.amount)}</div>
-                      <div style={{ marginTop: 4, fontFamily: BODY, fontSize: 13, lineHeight: 1.4, color: "#71717A" }}>{perFreq}</div>
+                      {inRet ? (
+                        <>
+                          <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.03em", color: INDIGO }}>Included</div>
+                          <div style={{ marginTop: 4, fontFamily: BODY, fontSize: 13, lineHeight: 1.4, color: "#A1A1AA" }}>
+                            <s>
+                              {fmtEur(price.amount)} {price.per}
+                            </s>{" "}
+                            · in the retainer
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.03em" }}>{fmtEur(price.amount)}</div>
+                          <div style={{ marginTop: 4, fontFamily: BODY, fontSize: 13, lineHeight: 1.4, color: "#71717A" }}>
+                            {perFreq}
+                            {isRet ? " · billed separately" : ""}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
               })}
+            {isRet && ret.retainer.outside.length ? (
+              <div style={{ padding: "28px clamp(24px,4vw,48px)", borderTop: "1px solid #E4E4E7", background: "rgba(79,85,241,.03)" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", gap: "6px 24px" }}>
+                  <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.03em" }}>Outside the retainer</div>
+                  <div style={{ fontFamily: BODY, fontSize: 14, color: "#71717A" }}>Registry fees at cost and one-off items billed separately.</div>
+                </div>
+                <div style={{ marginTop: 16, display: "flex", flexDirection: "column" }}>
+                  {ret.retainer.outside.map((o) => {
+                    const what =
+                      o.reason === "registry"
+                        ? { label: "Registry fee, passed on at cost", note: o.label, per: "/ yr · no VAT" }
+                        : o.reason === "one-off"
+                          ? { label: o.label, note: "One-off, billed on completion", per: "one-off" }
+                          : o.reason === "audit"
+                            ? { label: o.label, note: "Delivered separately, in its own cadence", per: o.cadence === "monthly" ? "/ mo" : "/ yr" }
+                            : { label: o.label, note: "Fixed fee", per: "fixed fee" };
+                    return (
+                      <div key={`${o.reason}-${o.index}`} data-row={`out-${o.reason}-${o.index}`} style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", gap: "4px 24px", padding: "12px 0", borderTop: "1px solid #E4E4E7" }}>
+                        <div style={{ flex: "1 1 260px", display: "flex", gap: 12, fontFamily: BODY, fontSize: 15, lineHeight: 1.5, color: "#3F3F46" }}>
+                          <span className="a4-bullet" />
+                          <span>
+                            {what.label}
+                            <span style={{ display: "block", fontSize: 13, color: "#71717A" }}>{what.note}</span>
+                          </span>
+                        </div>
+                        <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                          <span style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.03em" }}>{fmtEur(o.amount)}</span>
+                          <span style={{ marginLeft: 6, fontFamily: BODY, fontSize: 13, color: "#71717A" }}>{what.per}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
             {on.size === 0 ? (
               <div style={{ padding: "48px clamp(24px,4vw,48px)", borderTop: "1px solid #E4E4E7", fontSize: 20, fontWeight: 500, color: "#52525B", textAlign: "center" }}>
                 Switch on at least one service above to see your quote.
               </div>
             ) : null}
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 32, padding: "32px clamp(24px,4vw,48px) 40px", borderTop: "1px solid #E4E4E7", background: "#FAFAFA" }}>
-              <span style={{ padding: "6px 13px", borderRadius: 999, background: "rgba(9,9,11,.78)", color: "#FFFFFF", fontSize: 13, fontWeight: 500 }}>VAT added at 18% · registry fees at cost</span>
+              <span style={{ padding: "6px 13px", borderRadius: 999, background: "rgba(9,9,11,.78)", color: "#FFFFFF", fontSize: 13, fontWeight: 500 }}>
+                {isRet ? "Billed monthly, 12-month minimum · VAT added at 18%" : "VAT added at 18% · registry fees at cost"}
+              </span>
               <div style={{ width: "min(100%, 440px)", display: "flex", flexDirection: "column", gap: 12, fontFamily: BODY, fontSize: 16, fontWeight: 500, color: "#3F3F46" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-                  <span>Subtotal · {countLabel}</span>
-                  <span style={{ color: INK }}>{fmtEur(totals.net, 2)}</span>
-                </div>
+                {isRet ? (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 16, color: "#71717A" }}>
+                      <span>The same services, separately</span>
+                      <s>{fmtEur(ret.retainer.separateMonthly, 2)} /mo</s>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                      <span>Monthly retainer</span>
+                      <span style={{ color: INK }}>{fmtEur(totals.net, 2)} /mo</span>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                    <span>Subtotal · {countLabel}</span>
+                    <span style={{ color: INK }}>{fmtEur(totals.net, 2)}</span>
+                  </div>
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
                   <span>VAT 18%</span>
                   <span style={{ color: INK }}>{fmtEur(totals.vat, 2)}</span>
@@ -698,7 +836,25 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
                   <span style={{ fontFamily: SANS, fontSize: 20, fontWeight: 600, color: INK }}>Total {perLabel}</span>
                   <span style={{ fontFamily: SANS, fontSize: "clamp(34px,3.6vw,46px)", fontWeight: 600, letterSpacing: "-0.04em", ...gradText }}>{fmtEur(shown, 2)}</span>
                 </div>
-                {totals.alsoYearly || totals.alsoOneOff ? (
+                {isRet ? (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 16, color: INDIGO, fontSize: 14, fontWeight: 600 }}>
+                      <span>{fmtEur(ret.retainer.savingYearly)} less a year than separately</span>
+                    </div>
+                    {outsideParts.length ? (
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 16, color: INDIGO, fontSize: 14 }}>
+                        <span>Outside the retainer</span>
+                        <span style={{ textAlign: "right" }}>{outsideParts.join(" · ")}</span>
+                      </div>
+                    ) : null}
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 16, fontSize: 14 }}>
+                      <span>First year, with the items outside</span>
+                      <span style={{ textAlign: "right", color: INK }}>
+                        {fmtEur(ret.firstYear, 2)} + {fmtEur(ret.firstYearVat, 2)} VAT
+                      </span>
+                    </div>
+                  </>
+                ) : totals.alsoYearly || totals.alsoOneOff ? (
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 16, color: INDIGO, fontSize: 14 }}>
                     <span>Also on this quotation</span>
                     <span style={{ textAlign: "right" }}>
@@ -818,13 +974,18 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
               <Words d={560} style={{ fontWeight: 600 }} parts={[{ t: "quotation.", g: true }]} />
             </div>
             <p data-fx="rise" data-d="700" style={{ margin: "28px 0 0", fontSize: "clamp(18px,1.8vw,24px)", fontWeight: 500, letterSpacing: "-0.015em", color: "#A1A1AA" }}>
-              {countLabel} for {client}.
+              {accepted && acceptedRetainer ? `${acceptedRetainer}.` : isRet ? `One monthly retainer for ${client}.` : `${countLabel} for ${client}.`}
             </p>
             <div data-fx="rise" data-d="820" style={{ marginTop: 20, display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 10 }}>
               <span style={{ fontSize: "clamp(40px,4.4vw,64px)", fontWeight: 600, letterSpacing: "-0.04em", ...gradText }}>{fmtEur(shown)}</span>
               <span style={{ fontFamily: BODY, fontSize: 16, fontWeight: 500, color: "#A1A1AA" }}>{perLabel} incl. VAT</span>
             </div>
-            {totals.alsoYearly || totals.alsoOneOff ? (
+            {isRet ? (
+              <p data-fx="rise" data-d="900" style={{ margin: "10px 0 0", fontFamily: BODY, fontSize: 15, fontWeight: 500, lineHeight: 1.55, color: "#A1A1AA" }}>
+                {fmtEur(ret.retainer.savingYearly)} less a year than separately. Billed monthly, 12-month minimum.
+                {outsideParts.length ? ` Outside it: ${outsideParts.join(" · ")}.` : ""}
+              </p>
+            ) : totals.alsoYearly || totals.alsoOneOff ? (
               <p data-fx="rise" data-d="900" style={{ margin: "10px 0 0", fontFamily: BODY, fontSize: 15, fontWeight: 500, color: "#A1A1AA" }}>
                 Plus {[totals.alsoYearly ? `${fmtEur(totals.alsoYearly)} /yr` : "", totals.alsoOneOff ? `${fmtEur(totals.alsoOneOff)} one-off` : ""].filter(Boolean).join(" and ")}, before VAT.
               </p>
@@ -943,7 +1104,7 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
         style={{ position: "fixed", left: 0, right: 0, bottom: 20, zIndex: 40, display: "flex", justifyContent: "center", padding: "0 12px", pointerEvents: "none", transform: `translateY(${pillOn ? 0 : 120}px)`, opacity: pillOn ? 1 : 0, transition: "transform .5s cubic-bezier(.16,1,.3,1), opacity .4s" }}
       >
         <div style={{ pointerEvents: pillOn ? "auto" : "none", maxWidth: "100%", display: "flex", alignItems: "center", gap: 14, height: 60, padding: "0 8px 0 22px", borderRadius: 30, background: "rgba(9,9,11,.92)", border: "1px solid rgba(255,255,255,.12)", boxShadow: "0 24px 60px rgba(9,9,11,.35)", color: "#FFFFFF", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
-          <span className="q-hide-xs" style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, color: "#A1A1AA", whiteSpace: "nowrap" }}>{countLabel}</span>
+          <span className="q-hide-xs" style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, color: "#A1A1AA", whiteSpace: "nowrap" }}>{isRet ? "Monthly retainer" : countLabel}</span>
           <span className="q-hide-xs" style={{ width: 1, height: 22, background: "rgba(255,255,255,.14)" }} />
           <span style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.03em", whiteSpace: "nowrap", backgroundImage: "linear-gradient(90deg,#6468F3 0%,#8B8FF7 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" }}>
             {fmtEur(shown)}

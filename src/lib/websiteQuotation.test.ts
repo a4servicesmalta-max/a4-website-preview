@@ -1,9 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   buildA4Selections,
   buildQuoteRecord,
+  cleanProvenance,
   evaluateA4Items,
   isServiceStartMonth,
+  submitWebsiteQuotation,
   type A4Item,
 } from "./websiteQuotation";
 import {
@@ -671,5 +673,69 @@ describe("the submitted record", () => {
       { label: "Financial audit (if applicable)", amount: 995, cadence: "yearly" },
     ]);
     expect(r.yearly).toBe(746); // 995 × 0.75 = 746.25 → 746
+  });
+});
+
+describe("plan and provenance (the /quote builder)", () => {
+  const items: A4Item[] = [
+    { service: "bookkeeping-managed", entity: "company", expenses: "10-25k", txn: "1-20", banks: 1 },
+    { service: "taxret", entity: "company", expenses: "10-25k" },
+  ];
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("puts the plan in the selections only when the page asked", () => {
+    expect(buildA4Selections(items, "standard", START, "retainer").plan).toBe("retainer");
+    expect(buildA4Selections(items, "standard", START, "separate").plan).toBe("separate");
+    expect("plan" in buildA4Selections(items, "standard", START)).toBe(false);
+    const r = buildQuoteRecord({ name: "A", email: "a@b.com", items, serviceStartDate: START, plan: "retainer" }, AFTER);
+    expect(r.selections.plan).toBe("retainer");
+  });
+
+  it("never lets the plan change a line or a total", () => {
+    const a = buildQuoteRecord({ name: "A", email: "a@b.com", items, serviceStartDate: START }, AFTER);
+    const b = buildQuoteRecord({ name: "A", email: "a@b.com", items, serviceStartDate: START, plan: "retainer" }, AFTER);
+    expect(b.lines).toEqual(a.lines);
+    expect([b.monthly, b.yearly, b.oneOff, b.catchup]).toEqual([a.monthly, a.yearly, a.oneOff, a.catchup]);
+  });
+
+  it("trims and caps provenance to the backend's limits, dropping empties", () => {
+    expect(cleanProvenance(undefined)).toBeNull();
+    expect(cleanProvenance({ formName: "  ", pageUrl: "" })).toBeNull();
+    const p = cleanProvenance({ formName: " a4-quote-builder ", formLabel: "Quote builder", pageUrl: "https://a4.com.mt/quote" + "x".repeat(3000) });
+    expect(p?.formName).toBe("a4-quote-builder");
+    expect(p?.formLabel).toBe("Quote builder");
+    expect(p?.pageUrl?.length).toBe(2048);
+  });
+
+  it("posts provenance at the top level and the plan inside the record", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: { reference: "Q-1", status: "QUOTED" } }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const res = await submitWebsiteQuotation({
+      name: "Jane",
+      email: "jane@example.com",
+      items,
+      serviceStartDate: START,
+      plan: "retainer",
+      provenance: { formName: "a4-quote-builder", formLabel: "Quote builder", pageUrl: "https://a4.com.mt/quote" },
+    });
+    expect(res).toMatchObject({ status: "quoted", reference: "Q-1" });
+    const calls = fetchMock.mock.calls as unknown as [string, RequestInit][];
+    const body = JSON.parse(String(calls[0][1].body));
+    expect(body.provenance).toEqual({ formName: "a4-quote-builder", formLabel: "Quote builder", pageUrl: "https://a4.com.mt/quote" });
+    expect(body.record.selections.plan).toBe("retainer");
+  });
+
+  it("sends no provenance key when there is none", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: { reference: null, status: "RECEIVED" } }), { status: 202 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const res = await submitWebsiteQuotation({ name: "Jane", email: "jane@example.com", items, serviceStartDate: START });
+    expect(res.status).toBe("received");
+    const calls = fetchMock.mock.calls as unknown as [string, RequestInit][];
+    const body = JSON.parse(String(calls[0][1].body));
+    expect("provenance" in body).toBe(false);
+    expect("plan" in body.record.selections).toBe(false);
   });
 });

@@ -1048,6 +1048,10 @@ export function LandingQuoteCalculator() {
         </div>
 
         <div data-fx="rise" style={{ marginTop: 40, display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+          {/* The same services on one page — every service at once, and the monthly retainer. */}
+          <LocalizedLink href="/quote" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 6, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: INDIGO, textDecoration: "none" }}>
+            Open the full quote builder <Icon name="arrow-right" size={16} color={INDIGO} />
+          </LocalizedLink>
           <p style={{ margin: 0, fontFamily: BODY, fontSize: 14, lineHeight: 1.55, color: "#52525B" }}>The price appears instantly — nothing is gated behind an email. All fees exclude VAT.</p>
           {/* Same line, same wording, on the vacei.com homepage (index.html) — the
               two homepages reference the audit landing page identically. */}

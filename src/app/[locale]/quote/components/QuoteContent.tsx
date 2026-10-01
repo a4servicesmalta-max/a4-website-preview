@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import FormStatusModal from "@/components/common/FormStatusModal";
-import { QUOTE_SERVICE_OPTS, QUOTE_STEPS } from "@/data/a4QuoteSiteData";
+import { QUOTE_SERVICE_OPTS } from "@/data/a4QuoteSiteData";
 import { PageHero } from "@/app/[locale]/services/components/PageHero";
 import { ServicePortalBand } from "@/app/[locale]/services/components/ServicePortalBand";
 import {
@@ -11,15 +11,12 @@ import {
   Check,
   CtaCard,
   Eyebrow,
-  G,
-  Head,
   INDIGO,
   PillLink,
   Pills,
   Statement,
-  Timeline,
 } from "@/app/[locale]/services/components/SiteKit";
-import { QuotationBuilder } from "./QuotationBuilder";
+import { QuoteBuilder } from "@/components/a4-quote/QuoteBuilder";
 import { trackConversion } from "@/lib/analytics";
 
 /** Field label on the dark form card — the design's "Full name". */
@@ -264,59 +261,46 @@ function QuoteForm() {
 }
 
 /**
- * /quote — hero, 01 the instant quotation builder (the design's configurator
- * and quote document), 02 the request form as the design's dark accept card,
- * 03 how quotes work as the timeline, then the portal tour.
+ * /quote — hero, then the full-page builder (src/components/a4-quote: 01 about
+ * your business, 02 the services, 03 the quote line by line with the monthly
+ * retainer, 04 the formal quotation, 05 how it works, 06 terms), then 07 the
+ * tailored-quote request for anything the builder cannot price, and the portal
+ * tour.
  */
 export function QuoteContent() {
   return (
     <div className="a4-site-page" style={{ background: "#09090B" }}>
       <PageHero
-        eyebrow="Get instant quote"
-        title="A tailored quote, with no obligation"
-        sub="Build an instant indicative quote below — or tell us what you need and we'll come back within 24 hours with a clear, written quote."
+        eyebrow="Build your quote"
+        title="Pick what you need. See the price."
+        sub="Bookkeeping, VAT, payroll, tax, corporate services and audit — priced line by line as you go, and as one monthly retainer when you take two or more."
       >
         <Pills>
-          <PillLink href="#instant-quote" variant="light">
-            Build your quote
+          <PillLink href="#about" variant="light">
+            Start building
           </PillLink>
           <PillLink href="#request" variant="ghost">
-            Request my quote
+            Something more complex?
           </PillLink>
         </Pills>
       </PageHero>
 
-      <QuotationBuilder />
+      <QuoteBuilder />
 
-      {/* 02 — THE REQUEST FORM, as the design's dark accept card */}
-      <Band surface="dark" id="request" sec="request" glow={{ left: "-10%", top: "-20%", strength: 0.26 }}>
+      {/* 07 — THE TAILORED REQUEST, for what the builder cannot price */}
+      <Band surface="dark" id="request" sec="request" glow={{ left: "-10%", top: "-20%", strength: 0.26 }} style={{ scrollMarginTop: 88 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))", gap: "56px 72px", alignItems: "center" }}>
           <div>
-            <Eyebrow n="02" dark style={{ marginBottom: 22 }}>
-              Request a tailored quote
+            <Eyebrow n="07" dark style={{ marginBottom: 22 }}>
+              Something more complex?
             </Eyebrow>
             <Statement dark size="cta" per={45} typed="Tell us what" words={[{ t: "you need.", g: true }]} label="Tell us what you need." />
             <p data-fx="rise" data-d="700" style={{ margin: "28px 0 0", maxWidth: 520, fontSize: "clamp(18px,1.8vw,24px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.4, color: "#A1A1AA", textWrap: "pretty" }}>
-              We&apos;ll come back within 24 hours with a clear, written quote.
+              Groups, regulated work, formations or anything unusual — we&apos;ll come back within 24 hours with a clear, written quote.
             </p>
           </div>
           <QuoteForm />
         </div>
-      </Band>
-
-      {/* 03 — HOW QUOTES WORK */}
-      <Band surface="light" sec="how">
-        <Head
-          n="03"
-          eyebrow="How quotes work"
-          size="lg"
-          title={
-            <>
-              From first chat to confirmed <G>quote</G>
-            </>
-          }
-        />
-        <Timeline steps={QUOTE_STEPS.map((s) => ({ key: s.n, t: s.t, s: s.s }))} />
       </Band>
 
       <ServicePortalBand serviceName="your quote" />

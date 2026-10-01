@@ -51,6 +51,7 @@ import {
   DocFoot,
   DocHead,
   DocRow,
+  Eyebrow,
   G,
   GRID3,
   Head,
@@ -62,6 +63,7 @@ import {
   PillLink,
   Pills,
   Segmented,
+  Statement,
   Stepper,
   Switch,
   WordCard,
@@ -953,6 +955,40 @@ function PricingIncorporation() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
+/* The whole package — the full-page builder at /quote                        */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/** The calculator above prices one service at a time; /quote prices them all, with the monthly retainer. */
+function PricingBuilderCta() {
+  return (
+    <Band surface="dark" sec="builder-cta" id="builder" glow={{ left: "55%", top: "-30%", strength: 0.26 }}>
+      <Eyebrow dark style={{ marginBottom: 22 }}>
+        Quote builder
+      </Eyebrow>
+      <Statement
+        dark
+        per={36}
+        typed="Build your whole package —"
+        words={[{ t: "and see the" }, { t: "monthly retainer.", g: true }]}
+        label="Build your whole package — and see the monthly retainer."
+      />
+      <div style={{ marginTop: "clamp(36px,4vw,56px)", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "24px 48px" }}>
+        <p data-fx="rise" data-d="700" style={{ margin: 0, maxWidth: 640, fontSize: "clamp(18px,1.8vw,24px)", fontWeight: 500, letterSpacing: "-0.015em", lineHeight: 1.4, color: "#A1A1AA", textWrap: "pretty" }}>
+          Bookkeeping, VAT, payroll, tax, corporate services and audit on one page — priced line by line, and as one monthly retainer for the lot. Billed monthly, 12-month minimum; all fees exclude VAT.
+        </p>
+        <div data-fx="rise" data-d="820">
+          <Pills>
+            <PillLink href="/quote" variant="light">
+              Open the quote builder
+            </PillLink>
+          </Pills>
+        </div>
+      </div>
+    </Band>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
 /* 04 Complex work — the dark closing band                                    */
 /* ────────────────────────────────────────────────────────────────────────── */
 
@@ -1016,6 +1052,7 @@ export function PricingCalculatorContent() {
       </PageHero>
       <PricingStartingTiers />
       <PricingCalc />
+      <PricingBuilderCta />
       <PricingIncorporation />
       <PricingComplex />
     </div>
