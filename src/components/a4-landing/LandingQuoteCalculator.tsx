@@ -815,9 +815,9 @@ export function LandingQuoteCalculator() {
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--a4-hairline-light)" }}>
                       <p style={{ margin: 0, fontFamily: "var(--a4-font-body)", fontSize: 13, fontWeight: 600, lineHeight: 1.55, color: "var(--a4-ink)" }}>{sent.message}</p>
                       {sent.status === "quoted" && (
-                        <div style={{ marginTop: 12 }}>
-                          <Button variant="dark" size="sm" href={sent.portalHref} target="_blank">Create your account <Icon name="arrow-right" size={14} color="#fff" /></Button>
-                        </div>
+                        <p style={{ margin: "8px 0 0", fontFamily: "var(--a4-font-body)", fontSize: 12.5, lineHeight: 1.55, color: "var(--a4-mute)" }}>
+                          Quotation {sent.reference} — the email links to your quotation page, where you can switch services on or off and accept online.
+                        </p>
                       )}
                     </div>
                   ) : callback ? (

@@ -39,7 +39,6 @@ import {
   type ManagedEntity,
   type TxnBand,
 } from "@/data/a4QuotePack";
-import { resolveClientUrl } from "@/lib/external-links";
 import {
   INDEPENDENCE_CONFLICT,
   independenceFlags,
@@ -425,29 +424,22 @@ export type WebsiteQuoteInput = {
    * lowercase alphanumeric, then `. _ -`.
    */
   sourceDetail?: string;
+  /** Business name, when the page asked for one — shown on the quotation page. */
+  company?: string;
 };
 
 export type WebsiteQuoteResult =
-  | { status: "quoted"; reference: string; message: string; portalHref: string }
+  | { status: "quoted"; reference: string; message: string }
   | { status: "received"; message: string }
   | { status: "error"; message: string };
 
 const QUOTED_MESSAGE =
-  "Your quote is on its way — create your account to see it in your portal.";
+  "Your quotation is on its way — open the email to review it and accept online.";
 const RECEIVED_MESSAGE = "We've got your details — your quote follows by email.";
 const ERROR_MESSAGE =
   "We couldn't send that just now. Please try again, or email info@a4.com.mt and we'll pick it up.";
 export const START_MONTH_REQUIRED_MESSAGE =
   "Tell us which month we should start from — the price depends on it.";
-
-/**
- * Signup deep-link that carries the quote through account creation — the
- * client portal forwards `quote` and `email` into the onboarding wizard.
- */
-export function quotePortalHref(reference: string, email: string): string {
-  const signup = resolveClientUrl("/signup");
-  return `${signup}?quote=${encodeURIComponent(reference)}&email=${encodeURIComponent(email)}`;
-}
 
 /**
  * Build the record. Totals are re-derived from the items here rather than
@@ -518,6 +510,7 @@ export async function submitWebsiteQuotation(
         name,
         email,
         phone: input.phone?.trim() || "",
+        ...(input.company?.trim() ? { company: input.company.trim().slice(0, 160) } : {}),
         record: buildQuoteRecord(input),
         // IESBA routing at the top level, for when the backend adds the field.
         // It ALSO rides inside `record.selections.independence` (see
@@ -536,7 +529,6 @@ export async function submitWebsiteQuotation(
         status: "quoted",
         reference: String(data.reference),
         message: QUOTED_MESSAGE,
-        portalHref: quotePortalHref(String(data.reference), email),
       };
     }
     return { status: "received", message: RECEIVED_MESSAGE };

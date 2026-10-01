@@ -112,6 +112,8 @@ export const config = {
   /** Include `/` explicitly — some setups skip root with a single complex negative pattern. */
   matcher: [
     "/",
-    "/((?!api|_next|_vercel|lp/|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot|pdf|mp4|webm|html)$).*)",
+    // `q/` is the A4 quotation page (src/app/q/[id]) — one language, its own
+    // chrome, and never a locale rewrite.
+    "/((?!api|_next|_vercel|lp/|q/|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot|pdf|mp4|webm|html)$).*)",
   ],
 };

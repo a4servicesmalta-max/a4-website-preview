@@ -11,6 +11,7 @@ import {
 } from "@/lib/quotation";
 import { catchUpMonthsFrom, ongoingStartMonth } from "@/lib/accounting-fee";
 import { flagsForServiceSelection, independenceNotice } from "@/lib/independence";
+import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 import {
   EXPENSE_BANDS,
   BANK_ACCOUNT,
@@ -114,6 +115,8 @@ export function QuotationBuilder() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ pdfBase64: string; pdfName: string } | null>(null);
+  /** The portal's answer for the formal quotation (sent at once, or held for a person). */
+  const [portalResult, setPortalResult] = useState<WebsiteQuoteResult | null>(null);
 
   /**
    * IESBA routing. `accounts` here IS managed bookkeeping, so choosing it
@@ -176,6 +179,7 @@ export function QuotationBuilder() {
    */
   const retireQuotation = () => {
     setDone(null);
+    setPortalResult(null);
     setError("");
   };
   /** Wraps a pricing input's setter so no call site can forget the line above. */
@@ -270,18 +274,40 @@ export function QuotationBuilder() {
       setDone({ pdfBase64: data.pdfBase64, pdfName: data.pdfName });
       download(data.pdfBase64, data.pdfName);
 
-      // NOTE: this builder deliberately does NOT raise an instant portal
-      // quotation. It prices off a REVENUE band and its own baselines, which
-      // is not the `A4ServiceItem` basket the backend reprices — submitting it
-      // would fail the €1 / 1% tolerance check every time, producing a
-      // permanent 202 and a lead with a quote attached that nobody sent. The
-      // PDF plus the ops-portal record IS the deliverable here; the instant
-      // quotation lives on /pricing and the homepage calculator, which build
-      // real baskets.
-      //
-      // To make this builder instant, it has to collect a TRANSACTION band and
-      // drop the on-request lines, so its displayed total is the sum of
-      // priceable A4Items — see /pricing, which does exactly that.
+      // The formal quotation. The builder now asks every driver the pack
+      // prices on (entity, monthly expenses, transaction band, accounts,
+      // start month), so the basket below is the same A4Item basket the
+      // homepage and /pricing submit: the portal re-prices it, creates the
+      // lead in the partner portal and — for a4.com.mt — emails the visitor a
+      // link to their quotation page, where they choose services and accept.
+      // Payroll has no headcount here, so a basket with payroll is not
+      // instant-priceable: the portal keeps the lead for a person to quote.
+      const sendable = (txn || "") as TxnBand;
+      const items: A4Item[] = [];
+      if (services.has("accounts") && expenses && txn) {
+        items.push({ service: "bookkeeping-managed", entity, expenses, txn: sendable, banks });
+        if (catchUpMonths > 0) items.push({ service: "catchup", months: catchUpMonths, entity, expenses, txn: sendable, banks });
+      }
+      if (services.has("vat") && txn) items.push({ service: "vat", txn: sendable, vatreg: "art10" });
+      if (services.has("audit") && txn) items.push({ service: "audit", txn: sendable });
+      // Same capital default the homepage calculator uses for the annual return.
+      if (services.has("mbr") && entity === "company") items.push({ service: "mbr", capital: "1500" });
+      if (services.has("payroll")) items.push({ service: "payroll", heads: 0 });
+      // A `refer` sector is never auto-priced — a director quotes it.
+      const tier = SECTORS.find((x) => x.id === sector)?.tier;
+      const risk: A4Risk | undefined = tier === "standard" || tier === "elevated" || tier === "high" ? tier : undefined;
+      if (items.length && risk) {
+        const result = await submitWebsiteQuotation({
+          name,
+          email,
+          company,
+          items,
+          risk,
+          serviceStartDate: ongoingStartMonth(startMonth),
+          sourceDetail: "a4-quote-builder",
+        });
+        setPortalResult(result);
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not generate the quotation.");
     } finally {
@@ -540,10 +566,14 @@ export function QuotationBuilder() {
                   <Icon name="check" size={22} color="var(--a4-accent-teal)" stroke={2.4} />
                 </span>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 14.5, color: "var(--a4-ink)", margin: "12px 0 0", fontWeight: 600 }}>
-                  Your quotation has downloaded — and our team has it too.
+                  {portalResult?.status === "quoted"
+                    ? `Your quotation has downloaded — and quotation ${portalResult.reference} is on its way to ${email}.`
+                    : "Your quotation has downloaded — and our team has it too."}
                 </p>
                 <p style={{ fontFamily: "var(--a4-font-body)", fontSize: 13, color: "var(--a4-mute)", margin: "6px 0 0" }}>
-                  Prefer to talk it through? Request information and our team will follow up with next steps.
+                  {portalResult?.status === "quoted"
+                    ? "Open the email to see your quotation page — switch services on or off and accept online."
+                    : "Prefer to talk it through? Request information and our team will follow up with next steps."}
                 </p>
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 14 }}>
                   <Button variant="dark" size="md" href="/contact">

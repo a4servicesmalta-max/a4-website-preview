@@ -893,23 +893,12 @@ html.A4-custom-cursor body .cursor-pointer {
 /* Global Beautiful Hover Animations */
 @media (hover: hover) {
 
-  button,
-  a,
-  [role="button"],
-  .group {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.3s ease;
-  }
-
-  button:hover:not(:disabled),
-  a:hover,
-  [role="button"]:hover {
-    transform: translateY(-2px);
-  }
-
+  /* The A4 design has no hover lift — controls respond with colour and a
+     gentle press instead. */
   button:active:not(:disabled),
   a:active,
   [role="button"]:active {
-    transform: translateY(0) scale(0.98);
+    transform: scale(0.98);
   }
 }
 /* Accessibility safety net: neutralise motion for users who prefer reduced motion.
@@ -922,5 +911,334 @@ html.A4-custom-cursor body .cursor-pointer {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   A4 design language (from the "A4 Quotation" landing design)
+   Outfit display / Inter body · ink #09090B · indigo #4F55F1 → #6468F3 → #8B8FF7
+   ──────────────────────────────────────────────────────────────────────────── */
+/* Colour tokens (--a4-ink, --a4-body, --a4-mute, …) and the font tokens
+   (--a4-font-display / --a4-font-body) live in components/a4-landing/styles.css
+   and were re-pointed at this palette there. Only NEW names are declared here. */
+:root {
+  --a4-indigo: #4f55f1;
+  --a4-indigo-2: #6468f3;
+  --a4-peri: #8b8ff7;
+  --a4-grad: linear-gradient(90deg, #4f55f1 0%, #6468f3 55%, #8b8ff7 100%);
+  --a4-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --a4-ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --a4x-display: var(--font-outfit), "Outfit", var(--font-inter), "Inter", system-ui, sans-serif;
+  --a4x-body: var(--font-inter), "Inter", system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-ink: #09090b;
+  --color-brand: #4f55f1;
+  --color-brand-2: #6468f3;
+  --color-peri: #8b8ff7;
+  --font-display: var(--a4x-display);
+  --font-body: var(--a4x-body);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The design sets headings, controls and UI chrome in Outfit; descriptive
+   paragraphs stay in Inter (the body default). Zero specificity, base layer:
+   any utility or inline style still wins. */
+@layer base {
+  :where(h1, h2, h3, h4, h5, h6, button, label, nav, .a4-display-font) {
+    font-family: var(--a4x-display);
+  }
+}
+
+::selection {
+  background: #4f55f1;
+  color: #ffffff;
+}
+
+.a4-body,
+.blog-content {
+  font-family: var(--a4x-body);
+}
+
+.a4-grad-text {
+  background-image: var(--a4-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  padding-bottom: 0.06em;
+}
+
+/* Section surfaces */
+.a4-dark {
+  position: relative;
+  color: #ffffff;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px) 0 0 / 64px 64px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px) 0 0 / 64px 64px,
+    #09090b;
+}
+.a4-light {
+  position: relative;
+  color: #09090b;
+  background:
+    radial-gradient(1000px 800px at 24% 20%, rgba(79, 85, 241, 0.08), rgba(79, 85, 241, 0) 70%),
+    radial-gradient(900px 700px at 80% 74%, rgba(161, 161, 170, 0.14), rgba(161, 161, 170, 0) 70%),
+    #ffffff;
+}
+.a4-muted {
+  position: relative;
+  color: #09090b;
+  background:
+    radial-gradient(1000px 800px at 24% 20%, rgba(79, 85, 241, 0.14), rgba(79, 85, 241, 0) 70%),
+    radial-gradient(900px 700px at 80% 74%, rgba(161, 161, 170, 0.14), rgba(161, 161, 170, 0) 70%),
+    #f4f4f5;
+}
+.a4-dark-card {
+  background:
+    radial-gradient(420px 320px at 85% 0%, rgba(79, 85, 241, 0.3), rgba(79, 85, 241, 0) 70%),
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
+    #09090b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+.a4-section {
+  padding: clamp(100px, 13vw, 180px) clamp(20px, 5vw, 72px);
+}
+.a4-section-tight {
+  padding: clamp(72px, 9vw, 128px) clamp(20px, 5vw, 72px);
+}
+.a4-wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Type scale */
+.a4-display-xl {
+  font-size: clamp(46px, 8.2vw, 136px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+.a4-display {
+  font-size: clamp(42px, 6.4vw, 112px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+.a4-h2 {
+  font-size: clamp(32px, 3.6vw, 52px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+.a4-h3 {
+  font-size: clamp(24px, 2.2vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.a4-lead {
+  font-size: clamp(19px, 1.9vw, 28px);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+.a4-p {
+  font-family: var(--a4x-body);
+  font-size: 17px;
+  line-height: 1.55;
+}
+.a4-eyebrow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.a4-kicker {
+  font-family: var(--a4x-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #71717a;
+}
+
+/* Pills */
+.a4-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 58px;
+  padding: 0 30px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s, opacity 0.3s;
+}
+.a4-btn-sm {
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+.a4-btn-light {
+  background: #ffffff;
+  color: #09090b;
+  border: 0;
+}
+.a4-btn-light:hover {
+  background: #e4e4e7;
+}
+.a4-btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  font-weight: 500;
+}
+.a4-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.a4-btn-ink {
+  background: #09090b;
+  color: #ffffff;
+  border: 0;
+}
+.a4-btn-ink:hover {
+  background: #27272a;
+}
+.a4-btn-outline {
+  background: #ffffff;
+  color: #09090b;
+  border: 1px solid #e4e4e7;
+  font-weight: 500;
+}
+.a4-btn-outline:hover {
+  border-color: #a1a1aa;
+}
+.a4-btn-indigo {
+  background: #4f55f1;
+  color: #ffffff;
+  border: 0;
+  box-shadow: 0 24px 60px rgba(79, 85, 241, 0.35);
+}
+.a4-btn-indigo:hover {
+  background: #6468f3;
+}
+.a4-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.a4-chip-dark {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #a1a1aa;
+}
+.a4-chip-light {
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  color: #52525b;
+}
+
+/* Cards */
+.a4-card {
+  border-radius: 24px;
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  transition: border-color 0.35s, box-shadow 0.35s;
+}
+.a4-card:hover {
+  border-color: rgba(79, 85, 241, 0.45);
+  box-shadow: 0 24px 60px rgba(79, 85, 241, 0.12);
+}
+.a4-card-dark:hover {
+  border-color: rgba(139, 143, 247, 0.45);
+  box-shadow: 0 24px 60px rgba(9, 9, 11, 0.28);
+}
+.a4-bullet {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-top: 8px;
+  border-radius: 1px;
+  background: #4f55f1;
+  transform: skewX(-30deg);
+}
+
+/* Form fields on dark */
+.a4-input-dark {
+  width: 100%;
+  height: 56px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1px solid #3f3f46;
+  background: #09090b;
+  color: #ffffff;
+  font-family: var(--a4x-display);
+  font-size: 18px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.25s;
+}
+.a4-input-dark:focus {
+  border-color: #4f55f1;
+}
+.a4-input-dark::placeholder {
+  color: #71717a;
+}
+
+/* ── Motion pre-hide ──
+   `html.fx` is set by a head script before first paint (and removed again if
+   the runtime never boots). Until an element is fired its entrance is held
+   in the "before" state so server-rendered content doesn't flash in twice. */
+@media (prefers-reduced-motion: no-preference) {
+  html.fx :is([data-fx="rise"], [data-fx="big"], [data-fx="tighten"], [data-fx="zoom"], [data-fx="slab"]):not([data-fx-done]) {
+    opacity: 0;
+  }
+  html.fx [data-fx="words"]:not([data-fx-done]) [data-w],
+  html.fx :is([data-fx="type"], [data-fx="scatter"], [data-fx="cascade"], [data-fx="stack"]):not([data-fx-done]) [data-l] {
+    opacity: 0;
+  }
+  html.fx [data-fx="bar"]:not([data-fx-done]) {
+    transform: scaleY(0);
+  }
+  html.fx [data-fx="draw"]:not([data-fx-done]) {
+    stroke-dashoffset: var(--fx-len, 0);
+  }
+  html.fx [data-fx="glitch"]:not([data-fx-done]) :is([data-glitch-base], [data-glitch-after]) {
+    opacity: 0;
+  }
+  html.fx [data-fx="glitch"]:not([data-fx-done]) [data-uline] {
+    transform: scaleX(0);
+  }
+}
+[data-tl-fill] {
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+[data-tl-dot] {
+  transform: scale(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-tl-fill] {
+    transform: none;
+  }
+  [data-tl-dot] {
+    transform: none;
   }
 }

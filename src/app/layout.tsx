@@ -7,6 +7,7 @@ import "@/components/bookkeeping/bookkeeping.css";
 import { headers } from "next/headers";
 import GoogleTags from "@/components/common/GoogleTags";
 import FirstTouchAttribution from "@/components/common/FirstTouchAttribution";
+import FxRuntime from "@/components/fx/FxRuntime";
 import { LOCALE_HEADER } from "@/lib/i18n-config";
 import { getSiteUrl } from "@/lib/site-url";
 import { DEFAULT_DESCRIPTION, pageMetadata } from "@/lib/page-metadata";
@@ -91,7 +92,18 @@ export default async function RootLayout({
     // Font variables live on <html> so :root-level tokens (--a4-font-*,
     // --font-sans) can resolve them — on <body> they are invisible to :root.
     <html lang={lang} suppressHydrationWarning className={`${bodoni.variable} ${montserrat.variable} ${nunito.variable} ${outfit.variable} ${inter.variable}`}>
+      <head>
+        {/* Holds entrance animations in their "before" state until FxRuntime
+            boots — and lets go after 3.5s if it never does, so content can
+            never stay hidden. Skipped entirely for reduced motion. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;var d=document.documentElement;d.classList.add('fx');setTimeout(function(){if(!window.__fxReady)d.classList.remove('fx')},3500)}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body suppressHydrationWarning className="antialiased">
+        <FxRuntime />
         <Script
           id="clarity-script"
           strategy="afterInteractive"

@@ -109,7 +109,9 @@ export type ConversionEvent =
   /** /audit-services estimator — proposal request accepted by the backend. */
   | "audit_proposal_submit"
   /** /audit-services estimator — consultation request accepted by the backend. */
-  | "audit_consultation_submit";
+  | "audit_consultation_submit"
+  /** /q/<id> — a prospect accepted their quotation on the A4 quotation page. */
+  | "quotation_accept";
 
 /**
  * Per-event Google Ads conversion label (the part after the slash in
@@ -127,6 +129,7 @@ const CONVERSION_LABELS: Record<ConversionEvent, string> = {
   book_a_call_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_BOOK_A_CALL),
   audit_proposal_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_AUDIT_PROPOSAL),
   audit_consultation_submit: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_AUDIT_CONSULTATION),
+  quotation_accept: readId(process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL_QUOTATION_ACCEPT),
 };
 
 /* -------------------------------------------------------------------------- */

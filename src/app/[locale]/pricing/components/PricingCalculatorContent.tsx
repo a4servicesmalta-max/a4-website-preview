@@ -1056,9 +1056,9 @@ function PricingCalc() {
                   <div className="mt-5 pt-5 border-t border-[var(--a4-hairline-light)] text-center">
                     <p className="a4-font-body text-[14px] font-semibold text-[var(--a4-ink)] m-0">{sent.message}</p>
                     {sent.status === "quoted" && (
-                      <Button variant="dark" size="md" href={sent.portalHref} target="_blank" style={{ width: "100%", marginTop: 14 }}>
-                        Create your account <Icon name="arrow-right" size={16} color="#fff" />
-                      </Button>
+                      <p className="a4-font-body text-[12.5px] leading-[1.5] text-[var(--a4-mute)] mt-2 mb-0">
+                        Quotation {sent.reference} — the email links to your quotation page, where you can switch services on or off and accept online.
+                      </p>
                     )}
                   </div>
                 ) : (
