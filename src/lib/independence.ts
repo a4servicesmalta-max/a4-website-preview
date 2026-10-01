@@ -8,6 +8,12 @@
  * proposal. So the site resolves it at the moment the prospect chooses, tells
  * them plainly, and carries the answer onto the lead record.
  *
+ * Books + audit together (owner decision 2026-10-01): A4 keeps the books and
+ * finds a PARTNER audit firm for the audit or review, quoted at the published
+ * price and included in the client's portal (route "partner-audit"). A4 itself
+ * still never audits a company whose books it keeps — the flags say so
+ * (auditEligible false), and the backend bars it (AUDIT_BARRED).
+ *
  * THE single source of both the flag and the words. Every surface that can
  * capture a bookkeeping or audit request reads this file, so the site can
  * never explain the rule two different ways.
@@ -23,13 +29,19 @@
  * Delete the message line only once the field is persisted and verified.
  */
 
-export type IndependenceRoute = "bookkeeping" | "audit" | "conflict" | "neutral";
+/**
+ * "conflict" is no longer produced (books + audit route to a partner audit firm
+ * since 2026-10-01); old leads that carry it are the backend's to read.
+ */
+export type IndependenceRoute = "bookkeeping" | "audit" | "partner-audit" | "neutral";
 
 export type IndependenceFlags = {
-  /** False once the prospect asks A4 to keep the books. */
+  /** False once the prospect asks A4 to keep the books — A4 itself never audits them. */
   auditEligible: boolean;
-  /** False once the prospect asks A4 to audit. */
+  /** False once the prospect asks A4 to audit, unless A4 keeps the books and a partner audits. */
   bookkeepingEligible: boolean;
+  /** Books and audit/review together: A4 keeps the books, a partner audit firm does the audit or review. */
+  partnerAudit: boolean;
   route: IndependenceRoute;
 };
 
@@ -37,7 +49,7 @@ export function independenceRoute(opts: {
   wantsBookkeeping: boolean;
   wantsAudit: boolean;
 }): IndependenceRoute {
-  if (opts.wantsBookkeeping && opts.wantsAudit) return "conflict";
+  if (opts.wantsBookkeeping && opts.wantsAudit) return "partner-audit";
   if (opts.wantsBookkeeping) return "bookkeeping";
   if (opts.wantsAudit) return "audit";
   return "neutral";
@@ -48,11 +60,14 @@ export function independenceFlags(opts: {
   wantsAudit: boolean;
 }): IndependenceFlags {
   const route = independenceRoute(opts);
+  const partnerAudit = opts.wantsBookkeeping && opts.wantsAudit;
   return {
-    // In the conflict case neither is asserted as available — a person decides
-    // which service A4 takes, and the lead must not carry a guess.
+    // Books + audit: A4 keeps the books (bookkeepingEligible) and is never the
+    // auditor (auditEligible false) — the backend reads (false, true) as
+    // AUDIT_BARRED, and a partner audit firm carries out the audit or review.
     auditEligible: !opts.wantsBookkeeping,
-    bookkeepingEligible: !opts.wantsAudit,
+    bookkeepingEligible: !opts.wantsAudit || opts.wantsBookkeeping,
+    partnerAudit,
     route,
   };
 }
@@ -71,13 +86,13 @@ export function independenceFlags(opts: {
  * relevant professional wording signs them off.
  */
 export const INDEPENDENCE_BOOKKEEPING =
-  "If we keep your books, we cannot also give assurance on them — neither a statutory audit nor the lighter review engagement. Independence rules do not allow the same firm to do both, so we would introduce you to an independent firm for the audit or review.";
+  "If we keep your books, we cannot audit or review them ourselves — independence rules do not allow the same firm to do both. When you need an audit or review, we find a partner audit firm for you and include it in your portal.";
 
 export const INDEPENDENCE_AUDIT =
   "If we give assurance on your figures — a statutory audit or a review engagement — we cannot also keep your books. Independence rules do not allow the same firm to do both, so the bookkeeping would stay with you or with another firm.";
 
-export const INDEPENDENCE_CONFLICT =
-  "You have asked us both to keep the books and to give assurance on them. We cannot do both for the same client — independence rules do not allow it, and a review engagement carries the same requirement as a full audit. Tell us which one you want from A4 and we will arrange the other with an independent firm. Nothing is priced until that is settled.";
+export const INDEPENDENCE_PARTNER_AUDIT =
+  "You have asked us to keep the books and for the audit or review. We keep the books. Independence rules mean we cannot audit them ourselves, so we find a partner audit firm for you — the audit is quoted here at our published price and included in your portal.";
 
 export const INDEPENDENCE_HEADING = "One thing to know before you send this";
 
@@ -88,8 +103,8 @@ export function independenceNotice(route: IndependenceRoute): string | null {
       return INDEPENDENCE_BOOKKEEPING;
     case "audit":
       return INDEPENDENCE_AUDIT;
-    case "conflict":
-      return INDEPENDENCE_CONFLICT;
+    case "partner-audit":
+      return INDEPENDENCE_PARTNER_AUDIT;
     default:
       return null;
   }
@@ -105,6 +120,7 @@ export function independenceLeadNote(flags: IndependenceFlags): string | null {
     `[independence] route=${flags.route}`,
     `audit_eligible=${flags.auditEligible}`,
     `bookkeeping_eligible=${flags.bookkeepingEligible}`,
+    ...(flags.partnerAudit ? ["partner_audit=true"] : []),
   ].join(" · ");
 }
 

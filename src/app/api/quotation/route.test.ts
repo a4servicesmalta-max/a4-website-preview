@@ -1,9 +1,7 @@
 /**
- * The PDF route is the last place the independence rule can be enforced, and
- * the only one whose output leaves the browser. A downloaded quotation naming
- * a price for bookkeeping AND assurance would outlive every notice on screen,
- * so this route refuses that basket itself rather than trusting the builder —
- * it can be POSTed directly.
+ * The PDF route. Bookkeeping AND assurance together are priced since the owner
+ * decision of 2026-10-01: we keep the books and a partner audit firm carries
+ * out the audit — the PDF line says so, at the published fee.
  */
 import { it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/portal", () => ({ pushToPortal: vi.fn(async () => {}) }));
@@ -11,7 +9,7 @@ vi.mock("@/lib/quotation-pdf", () => ({ renderQuotationPdf: vi.fn(async () => ne
 import { pushToPortal } from "@/lib/portal";
 import { renderQuotationPdf } from "@/lib/quotation-pdf";
 import { POST } from "./route";
-import { INDEPENDENCE_CONFLICT } from "@/lib/independence";
+import { INDEPENDENCE_PARTNER_AUDIT } from "@/lib/independence";
 
 const req = (o: unknown) => ({ json: async () => o }) as never;
 
@@ -30,22 +28,23 @@ const BASE = {
 
 beforeEach(() => vi.clearAllMocks());
 
-it("refuses to price, record or render a bookkeeping + audit basket", async () => {
-  const r = await POST(req({ ...BASE, services: ["accounts", "audit"] }));
-  expect(r.status).toBe(422);
+it("prices a bookkeeping + audit basket, the audit by a partner audit firm", async () => {
+  const r = await POST(req({ ...BASE, expenses: "10-25k", services: ["accounts", "audit"] }));
+  expect(r.status).toBe(200);
   const body = await r.json();
-  expect(body.error).toBe(INDEPENDENCE_CONFLICT);
-  expect(body.pdfBase64).toBeUndefined();
-  expect(body.quote).toBeUndefined();
-  // Refused BEFORE the document exists and before anything is recorded.
-  expect(renderQuotationPdf).not.toHaveBeenCalled();
-  expect(pushToPortal).not.toHaveBeenCalled();
+  expect(body.ok).toBe(true);
+  expect(typeof body.pdfBase64).toBe("string");
+  const audit = body.quote.lines.find((l: { id: string }) => l.id === "audit");
+  // Same published fee (21-60, standard risk), labelled as the partner's.
+  expect(audit).toMatchObject({ name: "Statutory audit — by a partner audit firm", hint: INDEPENDENCE_PARTNER_AUDIT, annualEur: 995 });
+  expect(renderQuotationPdf).toHaveBeenCalledTimes(1);
+  expect(pushToPortal).toHaveBeenCalledTimes(1);
 });
 
-it("refuses it however many other services ride along", async () => {
+it("prices it however many other services ride along", async () => {
   const r = await POST(req({ ...BASE, services: ["vat", "audit", "payroll", "accounts", "mbr"] }));
-  expect(r.status).toBe(422);
-  expect(renderQuotationPdf).not.toHaveBeenCalled();
+  expect(r.status).toBe(200);
+  expect(renderQuotationPdf).toHaveBeenCalledTimes(1);
 });
 
 it("still issues the PDF for the bookkeeping side alone", async () => {
@@ -58,12 +57,13 @@ it("still issues the PDF for the bookkeeping side alone", async () => {
   expect(renderQuotationPdf).toHaveBeenCalledTimes(1);
 });
 
-it("still issues the PDF for the assurance side alone", async () => {
+it("still issues the PDF for the assurance side alone, with the plain audit label", async () => {
   const r = await POST(req({ ...BASE, services: ["audit", "vat"] }));
   expect(r.status).toBe(200);
   const body = await r.json();
   expect(body.ok).toBe(true);
   expect(typeof body.pdfBase64).toBe("string");
+  expect(body.quote.lines.find((l: { id: string }) => l.id === "audit").name).toBe("Statutory audit");
   expect(renderQuotationPdf).toHaveBeenCalledTimes(1);
 });
 

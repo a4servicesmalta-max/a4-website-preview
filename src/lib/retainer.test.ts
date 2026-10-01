@@ -35,7 +35,7 @@ export const RETAINER_VECTORS: { name: string; lines: RetainerLine[]; monthly: n
     ownAnnual: 4125,
   },
   {
-    name: "C restaurant company with catch-up (step €10 from €500)",
+    name: "C restaurant company with catch-up (over €500, a multiple of €5)",
     lines: [
       { label: "Bookkeeping — managed (company)", amount: 149, cadence: "monthly" },
       { label: "Bookkeeping — volume uplift", amount: 25, cadence: "monthly" },
@@ -57,7 +57,7 @@ export const RETAINER_VECTORS: { name: string; lines: RetainerLine[]; monthly: n
     name: "D audit-side holding company: nothing monthly",
     lines: [
       { label: "Annual tax return", amount: 235, cadence: "yearly" },
-      { label: "Review engagement (if applicable)", amount: 495, cadence: "yearly" },
+      { label: "Review engagement (if applicable)", amount: 420, cadence: "yearly" },
       { label: "Registered office", amount: 1200, cadence: "yearly" },
       { label: "Annual return — filed with the MBR", amount: 150, cadence: "yearly" },
     ],
@@ -75,6 +75,21 @@ export const RETAINER_VECTORS: { name: string; lines: RetainerLine[]; monthly: n
     registry: 0,
     oneOff: 0,
     ownAnnual: 588,
+  },
+  {
+    // 6398 × 95% ÷ 12 = 506.51 → €505. The retired €10 step from €500 would have given €500.
+    name: "F over €500 a month: still rounded down to €5",
+    lines: [
+      { label: "Bookkeeping — managed (company)", amount: 299, cadence: "monthly" },
+      { label: "VAT returns", amount: 99, cadence: "monthly" },
+      { label: "Payroll", amount: 60, cadence: "monthly" },
+      { label: "Annual tax return", amount: 902, cadence: "yearly" },
+    ],
+    monthly: 505,
+    offered: true,
+    registry: 0,
+    oneOff: 0,
+    ownAnnual: 6398,
   },
 ];
 

@@ -204,7 +204,7 @@ describe("a4.com.mt homepage wizard (qCalc) ↔ evaluateA4Items ↔ backend", ()
           taxret: "we", assure, regoff: entity === "company" ? "we" : "none",
         };
         const r = qCalc(q, AT);
-        if (r.refer || r.conflict || r.noExpenses) throw new Error(`a4 wizard refused ${JSON.stringify(q)}`);
+        if (r.refer || r.noExpenses) throw new Error(`a4 wizard refused ${JSON.stringify(q)}`);
         const items = qItems(q);
         const a4 = evaluateA4Items(items, qRisk(q), AT);
         const be = evaluateA4ServicesQuote({ kind: "a4-services", version: 1, risk: qRisk(q), serviceStartDate: "2026-10", items }, AT);
@@ -221,7 +221,7 @@ describe("a4.com.mt homepage wizard (qCalc) ↔ evaluateA4Items ↔ backend", ()
     for (const { id: sector } of PRICEABLE) for (const entity of ENTITIES) for (const expenses of BANDS) for (const txn of TXNS) for (const banks of [1, 2]) {
       const a = qCalc({ ...Q_INIT, sector, entity, expenses, txn, banks, head: 4, vatreg: "art10", behind: "3", book: "managed", pay: "we", vat: "we", taxret: "we", regoff: entity === "company" ? "we" : "none", cap: "1500" }, AT);
       const v = home.qCalc({ sector, entity, expenses, txn, banks, book: "we", pay: "we", head: 4, vat: "we", vatreg: "art10", taxret: "we", assure: "none", size: "small", regoff: entity === "company" ? "we" : "none", annret: entity === "company" ? "we" : "none", cap: "1500", behind: "3", start: "2026-10" });
-      if (a.refer || a.conflict || a.noExpenses) throw new Error("refused");
+      if (a.refer || a.noExpenses) throw new Error("refused");
       expect([a.moTot, a.yrTot, a.oneTot], `${sector}/${entity}/${expenses}/${txn}/${banks}`).toEqual([v.moTot, v.yrTot, v.oneTot]);
     }
   });

@@ -55,16 +55,15 @@ export type AnnualItemId = "accounts" | "tax";
  * declared `services: ["Bookkeeping"]`. So A4 can never be the auditor of
  * anyone who buys from here — an audit toggle was an offer we are barred by
  * IESBA from honouring. Worse, it had no independence path at all: the toggle
- * simply summed the audit fee into the displayed "€X/mo + €Y/yr" total, while
- * the homepage wizard, /pricing, /quote and /api/quotation all refuse that
- * exact basket unpriced. This page was the one survivor of that sweep.
+ * simply summed the audit fee into the displayed "€X/mo + €Y/yr" total, with
+ * no word that A4 cannot audit books it keeps.
  *
- * Removing the item is the fix that matches the page's purpose rather than
- * routing it to the conflict UI: on a page where bookkeeping cannot be
- * switched off, a conflict screen would be a dead end with no way out except
- * un-ticking the audit again. Visitors who need assurance are told what
- * happens instead — INDEPENDENCE_BOOKKEEPING is rendered on the page and says
- * A4 introduces an independent firm for the audit or review.
+ * Since the owner decision of 2026-10-01 the homepage wizard, /quote and
+ * /api/quotation price books + audit together, with the audit labelled as
+ * carried out by a partner audit firm A4 finds. This page stays bookkeeping
+ * only: visitors who need assurance are told what happens instead —
+ * INDEPENDENCE_BOOKKEEPING is rendered on the page and says we find a partner
+ * audit firm for the audit or review and include it in the client's portal.
  */
 export const LP_ANNUAL_ITEMS: Record<"company" | "personal", { id: AnnualItemId; label: string; sub: string; fee: number; from: boolean }[]> = {
   company: [

@@ -1,11 +1,13 @@
 /**
  * THE single source of truth for every A4 fee shown on this website.
  *
- * It transcribes quote pack `mt-2026-08-01` — the pack that already drives the
- * Vacei calculator (`vacei-marketing-site/index.html`) and the portal backend
- * (`portal-backend/src/modules/quote-pack/malta-pack.ts`). Those three copies
- * are byte-equivalent by design: if a fee changes, bump `A4_QUOTE_PACK_VERSION`
- * and change the number in ALL THREE places in the same change.
+ * It transcribes quote pack `mt-2026-08-01` — the pack that drove the
+ * Vacei calculator (`vacei-marketing-site/index.html`, retired 2026-09-22) and
+ * still drives the portal backend
+ * (`portal-backend/src/modules/quote-pack/malta-pack.ts`). There are TWO live
+ * copies — this file and the backend (vacei.com's copy was retired on
+ * 2026-09-22) — and they are byte-equivalent by design: if a fee changes, bump
+ * `A4_QUOTE_PACK_VERSION` and change the number in BOTH places in the same change.
  *
  * Copy conventions every surface reading this file must follow:
  *   - "from €X" whenever the figure is a floor rather than the final price
@@ -45,11 +47,12 @@
  * the registered office keep their current prices and stay driven by the
  * TRANSACTION band. See BOOKKEEPING_MANAGED_MONTHLY below.
  *
- * ⚠ Three copies of this pack must carry the SAME version string, or the
+ * ⚠ Two copies of this pack must carry the SAME version string, or the
  * backend hard-rejects the record before it even reprices (which is the
- * intent while the three lanes land at different times):
- *   - vacei-marketing-site/index.html
+ * intent while the two lanes land at different times):
+ *   - this file
  *   - portal-backend/src/modules/quote-pack/malta-pack.ts
+ * (vacei-marketing-site/index.html no longer holds a copy — retired 2026-09-22.)
  */
 /*
  * mt-2026-08-17-corrections — the external pricing review's corrections
@@ -89,8 +92,16 @@
  * identical to 26d. Worked example, pinned in every consumer: company 10–25k
  * at 21–60 txn → 79; per account 52; one account €79 full monthly; three
  * accounts 79 + 2 × 52 = €183.
+ *
+ * mt-2026-10-01-review (owner decision 2026-10-01): the review engagement
+ * starts from €350 — the "0" and "1-20" transaction bands are €350/yr BEFORE
+ * the sector risk multiplier (was 55% of the audit: €330 / €413). From the
+ * 21-60 band up it stays 55% of the audit fee (unrounded) × risk, rounded once.
+ * Everything else is identical to 27-entry. Worked example, pinned in every
+ * consumer: 1-20 review → €350 standard, €420 elevated (×1.2), €508 high
+ * (×1.45); 21-60 review → €547 (unchanged).
  */
-export const A4_QUOTE_PACK_VERSION = "mt-2026-08-27-entry";
+export const A4_QUOTE_PACK_VERSION = "mt-2026-10-01-review";
 
 export const PRICING_CURRENCY = "EUR";
 
@@ -523,8 +534,20 @@ export const AUDIT_YEARLY: Record<TxnBand, number> = {
   "1000+": 3650, //   was 5800  −37%
 };
 
-/** An independent review engagement is 55% of the audit fee, where eligible. */
+/** An independent review engagement is 55% of the audit fee from the 21-60 band
+ *  up, where eligible; €350 entry at 0/1-20 (REVIEW_ENTRY_YEARLY). */
 export const REVIEW_ENGAGEMENT_FACTOR = 0.55;
+/** Review engagement entry fee (owner decision 2026-10-01): €350/yr for the two
+ *  lowest transaction bands, BEFORE the sector risk multiplier. */
+export const REVIEW_ENTRY_YEARLY = 350;
+export const REVIEW_ENTRY_BANDS: readonly TxnBand[] = ["0", "1-20"];
+/** Review base €/yr for a band, before risk and UNROUNDED: 350 at "0"/"1-20",
+ *  else AUDIT_YEARLY × 0.55. Callers multiply by risk and round once. */
+export function reviewYearlyBase(txn: TxnBand): number | null {
+  const audit = AUDIT_YEARLY[txn];
+  if (typeof audit !== "number") return null;
+  return REVIEW_ENTRY_BANDS.includes(txn) ? REVIEW_ENTRY_YEARLY : audit * REVIEW_ENGAGEMENT_FACTOR;
+}
 
 export const VAT_RULES = {
   /** Art. 12 (EU acquisitions only) is 60% of the art. 10 band price. */
@@ -664,9 +687,9 @@ export const LAUNCH_PROMO = {
   // card, and the discount arithmetic is left untouched for the quotes that
   // were struck while it ran.
   //
-  // ⚠ Three copies of this pack must agree — this one, portal-backend's
-  // src/modules/quote-pack/malta-pack.ts and vacei-marketing-site's
-  // index.html. The backend re-prices whatever this site submits and rejects a
+  // ⚠ Two copies of this pack must agree — this one and portal-backend's
+  // src/modules/quote-pack/malta-pack.ts (vacei-marketing-site's index.html
+  // copy was retired 2026-09-22). The backend re-prices whatever this site submits and rejects a
   // divergence over €1 / 1%, so a copy that still discounts while another does
   // not turns that site's quotes into bare leads with no quotation attached,
   // silently, because the caller still gets a 202.
@@ -750,7 +773,7 @@ export const AUDIT_FROM = AUDIT_YEARLY["1-20"];
 /** Dormant / pre-trading audit — the absolute floor the estimator may quote. */
 export const AUDIT_PRE_TRADING = AUDIT_YEARLY["0"];
 /** Review engagement floor, where a review rather than an audit is eligible. */
-export const REVIEW_FROM = roundEur(AUDIT_FROM * REVIEW_ENGAGEMENT_FACTOR);
+export const REVIEW_FROM = REVIEW_ENTRY_YEARLY; // 350
 /** VAT returns floor (art. 10 monthly band). */
 export const VAT_FROM = fromPrice(VAT_MONTHLY);
 /** Annual tax return floor. */

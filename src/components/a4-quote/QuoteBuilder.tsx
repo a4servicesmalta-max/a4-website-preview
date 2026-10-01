@@ -82,10 +82,6 @@ function useBuilder(rootRef: React.RefObject<HTMLDivElement | null>, replayKey: 
       return { ...prev, heads: h, on: { ...prev.on, pay } };
     });
   }, [replayKey]);
-  /** The way out of the independence conflict: drop one side, price the rest. */
-  const resolve = useCallback((keep: "book" | "assure") => {
-    setS((prev) => ({ ...prev, on: keep === "book" ? { ...prev.on, assure: false } : { ...prev.on, book: false, vat: false } }));
-  }, []);
 
   const basket = useMemo(() => buildBasket(s, now), [s, now]);
   const retainer = useMemo(() => basketRetainer(basket), [basket]);
@@ -108,7 +104,7 @@ function useBuilder(rootRef: React.RefObject<HTMLDivElement | null>, replayKey: 
     [rootRef]
   );
 
-  return { s, set, toggle, setHeads, resolve, now, basket, retainer, view: effView, wantedView: view, setView, plan, setPlan, totals, shownTotal, shownNet, months, go };
+  return { s, set, toggle, setHeads, now, basket, retainer, view: effView, wantedView: view, setView, plan, setPlan, totals, shownTotal, shownNet, months, go };
 }
 
 export function QuoteBuilder() {

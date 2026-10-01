@@ -401,75 +401,87 @@ describe("IESBA independence", () => {
   it("rules A4 out as auditor once bookkeeping is switched on", () => {
     const f = qIndependence({ ...CANONICAL, assure: "none" });
     expect(f.auditEligible).toBe(false);
+    expect(f.partnerAudit).toBe(false);
     expect(f.route).toBe("bookkeeping");
   });
 
   it("treats the review engagement as assurance, exactly as the server does", () => {
     // A small company, so `assure: "we"` is a REVIEW — and a review is still an
-    // assurance engagement, so the books cannot also be ours.
-    expect(qIndependence({ ...CANONICAL, assure: "we" }).route).toBe("conflict");
-  });
-
-  it("puts NO figure on a conflict basket — not a line, not a total — and says why", () => {
-    const q: QState = { ...CANONICAL, assure: "we" };
-    const r = qCalc(q, PROMO_ON);
-    expect(r.conflict).toBe(true);
-    expect([...r.mo, ...r.yr, ...r.one]).toEqual([]);
-    expect([r.moTot, r.yrTot, r.oneTot, r.grossMo, r.grossYr]).toEqual([0, 0, 0, 0, 0]);
-    expect(r.promoApplied).toBe(false);
-    // Vacei's conflict note rides in the notes, as a warning.
-    expect(r.notes).toContainEqual(["warn", expect.stringContaining("Whichever you leave with us, we arrange the other side with an independent firm")]);
-    // Nothing to submit either, so `canSend` (which needs items) stays false.
-    expect(qItems(q)).toEqual([]);
+    // assurance engagement, so with the books ours a partner audit firm does it.
+    expect(qIndependence({ ...CANONICAL, assure: "we" }).route).toBe("partner-audit");
   });
 
   /**
-   * The conflict is a COMPANY matter, exactly as on vacei.com: a Maltese sole
-   * trader has no statutory audit, so `assure: "we"` prices nothing for them,
-   * conflicts with nothing, and never blocks the send.
+   * Owner decision 2026-10-01: books + audit together are allowed. A4 keeps the
+   * books; a partner audit firm A4 finds does the audit or review, quoted at the
+   * published price and labelled as the partner's.
    */
-  it("flags the conflict for a company only — a sole trader with the audit ticked is simply not sold one", () => {
+  it("prices the books AND the review, the review by a partner audit firm", () => {
+    const q: QState = { ...CANONICAL, assure: "we" };
+    const r = qCalc(q, PROMO_OFF);
+    expect(r.refer || r.noExpenses).toBe(false);
+    // The books exactly as without the audit…
+    expect([r.moTot]).toEqual([103]);
+    // …and the review at the published fee (21-60 × 0.55 = €547), partner label.
+    const review = line(r, "Review engagement — by a partner audit firm (if applicable)");
+    expect(review?.v).toBe(547);
+    expect(review?.e).toContain("carried out by a partner audit firm we find for you");
+    expect(line(r, "Review engagement (if applicable)")).toBeUndefined();
+    expect(r.yrTot).toBe(547 + 150);
+    // Said plainly, calmly, in the notes.
+    expect(r.notes).toContainEqual(["info", expect.stringContaining("we find a partner audit firm for you")]);
+    // On the wire: the audit item carries the partner flag, and the shared
+    // engine labels the line the same way the server does.
+    const items = qItems(q);
+    expect(items).toContainEqual({ service: "audit", txn: "21-60", review: true, partner: true });
+    const t = evaluateA4Items(items, qRisk(q), PROMO_OFF);
+    expect(t.partnerAssurance).toBe(true);
+    expect(t.lines).toContainEqual({ label: "Review engagement — by a partner audit firm (if applicable)", amount: 547, cadence: "yearly" });
+    expect([t.monthly, t.yearly]).toEqual([r.moTot, r.yrTot]);
+  });
+
+  /**
+   * The audit is a COMPANY matter, exactly as on vacei.com: a Maltese sole
+   * trader has no statutory audit, so `assure: "we"` prices nothing for them.
+   */
+  it("prices the audit for a company only — a sole trader with the audit ticked is simply not sold one", () => {
     const sole: QState = { ...CANONICAL, entity: "sole", assure: "we" };
     expect(qIndependence(sole).route).toBe("bookkeeping");
     expect(qIndependence(sole).auditEligible).toBe(false);
+    expect(qIndependence(sole).partnerAudit).toBe(false);
     const r = qCalc(sole, PROMO_OFF);
-    expect(r.conflict).toBe(false);
     expect(line(r, "Bookkeeping")?.v).toBe(39);
     expect(r.yr.some((l) => l.n.startsWith("Financial audit") || l.n.startsWith("Review engagement"))).toBe(false);
     expect(qItems(sole).some((i) => i.service === "audit")).toBe(false);
-    // Same shape for the company: switch the entity and the same answers conflict.
-    expect(qCalc({ ...sole, entity: "company" }, PROMO_OFF).conflict).toBe(true);
+    // Same shape for the company: switch the entity and the partner review appears.
+    expect(line(qCalc({ ...sole, entity: "company" }, PROMO_OFF), "Review engagement — by a partner audit firm (if applicable)")).toBeDefined();
   });
 
-  it("either button clears the conflict on the spot", () => {
-    const stuck: QState = { ...CANONICAL, assure: "we" };
-    const keptBooks: QState = { ...stuck, assure: "none" };
-    expect(qIndependence(keptBooks).route).toBe("bookkeeping");
-    expect(qCalc(keptBooks, PROMO_ON).conflict).toBe(false);
-    expect(qCalc(keptBooks, PROMO_ON).moTot).toBeGreaterThan(0);
-    expect(evaluateA4Items(qItems(keptBooks), qRisk(keptBooks)).independenceConflict).toBe(false);
-
+  it("keeps the plain labels when A4 itself does the review (no books)", () => {
     // The assurance side needs NO band — it does not buy bookkeeping.
-    const tookAssurance: QState = { ...stuck, book: "none", vat: "none", expenses: "" };
+    const tookAssurance: QState = { ...CANONICAL, assure: "we", book: "none", vat: "none", expenses: "" };
     expect(qIndependence(tookAssurance).route).toBe("audit");
     const ta = qCalc(tookAssurance, PROMO_ON);
-    expect(ta.conflict).toBe(false);
     expect(ta.noExpenses).toBe(false);
     // …and at that size and volume it prices as a REVIEW, not a full audit.
     expect(ta.yr.some((l) => l.n === "Review engagement (if applicable)")).toBe(true);
-    expect(evaluateA4Items(qItems(tookAssurance), qRisk(tookAssurance)).independenceConflict).toBe(false);
+    expect(ta.notes.some(([, t]) => t.includes("we find a partner audit firm for you"))).toBe(false);
+    const items = qItems(tookAssurance);
+    expect(items.find((i) => i.service === "audit")).toEqual({ service: "audit", txn: "21-60", review: true });
+    expect(evaluateA4Items(items, qRisk(tookAssurance)).partnerAssurance).toBe(false);
   });
 
-  it("flags the conflict when a full audit is asked for alongside the books", () => {
+  it("labels a full audit beside the books as the partner's too", () => {
     // size "big" + heavy volume makes it a full audit, not a review.
     const q: QState = { ...CANONICAL, size: "big", txn: "401-1000", assure: "we" };
     const f = qIndependence(q);
-    expect(f.route).toBe("conflict");
+    expect(f.route).toBe("partner-audit");
     expect(f.auditEligible).toBe(false);
-    expect(f.bookkeepingEligible).toBe(false);
-    // Full audit or review, the same silence: no figures either way.
-    expect(qCalc(q, PROMO_ON).conflict).toBe(true);
-    expect(qItems(q)).toEqual([]);
+    expect(f.bookkeepingEligible).toBe(true);
+    expect(f.partnerAudit).toBe(true);
+    const r = qCalc(q, PROMO_OFF);
+    expect(line(r, "Financial audit — by a partner audit firm (if applicable)")?.v).toBe(2700);
+    expect(qItems(q)).toContainEqual({ service: "audit", txn: "401-1000", partner: true });
   });
 
   it("rules A4 out of the books for an audit-only enquiry", () => {
@@ -477,6 +489,7 @@ describe("IESBA independence", () => {
     expect(f.route).toBe("audit");
     expect(f.bookkeepingEligible).toBe(false);
     expect(f.auditEligible).toBe(true);
+    expect(f.partnerAudit).toBe(false);
   });
 });
 
@@ -686,7 +699,6 @@ describe("the wizard walks vacei's steps", () => {
     expect(atQuote.pay).toBe("none"); // nobody on the payroll by default
     expect(atQuote.book).toBe("managed");
     expect(qIndependence(atQuote).route).toBe("bookkeeping");
-    expect(qCalc(atQuote, PROMO_ON).conflict).toBe(false);
   });
 });
 
@@ -708,7 +720,6 @@ describe("nothing about the price is pre-answered", () => {
 
     const shown = qCalc(atQuote, PROMO_ON);
     expect(shown.noExpenses).toBe(true);
-    expect(shown.conflict).toBe(false);
     expect(shown.noStart).toBe(true);
     // Not one figure anywhere — not a line, not a total, not a struck-through
     // "before discount" price to anchor on.
@@ -744,7 +755,6 @@ describe("nothing about the price is pre-answered", () => {
     const answered: QState = { ...atQuote, expenses: "10-25k", startMonth: "2026-09" };
     const r = qCalc(answered, PROMO_OFF);
     expect(r.noExpenses).toBe(false);
-    expect(r.conflict).toBe(false);
     expect(r.noStart).toBe(false);
     expect(line(r, "Bookkeeping")?.v).toBe(69);
     expect(qItems(answered).length).toBeGreaterThan(0);

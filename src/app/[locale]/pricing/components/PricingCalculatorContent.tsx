@@ -27,6 +27,7 @@ import {
   PRICING_VAT_NOTE,
   PRICING_GOV_NOTE,
   ONBOARDING_UNPRICED_NOTE,
+  REVIEW_FROM,
   type ExpenseBand,
   type ManagedEntity,
 } from "@/data/a4QuotePack";
@@ -214,7 +215,7 @@ const PR_STARTING_TIERS = [
     price: AUDIT_FROM,
     unit: "/ yr",
     from: true,
-    blurb: "Independent audit for companies that require one. Where a review engagement is enough, it is 55% of the audit fee. Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here.",
+    blurb: `Independent audit for companies that require one. Where a review engagement is enough, it starts from €${REVIEW_FROM}/yr. Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here.`,
   },
   {
     id: "incorporation",
@@ -543,8 +544,8 @@ function PricingCalc() {
   const price = isLeadPath ? incOneOff : unit === "/ mo" ? totals.monthly : totals.yearly;
   const discounted = promo && price < gross;
 
-  // IESBA routing. This calculator's tabs are one service at a time, so the
-  // conflict case cannot arise here — but the consequence of the tab they are
+  // IESBA routing. This calculator's tabs are one service at a time, so books
+  // + audit (the partner-audit case) cannot arise here — but the consequence of the tab they are
   // on is still shown before they send.
   const independence = independenceFlags({
     wantsBookkeeping: svc === "accounting",
@@ -709,7 +710,7 @@ function PricingCalc() {
               <OptionPills label="Transactions a month" items={PR_VOLUME_LABELS} value={turn} onPick={setTurn} min={140} />
               <p style={{ margin: "18px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: muted }}>
                 A standard statutory audit of your financial statements, signed by a licensed audit firm. Where a review
-                engagement is enough instead, it is 55% of this fee. Groups and regulated entities are scoped on a call.
+                engagement is enough instead, it starts from €{REVIEW_FROM}/yr. Groups and regulated entities are scoped on a call.
               </p>
             </PrStep>
           )}

@@ -23,6 +23,7 @@ import { PortalShowcase } from "@/components/fx/PortalShowcase";
 import { trackConversion } from "@/lib/analytics";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/contact";
 import {
+  PARTNER_AUDIT_TERM,
   QUOTE_API_BASE,
   acceptPlan,
   acceptedLineIndexes,
@@ -364,6 +365,7 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
   const pdfW = pdf === 1 || pdf === 2 ? "100%" : "0%";
   const pdfT = pdf === 1 ? "width 1.1s cubic-bezier(.65,0,.35,1)" : "width .3s ease";
   const hasAudit = cards.some((c) => (c.key === "aud" || c.key === "rev") && on.has(c.key));
+  const hasPartnerAudit = cards.some((c) => c.partner && on.has(c.key));
   const hasCsp = cards.some((c) => c.key === "csp" || c.key === "inc");
   const auditWord = ret.retainer.outside.some((o) => o.reason === "audit" && /review/i.test(o.label)) ? "review" : "audit";
   const outsideParts = [
@@ -401,6 +403,7 @@ export default function QuotationLanding({ summary, token, preview }: Props) {
         ]
       : []),
     "Accepting starts onboarding: before we act for you, we complete our client due diligence and send the engagement letter.",
+    ...(hasPartnerAudit ? [PARTNER_AUDIT_TERM] : []),
     ...(hasCsp ? ["Corporate services are delivered with licensed CSP partners."] : []),
     "Either side can end an engagement under the notice terms in the engagement letter. Work already done is billed.",
   ];

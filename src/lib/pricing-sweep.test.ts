@@ -20,7 +20,7 @@
 import { describe, it, expect } from "vitest";
 import {
   EXPENSE_BANDS, TXN_BANDS, taxReturnYearly, AUDIT_YEARLY, AUDIT_PRE_TRADING,
-  REVIEW_ENGAGEMENT_FACTOR, type TxnBand, type ExpenseBand, type ManagedEntity,
+  reviewYearlyBase, type TxnBand, type ExpenseBand, type ManagedEntity,
 } from "@/data/a4QuotePack";
 import { evaluateA4Items, type A4Item, type A4Risk } from "@/lib/websiteQuotation";
 import { TAXRET_ESTIMATE_FROM, calcAuditFee, TXN as AUDIT_TXN, SECTORS as AUDIT_SECTORS, SIZES as AUDIT_SIZES, type AuditInput } from "@/lib/audit-fee";
@@ -129,7 +129,11 @@ describe("pricing sweep", () => {
       expect(t.assure, `audit band ${t.id}`).toBe(AUDIT_YEARLY[t.id]);
 
       const review = evaluateA4Items([{ service: "audit", txn: t.id, review: true }], "standard", AT).yearly;
-      expect(review, `review ${t.id}`).toBe(Math.round(AUDIT_YEARLY[t.id] * REVIEW_ENGAGEMENT_FACTOR));
+      expect(review, `review ${t.id}`).toBe(Math.round(reviewYearlyBase(t.id)!));
+      // mt-2026-10-01-review, stated outright: €350 entry at 0/1-20, else 55%.
+      expect(review, `review table ${t.id}`).toBe(
+        ({ "0": 350, "1-20": 350, "21-60": 547, "61-150": 767, "151-400": 1073, "401-1000": 1485, "1000+": 2008 } as Record<TxnBand, number>)[t.id]
+      );
 
       // The tax-return ADD-ON on the audit page is the same figure the wizard
       // bills — it is the one that just moved, and it moved in two files.

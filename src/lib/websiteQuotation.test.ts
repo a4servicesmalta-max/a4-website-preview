@@ -49,7 +49,7 @@ describe("A4 selections contract", () => {
       risk: "standard",
       serviceStartDate: START,
       items: [{ service: "registered-office" }],
-      independence: { auditEligible: true, bookkeepingEligible: true, route: "neutral" },
+      independence: { auditEligible: true, bookkeepingEligible: true, partnerAudit: false, route: "neutral" },
     });
   });
 
@@ -150,6 +150,13 @@ describe("per-item pricing", () => {
     expect(gross([{ service: "audit", txn: "21-60" }]).yearly).toBe(995);
     // Review engagement — 995 × 0.55 = 547.25 → €547
     expect(gross([{ service: "audit", txn: "21-60", review: true }]).yearly).toBe(547);
+    // mt-2026-10-01-review: €350 entry at the two lowest bands, BEFORE risk.
+    expect(gross([{ service: "audit", txn: "1-20", review: true }]).yearly).toBe(350);
+    expect(gross([{ service: "audit", txn: "0", review: true }]).yearly).toBe(350);
+    expect(gross([{ service: "audit", txn: "1-20", review: true }], "elevated").yearly).toBe(420); // 350 × 1.2
+    expect(gross([{ service: "audit", txn: "1-20", review: true }], "high").yearly).toBe(508); // 350 × 1.45 = 507.5
+    // A full audit at those bands is unchanged.
+    expect(gross([{ service: "audit", txn: "1-20" }]).yearly).toBe(750);
     // 995 × 1.45 = 1442.75 → €1,443
     expect(gross([{ service: "audit", txn: "21-60" }], "high").yearly).toBe(1443);
   });
@@ -241,7 +248,7 @@ describe("IESBA independence routing", () => {
     const t = evaluateA4Items([{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k", txn: "1-20", banks: 1 }], "standard", AFTER);
     expect(t.wantsBookkeeping).toBe(true);
     expect(t.wantsAudit).toBe(false);
-    expect(t.independenceConflict).toBe(false);
+    expect(t.partnerAssurance).toBe(false);
   });
 
   it("treats a catch-up-only basket as bookkeeping too", () => {
@@ -265,22 +272,68 @@ describe("IESBA independence routing", () => {
     expect(t.wantsAudit).toBe(true);
   });
 
-  it("flags the conflict when both are asked for at once", () => {
+  // Owner decision 2026-10-01: books + audit together price normally — A4 keeps
+  // the books, a partner audit firm does the audit or review at the same fee.
+  it("prices books + audit, the audit labelled as a partner audit firm's", () => {
     const t = evaluateA4Items(
       [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k", txn: "1-20", banks: 1 }, { service: "audit", txn: "21-60" }],
       "standard",
       AFTER
     );
-    expect(t.independenceConflict).toBe(true);
+    expect(t.partnerAssurance).toBe(true);
+    expect(t.lines).toEqual([
+      { label: "Managed bookkeeping — Company", amount: 49, cadence: "monthly" },
+      { label: "Financial audit — by a partner audit firm (if applicable)", amount: 995, cadence: "yearly" },
+    ]);
+    expect([t.monthly, t.yearly]).toEqual([49, 995]);
   });
 
-  it("flags the conflict for a review engagement alongside the books", () => {
-    const t = evaluateA4Items(
-      [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k", txn: "1-20", banks: 1 }, { service: "audit", txn: "21-60", review: true }],
-      "standard",
+  it("does the same for a review engagement alongside the books, whatever the caller sent", () => {
+    const books: A4Item = { service: "bookkeeping-managed", entity: "company", expenses: "0-10k", txn: "1-20", banks: 1 };
+    const plain = evaluateA4Items([books, { service: "audit", txn: "21-60", review: true }], "standard", AFTER);
+    const flagged = evaluateA4Items([books, { service: "audit", txn: "21-60", review: true, partner: true }], "standard", AFTER);
+    expect(plain.partnerAssurance).toBe(true);
+    expect(plain.lines[1]).toEqual({ label: "Review engagement — by a partner audit firm (if applicable)", amount: 547, cadence: "yearly" });
+    expect(flagged.lines).toEqual(plain.lines);
+  });
+
+  it("keeps the plain label when A4 itself audits (no books)", () => {
+    const t = evaluateA4Items([{ service: "audit", txn: "21-60", review: true }], "standard", AFTER);
+    expect(t.partnerAssurance).toBe(false);
+    expect(t.lines).toEqual([{ label: "Review engagement (if applicable)", amount: 547, cadence: "yearly" }]);
+  });
+
+  it("carries the partner conclusion into the selections: A4 keeps the books, never audits them", () => {
+    const r = buildQuoteRecord(
+      {
+        name: "A",
+        email: "a@b.com",
+        items: [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k", txn: "1-20", banks: 1 }, { service: "audit", txn: "1-20", review: true }],
+        serviceStartDate: START,
+      },
       AFTER
     );
-    expect(t.independenceConflict).toBe(true);
+    expect(r.selections.independence).toEqual({ auditEligible: false, bookkeepingEligible: true, partnerAudit: true, route: "partner-audit" });
+    expect(r.lines.map((l) => l.label)).toContain("Review engagement — by a partner audit firm (if applicable)");
+  });
+
+  it("submits books + audit rather than refusing it", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: { reference: "Q-2", status: "QUOTED" } }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const res = await submitWebsiteQuotation({
+        name: "Jane",
+        email: "jane@example.com",
+        items: [{ service: "bookkeeping-managed", entity: "company", expenses: "0-10k", txn: "1-20", banks: 1 }, { service: "audit", txn: "21-60" }],
+        serviceStartDate: START,
+      });
+      expect(res).toMatchObject({ status: "quoted", reference: "Q-2" });
+      const calls = fetchMock.mock.calls as unknown as [string, RequestInit][];
+      const body = JSON.parse(String(calls[0][1].body));
+      expect([body.auditEligible, body.bookkeepingEligible, body.partnerAudit, body.route]).toEqual([false, true, true, "partner-audit"]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("carries the conclusion into the submitted selections", () => {
@@ -291,6 +344,7 @@ describe("IESBA independence routing", () => {
     expect(r.selections.independence).toEqual({
       auditEligible: false,
       bookkeepingEligible: true,
+      partnerAudit: false,
       route: "bookkeeping",
     });
   });
@@ -647,7 +701,7 @@ describe("the submitted record", () => {
   it("stamps the pack version and currency the backend validates against", () => {
     const r = buildQuoteRecord({ name: "A", email: "a@b.com", items, serviceStartDate: START }, DURING);
     expect(r.pack).toBe(A4_QUOTE_PACK_VERSION);
-    expect(r.pack).toBe("mt-2026-08-27-entry");
+    expect(r.pack).toBe("mt-2026-10-01-review");
     expect(r.currency).toBe("EUR");
     expect(r.quotedAt).toBe(DURING.toISOString());
   });
@@ -663,7 +717,7 @@ describe("the submitted record", () => {
       risk: "high",
       serviceStartDate: START,
       items: [{ service: "audit", txn: "21-60" }],
-      independence: { auditEligible: true, bookkeepingEligible: false, route: "audit" },
+      independence: { auditEligible: true, bookkeepingEligible: false, partnerAudit: false, route: "audit" },
     });
   });
 

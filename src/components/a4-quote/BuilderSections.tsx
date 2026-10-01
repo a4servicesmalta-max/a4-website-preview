@@ -57,11 +57,9 @@ import {
   wordSize,
 } from "@/app/[locale]/services/components/SiteKit";
 import {
-  CONFLICT_NOTE,
-  CONFLICT_SHORT,
-  CONFLICT_SUMMARY,
   MAX_BANKS,
   MAX_HEADS,
+  PARTNER_AUDIT_NOTE,
   REFER_NOTE,
   REGISTERED_OFFICE_FEE,
   VAT_REG_OPTIONS,
@@ -147,25 +145,6 @@ function viewCaption(api: BuilderApi): string {
   if (api.basket.gate) return "Fees before VAT · registry fees at cost";
   if (r.offered) return `Retainer ${euro(r.monthly)} /mo · fees before VAT · registry at cost`;
   return retainerReason(r) || "Fees before VAT · registry fees at cost";
-}
-
-/** "Which one is ours?" — the independence resolver (homepage wording). */
-function Resolver({ api, dark = false }: { api: BuilderApi; dark?: boolean }) {
-  const btn: CSSProperties = { height: "auto", minHeight: 44, padding: "10px 20px", fontSize: 15, whiteSpace: "normal", textAlign: "center" };
-  return (
-    <div>
-      <div style={{ fontFamily: SANS, fontSize: 19, fontWeight: 600, letterSpacing: "-0.015em", color: dark ? "#FFFFFF" : INK }}>Which one is ours?</div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-        <button type="button" onClick={() => api.resolve("book")} className={`a4-btn ${dark ? "a4-btn-light" : "a4-btn-ink"}`} style={btn}>
-          Keep the bookkeeping with us
-        </button>
-        <button type="button" onClick={() => api.resolve("assure")} className={`a4-btn ${dark ? "a4-btn-light" : "a4-btn-ink"}`} style={btn}>
-          Take the audit or review with us
-        </button>
-      </div>
-      <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 13.5, lineHeight: 1.55, color: dark ? "#D4D4D8" : "#3F3F46" }}>{CONFLICT_NOTE}</p>
-    </div>
-  );
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -349,11 +328,10 @@ export function ServicesSection({ api }: { api: BuilderApi }) {
         ))}
       </div>
 
-      {basket.conflict ? (
-        <div role="note" data-fx="rise" style={{ marginTop: 16, padding: "clamp(22px,3vw,32px)", borderRadius: 24, background: INK, color: "#FFFFFF" }}>
-          <span style={{ ...kicker, color: PERI }}>Independence</span>
-          <p style={{ margin: "8px 0 18px", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: "#E4E4E7", maxWidth: 820 }}>{CONFLICT_SHORT}</p>
-          <Resolver api={api} dark />
+      {basket.partnerAudit ? (
+        <div role="note" data-fx="rise" style={{ marginTop: 16, padding: "clamp(20px,2.6vw,28px)", borderRadius: 24, background: "rgba(79,85,241,.06)", border: "1px solid rgba(79,85,241,.22)" }}>
+          <span style={{ ...kicker, color: INDIGO }}>Independence</span>
+          <p style={{ margin: "8px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: "#3F3F46", maxWidth: 820 }}>{PARTNER_AUDIT_NOTE}</p>
         </div>
       ) : null}
     </Band>
@@ -367,15 +345,16 @@ function ServiceCard({ api, k, i, total }: { api: BuilderApi; k: ServiceKey; i: 
   const locked = k === "catch";
   const dark = i % 2 === 1;
   const preview = servicePreview(s, k, basket.risk, now);
-  const blank = basket.conflict && (k === "book" || k === "assure" || k === "catch" || k === "vat");
   const word = copy.word;
   const n = Array.from(word).length;
   const colors = Array.from(word).map((_, j) => (on ? (dark ? "#FFFFFF" : gcol(n > 1 ? j / (n - 1) : 0)) : dark ? "#3F3F46" : "#D4D4D8"));
   const line =
     k === "assure"
-      ? auditIsReview(s)
-        ? "A review engagement — the lighter option — with our partner audit firms."
-        : "A full statutory audit, with our partner audit firms."
+      ? s.on.book
+        ? "We find a partner audit firm for you and include the audit in your portal."
+        : auditIsReview(s)
+          ? "A review engagement — the lighter option — with our partner audit firms."
+          : "A full statutory audit, with our partner audit firms."
       : k === "catch"
         ? `${months} earlier ${months === 1 ? "month" : "months"}, brought up to date at your own monthly rate.`
         : copy.line;
@@ -448,9 +427,7 @@ function ServiceCard({ api, k, i, total }: { api: BuilderApi; k: ServiceKey; i: 
       ) : null}
       <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, paddingTop: 16, borderTop: `1px solid ${dark ? "rgba(255,255,255,.1)" : "#E4E4E7"}` }}>
         <div style={{ minWidth: 0 }}>
-          {blank ? (
-            <span style={{ fontFamily: BODY, fontSize: 14, fontWeight: 600, color: dark ? PERI : INDIGO }}>Blank until you pick which one is ours</span>
-          ) : preview.price ? (
+          {preview.price ? (
             <>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                 <span style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.03em", color: on ? (dark ? "#FFFFFF" : INK) : dark ? "#71717A" : "#A1A1AA", transition: "color .3s" }}>{euro(preview.price.amount)}</span>
@@ -497,15 +474,6 @@ function GateBody({ api }: { api: BuilderApi }) {
           <button type="button" className="a4-btn a4-btn-outline" style={{ height: 48, padding: "0 24px", fontSize: 16 }} onClick={() => go("#request")}>
             Tell us what you need
           </button>
-        </div>
-      </div>
-    );
-  if (basket.gate === "conflict")
-    return (
-      <div style={box}>
-        <p style={{ ...msg, fontSize: 17, fontFamily: BODY }}>{CONFLICT_SUMMARY}</p>
-        <div style={{ marginTop: 22, padding: "20px 20px 18px", borderRadius: 20, background: "rgba(79,85,241,.06)", border: "1px solid rgba(79,85,241,.22)" }}>
-          <Resolver api={api} />
         </div>
       </div>
     );
@@ -786,17 +754,12 @@ function SendCard({ api }: { api: BuilderApi }) {
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const canSend = !basket.gate && basket.items.length > 0 && startOk && nameOk && emailOk;
 
-  if (basket.gate === "refer" || basket.gate === "conflict") {
+  if (basket.gate === "refer") {
     return (
       <CtaCard>
-        <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.03em" }}>{basket.gate === "refer" ? "Let's talk first." : "One or the other."}</div>
-        <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: "#D4D4D8" }}>{basket.gate === "refer" ? REFER_NOTE : CONFLICT_SHORT}</p>
-        {basket.gate === "conflict" ? (
-          <div style={{ marginTop: 22 }}>
-            <Resolver api={api} dark />
-          </div>
-        ) : null}
-        <PillLink href="/contact" variant={basket.gate === "refer" ? "light" : "ghost"} style={{ marginTop: 24, width: "100%", height: 60, fontSize: 18 }}>
+        <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.03em" }}>{"Let's talk first."}</div>
+        <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: "#D4D4D8" }}>{REFER_NOTE}</p>
+        <PillLink href="/contact" variant="light" style={{ marginTop: 24, width: "100%", height: 60, fontSize: 18 }}>
           Request a call
         </PillLink>
       </CtaCard>

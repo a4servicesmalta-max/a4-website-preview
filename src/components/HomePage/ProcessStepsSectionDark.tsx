@@ -153,11 +153,8 @@ const ProcessStepsSectionDark = ({ isDark = false }: { isDark?: boolean }) => {
       return t("processSteps.errors.phoneRequired")
     }
 
-    // Bookkeeping AND audit together: A4 cannot provide both to the same
-    // client, so this cannot go through as written.
-    if (independence.route === "conflict") {
-      return independenceText ?? ""
-    }
+    // Bookkeeping AND audit together go through (owner decision 2026-10-01):
+    // we keep the books and find a partner audit firm for the audit or review.
 
     return ""
   }
@@ -428,17 +425,9 @@ const ProcessStepsSectionDark = ({ isDark = false }: { isDark?: boolean }) => {
                           {step.id === "onboarding" && independenceText && (
                             <div
                               role="note"
-                              className={cn(
-                                "rounded-2xl border p-4",
-                                independence.route === "conflict"
-                                  ? "bg-amber-500/10 border-amber-500/30"
-                                  : "bg-white/5 border-white/10"
-                              )}
+                              className="rounded-2xl border p-4 bg-white/5 border-white/10"
                             >
-                              <p className={cn(
-                                "text-xs font-black uppercase tracking-widest",
-                                independence.route === "conflict" ? "text-amber-300" : "text-slate-400"
-                              )}>
+                              <p className="text-xs font-black uppercase tracking-widest text-slate-400">
                                 {INDEPENDENCE_HEADING}
                               </p>
                               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-300">

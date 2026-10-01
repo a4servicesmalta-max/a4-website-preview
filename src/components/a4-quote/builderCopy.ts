@@ -51,7 +51,10 @@ export const SERVICE_COPY: Record<ServiceKey, ServiceCopy> = {
     word: "Audit",
     line: "An audit or a review engagement, with our partner audit firms.",
     fx: "tighten",
-    scope: ["A review engagement where the law allows one — a full audit otherwise", "Carried out by our partner audit firms; the fee stays as quoted"],
+    scope: [
+      "A review engagement where the law allows one — a full audit otherwise",
+      "Carried out by a partner audit firm we find for you; the fee stays as quoted and the audit runs in your portal",
+    ],
   },
 };
 
@@ -77,6 +80,6 @@ export const TERMS = [
   "Separate services are billed in their own cadence: monthly services monthly in advance, annual services once per financial year.",
   "One-off items, such as a catch-up, are billed on completion.",
   "Corporate services — the annual return and the registered office — are delivered with licensed CSP partners.",
-  "Independence: we cannot keep your books and also audit or review them. Whichever you leave with us, we arrange the other side with an independent firm.",
+  "Independence: we never audit or review books we keep. Ask for both and we keep the books, find a partner audit firm for the audit or review, and include it in your portal at the fee quoted.",
   "Before we act for you we complete our client due diligence and send the engagement letter. Onboarding and opening balances are quoted once we have seen your records.",
 ];

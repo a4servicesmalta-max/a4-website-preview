@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Button, Icon, Container, Eyebrow } from "@/components/a4-landing/Primitives";
 import { MUTED_GLOW, TypeText, Words, gradText } from "@/components/fx/primitives";
 import LocalizedLink from "@/components/common/LocalizedLink";
-import { AUDIT_YEARLY, BOOKKEEPING_VOLUME_UPLIFT, BOOKKEEPING_MANAGED_MONTHLY, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, bankAccountMonthly, BANK_ACCOUNT, taxReturnYearly, VAT_MONTHLY, VAT_RULES, REVIEW_ENGAGEMENT_FACTOR, REGISTERED_OFFICE_YEARLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXPENSE_BANDS, LAUNCH_PROMO, catchUpAmount, catchUpLabel, fullMonthlyBookkeeping, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
+import { AUDIT_YEARLY, BOOKKEEPING_VOLUME_UPLIFT, BOOKKEEPING_MANAGED_MONTHLY, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, bankAccountMonthly, BANK_ACCOUNT, taxReturnYearly, VAT_MONTHLY, VAT_RULES, REVIEW_ENGAGEMENT_FACTOR, reviewYearlyBase, REGISTERED_OFFICE_YEARLY, payrollFee, payrollFeeLabel, CAPITAL_BANDS, MBR_ANNUAL_RETURN, EXPENSE_BANDS, LAUNCH_PROMO, catchUpAmount, catchUpLabel, fullMonthlyBookkeeping, isPromoActive, managedMonthly, type CapitalBand, type ExpenseBand, type ManagedEntity, type TxnBand } from "@/data/a4QuotePack";
 import { submitWebsiteQuotation, type A4Item, type A4Risk, type WebsiteQuoteResult } from "@/lib/websiteQuotation";
 import { independenceFlags } from "@/lib/independence";
 import { catchUpMonthsFrom, formatStartMonth, ongoingStartMonth } from "@/lib/accounting-fee";
@@ -56,11 +56,12 @@ const QVATREG: [string, string, string][] = [
   ["art12", "EU purchases", "acquisitions only"],
   ["unsure", "Not sure", "we'll check"],
 ];
-/* IESBA independence, in the site's own words — the single wording for the
-   conflict, identical to vacei.com. Do not machine-translate. */
-const CONFLICT_SUMMARY = "You have asked us to keep the books and to do the audit or review. We cannot do both for the same company — an auditor is not independent of books their own firm has kept, and a review engagement carries the same rule. So there is nothing to price until that is settled. Choose which one is ours below and the quote appears, or send this through and a director calls you.";
-const CONFLICT_NOTE = "Whichever you leave with us, we arrange the other side with an independent firm — keep the bookkeeping here and we introduce you to an independent auditor, or take the audit or review here and we quote the bookkeeping out.";
-const CONFLICT_SHORT = "The bookkeeping and the audit or review cannot both be ours — an auditor is not independent of books their own firm has kept. That is why the amounts have gone blank. Switch one of the two off, or carry on and the quote step gives you the choice.";
+/* IESBA independence, in the site's own words (owner decision 2026-10-01): books
+   + audit together — we keep the books and a partner audit firm we find does the
+   audit or review, at the published price, inside the client's portal. The same
+   wording as src/lib/independence.ts INDEPENDENCE_PARTNER_AUDIT and the /quote
+   builder. Do not machine-translate. */
+export const PARTNER_AUDIT_NOTE = "You have asked us to keep the books and for the audit or review. We keep the books. Independence rules mean we cannot audit them ourselves, so we find a partner audit firm for you — the audit is quoted here at our published price and included in your portal.";
 /** Onboarding carries NO figure. Vacei's wording; `qItems` gates the wire item on it. */
 const ONBOARDING_NOTE = "Digital Onboarding and opening balances are not priced here. We quote those once we have seen your records, because what they take depends on the state they are in.";
 
@@ -148,15 +149,18 @@ function qAuditIsReview(q: QState) {
  */
 const ASSURE_AUDIT_LABEL = "Financial audit (if applicable)";
 const ASSURE_REVIEW_LABEL = "Review engagement (if applicable)";
+/** Books + audit: a partner audit firm carries out the audit or review (same price). */
+const ASSURE_AUDIT_PARTNER_LABEL = "Financial audit — by a partner audit firm (if applicable)";
+const ASSURE_REVIEW_PARTNER_LABEL = "Review engagement — by a partner audit firm (if applicable)";
 const MBR_LABEL = "Annual return — filed with the MBR";
 
 type Calc = {
-  refer: boolean; conflict: boolean; noExpenses: boolean; noStart: boolean;
+  refer: boolean; noExpenses: boolean; noStart: boolean;
   notes: Note[]; mo: Line[]; yr: Line[]; one: Line[];
   moTot: number; yrTot: number; oneTot: number; grossMo: number; grossYr: number; promoApplied: boolean;
 };
-const unpriced = (flags: Partial<Pick<Calc, "refer" | "conflict" | "noExpenses">>, notes: Note[], noStart: boolean): Calc => ({
-  refer: false, conflict: false, noExpenses: false, ...flags, noStart, notes,
+const unpriced = (flags: Partial<Pick<Calc, "refer" | "noExpenses">>, notes: Note[], noStart: boolean): Calc => ({
+  refer: false, noExpenses: false, ...flags, noStart, notes,
   mo: [], yr: [], one: [], moTot: 0, yrTot: 0, oneTot: 0, grossMo: 0, grossYr: 0, promoApplied: false,
 });
 
@@ -172,12 +176,6 @@ export function qCalc(q: QState, now: Date = new Date()): Calc {
   const rm = tier.mult;
   const mo: Line[] = [], yr: Line[] = [], one: Line[] = [];
   const managed = q.book === "managed";
-  // IESBA independence, settled BEFORE anything is priced. A COMPANY matter:
-  // a sole trader has no statutory audit, so there is nothing to conflict.
-  if (managed && q.assure === "we" && entity === "company") {
-    notes.push(["warn", CONFLICT_NOTE]);
-    return unpriced({ conflict: true }, notes, noStart);
-  }
   // Bookkeeping is priced on MONTHLY EXPENSES. With no band there is no rate —
   // it must NEVER fall back to the entry band.
   const band = managed ? q.expenses : "";
@@ -223,7 +221,17 @@ export function qCalc(q: QState, now: Date = new Date()): Calc {
     const bigVol = QT_BIG_VOL.indexOf(q.txn) !== -1;
     const bandBig = BAND_BIG.indexOf(q.expenses) !== -1;
     const review = qAuditIsReview(q);
-    yr.push({ n: review ? ASSURE_REVIEW_LABEL : ASSURE_AUDIT_LABEL, e: (review ? "review engagement — the lighter option" : "full financial audit") + ". Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here.", v: QT.assure[q.txn] * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) * rm });
+    // mt-2026-10-01-review: a review is €350 at the "0"/"1-20" bands, else 55% of
+    // the audit — unrounded here, × risk, rounded once below.
+    const base = review ? reviewYearlyBase(q.txn as TxnBand) ?? QT.assure[q.txn] * REVIEW_ENGAGEMENT_FACTOR : QT.assure[q.txn];
+    if (managed) {
+      // IESBA independence (owner decision 2026-10-01): we keep the books, so a
+      // partner audit firm we find carries out the audit or review — same fee.
+      yr.push({ n: review ? ASSURE_REVIEW_PARTNER_LABEL : ASSURE_AUDIT_PARTNER_LABEL, e: (review ? "review engagement — the lighter option" : "full financial audit") + ", carried out by a partner audit firm we find for you — we keep your books, so we cannot audit them ourselves. The fee stays as quoted and the audit runs in your portal.", v: base * rm });
+      notes.push(["info", PARTNER_AUDIT_NOTE]);
+    } else {
+      yr.push({ n: review ? ASSURE_REVIEW_LABEL : ASSURE_AUDIT_LABEL, e: (review ? "review engagement — the lighter option" : "full financial audit") + ". Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here.", v: base * rm });
+    }
     if (review) notes.push(["ok", "You likely qualify for a review instead of a full audit — about half the cost. We confirm it against your figures before anything is agreed."]);
     if (bigVol && q.size !== "big") notes.push(["warn", "At that volume a company is unlikely to stay under the small-company thresholds, so we priced a full audit. If your figures come in under, the price drops."]);
     if (bandBig && !bigVol) notes.push(["info", "At your monthly spend the company is above the small-company thresholds, so we priced a full audit rather than the lighter review. If your figures come in under them, the price drops."]);
@@ -264,7 +272,7 @@ export function qCalc(q: QState, now: Date = new Date()): Calc {
   const keep = 1 - LAUNCH_PROMO.pct;
   const moTot = promo ? Math.round(grossMo * keep) : grossMo;
   const yrTot = promo ? Math.round((grossYr - registry) * keep) + registry : grossYr;
-  return { refer: false, conflict: false, noExpenses: false, noStart, mo, yr, one, notes, moTot, yrTot, oneTot, grossMo, grossYr, promoApplied: promo };
+  return { refer: false, noExpenses: false, noStart, mo, yr, one, notes, moTot, yrTot, oneTot, grossMo, grossYr, promoApplied: promo };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -283,7 +291,7 @@ export function qRisk(q: QState): A4Risk {
  */
 export function qItems(q: QState): A4Item[] {
   const r = qCalc(q);
-  if (r.refer || r.conflict || r.noExpenses) return [];
+  if (r.refer || r.noExpenses) return [];
   const all = [...r.mo, ...r.yr, ...r.one];
   const has = (n: string) => all.some((l) => l.n === n);
   const txn = q.txn as TxnBand;
@@ -296,7 +304,8 @@ export function qItems(q: QState): A4Item[] {
   if (has("VAT returns")) items.push({ service: "vat", txn, vatreg: q.vatreg === "art12" ? "art12" : "art10" });
   if (has("VAT declaration")) items.push({ service: "vat", txn, vatreg: "art11" });
   if (has("Annual tax return")) items.push({ service: "taxret", entity, expenses });
-  if (has(ASSURE_AUDIT_LABEL) || has(ASSURE_REVIEW_LABEL)) items.push({ service: "audit", txn, ...(qAuditIsReview(q) ? { review: true as const } : {}) });
+  if (has(ASSURE_AUDIT_LABEL) || has(ASSURE_REVIEW_LABEL) || has(ASSURE_AUDIT_PARTNER_LABEL) || has(ASSURE_REVIEW_PARTNER_LABEL))
+    items.push({ service: "audit", txn, ...(qAuditIsReview(q) ? { review: true as const } : {}), ...(q.book === "managed" ? { partner: true as const } : {}) });
   if (has("Registered office")) items.push({ service: "registered-office" });
   if (has(MBR_LABEL)) items.push({ service: "mbr", capital: q.cap || "1500" });
   if (r.one.length > 0 && q.book === "managed" && +q.behind > 0) items.push({ service: "catchup", months: +q.behind, entity, expenses, txn, banks: q.banks || 1 });
@@ -321,7 +330,7 @@ export function qAdvance(q: QState, lastStep: number = QSTEP_QUOTE): Partial<QSt
 /**
  * IESBA routing. `assure: "we"` is audit-side whether it prices as a full audit
  * or a review — but only for a COMPANY: a sole trader has no statutory audit,
- * so vacei prices nothing for it and flags no conflict.
+ * so nothing is priced for it. Books + audit route to a partner audit firm.
  */
 export function qIndependence(q: QState) {
   return independenceFlags({
@@ -336,7 +345,8 @@ function qSummarise(q: QState) {
   if (q.pay === "we" && q.head > 0) bits.push("we run your payroll");
   if (q.vat === "we" && q.vatreg !== "none" && q.book === "managed") bits.push("we prepare and submit your VAT returns");
   if (q.taxret === "we") bits.push("we prepare your annual tax return");
-  if (q.assure === "we" && q.entity !== "sole") bits.push("we handle your audit or review");
+  if (q.assure === "we" && q.entity !== "sole")
+    bits.push(q.book === "managed" ? "a partner audit firm we find for you carries out your audit or review, inside your portal" : "we handle your audit or review");
   if (q.regoff === "we" && q.entity !== "sole") bits.push("we provide your registered office");
   if (!bits.length) return "Nothing picked yet — choose what you need in the services step.";
   const j = bits.length === 1 ? bits[0] : bits.slice(0, -1).join(", ") + ", and " + bits[bits.length - 1];
@@ -642,7 +652,7 @@ export function LandingQuoteCalculator() {
       : null,
     entity === "company"
       ? {
-          ...svc("assure", "Financial audit — if applicable", "Most small companies qualify for a lighter review — tap the ? for the guidelines. Audits are carried out by our partner audit firms — we connect you with them, and the fee stays as quoted here. We cannot audit a company whose books we keep; ask for both and the quote says so.", [["none", "No"], ["we", "Yes"]]),
+          ...svc("assure", "Financial audit — if applicable", "Most small companies qualify for a lighter review — tap the ? for the guidelines. If we also keep your books, we find a partner audit firm for you and include the audit in your portal; the fee stays as quoted here.", [["none", "No"], ["we", "Yes"]]),
           hasInfo: true,
           amt: assureLine && assureLine.v > 0 ? euro(assureLine.v) + " /yr" : "—",
         }
@@ -658,40 +668,35 @@ export function LandingQuoteCalculator() {
     ...r.one.filter((l) => l.v > 0).map((l) => ({ n: l.n, e: l.e, v: euro(l.v) + " once" })),
   ];
 
-  // Three unpriceable cases withhold every figure because there IS no figure.
+  // Two unpriceable cases withhold every figure because there IS no figure.
   // A missing start month is different in kind: every line is priced and only
   // the catch-up one-off is still to come, so the figures stay lit.
-  const priced = !(r.refer || r.conflict || r.noExpenses);
-  const summary = r.conflict
-    ? CONFLICT_SUMMARY
-    : r.noExpenses
-      ? "Bookkeeping is priced on what you spend in a month, and that question is still blank — so there is nothing to price yet. Go back to the monthly-spend question and pick a band, or send this through and a director calls you. We will not quote you the cheapest band and correct it later."
-      : r.refer
-        ? "We price most sectors instantly. This one needs a short conversation with a director before we put a number to it — usually the same day."
-        : qSummarise(q);
-  const moText = priced ? euro(r.moTot) : r.conflict ? "One or the other" : r.noExpenses ? "Monthly spend first" : "Let's talk first";
+  const priced = !(r.refer || r.noExpenses);
+  const summary = r.noExpenses
+    ? "Bookkeeping is priced on what you spend in a month, and that question is still blank — so there is nothing to price yet. Go back to the monthly-spend question and pick a band, or send this through and a director calls you. We will not quote you the cheapest band and correct it later."
+    : r.refer
+      ? "We price most sectors instantly. This one needs a short conversation with a director before we put a number to it — usually the same day."
+      : qSummarise(q);
+  const moText = priced ? euro(r.moTot) : r.noExpenses ? "Monthly spend first" : "Let's talk first";
   const promo = priced && r.promoApplied && r.grossMo > 0;
   const totLabel = !priced ? "" : promo ? "Every month · " + LAUNCH_PROMO.label : "Every month";
   const yrHas = priced && r.yrTot > 0;
   const yrPromo = priced && r.promoApplied && r.yrTot < r.grossYr;
   const oneHas = priced && r.oneTot > 0;
-  const panelNote = r.conflict
-    ? "We cannot give assurance on books we keep ourselves. Tell us which of the two is ours and every figure fills in."
-    // Same priority as vacei's panel: the spend band is the FIRST thing a
-    // visitor is missing (step 1 has neither answer yet), so its sentence
-    // wins over the start-month one.
-    : r.noExpenses
-      ? "Your monthly spend sets the bookkeeping fee. Pick a band and every figure fills in — we will not quote you the cheapest one and correct it later."
-      : r.noStart
-        ? "Running total, updating as you answer. Pick the month you need us from and we can add the catch-up months and issue the quote."
-        : r.refer
-          ? "We price most sectors on the spot. Yours needs a short call with a director first — usually the same day."
-          : "Updates as you answer. Nothing is gated behind an email. Send it and your quotation arrives by email, ready to accept online. All fees exclude VAT.";
+  // Same priority as vacei's panel: the spend band is the FIRST thing a
+  // visitor is missing (step 1 has neither answer yet), so its sentence
+  // wins over the start-month one.
+  const panelNote = r.noExpenses
+    ? "Your monthly spend sets the bookkeeping fee. Pick a band and every figure fills in — we will not quote you the cheapest one and correct it later."
+    : r.noStart
+      ? "Running total, updating as you answer. Pick the month you need us from and we can add the catch-up months and issue the quote."
+      : r.refer
+        ? "We price most sectors on the spot. Yours needs a short call with a director first — usually the same day."
+        : "Updates as you answer. Nothing is gated behind an email. Send it and your quotation arrives by email, ready to accept online. All fees exclude VAT.";
 
   // Capture. The basket is what the backend reprices, so the visitor gets a
   // real quotation record rather than an empty contact form.
   const items = isQuote && priced ? qItems(q) : [];
-  const independence = qIndependence(q);
   // Honest button: with no start month (or nothing priceable) the send path
   // degrades to the callback, so the label must not promise a quotation.
   const callback = !priced || r.noStart;
@@ -699,7 +704,6 @@ export function LandingQuoteCalculator() {
     !callback &&
     items.length > 0 &&
     startOk &&
-    independence.route !== "conflict" &&
     name.trim().length > 0 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const send = async () => {
@@ -905,9 +909,6 @@ export function LandingQuoteCalculator() {
                     </div>
                   );
                 })}
-                {/* Said HERE as well as on the quote step: switching the audit
-                    on next to the bookkeeping empties every amount above. */}
-                {r.conflict && <p role="note" style={{ ...NOTE_P("warn"), margin: "4px 0 0" }}><Mark tone="warn" /><span>{CONFLICT_SHORT}</span></p>}
               </div>
             )}
 
@@ -931,20 +932,6 @@ export function LandingQuoteCalculator() {
                 {r.notes.map(([tone, text], i) => (
                   <p key={i} style={NOTE_P(tone)}><Mark tone={tone} /><span>{text}</span></p>
                 ))}
-                {/* The way out, on the spot: one tap drops either side of the
-                    rule and the quote prices itself immediately. */}
-                {r.conflict && (
-                  <div style={{ marginTop: 12, padding: "18px 20px", borderRadius: 18, background: "rgba(79,85,241,.06)", border: "1px solid rgba(79,85,241,.22)" }}>
-                    <div style={{ fontFamily: DISPLAY, fontSize: 17, fontWeight: 600, letterSpacing: "-0.015em", color: INK }}>Which one is ours?</div>
-                    <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button type="button" onClick={() => setQ({ assure: "none" })} className="a4-btn a4-btn-ink" style={{ height: "auto", minHeight: 44, padding: "10px 20px", fontSize: 15, whiteSpace: "normal", textAlign: "center" }}>Keep the bookkeeping with us</button>
-                      <button type="button" onClick={() => setQ({ book: "none", vat: "none" })} className="a4-btn a4-btn-ink" style={{ height: "auto", minHeight: 44, padding: "10px 20px", fontSize: 15, whiteSpace: "normal", textAlign: "center" }}>Take the audit or review with us</button>
-                    </div>
-                    <p style={{ margin: "12px 0 0", fontFamily: BODY, fontSize: 13.5, lineHeight: 1.55, color: "#3F3F46" }}>
-                      Pick one and the itemised quote appears straight away. Not sure which? Leave it and send this through — a director calls you and we work it out.
-                    </p>
-                  </div>
-                )}
                 {sent ? (
                   <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid " + HAIR }}>
                     <p style={{ margin: 0, fontFamily: DISPLAY, fontSize: 17, fontWeight: 600, lineHeight: 1.45, letterSpacing: "-0.01em", color: INK }}>{sent.message}</p>

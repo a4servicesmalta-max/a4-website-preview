@@ -106,6 +106,8 @@ export interface ServiceCard {
   oneOff: number;
   /** Lines with no cadence (staff-typed quotes) — a fixed fee. */
   fixed: number;
+  /** Audit / review carried out by a partner audit firm (A4 keeps the books). */
+  partner?: boolean;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -257,6 +259,18 @@ const CARD_DEFS: CardDef[] = [
   },
 ];
 
+/**
+ * Books + audit (owner decision 2026-10-01): A4 keeps the books and a partner
+ * audit firm carries out the audit or review. The site and the backend label
+ * those lines "… — by a partner audit firm (if applicable)".
+ */
+export const PARTNER_AUDIT_LABEL = /partner audit firm/i;
+const PARTNER_AUDIT_LINE = "We find a partner audit firm for you and include the audit in your portal.";
+const PARTNER_AUDIT_SCOPE = "Carried out and signed by a partner audit firm we find for you";
+/** The /q terms line whenever a partner-delivered audit or review is on the quotation. English only. */
+export const PARTNER_AUDIT_TERM =
+  "The audit or review is carried out and signed by an independent partner audit firm we find for you. We keep your books, so independence rules do not allow us to audit them ourselves. The fee is as quoted and the audit runs in your portal.";
+
 const FX_CYCLE: LetterFx[] = ["scatter", "tighten", "cascade", "stack", "zoom", "type"];
 
 function shortWord(label: string): string {
@@ -288,7 +302,10 @@ export function buildCards(lines: QuoteLine[]): ServiceCard[] {
   for (const l of lines) {
     if (l.adjustment) continue;
     const def = CARD_DEFS.find((d) => d.match.test(l.label));
-    if (def) {
+    if (def && (def.key === "aud" || def.key === "rev") && PARTNER_AUDIT_LABEL.test(l.label)) {
+      // The partner variant of the audit / review card.
+      add(def.key, { key: def.key, word: def.word, line: PARTNER_AUDIT_LINE, fx: def.fx, scope: [PARTNER_AUDIT_SCOPE, ...def.scope], partner: true }, l);
+    } else if (def) {
       add(def.key, { key: def.key, word: def.word, line: def.line, fx: def.fx, scope: def.scope }, l);
     } else {
       const key = `other-${other}`;

@@ -10,7 +10,7 @@
  */
 
 import {
-  AUDIT_YEARLY, taxReturnYearly, TXN_BANDS, RISK_TIERS, REVIEW_ENGAGEMENT_FACTOR, AUDIT_PRE_TRADING,
+  AUDIT_YEARLY, taxReturnYearly, TXN_BANDS, RISK_TIERS, REVIEW_ENTRY_YEARLY, reviewYearlyBase, AUDIT_PRE_TRADING,
   type TxnBand,
 } from "@/data/a4QuotePack";
 
@@ -119,8 +119,9 @@ export const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB")
 
 const find = <T extends { id: string }>(list: T[], id: string) => list.find((x) => x.id === id) ?? list[0];
 
-/** Pack pre-trading figure for the engagement type: €600 full audit, €330 review engagement. */
-export const auditFloor = (review: boolean) => Math.round(AUDIT_PRE_TRADING * (review ? REVIEW_ENGAGEMENT_FACTOR : 1));
+/** Pack pre-trading figure for the engagement type: €600 full audit, €350 review engagement
+ *  (the review entry fee, mt-2026-10-01-review). */
+export const auditFloor = (review: boolean) => (review ? REVIEW_ENTRY_YEARLY : AUDIT_PRE_TRADING);
 
 export function calcAuditFee(s: AuditInput): AuditQuote {
   const tier = TIERS[find(SECTORS, s.sector).tier];
@@ -129,8 +130,8 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   const txnIdx = TXN.findIndex((t) => t.id === s.txn);
   const txn = txnIdx < 0 ? TXN[0] : TXN[txnIdx];
   const bigVol = txnIdx >= 4;
-  // Small companies with modest volume qualify for a review engagement — a
-  // little over half the cost of a full audit.
+  // Small companies with modest volume qualify for a review engagement — €350
+  // at the two lowest bands, a little over half the cost of a full audit above.
   const review = s.size !== "big" && !bigVol;
 
   // NOT × tier.mult since pack mt-2026-08-26-taxret. The audit itself still
@@ -142,7 +143,9 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   // has none, so the homepage wizard, /pricing and the quote builder never
   // charged them; this page did, inside the multiplied bracket, and quoted a
   // different audit for the same company. Audit = pack band × review factor ×
-  // sector multiplier, floored at the pre-trading fee — nothing else.
+  // sector multiplier, floored at the pre-trading fee — nothing else. (Since
+  // mt-2026-10-01-review the review base is €350 at the "0"/"1-20" bands, else
+  // band × 0.55 — reviewYearlyBase in the pack.)
   //
   // ⚠ NO €50 ROUNDING (owner, 2026-08-26: "ensure that the audit calculator
   // actually matches the bookkeeping calculator").
@@ -156,9 +159,9 @@ export function calcAuditFee(s: AuditInput): AuditQuote {
   // line on every other surface.
   const fee =
     // The floor is the pack's own pre-trading figure for THIS engagement type —
-    // €600 for a full audit, €330 for a review — so the page can never quote
+    // €600 for a full audit, €350 for a review — so the page can never quote
     // above the homepage wizard, which reads the same table with no floor.
-    Math.max(auditFloor(review), Math.round(txn.assure * (review ? REVIEW_ENGAGEMENT_FACTOR : 1) * tier.mult)) +
+    Math.max(auditFloor(review), Math.round((review ? reviewYearlyBase(txn.id)! : txn.assure) * tier.mult)) +
     taxAdd;
 
   const yearsN = s.year === "multi" ? Math.max(2, parseInt(s.nyrs, 10) || 2) : 1;

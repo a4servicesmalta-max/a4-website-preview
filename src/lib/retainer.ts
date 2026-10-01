@@ -1,6 +1,6 @@
 /**
  * The A4 monthly retainer: one monthly fee for every recurring A4 service in a quote,
- * slightly less than buying them separately, rounded (owner, 1 Oct 2026).
+ * slightly less than buying them separately, rounded down to €5 (owner, 1 Oct 2026).
  *
  * MIRRORED IN THE BACKEND (vacei-portal-backend src/modules/quote-pack/retainer.ts) and the
  * partner portal (quotationModel) — same constants, same rules, same test vectors. Change all
@@ -14,7 +14,8 @@
  *   - one-off items (catch-up, incorporation),
  *   - audit / review engagements ("if applicable", delivered separately),
  *   - lines without a cadence.
- * - Price: a year of the covered fees, 5% off, ÷ 12, rounded DOWN to €5 (€10 from €500).
+ * - Price: a year of the covered fees, 5% off, ÷ 12, rounded DOWN to €5 — always €5, at
+ *   every size (owner, 1 Oct 2026: the earlier €10 step from €500 is gone).
  *   Never more than 10% off (small baskets would otherwise round too far): then it is
  *   rounded down to the euro instead.
  * - Offered only with at least two services inside it, at least one of them monthly.
@@ -27,9 +28,8 @@ export const RETAINER = {
   version: 1,
   discountPct: 0.05,
   maxDiscountPct: 0.1,
-  stepSmall: 5,
-  stepLarge: 10,
-  largeFrom: 500,
+  /** Rounding step, €: always €5, however large the basket. */
+  step: 5,
   minServices: 2,
   minTermMonths: 12,
 } as const;
@@ -165,10 +165,10 @@ export function retainerFor(lines: RetainerLine[], selected?: Iterable<number>):
   if (!hasMonthlyService) return none("no-monthly-service");
   if (groups.size < RETAINER.minServices) return none("too-few-services");
 
-  // Integer-safe: floor(ownAnnual × 95% / 12 / step) × step, capped at 10% off.
+  // Integer-safe: floor(ownAnnual × 95% / 12 / €5) × €5, capped at 10% off.
   const keep = Math.round((1 - RETAINER.discountPct) * 100); // 95
   const target = (ownAnnual * keep) / 1200;
-  const step = target >= RETAINER.largeFrom ? RETAINER.stepLarge : RETAINER.stepSmall;
+  const step = RETAINER.step;
   let monthly = Math.floor((ownAnnual * keep) / (1200 * step)) * step;
   const floorPct = Math.round((1 - RETAINER.maxDiscountPct) * 100); // 90
   if (monthly * 1200 < ownAnnual * floorPct) monthly = Math.floor(target);

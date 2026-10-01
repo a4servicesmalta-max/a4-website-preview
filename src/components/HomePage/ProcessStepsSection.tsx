@@ -121,9 +121,9 @@ const ProcessStepsSection = () => {
    *
    * A firm that keeps a client's books cannot also audit them, so picking
    * "Bookkeeping" rules A4 out as auditor and picking "Audit & Annual
-   * Accounts" rules us out of the books. Both together is the conflict case:
-   * it blocks the step rather than submitting silently, because there is no
-   * version of that request A4 can accept as written.
+   * Accounts" rules us out of the books. Both together (owner decision
+   * 2026-10-01): we keep the books and find a partner audit firm for the audit
+   * or review — the notice says so and the request goes through.
    */
   const independence = flagsForServiceSelection(formData.service)
   const independenceText = independenceNotice(independence.route)
@@ -151,12 +151,9 @@ const ProcessStepsSection = () => {
       return "Phone number is required for this communication method."
     }
 
-    // Bookkeeping AND audit together. Independence rules mean A4 cannot
-    // provide both to the same client, so this cannot go through as written —
-    // the prospect picks one and we arrange the other with an independent firm.
-    if (independence.route === "conflict") {
-      return independenceText ?? ""
-    }
+    // Bookkeeping AND audit together go through (owner decision 2026-10-01):
+    // we keep the books and find a partner audit firm for the audit or review.
+    // The notice below says so; nothing blocks the request.
 
     return ""
   }
@@ -428,17 +425,9 @@ const ProcessStepsSection = () => {
                           {step.id === "onboarding" && independenceText && (
                             <div
                               role="note"
-                              className={cn(
-                                "rounded-2xl border p-4",
-                                independence.route === "conflict"
-                                  ? "bg-amber-50 border-amber-200"
-                                  : "bg-slate-50 border-slate-200"
-                              )}
+                              className="rounded-2xl border p-4 bg-slate-50 border-slate-200"
                             >
-                              <p className={cn(
-                                "text-xs font-black uppercase tracking-widest",
-                                independence.route === "conflict" ? "text-amber-700" : "text-slate-500"
-                              )}>
+                              <p className="text-xs font-black uppercase tracking-widest text-slate-500">
                                 {INDEPENDENCE_HEADING}
                               </p>
                               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-700">

@@ -21,7 +21,6 @@ import {
   MANAGED_ENTITY_LABELS,
   MBR_ANNUAL_RETURN,
   REGISTERED_OFFICE_YEARLY,
-  REVIEW_ENGAGEMENT_FACTOR,
   RISK_TIERS,
   BOOKKEEPING_VOLUME_UPLIFT,
   bankAccountMonthly,
@@ -33,17 +32,14 @@ import {
   isPromoActive,
   managedMonthly,
   payrollFee,
+  reviewYearlyBase,
   roundEur,
   type CapitalBand,
   type ExpenseBand,
   type ManagedEntity,
   type TxnBand,
 } from "@/data/a4QuotePack";
-import {
-  INDEPENDENCE_CONFLICT,
-  independenceFlags,
-  type IndependenceFlags,
-} from "@/lib/independence";
+import { independenceFlags, type IndependenceFlags } from "@/lib/independence";
 
 export const QUOTE_API_BASE =
   process.env.NEXT_PUBLIC_QUOTE_API_BASE?.trim().replace(/\/+$/, "") ||
@@ -96,7 +92,12 @@ export type A4Item =
   | { service: "vat"; txn: TxnBand; vatreg: "art10" | "art11" | "art12" }
   /** mt-2026-08-26c-volume: priced from the SPEND band (base rate x 4.8). */
   | { service: "taxret"; entity: ManagedEntity; expenses: ExpenseBand }
-  | { service: "audit"; txn: TxnBand; review?: true }
+  /**
+   * `partner: true` — A4 keeps the books, so a partner audit firm carries out
+   * the audit or review (same price, partner label). `evaluateA4Items` sets it
+   * itself whenever the basket also has the books, whatever the caller sent.
+   */
+  | { service: "audit"; txn: TxnBand; review?: true; partner?: true }
   | { service: "payroll"; heads: number }
   | { service: "mbr"; capital: CapitalBand }
   | { service: "registered-office" }
@@ -196,10 +197,11 @@ export type A4Totals = {
   hasUnpricedOnboarding: boolean;
   /** IESBA routing: this basket asks A4 to keep the books. */
   wantsBookkeeping: boolean;
-  /** IESBA routing: this basket asks A4 to audit (a review engagement is not an audit). */
+  /** IESBA routing: this basket asks for an audit or a review engagement (both are assurance). */
   wantsAudit: boolean;
-  /** Both at once — the conflict case. Must never price silently. */
-  independenceConflict: boolean;
+  /** Both at once: A4 keeps the books and a partner audit firm does the audit or
+   *  review — priced at the published fee, labelled "— by a partner audit firm". */
+  partnerAssurance: boolean;
 };
 
 /**
@@ -294,14 +296,13 @@ function priceItem(item: A4Item, risk: A4Risk, promoNow: boolean): PricedItem[] 
       return price == null ? null : [yr("Annual tax return", price)];
     }
     case "audit": {
-      const price = AUDIT_YEARLY[item.txn];
-      if (price == null) return null;
-      return [
-        yr(
-          item.review ? "Review engagement (if applicable)" : "Financial audit (if applicable)",
-          price * (item.review ? REVIEW_ENGAGEMENT_FACTOR : 1) * rm
-        ),
-      ];
+      // mt-2026-10-01-review: a review is €350 at the "0"/"1-20" bands, else 55%
+      // of the audit — unrounded, × risk, rounded once (by `yr`).
+      const base = item.review ? reviewYearlyBase(item.txn) : AUDIT_YEARLY[item.txn];
+      if (base == null) return null;
+      // The labels are matched over the wire — identical on the backend.
+      const what = item.review ? "Review engagement" : "Financial audit";
+      return [yr(`${what}${item.partner ? " — by a partner audit firm" : ""} (if applicable)`, base * rm)];
     }
     case "payroll": {
       // Whole people only, and within the range the server will accept.
@@ -361,7 +362,20 @@ export function evaluateA4Items(
   // slice used to be recovered by matching the label with a regex, which made
   // a copy edit able to silently change a submitted total.
   const promoNow = isPromoActive(now);
+  const has = (s: A4Item["service"]) => items.some((i) => i.service === s);
+  const wantsBookkeeping = has("bookkeeping-managed") || has("catchup");
+  // A review engagement is an ASSURANCE engagement and carries the same
+  // independence requirement as a full audit — a firm cannot keep the books and
+  // then give assurance on them. So `review: true` is audit-side here, exactly
+  // as the portal's malta-pack treats it (`if (service === 'audit') wantsAudit
+  // = true`, no review check).
+  const wantsAudit = has("audit");
+  // Books + audit (owner decision 2026-10-01): A4 keeps the books and a partner
+  // audit firm does the audit or review. The basket decides it, not the caller,
+  // so the label always matches the server's.
+  const partnerAssurance = wantsBookkeeping && wantsAudit;
   const pairs = items
+    .map((item) => (partnerAssurance && item.service === "audit" ? { ...item, partner: true as const } : item))
     .map((item) => ({ item, lines: priceItem(item, risk, promoNow) }))
     .filter((p): p is { item: A4Item; lines: PricedItem[] } => p.lines != null);
   const priced = pairs.flatMap((p) => p.lines);
@@ -378,17 +392,6 @@ export function evaluateA4Items(
   const promoApplied = isPromoActive(now) && grossMonthly + grossYearly > 0;
   const keep = 1 - LAUNCH_PROMO.pct;
 
-  const has = (s: A4Item["service"]) => items.some((i) => i.service === s);
-  const wantsBookkeeping = has("bookkeeping-managed") || has("catchup");
-  // A review engagement is an ASSURANCE engagement and carries the same
-  // independence requirement as a full audit — a firm cannot keep the books and
-  // then give assurance on them. So `review: true` is audit-side here, exactly
-  // as the portal's malta-pack treats it (`if (service === 'audit') wantsAudit
-  // = true`, no review check). This line used to exclude reviews, which meant
-  // the DEFAULT homepage basket — small company, review engagement, managed
-  // books — was passed as clean by the site and refused by the server.
-  const wantsAudit = has("audit");
-
   return {
     lines: priced.map(({ label, amount, cadence }) => ({ label, amount, cadence })),
     monthly: promoApplied ? roundEur(grossMonthly * keep) : grossMonthly,
@@ -404,7 +407,7 @@ export function evaluateA4Items(
     hasUnpricedOnboarding: has("onboarding"),
     wantsBookkeeping,
     wantsAudit,
-    independenceConflict: wantsBookkeeping && wantsAudit,
+    partnerAssurance,
   };
 }
 
@@ -535,12 +538,9 @@ export async function submitWebsiteQuotation(
   if (!isServiceStartMonth(input.serviceStartDate)) {
     return { status: "error", message: START_MONTH_REQUIRED_MESSAGE };
   }
-  // Both sides of the independence rule in one basket. Pricing it would imply
-  // A4 can do both, which it cannot — a person settles it first.
+  // Books + audit together price normally: A4 keeps the books and a partner
+  // audit firm does the audit or review (the flags below say so).
   const totals = evaluateA4Items(input.items, input.risk ?? "standard");
-  if (totals.independenceConflict) {
-    return { status: "error", message: INDEPENDENCE_CONFLICT };
-  }
 
   const sourceDetail = input.sourceDetail?.trim();
   const provenance = cleanProvenance(input.provenance);

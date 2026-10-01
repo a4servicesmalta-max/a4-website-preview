@@ -24,11 +24,13 @@ describe("audit fee engine", () => {
     // The advertised "from" is the cheapest TRADING company, not the dormant one.
     expect(AUDIT_FROM).toBe(750);
     expect(AUDIT_PRE_TRADING).toBe(600);
-    // Floor is the pack's band-0 figure PER ENGAGEMENT: €600 full audit, €330 review.
+    // Floor is the pack's band-0 figure PER ENGAGEMENT: €600 full audit, €350 review.
     expect(at({ txn: "0", size: "big" })).toMatchObject({ fee: 600, final: 600 });
-    expect(at({ txn: "0" })).toMatchObject({ fee: 330, final: 330, review: true });
+    expect(at({ txn: "0" })).toMatchObject({ fee: 350, final: 350, review: true });
     expect(auditFloor(false)).toBe(600);
-    expect(auditFloor(true)).toBe(330);
+    expect(auditFloor(true)).toBe(350);
+    // mt-2026-10-01-review: the 1-20 review is the €350 entry fee too.
+    expect(at({ txn: "1-20" })).toMatchObject({ fee: 350, final: 350, review: true });
     // Any company that actually trades starts at the advertised floor.
     expect(at({ txn: "1-20", size: "big" })).toMatchObject({ fee: AUDIT_FROM });
   });

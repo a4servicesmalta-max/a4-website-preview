@@ -3,7 +3,7 @@
 import React from "react";
 import { Button, Icon } from "@/components/a4-landing/Primitives";
 import { AuditEstimator } from "./AuditEstimator";
-import { AUDIT_PRE_TRADING, REVIEW_ENGAGEMENT_FACTOR } from "@/data/a4QuotePack";
+import { AUDIT_PRE_TRADING, REVIEW_FROM } from "@/data/a4QuotePack";
 import {
   BODY, CardGrid, CenterEyebrow, CtaBand, FaqSection, G, Head, InfoCard, KitStyles, PaidHero, Section, Statement, Timeline, ctaPill,
 } from "@/app/[locale]/accounting-services/components/PaidLandingKit";
@@ -60,7 +60,7 @@ function AuditHero() {
       accent="We make it simple."
       lead={
         <>
-          Every company in Malta must file audited financial statements. As a licensed audit firm, A4 delivers a rigorous, independent, on-time audit — with a fixed fee agreed up front, <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;{AUDIT_PRE_TRADING}/year</strong>. Where a review engagement is enough, it is {Math.round(REVIEW_ENGAGEMENT_FACTOR * 100)}% of the audit fee.
+          Every company in Malta must file audited financial statements. As a licensed audit firm, A4 delivers a rigorous, independent, on-time audit — with a fixed fee agreed up front, <strong style={{ color: "#fff", fontWeight: 600 }}>from &euro;{AUDIT_PRE_TRADING}/year</strong>. Where a review engagement is enough, it starts from &euro;{REVIEW_FROM}/year.
         </>
       }
       chips={["Licensed audit firm", "On-time filing, guaranteed", "Fixed fee, no surprises", "Portal-based document collection"]}

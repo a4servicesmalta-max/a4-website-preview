@@ -28,6 +28,7 @@ import {
   bankAccountMonthly,
   MBR_ANNUAL_RETURN,
   PAYROLL_ENTRY_RATE,
+  REVIEW_FROM,
   RISK_TIERS,
   SECTORS,
   TXN_BANDS,
@@ -42,6 +43,7 @@ import {
   type ManagedEntity,
   type TxnBand,
 } from "@/data/a4QuotePack";
+import { INDEPENDENCE_PARTNER_AUDIT } from "@/lib/independence";
 
 export const QUOTE_PACK_VERSION = A4_QUOTE_PACK_VERSION;
 
@@ -236,12 +238,17 @@ export function buildQuote(input: QuoteInput): QuoteResult {
       if (txn == null || mult == null) { onRequest(id, b); continue; }
       fee = roundEur(AUDIT_YEARLY[txn] * mult);
     } else fee = b.base;
+    // Books + audit (owner decision 2026-10-01): we keep the books, so a partner
+    // audit firm carries out the audit — same fee, said on the line.
+    const partner = id === "audit" && input.services.includes("accounts");
+    const name = partner ? `${b.name} — by a partner audit firm` : b.name;
+    const hint = partner ? INDEPENDENCE_PARTNER_AUDIT : b.hint;
     if (b.type === "monthly") {
       monthly += fee;
-      lines.push({ id, name: b.name, hint: b.hint, display: `${euro(fee)} / month`, annualEur: fee * 12 });
+      lines.push({ id, name, hint, display: `${euro(fee)} / month`, annualEur: fee * 12 });
     } else {
       annual += fee;
-      lines.push({ id, name: b.name, hint: b.hint, display: `${euro(fee)} / year`, annualEur: fee });
+      lines.push({ id, name, hint, display: `${euro(fee)} / year`, annualEur: fee });
     }
   }
 
@@ -273,7 +280,7 @@ export function buildQuote(input: QuoteInput): QuoteResult {
       input.startMonth
         ? `Bookkeeping starts ${input.startMonth}${catchUpMonths > 0 ? `; ${catchUpMonths} earlier month${catchUpMonths === 1 ? "" : "s"} quoted separately above` : ""}.`
         : "Start month to be confirmed — it decides which months are catch-up.",
-      "Single Malta company. VAT priced as an Article 10 registration; the audit as a full statutory audit — where a review engagement is enough it is 55% of that figure, confirmed against your accounts.",
+      `Single Malta company. VAT priced as an Article 10 registration; the audit as a full statutory audit — where a review engagement is enough it starts from €${REVIEW_FROM}/yr, confirmed against your accounts.`,
       "All fees exclude VAT. Figures are indicative and confirmed in writing within 24 hours.",
       "Government and registry fees (including the MBR registry fee, €100–€379 by share capital) are passed through at cost.",
       "Regulated-sector obligations (e.g. MGA reporting) may adjust scope.",

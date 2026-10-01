@@ -113,5 +113,6 @@ describe("M3 — this page cannot sell an audit alongside the books", () => {
     const r = lpCalc(ANSWERED, PROMO_ON);
     expect(r.independence.route).toBe("bookkeeping");
     expect(r.independence.auditEligible).toBe(false);
+    expect(r.independence.partnerAudit).toBe(false);
   });
 });

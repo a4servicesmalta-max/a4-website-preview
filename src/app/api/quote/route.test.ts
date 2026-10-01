@@ -55,7 +55,7 @@ const BASE = { name: "Jane Borg", email: "jane@example.com" };
 beforeEach(() => vi.clearAllMocks());
 
 describe("QuoteContent — comma-joined strings", () => {
-  it("routes a bookkeeping + audit tick to CONFLICT, not neutral", async () => {
+  it("routes a bookkeeping + audit tick to PARTNER-AUDIT, not neutral", async () => {
     // Exactly what QuoteContent sends: `sel.join(", ")` in both fields.
     await POST(req({
       ...BASE,
@@ -64,10 +64,12 @@ describe("QuoteContent — comma-joined strings", () => {
         service: "Bookkeeping, Audit & Annual Accounts",
       },
     }));
+    // We keep the books (never audit them); a partner audit firm does the audit.
     expect(routed()).toMatchObject({
-      route: "conflict",
+      route: "partner-audit",
       auditEligible: false,
-      bookkeepingEligible: false,
+      bookkeepingEligible: true,
+      partnerAudit: true,
     });
   });
 
@@ -83,7 +85,7 @@ describe("QuoteContent — comma-joined strings", () => {
 
   it("survives the whitespace a join produces, in either order", async () => {
     await POST(req({ ...BASE, meta: { services: "VAT / Tax,Audit & Annual Accounts ,  Bookkeeping" } }));
-    expect(routed()).toMatchObject({ route: "conflict" });
+    expect(routed()).toMatchObject({ route: "partner-audit" });
   });
 
   it("leaves an unrelated basket neutral", async () => {
@@ -110,14 +112,14 @@ describe("QuoteActions — the estimator handoff", () => {
 });
 
 describe("ProcessStepsSection — a real array", () => {
-  it("keeps working, and still reaches conflict", async () => {
+  it("keeps working, and still reaches partner-audit", async () => {
     await POST(req({
       ...BASE,
       meta: { services: ["Bookkeeping", "Audit & Annual Accounts"], auditEligible: true },
     }));
     // Derived from the SERVICES, never from the client's `auditEligible: true`
     // — which is the whole claim the route's comment makes.
-    expect(routed()).toMatchObject({ route: "conflict", auditEligible: false });
+    expect(routed()).toMatchObject({ route: "partner-audit", auditEligible: false });
   });
 
   it("ignores a client-supplied boolean that contradicts the selection", async () => {

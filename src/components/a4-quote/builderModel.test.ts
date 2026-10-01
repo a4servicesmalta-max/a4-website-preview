@@ -3,6 +3,7 @@ import { buildQuoteRecord, evaluateA4Items } from "@/lib/websiteQuotation";
 import { ongoingStartMonth } from "@/lib/accounting-fee";
 import {
   BUILDER_INIT,
+  PARTNER_AUDIT_NOTE,
   auditIsReview,
   basketRetainer,
   basketSignature,
@@ -77,7 +78,7 @@ describe("answers → basket → lines (one engine)", () => {
   });
 
   it("reaches retainer vectors C, D and E from the page's answers", () => {
-    // C: restaurant company, six months behind — the €10 step from €500, catch-up outside.
+    // C: restaurant company, six months behind — over €500 a month, still €5 rounding, catch-up outside.
     const c = buildBasket(
       state({ entity: "company", sector: "hospitality", expenses: "50-100k", txn: "61-150", banks: 3, heads: 12, capital: "10000", regoff: true, startMonth: "2026-04" }, { pay: true, csp: true }),
       NOW
@@ -90,7 +91,8 @@ describe("answers → basket → lines (one engine)", () => {
       state({ entity: "company", sector: "holding", expenses: "0-10k", txn: "1-20", capital: "1500", regoff: true }, { book: false, vat: false, assure: true, csp: true }),
       NOW
     );
-    expect([...d.lines.map((l) => l.amount)].sort((x, y) => x - y)).toEqual([235, 495, 1200, 150].sort((x, y) => x - y));
+    // The 1-20 review is the €350 entry × 1.2 holding-company risk = €420.
+    expect([...d.lines.map((l) => l.amount)].sort((x, y) => x - y)).toEqual([235, 420, 1200, 150].sort((x, y) => x - y));
     expect(basketRetainer(d)).toMatchObject({ offered: false, monthly: 0, registryYearly: 100, ownAnnual: 1485 });
     // E: bookkeeping alone — one service, no retainer.
     const e = buildBasket(state({ entity: "company", expenses: "0-10k" }, { vat: false, tax: false }), NOW);
@@ -128,19 +130,31 @@ describe("gates", () => {
     expect(b.items).toEqual([]);
   });
 
-  it("prices nothing while the books and the audit are both asked for (company)", () => {
+  // Owner decision 2026-10-01: books + audit together price — A4 keeps the books
+  // and a partner audit firm does the audit or review, at the published fee.
+  it("prices the books AND the audit together, the audit by a partner audit firm (company)", () => {
     const b = buildBasket(state({ expenses: "10-25k" }, { assure: true }), NOW);
-    expect(b.gate).toBe("conflict");
-    expect(b.items).toEqual([]);
-    // Either side resolves it.
-    expect(buildBasket(state({ expenses: "10-25k" }, { assure: false }), NOW).gate).toBeNull();
+    expect(b.gate).toBeNull();
+    expect(b.partnerAudit).toBe(true);
+    expect(b.priced).toEqual(["book", "vat", "tax", "assure"]);
+    // 1-20 review: the €350 entry fee, labelled as the partner's by the engine.
+    expect(b.lines.find((l) => l.key === "assure")).toMatchObject({ label: "Review engagement — by a partner audit firm (if applicable)", amount: 350, cadence: "yearly" });
+    expect(b.items).toContainEqual({ service: "audit", txn: "1-20", review: true, partner: true });
+    expect(b.totals.partnerAssurance).toBe(true);
+    // The lines on screen are the lines on the wire.
+    expect(b.lines.map((l) => l.label)).toEqual(b.totals.lines.map((l) => l.label));
+    expect(b.notes).toContain(PARTNER_AUDIT_NOTE);
+    // Without the books, A4 itself does it — the plain label, no partner note.
     const auditSide = buildBasket(state({ expenses: "10-25k" }, { assure: true, book: false }), NOW);
     expect(auditSide.gate).toBeNull();
+    expect(auditSide.partnerAudit).toBe(false);
     expect(auditSide.priced).toEqual(["tax", "assure"]);
-    expect(auditSide.totals.independenceConflict).toBe(false);
+    expect(auditSide.lines.find((l) => l.key === "assure")?.label).toBe("Review engagement (if applicable)");
+    expect(auditSide.totals.partnerAssurance).toBe(false);
+    expect(auditSide.notes).not.toContain(PARTNER_AUDIT_NOTE);
   });
 
-  it("a sole trader has no audit, so no conflict, and no corporate services", () => {
+  it("a sole trader has no audit, and no corporate services", () => {
     const s = state({ entity: "sole", expenses: "10-25k" }, { assure: true, csp: true });
     expect(visibleServices(s, NOW)).not.toContain("assure");
     expect(visibleServices(s, NOW)).not.toContain("csp");

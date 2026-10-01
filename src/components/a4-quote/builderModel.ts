@@ -15,8 +15,9 @@
  *   - the monthly spend band is required for the bookkeeping and the tax
  *     return — never a default band;
  *   - a "refer" sector is never priced (a director calls);
- *   - A4 cannot keep the books AND give assurance for one company (IESBA) —
- *     nothing is priced until the visitor picks which one is ours;
+ *   - A4 never audits or reviews books it keeps (IESBA): with both switched on,
+ *     A4 keeps the books and a partner audit firm does the audit or review, at
+ *     the same fee, labelled "— by a partner audit firm" by the engine;
  *   - VAT returns only on books A4 keeps;
  *   - the catch-up is derived from a start month in the past, never asked.
  */
@@ -118,15 +119,13 @@ export function visibleServices(s: BuilderState, now: Date = new Date()): Servic
 
 /* -------------------------------------------------------------------------- */
 /* Copy that must read the same as the homepage (English only — do not        */
-/* machine-translate; LandingQuoteCalculator.tsx CONFLICT_* / ONBOARDING_NOTE) */
+/* machine-translate; LandingQuoteCalculator.tsx PARTNER_AUDIT_NOTE /         */
+/* ONBOARDING_NOTE)                                                            */
 /* -------------------------------------------------------------------------- */
 
-export const CONFLICT_SUMMARY =
-  "You have asked us to keep the books and to do the audit or review. We cannot do both for the same company — an auditor is not independent of books their own firm has kept, and a review engagement carries the same rule. So there is nothing to price until that is settled. Choose which one is ours below and the quote appears, or send this through and a director calls you.";
-export const CONFLICT_NOTE =
-  "Whichever you leave with us, we arrange the other side with an independent firm — keep the bookkeeping here and we introduce you to an independent auditor, or take the audit or review here and we quote the bookkeeping out.";
-export const CONFLICT_SHORT =
-  "The bookkeeping and the audit or review cannot both be ours — an auditor is not independent of books their own firm has kept. That is why the amounts have gone blank. Switch one of the two off, or carry on and the quote step gives you the choice.";
+/** Books + audit (owner decision 2026-10-01) — the homepage's PARTNER_AUDIT_NOTE. */
+export const PARTNER_AUDIT_NOTE =
+  "You have asked us to keep the books and for the audit or review. We keep the books. Independence rules mean we cannot audit them ourselves, so we find a partner audit firm for you — the audit is quoted here at our published price and included in your portal.";
 export const ONBOARDING_NOTE =
   "Digital Onboarding and opening balances are not priced here. We quote those once we have seen your records, because what they take depends on the state they are in.";
 
@@ -200,7 +199,11 @@ export function serviceItems(s: BuilderState, key: ServiceKey, now: Date = new D
       };
     case "assure":
       if (entity !== "company") return { items: [], needs: "For companies only — a sole trader has no statutory audit." };
-      return { items: [{ service: "audit", txn: s.txn, ...(auditIsReview(s) ? { review: true as const } : {}) }], needs: null };
+      // With the books on, a partner audit firm does it — the engine labels the line so.
+      return {
+        items: [{ service: "audit", txn: s.txn, ...(auditIsReview(s) ? { review: true as const } : {}), ...(s.on.book ? { partner: true as const } : {}) }],
+        needs: null,
+      };
   }
 }
 
@@ -215,8 +218,8 @@ export function isOn(s: BuilderState, key: ServiceKey, now: Date = new Date()): 
 /* The basket                                                                  */
 /* -------------------------------------------------------------------------- */
 
-/** Why nothing is priced: a director call, the independence choice, the spend band, or nothing picked. */
-export type Gate = "refer" | "conflict" | "no-expenses" | "nothing" | null;
+/** Why nothing is priced: a director call, the spend band, or nothing picked. */
+export type Gate = "refer" | "no-expenses" | "nothing" | null;
 
 /** One priced line, with the service it belongs to and its index on the wire. */
 export type BuilderLine = {
@@ -239,7 +242,8 @@ export type Basket = {
   lines: BuilderLine[];
   /** evaluateA4Items(items, risk) — the totals that are sent. */
   totals: A4Totals;
-  conflict: boolean;
+  /** The books and the audit/review both priced: a partner audit firm does the audit or review. */
+  partnerAudit: boolean;
   notes: string[];
 };
 
@@ -256,7 +260,6 @@ function registryOf(label: string, amount: number): number {
 export function buildBasket(s: BuilderState, now: Date = new Date()): Basket {
   const tier = sectorTier(s.sector);
   const risk: A4Risk = tier === "elevated" || tier === "high" ? tier : "standard";
-  const conflict = s.entity === "company" && s.on.book && s.on.assure;
   const empty = (gate: Gate, notes: string[] = []): Basket => ({
     gate,
     risk,
@@ -264,11 +267,10 @@ export function buildBasket(s: BuilderState, now: Date = new Date()): Basket {
     priced: [],
     lines: [],
     totals: evaluateA4Items([], risk, now),
-    conflict,
+    partnerAudit: false,
     notes,
   });
   if (tier === "refer") return empty("refer", [REFER_NOTE]);
-  if (conflict) return empty("conflict", [CONFLICT_NOTE]);
   if ((isOn(s, "book", now) || isOn(s, "tax", now)) && s.expenses === "") return empty("no-expenses");
 
   const items: A4Item[] = [];
@@ -293,15 +295,17 @@ export function buildBasket(s: BuilderState, now: Date = new Date()): Basket {
   // Onboarding carries no figure but rides in the basket, so the quotation says so.
   items.push({ service: "onboarding" });
 
+  const partnerAudit = priced.includes("assure") && priced.includes("book");
   const notes: string[] = [];
   const tierNote = TIER_NOTE[tier];
   if (tierNote) notes.push(tierNote);
+  if (partnerAudit) notes.push(PARTNER_AUDIT_NOTE);
   if (priced.includes("vat") && s.vatreg === "unsure") notes.push(VAT_UNSURE_NOTE);
   if (priced.includes("assure") && auditIsReview(s)) notes.push(REVIEW_NOTE);
   if (priced.includes("csp")) notes.push(CSP_NOTE);
   notes.push(ONBOARDING_NOTE);
 
-  return { gate: null, risk, items, priced, lines, totals: evaluateA4Items(items, risk, now), conflict: false, notes };
+  return { gate: null, risk, items, priced, lines, totals: evaluateA4Items(items, risk, now), partnerAudit, notes };
 }
 
 /* -------------------------------------------------------------------------- */

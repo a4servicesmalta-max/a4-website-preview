@@ -29,7 +29,7 @@ import {
   BOOKKEEPING_MANAGED_MONTHLY, EXPENSE_BANDS, EXPENSE_BAND_CEILINGS, VAT_MONTHLY, PAYROLL_PER_HEAD, sectorTier,
   catchUpAmount, bandForMonthlyExpenses, fullMonthlyBookkeeping, bankAccountMonthly, banksMonthly,
   BANK_ACCOUNT, BOOKKEEPING_FROM, BOOKKEEPING_COMPANY, BOOKKEEPING_BASE_FROM, BOOKKEEPING_BASE_COMPANY,
-  BOOKKEEPING_SOLE_TOP, BOOKKEEPING_COMPANY_TOP, A4_QUOTE_PACK_VERSION,
+  BOOKKEEPING_SOLE_TOP, BOOKKEEPING_COMPANY_TOP, A4_QUOTE_PACK_VERSION, REVIEW_ENTRY_YEARLY, REVIEW_FROM, reviewYearlyBase,
   type TxnBand, type ExpenseBand,
 } from "@/data/a4QuotePack";
 import { qCalc, qItems, qRisk, Q_INIT, QSTEP_QUOTE, type QState } from "@/components/a4-landing/LandingQuoteCalculator";
@@ -205,7 +205,7 @@ describe("quote parity across every surface", () => {
     expect(page.monthlyFull).toBe(24);
     // Rounding is per account, THEN × count: company 0–10k, 2 extras = 2 × 47 = 94, not 95.
     expect(banksMonthly("company", "0-10k", "1-20", 3)).toBe(94);
-    expect(A4_QUOTE_PACK_VERSION).toBe("mt-2026-08-27-entry");
+    expect(A4_QUOTE_PACK_VERSION).toBe("mt-2026-10-01-review");
   });
 
   it("drops the catch-up line, rather than guessing a rate, when no band came with it", () => {
@@ -245,7 +245,7 @@ describe("quote parity across every surface", () => {
           expect(q.lines.find((l) => l.id === "catchup")?.annualEur, `catch-up at ${where}`).toBe(w.catchup);
           expect(q.lines.find((l) => l.id === "accounts")?.annualEur, `books at ${where}`).toBe(fullMonthlyBookkeeping(entity, expenses.id, txn.id, banks)! * 12);
         }
-        // The audit is a company-only basket on the wizard side (independence bars it beside the books).
+        // The audit on its own (beside the books it is the same fee, by a partner audit firm).
         const qa = quoteFor({ sector: sector.id, txn: txn.id, expenses: expenses.id, services: ["audit"] });
         const wa = evaluateA4Items([{ service: "audit", txn: txn.id }], risks[tier], AT);
         expect(qa.annualTotalEur, `audit at ${sector.id}/${txn.id}`).toBe(wa.yearly);
@@ -315,6 +315,13 @@ describe("quote parity across every surface", () => {
 
   it("pins the figures every surface is quoting, so a silent edit is visible", () => {
     expect(AUDIT_YEARLY).toEqual({ "0": 600, "1-20": 750, "21-60": 995, "61-150": 1395, "151-400": 1950, "401-1000": 2700, "1000+": 3650 });
+    // mt-2026-10-01-review: the review engagement starts from €350 (bands 0 and
+    // 1-20, before risk); 55% of the audit, unrounded, from 21-60 up.
+    expect(REVIEW_ENTRY_YEARLY).toBe(350);
+    expect(REVIEW_FROM).toBe(350);
+    expect(reviewYearlyBase("0")).toBe(350);
+    expect(reviewYearlyBase("1-20")).toBe(350);
+    expect(reviewYearlyBase("21-60")).toBeCloseTo(547.25, 10);
     // mt-2026-08-26c-volume: the tax return is the formula, not a table.
     // Worked example pinned in all three repos: company 10-25k → 69 × 4.8 = 331.
     expect(taxReturnYearly("company", "10-25k")).toBe(331);

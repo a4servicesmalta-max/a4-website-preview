@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  PARTNER_AUDIT_TERM,
   acceptPlan,
   acceptedLineIndexes,
   buildCards,
@@ -84,6 +85,24 @@ describe("quotation page cards", () => {
     const t = computeTotals(l, c, new Set(["aud"]), "monthly");
     expect(t.per).toBe("/ yr");
     expect(t.net).toBe(1450);
+  });
+
+  it("shows the partner variant of the audit / review card when a partner audit firm does it", () => {
+    const l = readLines([
+      { label: "Managed bookkeeping — Company", amount: 69, cadence: "monthly" },
+      { label: "Review engagement — by a partner audit firm (if applicable)", amount: 350, cadence: "yearly" },
+    ]);
+    const c = buildCards(l);
+    const rev = c.find((x) => x.key === "rev")!;
+    expect(rev.partner).toBe(true);
+    expect(rev.line).toBe("We find a partner audit firm for you and include the audit in your portal.");
+    expect(rev.scope[0]).toMatch(/partner audit firm we find for you/);
+    const aud = buildCards(readLines([{ label: "Financial audit — by a partner audit firm (if applicable)", amount: 995, cadence: "yearly" }]))[0];
+    expect([aud.key, aud.partner]).toEqual(["aud", true]);
+    // A4's own audit keeps the plain card.
+    const own = buildCards(readLines([{ label: "Financial audit (if applicable)", amount: 995, cadence: "yearly" }]))[0];
+    expect([own.key, own.partner ?? false]).toEqual(["aud", false]);
+    expect(PARTNER_AUDIT_TERM).toMatch(/^The audit or review is carried out and signed by an independent partner audit firm/);
   });
 
   it("staff-typed lines without a cadence still render", () => {
